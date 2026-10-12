@@ -1,0 +1,17 @@
+{
+  "_comment": "The Races screen (SCREEN_RACE, 6), work order 175 C. Everything it draws is placed at the HD image of its native rectangle (racesgeom, through core/researchnative), so this file carries no geometry: only the markings, one per thing HD does that the original does not, or leaves out, or cannot do yet. Each is also stated in the module that performs it and held by the smoke group (dev:tools/smoke_suite/090e_races_the_races_screen.py).",
+  "marks": {
+    "hd_state": "BUILT, NOT ACCEPTED. The live part of work order 175 C is parked (dev:doc/briefs/175-parked-for-data.md).",
+    "omission_outer_frame": "OMISSION \u2014 RACES.LBX 0, the background with the panels, bars, sliders and buttons painted in, is not drawn; decision 71's HUD style draws them in code.",
+    "deviation_hud_parts": "DEVIATION \u2014 the slider, the mission row, the five buttons and the striped fields are HUD blocks at the original's rectangles, not RACES.LBX 2, 6-30, 60 and 0's painted fields; the relation bar is RACES.LBX 3 itself since work order 223.",
+    "deviation_button_words": "DEVIATION \u2014 RETURN, AUDIENCE, REPORT, DECLARE WAR, IGNORE, ESPIONAGE / SABOTAGE / HIDE, the title and BONUSES are baked into the original's art; HD writes them in OrionLayer's words.",
+    "deviation_hd_font": "DEVIATION \u2014 the bitmap fonts become the HD font at the native line height, shrunk to the original's width where they would overflow.",
+    "hd_extension_sprite_scale": "HD EXTENSION \u2014 portraits and spy icons at an integer magnification, centred on their native cell (decision 28).",
+    "transcription_spy_move": "TRANSCRIPTION, sent as one command \u2014 a click on a spy group picks the icon under the pointer and every icon right of it (Draw_Icon_Group_Cursor_, racescrn.cpp:600-635), a click on another group drops them there, no group above 63 (Move_Spy_Group_From_Mouse_, :390-408); a mission button sets that race's mission (:441-443). Each change goes as open fix 64's MSG_SET_SPIES, the whole list at once, which the engine writes into s_player.spies at once (work order 197; racesspies).",
+    "deviation_spy_drop_rest": "DEVIATION \u2014 what does not fit a group at the drop stays in the group it came from; the original keeps it in hand for another drop. HD keeps no hand across a command, and the hand is drawn as its number beside the pointer, not as the original's pointer icon.",
+    "hd_state_armed_action": "HD STATE \u2014 which action WHO mode has armed is a local of Race_Screen_; HD lights the button it sent itself and says nothing when the game armed one on its own (a hotkey in the fallback).",
+    "omission_anomaly_leaders": "OMISSION \u2014 the spy / agent bonus counts every spy-master and telepath leader; the original skips one at a space anomaly (Leader_At_Anomaly_, colcalc.cpp:1206), whose event table is not on the wire.",
+    "hd_extension_who_lit": "HD EXTENSION \u2014 in WHO mode the panel of the race under the pointer gets the popup's lit edge as well as the original's box round the portrait: HD cannot change the pointer to the original's 'who' cursor (RACES.LBX 5 / 61-63), so the panel says it instead.",
+    "transcription_hover": "TRANSCRIPTION, drawn by HD alone \u2014 the relation word over the bar under the pointer and, in WHO mode, the box round the race under it (racescrn.cpp:549-566). The API has no mouse motion; HD resolves the pointer itself and sends nothing."
+  }
+}

@@ -1,0 +1,358 @@
+{
+  "1920x1080": [
+    {
+      "name": "race_picks_panel",
+      "rect": [
+        20,
+        85,
+        733,
+        893
+      ],
+      "style": {
+        "label": "Race Picks Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border",
+        "fill": true
+      }
+    },
+    {
+      "name": "specials_panel",
+      "rect": [
+        773,
+        85,
+        529,
+        893
+      ],
+      "style": {
+        "label": "Special Abilities Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border",
+        "fill": true
+      }
+    },
+    {
+      "name": "description_panel",
+      "rect": [
+        1322,
+        85,
+        578,
+        893
+      ],
+      "style": {
+        "label": "Description Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border",
+        "fill": true
+      }
+    },
+    {
+      "name": "picks_score_bar",
+      "rect": [
+        290,
+        998,
+        1340,
+        62
+      ],
+      "style": {
+        "label": "Picks/Score Bar",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_text",
+      "rect": [
+        305,
+        1006,
+        635,
+        46
+      ],
+      "style": {
+        "label": "Race Picks Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "score_text",
+      "rect": [
+        980,
+        1006,
+        635,
+        46
+      ],
+      "style": {
+        "label": "Score Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_header",
+      "rect": [
+        28,
+        93,
+        717,
+        30
+      ],
+      "style": {
+        "label": "Race Picks Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "specials_header",
+      "rect": [
+        781,
+        93,
+        513,
+        30
+      ],
+      "style": {
+        "label": "Special Abilities Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "description_header",
+      "rect": [
+        1330,
+        93,
+        562,
+        30
+      ],
+      "style": {
+        "label": "Description Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_popup",
+      "rect": [
+        560,
+        400,
+        800,
+        280
+      ],
+      "style": {
+        "label": "Picks Popup Panel",
+        "font_scale": 1.0,
+        "skin": "none"
+      }
+    },
+    {
+      "name": "picks_popup_text",
+      "rect": [
+        620,
+        450,
+        680,
+        180
+      ],
+      "style": {
+        "label": "Picks Popup Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_name_label",
+      "rect": [
+        1338,
+        900,
+        546,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "race_name_field",
+      "rect": [
+        1338,
+        928,
+        546,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "race_picks_panel",
+      "rect": [
+        20,
+        85,
+        733,
+        893
+      ],
+      "style": {
+        "label": "Race Picks Panel",
+        "font_scale": 0.9,
+        "skin": "thin_border",
+        "fill": true
+      }
+    },
+    {
+      "name": "specials_panel",
+      "rect": [
+        773,
+        85,
+        529,
+        893
+      ],
+      "style": {
+        "label": "Special Abilities Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border",
+        "fill": true
+      }
+    },
+    {
+      "name": "description_panel",
+      "rect": [
+        1322,
+        85,
+        578,
+        893
+      ],
+      "style": {
+        "label": "Description Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border",
+        "fill": true
+      }
+    },
+    {
+      "name": "picks_score_bar",
+      "rect": [
+        290,
+        998,
+        1340,
+        62
+      ],
+      "style": {
+        "label": "Picks/Score Bar",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_text",
+      "rect": [
+        305,
+        1006,
+        635,
+        46
+      ],
+      "style": {
+        "label": "Race Picks Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "score_text",
+      "rect": [
+        980,
+        1006,
+        635,
+        46
+      ],
+      "style": {
+        "label": "Score Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_header",
+      "rect": [
+        28,
+        93,
+        717,
+        30
+      ],
+      "style": {
+        "label": "Race Picks Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "specials_header",
+      "rect": [
+        781,
+        93,
+        513,
+        30
+      ],
+      "style": {
+        "label": "Special Abilities Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "description_header",
+      "rect": [
+        1330,
+        93,
+        562,
+        30
+      ],
+      "style": {
+        "label": "Description Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "picks_popup",
+      "rect": [
+        560,
+        400,
+        800,
+        280
+      ],
+      "style": {
+        "label": "Picks Popup Panel",
+        "font_scale": 1.0,
+        "skin": "none"
+      }
+    },
+    {
+      "name": "picks_popup_text",
+      "rect": [
+        620,
+        450,
+        680,
+        180
+      ],
+      "style": {
+        "label": "Picks Popup Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_name_label",
+      "rect": [
+        1338,
+        900,
+        546,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "race_name_field",
+      "rect": [
+        1338,
+        928,
+        546,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
+    }
+  ]
+}

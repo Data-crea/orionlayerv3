@@ -1,0 +1,1000 @@
+{
+  "1920x1080": [
+    {
+      "name": "map_panel",
+      "rect": [
+        20,
+        85,
+        996,
+        579
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_00",
+      "rect": [
+        1044,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_01",
+      "rect": [
+        1236,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_02",
+      "rect": [
+        1429,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_03",
+      "rect": [
+        1620,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_04",
+      "rect": [
+        1044,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_05",
+      "rect": [
+        1236,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_06",
+      "rect": [
+        1429,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_07",
+      "rect": [
+        1620,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_08",
+      "rect": [
+        1044,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_09",
+      "rect": [
+        1236,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_10",
+      "rect": [
+        1429,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_11",
+      "rect": [
+        1620,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_12",
+      "rect": [
+        1044,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_13",
+      "rect": [
+        1236,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_14",
+      "rect": [
+        1429,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_15",
+      "rect": [
+        1620,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_16",
+      "rect": [
+        1044,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_17",
+      "rect": [
+        1236,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_18",
+      "rect": [
+        1429,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_19",
+      "rect": [
+        1620,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "inset_map",
+      "rect": [
+        56,
+        93,
+        924,
+        563
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "ship_panel",
+      "rect": [
+        20,
+        768,
+        996,
+        292
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "prev_fleet",
+      "rect": [
+        20,
+        684,
+        96,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "status_band",
+      "rect": [
+        136,
+        684,
+        764,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "next_fleet",
+      "rect": [
+        920,
+        684,
+        96,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_all",
+      "rect": [
+        1044,
+        901,
+        277,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_relocate",
+      "rect": [
+        1329,
+        901,
+        277,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_scrap",
+      "rect": [
+        1614,
+        901,
+        278,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_leaders",
+      "rect": [
+        1044,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_support",
+      "rect": [
+        1258,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_combat",
+      "rect": [
+        1472,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_return",
+      "rect": [
+        1686,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "ship_panel_text",
+      "rect": [
+        45,
+        793,
+        946,
+        242
+      ],
+      "style": {
+        "skin": "none",
+        "font_size": 14,
+        "font_scale": 1.5
+      }
+    },
+    {
+      "name": "icon_area",
+      "rect": [
+        1036,
+        85,
+        864,
+        788
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "button_band",
+      "rect": [
+        1036,
+        893,
+        864,
+        167
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "status_text",
+      "rect": [
+        348,
+        684,
+        340,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "scroll_column",
+      "rect": [
+        1838,
+        93,
+        54,
+        772
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "inset_hint",
+      "rect": [
+        71,
+        608,
+        894,
+        33
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center"
+      }
+    },
+    {
+      "name": "status_hint",
+      "rect": [
+        146,
+        702,
+        744,
+        27
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center"
+      }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "map_panel",
+      "rect": [
+        20,
+        85,
+        996,
+        579
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_00",
+      "rect": [
+        1044,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_01",
+      "rect": [
+        1236,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_02",
+      "rect": [
+        1429,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_03",
+      "rect": [
+        1620,
+        93,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_04",
+      "rect": [
+        1044,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_05",
+      "rect": [
+        1236,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_06",
+      "rect": [
+        1429,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_07",
+      "rect": [
+        1620,
+        251,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_08",
+      "rect": [
+        1044,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_09",
+      "rect": [
+        1236,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_10",
+      "rect": [
+        1429,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_11",
+      "rect": [
+        1620,
+        409,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_12",
+      "rect": [
+        1044,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_13",
+      "rect": [
+        1236,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_14",
+      "rect": [
+        1429,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_15",
+      "rect": [
+        1620,
+        567,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_16",
+      "rect": [
+        1044,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_17",
+      "rect": [
+        1236,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_18",
+      "rect": [
+        1429,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "cell_19",
+      "rect": [
+        1620,
+        725,
+        174,
+        140
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "inset_map",
+      "rect": [
+        56,
+        93,
+        924,
+        563
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "ship_panel",
+      "rect": [
+        20,
+        768,
+        996,
+        292
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "prev_fleet",
+      "rect": [
+        20,
+        684,
+        96,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "status_band",
+      "rect": [
+        136,
+        684,
+        764,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "next_fleet",
+      "rect": [
+        920,
+        684,
+        96,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_all",
+      "rect": [
+        1044,
+        901,
+        277,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_relocate",
+      "rect": [
+        1329,
+        901,
+        277,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_scrap",
+      "rect": [
+        1614,
+        901,
+        278,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_leaders",
+      "rect": [
+        1044,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_support",
+      "rect": [
+        1258,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_combat",
+      "rect": [
+        1472,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "btn_return",
+      "rect": [
+        1686,
+        985,
+        206,
+        67
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "ship_panel_text",
+      "rect": [
+        45,
+        793,
+        946,
+        242
+      ],
+      "style": {
+        "skin": "none",
+        "font_size": 14,
+        "font_scale": 1.5
+      }
+    },
+    {
+      "name": "icon_area",
+      "rect": [
+        1036,
+        85,
+        864,
+        788
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "button_band",
+      "rect": [
+        1036,
+        893,
+        864,
+        167
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "status_text",
+      "rect": [
+        348,
+        684,
+        340,
+        64
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "scroll_column",
+      "rect": [
+        1838,
+        93,
+        54,
+        772
+      ],
+      "style": {
+        "skin": "none"
+      }
+    },
+    {
+      "name": "inset_hint",
+      "rect": [
+        71,
+        608,
+        894,
+        33
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center"
+      }
+    },
+    {
+      "name": "status_hint",
+      "rect": [
+        146,
+        702,
+        744,
+        27
+      ],
+      "style": {
+        "skin": "text",
+        "align": "center"
+      }
+    },
+    {
+      "name": "help_popup",
+      "rect": [
+        840,
+        161,
+        1080,
+        745
+      ],
+      "style": {
+        "font_scale": 1.0
+      },
+      "hidden": true
+    }
+  ]
+}

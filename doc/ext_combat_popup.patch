@@ -1,0 +1,68 @@
+OrionLayer open fix 66 — the battle's scan view and board popup on the wire
+===========================================================================
+
+Work order 199 (Part C, step C1). orion2re 121950ed on `orionlayer-local`, on
+top of 9e19c9f3 (open fix 64). src/ext only.
+
+WHAT IS MISSING. Open fix 52 reports the battle's scan view as 66 and its
+board popup as 67, but nothing said what they show. The scan view draws
+MOX::_global_combat_data, the copy of the unit Display_Combat_View_Ship_
+took, and keeps its index in _ship_data_id (cmbtdrw1.cpp:1549-1551); the
+board popup keeps its message, its range and the marines chosen in
+CMBTDRW1::_g_msg, _g_min, _g_max and _g_var (cmbtdrw1.cpp:1581-1666). None
+of it was on the wire, so a client could not draw either, nor see the
+effect of the popup's arrows.
+
+WHAT THE PATCH ADDS. Snapshot section 25, "CPOP", after CMEV, written only
+while a battle is live and the screen is 66 or 67: a version byte, then
+int16 the screen, the battle's serial, the scanned unit (-1 in the popup),
+the popup's min, max and chosen value (0 in the scan view), then a length
+byte and the popup's message (empty in the scan view).
+
+BEHAVIOUR WITHOUT ORIONLAYER: unchanged. The block is read only; nothing
+in the game changes, and nothing is written outside those two screens.
+
+HOW TO REVERT. git revert 121950ed.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 4397e198..8a9a27ce 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1702,6 +1702,37 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         }
+         g_combat_event_sent = g_combat_event_next;
+     }
++
++    // 25. The battle's scan view and board popup: "CPOP", written ONLY while
++    //     one of them is up in a battle (66 or 67, open fix 52's ids), after
++    //     CMEV. OrionLayer, open fix 66.
++    //
++    //     The scan view draws MOX::_global_combat_data, the copy of the unit
++    //     Display_Combat_View_Ship_ took (cmbtdrw1.cpp:1549-1551), and keeps
++    //     its index in _ship_data_id; the board popup keeps its message, its
++    //     range and the chosen marines in CMBTDRW1's _g_msg/_g_min/_g_max/
++    //     _g_var (cmbtdrw1.cpp:1581-1666). None of it was on the wire, so a
++    //     client could not say which unit is scanned, nor show the popup, nor
++    //     see the effect of an arrow. Read only; nothing here changes the game.
++    if (g_combat_live &&
++        (current_screen == SCREEN_EXT_COMBAT_SCAN || current_screen == SCREEN_EXT_COMBAT_BOARD)) {
++        const bool board = current_screen == SCREEN_EXT_COMBAT_BOARD;
++        const char* msg = (board && CMBTDRW1::_g_msg != nullptr) ? CMBTDRW1::_g_msg : "";
++        const size_t len = strnlen(msg, 255);
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'P');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, current_screen);
++        Write16(buf, (int16_t)g_combat_serial);
++        Write16(buf, board ? (int16_t)-1 : MOX::_ship_data_id);
++        Write16(buf, board ? CMBTDRW1::_g_min : (int16_t)0);
++        Write16(buf, board ? CMBTDRW1::_g_max : (int16_t)0);
++        Write16(buf, board ? CMBTDRW1::_g_var : (int16_t)0);
++        Write8(buf, (uint8_t)len);
++        buf.insert(buf.end(), msg, msg + len);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

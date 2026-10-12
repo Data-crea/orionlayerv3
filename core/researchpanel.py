@@ -1,0 +1,341 @@
+"""Drawing the research panel — the eight categories, their rows, the hover.
+
+One implementation for both modes (work order 165 part B). Everything
+is positioned through the `Geometry` the caller hands in, so the panel
+that is 81 px further left is the same code with a different origin —
+which is what `TECH::_Tech_Select_(changing_tech)` itself is.
+
+DRAWING AND HIT-TESTING CANNOT DISAGREE: the screen resolves a click
+back to a native pixel and tests it against `Entry.row_rect`, which is
+the rectangle this module draws in (decision 5).
+
+That guarantees agreement and NOT correctness — the stacked colony
+figures agreed with themselves through 165 of 210 missed clicks
+(decision 5's own amendment). So the smoke check for these screens
+asserts against the DRAWN PIXELS, as work order 128 D did for the
+Planets list: it renders, then picks the visible centre of each row and
+requires the hit test to name that row.
+
+THE ORIGINAL SQUEEZES, HD SHRINKS. `BILL::Squeeze_Print_`
+(tech.cpp:700, :735) compresses the glyphs of a name to fit its width
+rather than clipping it. An HD font cannot be squeezed, so the size
+comes down until the string fits — the same intent, and the nearest
+thing available. DEVIATION, in each screen's marked list.
+"""
+import pygame
+
+from core.hud import blocks as hud
+from core.hud import glyphs
+
+from core import palette
+from core import researchband
+from core import researchlist
+from core import researchnative as geom_mod
+
+#: The smallest the shrink may go before it gives up and clips.
+MIN_FONT = 8
+
+#: THE SECOND COLOUR, and which mode can reach it.
+#:
+#: The original has `TECH::_tech_color[0]` and `[2]`, and uses `[2]`
+#: for the field the player is ALREADY researching and for its chosen
+#: application (tech.cpp:686-696). In SELECT mode that is unreachable:
+#: `Tech_Select_` zeroes `current_research_field` before the list is
+#: built (tech.cpp:104-105), so nothing on the panel is the current
+#: one and every row is drawn in the first colour. In CHANGE mode it
+#: is the point — the field you are on is offered, and it is marked.
+#:
+#: Written down rather than discovered later: while only select mode
+#: existed this module drew one colour and said the second was "not
+#: missing, it has nothing to mark". Change mode is what gives it
+#: something, and `current=(0, 0)` is how select mode keeps saying so.
+#:
+#: The palette section stays `research_select` for both, because there
+#: is one panel and the original has one colour table for it; a second
+#: section would be a second set of numbers to keep equal.
+CURRENT = "field_current", "row_current"
+
+
+def col(key, default):
+    return palette.col("research_select", key, default)
+
+
+#: THE INNER BOXES ARE DRAWN, NOT WORN — work order 166 part C, Data's
+#: verdict on the live panel: the `inner_panel` ARTWORK does not fit
+#: them. They are drawn the way `screens/planets/` draws its boxes, out
+#: of the same two colours and through the same helper, so the two
+#: screens read as one system rather than as two takes on it:
+#:
+#:   the fill     `colony_summary.panel_background`, which is what
+#:                `planetdraw.PANEL_BG` fills its five windows with
+#:   the outline  `panel.thin_border` through `Style.draw_plate`, the
+#:                rounded 1 px plate of decision 51 — `planetdraw`
+#:                draws its headings, controls and status with the
+#:                same call
+#:
+#: Both are read from the section that owns them rather than copied
+#: into this screen's own, because a second copy of a colour is the
+#: copy that goes stale.
+#: The margin between a box's edge and the content inside it, in the
+#: original's own pixels. OURS, so Data's (decision 53): the original
+#: paints its panels into the TECHSEL art and there is no edge to
+#: transcribe.
+#:
+#: **2, AND THE UPPER BOUND IS WHAT SETS IT.** Entry 0's rows end at
+#: native x 313 and entry 1 begins at 322 — a gap of 9 — so the two
+#: margins and the space between the columns come out of those 9 px
+#: together. 166 took 4, which leaves 1 px between the columns: legal,
+#: and on screen the two boxes read as one wide box with a seam. Data's
+#: Nachtrag to 166 asks for a VISIBLE gap and names the default —
+#: less margin around the content rather than a wider box — so 2 it is,
+#: and the columns stand 5 native px apart.
+#:
+#: It buys the button its clearance in the same move: change mode's
+#: exit sits at `y = 452` (`EXIT_BUTTON_Y`, tech.cpp:198-200) and the
+#: bottom row of boxes ended at 450 with a margin of 4. At 2 it ends at
+#: 448, and CANCEL has 4 px of its own.
+#:
+#: Both bounds are asserted rather than trusted, in
+#: `080k_core_the_research_text_fits_its_box` — with the text still
+#: inside its box, which is the floor the margin cannot fall through.
+BOX_MARGIN = 2
+
+#: The box's fill is the HUD panel's since decision 71 (work order 169):
+#: `draw_box` draws a HUD panel, and what lies inside it is this.
+from core.hud import style as _hudstyle
+BOX_FILL = _hudstyle.get().colour("panel.fill")
+BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
+
+
+def draw_box(surface, layout, style, native_rect, popup=False):
+    """One box of the panel: a fill and a rounded outline, in code.
+
+    `native_rect` is a 640x480 rectangle — an entry's block or the list
+    popup's window. Nothing here is a transcription: the original wears
+    TECHSEL artwork in these places and HD has none of it, so the box
+    is the tree's own panel look. DEVIATION, `inner_boxes_drawn`.
+    """
+    rect = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
+    # A HUD PANEL since decision 71 (work order 169): the tree's panel
+    # look is the HUD's now, and this box is still that look.
+    # `popup`: a dialog over the panel (the list popup) wears the HUD
+    # popup block, lit, as every dialog does.
+    if popup:
+        hud.popup(surface, rect, layout.scale)
+    else:
+        # DENSE glass (work order 174): a research list's words dominate.
+        hud.panel(surface, rect, layout.scale, dense=True)
+    return rect
+
+
+def _fit(style, text, max_w, size):
+    """The largest size at or below `size` whose render fits `max_w`."""
+    while size > MIN_FONT:
+        if style.get_font(size).size(text)[0] <= max_w:
+            return size
+        size -= 1
+    return MIN_FONT
+
+
+def _blit_text(surface, style, text, pos, max_w, size, color):
+    """One name, shrunk to fit, through Style.render_text (decision 30).
+
+    Every string here can carry game data — a field name, an
+    application name, a cost — so none of them goes through a bare
+    `font.render`: `render_text` is what falls back per character on a
+    glyph the display font cannot draw.
+    """
+    if not text:
+        return None
+    size = _fit(style, text, max_w, size)
+    surf = style.render_text(text, size, color)
+    surface.blit(surf, pos)
+    return surf
+
+
+def marks_every_row(field, creative):
+    """Whether EVERY application of the current field is marked.
+
+    `Display_Entry_Text_` (tech.cpp:661-666): a Creative player gets
+    every application of the field being researched, and so does any
+    player researching one of the six `_starting_tech_field_ids`
+    (techdata.cpp:548 — the same six the function tests inline). In
+    both cases the original marks all of the entry's rows, not one.
+
+    TRAIT_UNCREATIVE is NOT tested here, and its absence is the
+    transcription: it changes what the player GETS, not what is
+    marked, so an Uncreative player's entry is coloured like any other
+    player's.
+    """
+    return bool(creative) or field in researchlist.ALL_APPLICATIONS_FIELDS
+
+
+def marks_row(names, app, current_app):
+    """Whether the original marks THIS row when only one is marked.
+
+    **THE ORIGINAL COMPARES NAMES, NOT IDS** —
+    `strcasecmp(item->app_names[i],
+    _technology_applications[cur_app].name)`, tech.cpp:697-700 — so two
+    applications that share a name are both marked. Transcribed; where
+    the names are distinct it is the id comparison this was, and where
+    a name is missing it falls back to the id rather than marking
+    nothing.
+    """
+    if not current_app or not app:
+        return False
+    if names is None:
+        return app == current_app
+    mine, theirs = (names.application_name(app),
+                    names.application_name(current_app))
+    if not mine or not theirs:
+        return app == current_app
+    return mine.strip().casefold() == theirs.strip().casefold()
+
+
+def draw_exit(surface, layout, style, native_rect, label, pressed=False):
+    """The exit button, AT THE RECTANGLE THE WIRE REPORTS.
+
+    `Add_Button_Field_(s + 0xBD, 0x1C4, "", TECHSEL 27, "\x1B", '(')`
+    (tech.cpp:208-210; the art loaded at :176) takes its rectangle from
+    that art (fields.cpp:366-367), so the SOURCE has the origin and
+    nothing else — `dev:doc/tech_change_reading.md` §2 had the end as NOT
+    SETTLED until the live list was read. The caller therefore hands in
+    the rectangle it found in the list read NOW, and where there is no
+    such field there is nothing to draw and nothing to click.
+
+    DEVIATION, marked: the word is painted into the button art and
+    `Add_Button_Field_` is passed an EMPTY label string, so there is no
+    string tech.cpp prints for HD to transcribe. It is printed as text
+    until the artwork is extracted — the same deviation the category
+    labels carry, and marked the same way.
+    """
+    box = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
+    # The HUD's small button (decision 71), lit while pressed.
+    hud.small_button(surface, box, layout.scale,
+                     "active" if pressed else "normal")
+    if not label:
+        return box
+    size = _fit(style, label, int(box.width * 0.8),
+                layout.font_size(13))
+    text = style.render_text(label, size, col("exit_label",
+                                              (198, 212, 238)))
+    # The button's glyph beside the word when both fit (work order 179).
+    cx = hud.icon_beside(surface, box, glyphs.for_button("research", "exit"),
+                         text.get_width())
+    surface.blit(text, (cx - text.get_width() // 2,
+                        box.centery - text.get_height() // 2))
+    return box
+
+
+def row_label(layout, style, entry, row, text):
+    """(size, max width, band) for one row's label.
+
+    ONE computation of it, because three callers need the same answer:
+    the drawing below, the live driver that hovers a row and asks where
+    the band came out, and the checks. The band follows the SIZE, which
+    follows the text through the shrink rule, so a caller that took the
+    nominal size would get a band a pixel off on exactly the rows the
+    shrink touches.
+    """
+    label_x, label_y, label_w = entry.app_label_anchor(row)
+    width = geom_mod.window_width(label_x, label_y, label_w, layout)
+    size = _fit(style, text or "", width, layout.font_size(14))
+    return size, width, researchband.band(layout, style, size,
+                                          (label_x, label_y),
+                                          *entry.band_span())
+
+
+def row_text(entry, row, words, names):
+    """What the panel prints on a row — the placeholder or the name."""
+    if entry.placeholder:
+        return words.get("placeholder")
+    return names.application_name(entry.apps[row]) if names else None
+
+
+def draw(surface, layout, style, entries, hover, words, names, wording,
+         current=(0, 0), creative=False):
+    """Draw the eight entries. `hover` is (entry index, row) or None.
+
+    `current` is `(current_research_field, current_research_application)`
+    off the wire — see `CURRENT` above for what it colours and why
+    select mode passes zeros. `creative` is the player's
+    TRAIT_CREATIVE; see `marks_every_row`.
+    """
+    for entry in entries:
+        # ALL EIGHT BOXES, offered or not: `Init_Entry_Data_` adds a
+        # block field for every category and the original draws an
+        # empty panel for one with nothing to offer (tech.cpp:225-231).
+        draw_box(surface, layout, style, entry.panel_box(BOX_MARGIN))
+    for entry in entries:
+        if entry.offered:
+            _draw_entry(surface, layout, style, entry, hover, words,
+                        names, wording, current, creative)
+
+
+def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
+                current, creative=False):
+    is_current = entry.field == current[0] and entry.field != 0
+    every_row = is_current and marks_every_row(entry.field, creative)
+    # The category's own name. The original paints it into the TECHSEL
+    # art; HD prints it, and the WORD is still the game's own —
+    # billtext 64 + group (tech.cpp:802-816). Marked in screen.py.
+    label = wording.group_name(entry.group) if wording else None
+    if label:
+        _blit_text(surface, style, label,
+                   geom_mod.window_point((entry.x, entry.y + 2), layout),
+                   geom_mod.window_width(entry.x, entry.y + 2, 150, layout),
+                   layout.font_size(13), col("category", (128, 148, 186)))
+
+    # The cost, right-aligned where Print_Right_ puts it (tech.cpp:703).
+    # AND IN THE CURRENT FIELD'S COLOUR WHEN IT IS THE CURRENT FIELD.
+    # `Display_Entry_Text_` picks one `color` and prints the field name
+    # (style 4) AND the cost (style 3) in it (tech.cpp:648-657), so the
+    # cost follows the name rather than having a colour of its own.
+    cost_of = words.get("cost")
+    cost = cost_of(entry) if cost_of else None
+    if cost:
+        size = layout.font_size(13)
+        surf = style.render_text(
+            cost, size, col("field_current", (250, 226, 150)) if is_current
+            else col("cost", (188, 204, 236)))
+        cx, cy = geom_mod.window_point(entry.cost_anchor(), layout)
+        surface.blit(surf, (cx - surf.get_width(), cy))
+
+    # The field name, on row 0's own first line (tech.cpp:700).
+    name_x, name_y, name_w = entry.field_name_anchor()
+    _blit_text(surface, style,
+               names.field_name(entry.field) if names else None,
+               geom_mod.window_point((name_x, name_y), layout),
+               geom_mod.window_width(name_x, name_y, name_w, layout),
+               layout.font_size(17),
+               col("field_current", (250, 226, 150)) if is_current
+               else col("field", (226, 234, 250)))
+
+    for row, app in enumerate(entry.apps):
+        label_x, label_y, label_w = entry.app_label_anchor(row)
+        # THE SIZE IS DECIDED BEFORE THE BAND, because the band is
+        # centred on the line this size renders — a name the shrink
+        # rule had to bring down has a shorter line to be centred on.
+        text = row_text(entry, row, words, names)
+        size, width, band = row_label(layout, style, entry, row, text)
+        if hover == (entry.index, row):
+            # The original marks the hovered row with a cycling box and
+            # a little arrow (`Draw_Little_Arrow_`, tech.cpp:740). HD
+            # fills the row instead — INVENTION: MOO2 cycles a palette
+            # index, which an RGB surface does not have.
+            #
+            # THE BAND IS NOT THE CLICK AREA, and it is not the label's
+            # own top edge either: `researchband` centres it on the
+            # capitals-to-baseline line, Data's rule after seeing the
+            # words clinging to the ceiling of it. The click area stays
+            # `row_rect`, transcribed, with the field-name line in it.
+            shade = pygame.Surface(band.size, pygame.SRCALPHA)
+            shade.fill(col("hover", (70, 104, 168, 90)))
+            surface.blit(shade, band.topleft)
+        _blit_text(surface, style, text,
+                   geom_mod.window_point((label_x, label_y), layout),
+                   width, size,
+                   col("row_current", (250, 226, 150))
+                   if is_current and (every_row
+                                      or marks_row(names, app, current[1]))
+                   else col("row", (198, 212, 238)))

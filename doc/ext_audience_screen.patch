@@ -1,0 +1,98 @@
+Engine: the diplomacy audience reports its own screen ids, 57 and 58 (open fix 46).
+
+STATUS: APPLIED 28 September 2026 by work order 186, on Data's approval —
+orion2re 8aea1a25 on orionlayer-local (before: 4af9fefa), this file's
+diff byte for byte (index lines included). Written and proved by work
+order 185, parked there for Data (doc/briefs/185-parked-for-data.md).
+Required by tools/version_check.py since work order 186.
+
+PROOF (work order 185, as written, 28 September 2026): in a scratch worktree of
+orionlayer-local 4bf152e4 with its own build directory (never on
+orionlayer-local itself, never the build play.py starts) this file applied
+with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz, and the
+applied tree equals the scratch commit; the scratch engine was built in
+full (Debug, ORION2RE_EXT=ON) — no error — dip_scrn_main.cpp compiles alone
+with the build's own command, and a control, the same file with
+`ScreenOverride` misspelt `ScreenOveride`, was refused by the compiler.
+See the entry, doc/orion2re_open_fixes.md 46.
+
+PROOF ON THE TIP IT WAS APPLIED TO (work order 186): in a scratch clone
+of orionlayer-local at 4af9fefa this file applied with `patch -p1
+--dry-run` and `patch -p1`, no offset, no fuzz, the applied tree equal to
+it; every changed .cpp compiled alone with the build's own command; the
+control — `ext::ScreenOverride` misspelt `ext::ScreenOveride` in
+dip_scrn_main.cpp — was refused by the compiler.
+RE-CUT for that tip: as written by 185 the ext_api.h hunk applied at
+line 48 (offset 4 lines — fix 45 added four lines above it); the file was
+regenerated from the applied tree, which changed that hunk's position and
+the file's index line and nothing else (every added and context line the
+same), and the re-cut file was proved again from the start.
+Then applied to ~/orion2re, built (ninja, no error) and committed.
+
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+8aea1a25` only after 47's `git revert ba9b6bc6` (47's ext_api.h hunk sits
+on 46's comment), or `patch -R -p1` in the same order; then rebuild. See
+the entry, doc/orion2re_open_fixes.md 46.
+
+WHAT IT IS FOR
+
+    The diplomacy audience has no screen id: DIP_SCRN::Diplomacy_Screen_
+    (the player's, from the Races screen) and Npc_Diplomacy_Screen_ (the
+    AI's — at turn start from report.cpp, on a sneak attack from
+    combfind.cpp) run under their caller's id, 6, 0 or 12, so a client
+    cannot tell the audience is up. The patch makes each report a
+    synthetic id through ext::ScreenOverride (open fix 24's pattern: what
+    is SENT, nothing the game reads): 57 the player's, 58 the AI's. A
+    marker, `OrionLayer, open fix 46.`, on one line at every changed place.
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index c845ab21..045b2e23 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -48,6 +48,12 @@ struct ScreenOverride {
+     ~ScreenOverride();
+ };
+ 
++/// OrionLayer, open fix 46. The diplomacy audience has no screen id and runs under its
++/// caller's (6 the Races screen, 0 a turn-start report, 12 a sneak attack
++/// in turn processing): it reports 57 when the player opened it
++/// (DIP_SCRN::Diplomacy_Screen_) and 58 when an AI asked for it
++/// (DIP_SCRN::Npc_Diplomacy_Screen_), so a client can tell it is up.
++
+ /// The field id of the input Get_Input_() is returning THIS CALL when it
+ /// came from a client's ACTIVATE_FIELD, and 0 when it came from the mouse.
+ ///
+diff --git a/src/game/dip_scrn_main.cpp b/src/game/dip_scrn_main.cpp
+index a534a3b4..e3025c66 100644
+--- a/src/game/dip_scrn_main.cpp
++++ b/src/game/dip_scrn_main.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 46. ScreenOverride for the two audiences.
++#endif
+ 
+ namespace DIP_SCRN {
+     /**
+@@ -1255,6 +1258,10 @@ namespace DIP_SCRN {
+     }
+ 
+     void __cdecl Diplomacy_Screen_(int player_idx) {
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 46. The player's audience reports a synthetic 57 (ext_api.h); the game still reads its caller's screen.
++        const ext::ScreenOverride ext_screen_guard(57);
++#endif
+         _diplomacy_current_music = -1;
+         _synch_up_established_flag = 0;
+ 
+@@ -1352,6 +1359,10 @@ namespace DIP_SCRN {
+         if (MOX::_player[player_idx].eliminated == 1) {
+             return;
+         }
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 46. An audience the AI asked for (turn start, report.cpp; a sneak attack, combfind.cpp) reports a synthetic 58 (ext_api.h).
++        const ext::ScreenOverride ext_screen_guard(58);
++#endif
+ 
+         fields::Deactivate_Help_List_();
+         fields::Enable_Draw_All_Fields_();

@@ -1,0 +1,263 @@
+"""What each turn-time popup shows — open fix 49 (work order 188).
+
+The content half of `core/turnpopup.py` (split for decision 6): from a
+popup (TPOP) and the snapshot, a title, lines, options and buttons, each
+bound to the popup's OWN field — see `core/turnpopup.py` for the rules.
+"""
+DEFAULT_WORDS = {"close": "CLOSE",
+                 "prev": "PREV", "next": "NEXT", "continue": "CONTINUE",
+                 "hire": "HIRE", "reject": "REJECT",
+                 "turn_summary": "TURN SUMMARY",
+                 # the colony combat popup's buttons (work order 232 C:
+                 # MAINPUPS.LBX 0x52, 0x36, 0x37, 0x35, 0x50, 0x4F, 0x3C)
+                 "inv_close": "CANCEL", "inv_invade": "INVADE",
+                 "inv_bomb": "BOMBARD", "inv_destroy": "DESTROY",
+                 "inv_mind_control": "MIND CONTROL",
+                 "inv_drop_all": "DROP ALL", "inv_cease_fire": "HALT",
+                 "inv_bomb_hits": "BOMBARD"}
+
+
+def _star_name(state, index):
+    stars = getattr(state, "stars", None) or []
+    return stars[index].name if 0 <= index < len(stars) else "?"
+
+
+def _planet_name(state, planet_index):
+    from core.structs import planet as planet_struct
+    from screens.colony_summary.colonyrows import star_planet_name
+    planets = getattr(state, "planets_raw", None) or []
+    stars = getattr(state, "stars", None) or []
+    if not 0 <= planet_index < len(planets):
+        return "?"
+    planet = planet_struct.parse(planets[planet_index])
+    if not 0 <= planet.star_index < len(stars):
+        return "?"
+    return star_planet_name(stars[planet.star_index], planet_index)
+
+
+def _leader_name(state, index):
+    from core.structs import leader as leader_struct
+    raw = getattr(state, "leaders_raw", None) or []
+    if not 0 <= index < len(raw):
+        return "?"
+    return leader_struct.parse(raw[index]).name
+
+
+def _leader_words(app):
+    """ESTRINGS and HESTRNGS as the Leaders screen reads them — HESTRNGS
+    the App's one instance (`hestrings.for_app`, D17), cached on the App."""
+    words = getattr(app, "_turnpopup_words", None) if app is not None \
+        else None
+    if words is None:
+        from core import estrings, hestrings
+        from screens.leaders import ldrrows
+        lang = (getattr(app, "settings", {}) or {}).get("language", "en")
+        words = ldrrows.Words(estrings.EStrings(lang),
+                              hestrings.for_app(app) if app is not None
+                              else None, lang)
+        if app is not None:
+            app._turnpopup_words = words
+    return words
+
+
+def leader_card(state, index, app=None):
+    """The hire popup's card (officer.cpp:449-461, :3747-3837): the title
+    `Leader_Name_` prints, the skill rows as `Print_Officer_Data_` does,
+    the portrait, and the question — HESTRNGS 0x124 / 0x125 formatted with
+    the name and the ENGINE'S cost and upkeep (TPOP args 1 and 8)."""
+    from core import leaderskills as ls
+    from core.structs import leader as leader_struct
+    from screens.leaders import ldrrows
+    raw = getattr(state, "leaders_raw", None) or []
+    if not 0 <= index < len(raw):
+        return {"title": "?", "skills": [], "portrait": None,
+                "question": lambda c, u: None}
+    rec = leader_struct.parse(raw[index])
+    words = _leader_words(app)
+    level = ls.shown_level(rec, index, lambda _p: False)
+    title_word = words.estring(ls.level_name_estring(rec, level)) or ""
+    the_word = ldrrows.the_word(words, index)
+    name = ls.leader_name(rec, title_word, the_word)
+    skills = []
+    for sid in ls.displayed_skills(rec):
+        value = ls.c_format(ls.SKILLS[sid][6], ls.skill_bonus(level, sid))
+        skills.append(((words.estring(ls.SKILL_NAME_ESTRINGS[sid]) or ""),
+                       value))
+
+    def question(cost, upkeep):
+        template = words.hstring(0x124 if upkeep == 1 else 0x125)
+        if not template or cost < 0:
+            return None
+        from core.hestrings import printf
+        return printf(template, name, cost, upkeep)
+    portrait = None
+    try:
+        from screens.leaders import ldrart
+        art = ldrart.load()
+        if art is not None and art.available:
+            portrait = art.portrait(rec.pict_num)
+    except Exception:       # absent extraction: no picture, stated
+        portrait = None
+    return {"title": name, "skills": skills, "portrait": portrait,
+            "leader": rec, "question": question}
+
+
+def _tech_name(tech):
+    try:
+        from core import lang, technames
+        # in the language shown (the German walk found this one English)
+        return technames.TechNames(lang.current()).application_name(
+            tech & 0x1FF)
+    except Exception:
+        return None
+
+
+def _field(state, index):
+    return next((f for f in (getattr(state, "fields", None) or [])
+                 if getattr(f, "index", None) == index and index > 0), None)
+
+
+#: TRANSCRIPTION `popup_right` (work order 200 B) — what a right click on a
+#: popup does in the original. The whole-screen help entries:
+#: Turn_Summary_Popup_Help_ 247 (billhelp.cpp:26, turnsum.cpp:151),
+#: the planet choice's 563 (erichelp.cpp:110, mainpups.cpp:1676), the
+#: officer popups' 564 (erichelp.cpp:114, mainpups.cpp:305-309). Per item
+#: (`content`'s "right", a right click on the item's own field, its answer a
+#: box on the wire — `core/rightinfo`): a planet of the discovery or the
+#: defence choice, `Potential_Colony_Info_Popup_` (mainpups.cpp:2013,
+#: :2937-2944 -> mainscr.cpp:2105); a leader offer's HIRE / REJECT, its
+#: `Text_Box_` (mainpups.cpp:954-982), and its skill lines, the skill's
+#: help (`line_right`); the landing, which any input ends
+#: (colland.cpp:227-232). The science room and GNN deactivate help and read
+#: only positive fields (science.cpp:178, events.cpp:2573, :2604): nothing.
+RIGHT_HELP = {"turn_summary": 247, "planet_choice": 563,
+              "leader_level": 564}
+
+
+def content(popup, state, words, app=None):
+    """`{"title", "lines", "options", "buttons"}` for one popup; options
+    and buttons are `(label, action)`, an action `("activate" | "click",
+    field)` or None when that field is not in the live list."""
+    kind, a = popup["kind"], popup["args"]
+    title = popup.get("title")
+    lines, options, buttons = [], [], []
+    picture = leader_rec = None
+    # the right click (`RIGHT`): per option, per button, per table line,
+    # else the popup's
+    right_opts, right_buttons, line_right = [], [], []
+
+    def act(index, how="activate"):
+        f = _field(state, index)
+        return (how, f) if f is not None else None
+    anywhere = next((f for f in (getattr(state, "fields", None) or [])
+                     if getattr(f, "index", 0) > 0 and (f.x, f.y, f.x_end,
+                                                        f.y_end) ==
+                     (0, 0, 639, 479)), None)
+
+    if kind == "science":
+        n = max(0, a[0])
+        names = []
+        i = 3
+        while i < 16 and len(names) < n:
+            tech = a[i]
+            i += 1
+            if tech < 0:
+                continue
+            if tech & 0x4000:            # a weapon-mod entry and its mask
+                i += 1
+                continue
+            names.append(_tech_name(tech) or f"#{tech & 0x1FF}")
+        lines = [f"• {nm}" for nm in names]
+        if popup.get("text"):
+            lines = [""] + lines
+            lines = [popup["text"]] + lines
+        buttons = [(words["continue"], ("activate", anywhere)
+                    if anywhere else None)]
+    elif kind == "turn_summary":
+        page = a[0]
+        for m in popup.get("messages", []):
+            if m["page"] != page:
+                continue
+            target = None
+            if m["jumps"] and m["first_field"] > 0:
+                target = act(m["first_field"], "click")
+            options.append((m["text"], target))
+        if a[1] > 1:
+            buttons.append((words["prev"], act(a[2], "click")
+                            if page > 1 else None))
+            buttons.append((words["next"], act(a[3], "click")
+                            if page < a[1] else None))
+        buttons.append((words["close"], act(a[4], "click")))
+        title = words["turn_summary"]
+    elif kind == "leader_hire":
+        card = leader_card(state, a[0], app)
+        title = card["title"]
+        lines = list(card["skills"])
+        question = card["question"](a[1], a[8])
+        if question:
+            lines += ["", question]
+        picture = card["portrait"]
+        # the HD picture replaces it in the same box (work order 234):
+        # `turnpopup.draw` asks `core.leaderportraits` with this record
+        leader_rec = card.get("leader")
+        # REJECT left, HIRE right, as the popup's own buttons stand
+        # (Update_Random_New_Officer_Fields_, mainpups.cpp:1721-1773)
+        buttons = [(words["reject"], act(a[5], "click")),
+                   (words["hire"], act(a[4], "click"))]
+        right_buttons = [_field(state, a[5]), _field(state, a[4])]
+        # a skill line: its help field (`Add_Skill_Description_Help_
+        # Fields_`, officer.cpp:3893-3968 — 0xBE wide, one per skill in the
+        # order the card lists them), answered by `Print_Officer_Skill_
+        # Help_`'s box (mainpups.cpp:914, officer.cpp:3977-4003)
+        line_right = sorted(
+            (f for f in (getattr(state, "fields", None) or [])
+             if f.field_type == 7 and f.x_end - f.x == 0xBE),
+            key=lambda f: f.y)
+        if a[3] > 0:                    # the tutor's result states
+            buttons = [(words["continue"], act(a[6]) or act(a[5], "click"))]
+            right_buttons = []
+    elif kind in ("planet_choice", "discovery"):
+        sysd = popup.get("system") or {}
+        title = title or _star_name(state, sysd.get("star", -1))
+        if popup.get("text"):
+            lines.append(popup["text"])
+        for slot in sysd.get("planets", []):
+            if slot["planet"] < 0:
+                continue
+            target = (act(slot["field"], "click")
+                      if kind != "discovery" and slot["field"] > 0 else None)
+            options.append((_planet_name(state, slot["planet"]), target))
+            right_opts.append(_field(state, slot["field"])
+                              if kind != "planet_choice" else None)
+        # the original's button reads CLOSE (BUFFER0.LBX, the native frame
+        # of work order 188's planet choice)
+        cancel = {"planet_choice": 4}.get(kind)
+        if cancel is not None:
+            buttons.append((words["close"], act(a[cancel], "click")))
+        else:
+            buttons.append((words["close"], act(a[2])))
+    elif kind == "leader_level":
+        lines = [_leader_name(state, a[0])]
+        buttons = [(words["close"], act(a[3]) or (
+            ("activate", anywhere) if anywhere else None))]
+    elif kind == "gnn":
+        title = title or "GNN"
+        if popup.get("text"):
+            lines = [popup["text"]]
+        buttons = [(words["continue"], ("activate", anywhere)
+                    if anywhere else None)]
+    elif kind == "landing":
+        title = title or _planet_name(state, a[0])
+        buttons = [(words["continue"], act(a[3]) or (
+            ("activate", anywhere) if anywhere else None))]
+        right_buttons = [_field(state, a[3]) or anywhere]
+    right = [("field", f) if f is not None else None for f in
+             right_opts + [None] * (len(options) - len(right_opts)) +
+             right_buttons + [None] * (len(buttons) - len(right_buttons))]
+    return {"title": title, "lines": lines, "options": options,
+            "buttons": buttons, "right": right, "line_right": line_right,
+            "right_help": RIGHT_HELP.get(kind),
+            "picture": picture if kind == "leader_hire" else None,
+            "leader": leader_rec if kind == "leader_hire" else None}
+
+

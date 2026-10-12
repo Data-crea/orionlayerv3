@@ -1,0 +1,34 @@
+{
+  "_comment": "Right-click help for the ground combat, transcribed from _colony_ground_combat_screen_help (colgcbt.cpp:5-9, {help_id, x1, y1, x2, y2}), installed by Set_Help_List_ (:275-277). First hit wins: the two summary boxes, then 540 for the whole screen. 541 and 542 stand over HD's two panels (screen.help_extra_rect).",
+  "_source": "orion2re orionlayer-local, colgcbt.cpp:5-9",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 541,
+      "native": [
+        1,
+        40,
+        260,
+        185
+      ]
+    },
+    {
+      "help_id": 542,
+      "native": [
+        378,
+        40,
+        639,
+        185
+      ]
+    },
+    {
+      "help_id": 540,
+      "native": [
+        0,
+        0,
+        639,
+        479
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1012 @@
+"""The row's geometry: where every box in a colony row is.
+
+Split out of `colonylist` on 6 September 2026, when that file stood
+at exactly 300 code lines against the ~300 guideline (decision 6) and
+the row's box arithmetic had to go somewhere. The seam is real
+rather than a
+place to cut: this tree already separates the NUMBERS
+(`colonyrows`) from the DRAWING (`colonylist`), and what sat between
+them unnamed was the ARITHMETIC — how many rows fit, where the track
+starts, which slot a pixel is in, which job a click names.
+
+**IT IS ALSO DECISION 5'S HOME.** "One function produces the rect;
+drawing and clicking both call it" is only enforceable if there is
+one place the rect comes from. The drop targets were two copies of a
+thirds calculation that agreed with each other and disagreed with the
+cells until 5 September; that could happen because the geometry was
+scattered through a drawing module. Everything here is a pure
+function of (area, cfg, scale, row) and nothing here draws.
+
+Nothing in this module imports pygame for rendering — `Rect` is used
+as a value type and that is all.
+"""
+import collections
+
+import pygame
+
+from core import zoomtables
+
+from .colonyrows import POP_LIMIT_CAP
+
+
+#: What is left of the row's own measurements once the columns are
+#: boxes and the band is the window divided by the row count: the
+#: gutter between two cells, and nothing else. **NINE VALUES DIED
+#: HERE on 8 September 2026** — `row_height`, `pad_x`, `pad_y`,
+#: `name_width`, `name_gap`, `bar_height`, `tail_width`,
+#: `building_width` and `growth_gap`. Every one of them answered a
+#: question a box or the row count now answers, and a tuned number
+#: that agrees with a derived one is the second copy decision 5 is
+#: about.
+Track = collections.namedtuple("Track", "gap band_h")
+
+
+def track_metrics(area, cfg, scale):
+    """The row's two remaining measurements.
+
+    `band_h` is the window divided by `list.row_count` — TEN, the
+    original's own window (`_list_col[10]`, colsum.cpp:348) — and it
+    is what the figure step, the cell, the plate and the drop rect
+    are all derived from. `gap` is the gutter a crowded column gives
+    up first (see `_column_boxes`).
+    """
+    return Track(gap=max(1, int(cfg.get("square_gap", 2) * scale)),
+                 band_h=band_height(area, cfg))
+
+
+def band_height(area, cfg):
+    """The row band — `list_area` height divided by the row count.
+
+    One expression, one home. TEN rows at every resolution because
+    that is the original's window and not a number that looked right:
+    `COLSUM::_list_col[10]` and `Update_Col_List_` fills exactly that
+    many (colsum.cpp:348). The remainder goes to the LAST band, the
+    same rule the columns and the header plates use, so the rows tile
+    the window exactly instead of leaving a strip nothing owns.
+    """
+    from core import listgrid
+    return listgrid.band_height(area, int(cfg.get("row_count", 10)))
+
+
+def figure_step(area, cfg):
+    """The largest sprite step whose figure's INK fits one band.
+
+    **DERIVED, never declared** — the hand-written per-resolution
+    table is gone. A master is 28 px (decision 50) and a step is an
+    integer swap (decision 28).
+
+    **THE RULE CARRIES TWO SEPARATE FACTS AND THEY MUST NOT BE
+    MERGED.** One is a transcription of where the original puts the
+    figure; the other is a measurement of what the plate needs. They
+    happen to point the same way today, which is exactly why the
+    weaker one would be "simplified" away by a later reader.
+
+    1. THE ORIGINAL LEAVES ROOM ABOVE ITS FIGURES — TRANSCRIBED, and
+       **it is no longer where ours are anchored** (12 September 2026,
+       see `figure_origin_y`). The original's ICON ROW is `31*i + 38`
+       (`Draw_Info_Pop_For_`, colsum.cpp:685, and both hit tests pass
+       the same) against a FIELD of `31*i + 35` … `31*i + 65`
+       inclusive (colsum.cpp:283-291) — THREE native px, not the four
+       this constant says; see `FIGURE_TOP_NATIVE` for where the
+       fourth came from. The number is kept at 4 because what it does
+       here is measure the FIT, and one row of margin in the fit is
+       not a thing to trim on the day the anchor moves.
+
+    2. THE PLATE'S TOP LINE NEEDS ONE PIXEL — MEASURED. The cell
+       plate is a 1 px line and 46 of the 54 masters carry ink on
+       canvas row 0 (re-measured over the whole set, 9 September
+       2026), so a figure blitted at the band's own top would paint
+       over it.
+
+    Fact 1 subsumes fact 2 at every step the tree can produce —
+    `4 * step >= 1` for all of them — so the clearance is not what
+    binds today. **It is still true and it is still why a step of
+    zero would be wrong**, and if the transcription is ever revisited
+    the clearance is the floor underneath it.
+
+    THE BOTTOM NEEDS NOTHING, and that is the same measurement the
+    row clip rests on: every master has at least `INK_BOTTOM_MIN`
+    transparent rows below its ink, so the canvas may overhang the
+    band by that much and lose no ink.
+
+    So the band must hold `4 + 28 - 3 = 29` master rows per step.
+
+    **SINCE THE ANCHOR MOVED TO THE FLOOR, 28 WOULD DO** — the canvas
+    is placed inside the band and cannot overhang either edge. 29 is
+    kept deliberately: it is one row of slack, it is what every
+    shipped step was chosen under, and relaxing it would change the
+    step at window sizes nobody has looked at. It is also what
+    guarantees `figure_origin_y` stays inside the band, since
+    `band >= 29 * step` gives `band - 28 * step >= step`.
+    """
+    band = band_height(area, cfg)
+    need = FIGURE_TOP_NATIVE + 28 - INK_BOTTOM_MIN
+    fits = [s for s in zoomtables.FIGURE_STEPS if need * s <= band]
+    return max(fits) if fits else min(zoomtables.FIGURE_STEPS)
+
+
+#: The cell plate's line, in device px — `StyleRenderer.draw_plate`
+#: draws width 1 at every resolution. Kept because it is a different
+#: fact from `FIGURE_TOP_NATIVE` and only one of the two is a
+#: transcription; see `figure_step`.
+PLATE_LINE = 1
+
+#: How far below the BAND's top the figure starts, in native px, per
+#: step. **NO LONGER THE ANCHOR — 12 September 2026, see
+#: `figure_origin_y`.** It is what `figure_step` still measures the
+#: fit with, and it is kept for that and for the record.
+#:
+#: TRANSCRIBED, and the transcription was one px out: icon row
+#: `31*i + 38` (`Draw_Info_Pop_For_`, colsum.cpp:685) against a field
+#: that starts at `31*i + 35` and not 34 — `y_row_end` begins at 65
+#: and `y1 = y_row_end - 30` (colsum.cpp:283-291). The 34 is the
+#: coordinate `Add_Fields_Pop_For_` passes with MODE 1
+#: (colsum.cpp:336), and mode 1 of
+#: `Do_Colony_Info_Pop_Stuff_For_Pop_` fills `pop_index_by_slot` and
+#: never reads `top_y` (coldraw.cpp:281-380). So the original's own
+#: gap between band top and canvas top is THREE, not four.
+FIGURE_TOP_NATIVE = 4
+
+#: The master's canvas, native px. All 54 are 28 x 28 (decision 50).
+#: Declared here because both of this module's figure rules need it
+#: and `colonyfigures` imports THIS module, not the other way round;
+#: a smoke check holds this to `colonyfigures.MASTER_SIZE` so the two
+#: cannot drift (decision 36).
+MASTER_ROWS = 28
+
+#: How much bigger than the integer step's canvas a derived size has
+#: to be before the pixel grid is given up for it: a QUARTER of a
+#: master row, `MASTER_ROWS // 4` device px.
+#:
+#: **THIS IS WHAT KEEPS THE INTEGER SIZES BYTE-IDENTICAL.** At
+#: 1920x1080 the band is 58 and the room is 57 against a 56 px canvas
+#: — one pixel, 1.8 % of the figure's height, for a sprite that stops
+#: being the game's own pixel grid. At 3840x2160 it is three of 112.
+#: Both keep the integer step and nothing about them changes. At
+#: 2560x1440 the room is 76 against 56 and at 3440x1371 72 against 56;
+#: those are 36 % and 29 %, which is the quarter-empty row this
+#: deviation exists for.
+FIGURE_SIZE_SNAP = MASTER_ROWS // 4
+
+#: Native px between the sprite's canvas BOTTOM and the band's, per
+#: step. **MEASURED, AND IT IS ZERO.** It is no longer what the
+#: anchor uses — `figure_origin_y` places the INK, not the canvas —
+#: and it is kept because it is the measurement that says the two
+#: are the same thing at native scale and only there:
+#:
+#:   the band is `31*i + 35` to `31*i + 65` INCLUSIVE — `y1 =
+#:   y_row_end - 30` with `y_row_end` starting at 65 and stepping 31
+#:   (colsum.cpp:283-291), and a field's `y_end` is its LAST row, not
+#:   one past it (`field->y <= y && y <= field->y_end`,
+#:   fields.cpp:708 and :1268; `y_end = y + height - 1` at :332).
+#:   So the band is 31 rows and the rows tile the pitch exactly.
+#:
+#:   the canvas is `31*i + 38` plus 28 = `31*i + 38` to `31*i + 65`.
+#:
+#: The canvas's last row IS the band's last row. On the framebuffer
+#: (`evidence/colony_summary_native_split.png`, the natives fixture,
+#: Elerian) row 0 reads: top line at native 35, ink 38..61, the
+#: plate's border at 62-63, the next row's top line at 66 — and the
+#: Elerian farmer master inks rows 0..23 of its 28, so its canvas is
+#: 38..65 and the four rows it ends with are the transparent tail.
+#: Ink-to-border is 0 interior rows; canvas-to-band-bottom is 0.
+FIGURE_BOTTOM_NATIVE = 0
+
+#: Transparent canvas rows below the ink, over all 54 masters, worst
+#: case. MEASURED 9 September 2026 (min 3, on the three Bulrathi;
+#: max 4). The canvas may overhang the band by this much and lose
+#: nothing — which is what lets the band be 29 rows rather than 32,
+#: and is the same measurement the row clip already rests on.
+INK_BOTTOM_MIN = 3
+
+
+#: `runs` is (zone, start_slot, count) per profession — the squares
+#: fill them. `filled`..`reach` is the free region, `reach`..
+#: POP_LIMIT_CAP the unreachable one.
+#:
+#: `spans` is the same thing for ALL THREE zones including the empty
+#: ones, as (start_slot, count) in ECON order. `runs` drops the
+#: empties because nothing draws them; `drop_targets` needs to know
+#: WHERE an empty group would have been, and computing that a second
+#: time is how the drawing and the hit test start to disagree.
+Regions = collections.namedtuple("Regions", "runs filled reach spans")
+
+
+#: The key `cfg` carries the column table under. The screen binds the
+#: six column BOXES into its `list` block on load
+#: (`colonyheader.install_columns`), so the table travels with every
+#: other row value and there is no module state to leak between one
+#: caller and the next — which a global would do the moment one check
+#: rendered the real screen and the next used a synthetic fixture.
+COLUMNS_KEY = "columns"
+
+#: The key `cfg` carries `list_area`'s own REFERENCE rect under, as
+#: `(ref_x, ref_width)`. Bound beside the table by the same call, so
+#: the cutout a column is a fraction of travels with the columns and
+#: cannot be a second lookup that misses.
+COLUMNS_SPAN_KEY = "columns_span"
+
+
+def columns(area, cfg):
+    """{key: (x, width)} in SCREEN px, from the six column BOXES.
+
+    Empty when `cfg` carries no column table, and the single-track
+    arithmetic runs then — which is what the synthetic fixtures in
+    the checks exercise, and what the row was before Stage 4.
+
+    **THE BOXES ARE THE COLUMNS — 8 September 2026.** `cfg[COLUMNS_KEY]`
+    holds `[(key, Box)]`, live objects, so a column dragged in the F3
+    editor moves the cells, the plates, the drop rects and the
+    heading above it on the same frame. It used to hold
+    `[(key, ref_width)]` baked out of `layout_reference.json` at
+    screen load, tiled here, and tiled a SECOND time in
+    `plate_rects` — two arithmetics that agreed by construction and
+    could not be edited.
+
+    **THE COLUMN IS A FRACTION OF THE CUTOUT, NOT A POSITION IN THE
+    WINDOW — 9 September 2026.** What is read off a box is its
+    REFERENCE left edge, and it is mapped into `area`, which is
+    `list_area` resolved through the same `Layout.rect` call the
+    frame image went through (`screen._scale_frame`, removed with the
+    frame images' loader by work order 189). Both edges of
+    every column therefore come out of one rect that is recomputed
+    every frame.
+
+    Until this date the left edge came from `Box.screen_rect`, which
+    `Box.update_layout` writes ONCE per layout change. That is a
+    device coordinate with a lifetime, and it outlived the window:
+    `ScreenBase.on_resize` calls `_reload_boxes`, which REPLACES
+    `screen.boxes` with new objects, while the table bound at
+    `enter()` went on pointing at the discarded ones. Measured on
+    8 September 2026 at all four window-size presets — after any resize away
+    from the start size the six columns kept the start size's device
+    x (105, 408, 751, 1112, 1452, 1767) while `list_area` and the
+    frame followed the new one. At 2560x1440 the frame's left rail
+    was then drawn over the NAME text; at 3440x1440 the columns sat
+    on the letterbox bar outside the frame entirely; and `col_scroll`,
+    being the remainder, swelled from 35 px to 635, 1075 and 1837.
+    Every value on the screen stayed correct, which is why it lived
+    a day.
+
+    **ONLY THE LEFT EDGE IS READ, and the width is the distance to
+    the next column.** A box carries four numbers and three of them
+    would be a second answer: the y and height are `list_area`'s
+    because a column is a strip of the list, and the WIDTH is the
+    gap to its neighbour because the six have to tile the window
+    exactly. Reading the stored width instead opened a one-pixel seam
+    at 1280x720 and 2048x1152 — `Box.update_layout` truncates x and
+    width independently, so `int(x*s) + int(w*s)` and
+    `int((x+w)*s)` disagree wherever the fractions add up. Mapping
+    both edges through `area` with one expression makes the tiling
+    true by construction rather than by two roundings agreeing: the
+    first column starts at `area.x` because its offset into the
+    cutout is zero, and the last ends at `area.right` because the
+    span's end is the cutout's end.
+
+    What that means at the editor: dragging a column moves a
+    BOUNDARY, and its neighbour follows.
+    `colonyheader.sync_columns` writes the derived width and the
+    window's y and height back into the boxes, so the outline shows
+    what the geometry did rather than what was dragged.
+    """
+    # THE ARITHMETIC IS `core.listgrid.columns` since 13 September 2026
+    # (brief 101), shared with the Planets list; this keeps the colony
+    # screen's cfg keys and its name.
+    from core import listgrid
+    return listgrid.columns(area, cfg.get(COLUMNS_KEY) or (),
+                            cfg.get(COLUMNS_SPAN_KEY))
+
+
+#: The three job columns, in ECON order, as they are keyed above.
+JOB_KEYS = ("farmers", "workers", "scientists")
+
+
+def row_regions(row):
+    """The three job groups of one row, in CELL counts.
+
+    `runs` is (zone, first_cell_index, count) for the jobs that hold
+    pops, `spans` the same for all three including the empty ones,
+    `filled` the pops drawn and `reach` how many the colony could
+    hold. **None of these are slots any more** — the column layout
+    lays each job's cells inside its own column, so `row_boxes` is
+    what turns a cell index into a rectangle and this counts.
+
+    Zones are laid down in ECON order and clipped at POP_LIMIT_CAP,
+    which the engine cannot pass either. Cells past `max_pop` are
+    kept, not clipped: a pop is a fact, `max_pop` a computation with
+    two documented deviations (`colonyrows.max_population`), so they
+    stay visible and the disagreement stays visible with them.
+
+    The count is `row["cells"]` where the row carries it — one entry
+    per ICON, in the original's own draw order (decision 48) — and
+    falls back to `row["jobs"]` for a row built without it, which is
+    every synthetic fixture in the checks.
+    """
+    cells = row.get("cells")
+    runs, spans = [], []
+    used = 0
+    for zone in range(3):
+        count = (len(cells[zone]) if cells is not None
+                 else row["jobs"][zone])
+        n = max(0, min(count, POP_LIMIT_CAP - used))
+        spans.append((used, n))
+        if n:
+            runs.append((zone, used, n))
+        used += n
+    return Regions(runs=tuple(runs), filled=used,
+                   reach=max(0, min(row["max_pop"], POP_LIMIT_CAP)),
+                   spans=tuple(spans))
+
+
+#: One row's boxes, all of them, in screen pixels.
+#:
+#: `cells` is what is drawn; `targets` is the three job rects a drop
+#: is tested against, and `name` is the fourth target — the colony
+#: name's own column, which the original accepts a drop on as "put
+#: them back" (`Send_Cluster_(colony, -1)`, colsum.cpp:909).
+#:
+#: **THE `growth` AND `beyond` FIELDS ARE GONE — 21 September 2026,
+#: work order 157.** They were the dashed capacity boxes and the faint
+#: line past `max_pop`, and both belonged to the HD allocation bar,
+#: which was an INVENTION: the original's row draws population sprites
+#: and nothing else (`Do_Colony_Info_Pop_Stuff_For_Pop_`,
+#: coldraw.cpp:282). `514ebb2` replaced the bar with six column boxes
+#: on 8 September and `row_boxes` has returned `()` and `None` for
+#: both ever since — unmarked empty fields left over from a removed
+#: invention are residue, so they went. See `_column_boxes` for the
+#: design question they used to stand for, which is still open.
+#:
+#: **THE `markers` FIELD IS GONE — 8 September 2026.** It carried the
+#: three F/W/S squares, which were an HD EXTENSION standing in for
+#: headings a column-less row could not have. Stage 4 gave the row
+#: five real columns with the original's own headings above them, so
+#: the stand-in had nothing left to stand in for, and its own marking
+#: said as much: "whether they stay is Stage 5's call". Removed with
+#: the marking, in this commit, and the drop target did not move with
+#: them — it was already the whole column (see `_column_boxes`).
+RowBoxes = collections.namedtuple(
+    "RowBoxes", "name cells targets run_right")
+
+
+def row_boxes(area, cfg, scale, row, band=None):
+    """THE row geometry. Everything that draws or hits calls this.
+
+    `band` is the (top, height) `row_bands` gave for this row; without
+    it the rects carry x and width only and their y is 0, which is
+    what a hit test wants and what the layout checks read.
+
+    **NO JOB MARKERS — REMOVED 8 September 2026.** Three grey F/W/S
+    squares used to head each group. They were an HD EXTENSION with
+    one argument behind them: a row without columns cannot carry a
+    heading, so a colony with everyone farming drew a run of squares
+    and nothing said the other two jobs existed. Stage 4's five
+    columns and the headings above them answer that, and the marking
+    itself named this as Stage 5's call. The cells now start at their
+    column's own left edge, which is where the original starts its
+    icons — `(30 - squish) * i + left_x` with `left_x` the column
+    (coldraw.cpp:349).
+
+    **THE EMPTY-COLUMN DROP DID NOT DEPEND ON THEM.** In the column
+    layout the target has always been the whole column rect, which is
+    what the original's own per-row job field is (`Add_Scroll_Field_(
+    left_x, top_y, …, right_x - left_x + 8, 30, …)`,
+    coldraw.cpp:409, added in mode 1 whether or not the column holds
+    an icon). This path — the single-track fallback, which only the
+    synthetic fixtures reach — cannot say that: with no marker and no
+    cells a job's target is empty, and `drop_band` answers None.
+    Stated rather than papered over, because an invisible placeholder
+    is exactly what this removal was for.
+
+    **The growth boxes belong to the COLONY, not to a job**, so they
+    follow all three groups after a fixed gap (`list.growth_gap`,
+    a layout value and not a side effect of some other number).
+    """
+    track = track_metrics(area, cfg, scale)
+    top, height = band if band else (0, 0)
+    cols = columns(area, cfg)
+    if not cols:
+        # NO COLUMNS, NO ROW. The single-track geometry is gone with
+        # the nine tuned values it was measured from (see `Track`);
+        # a caller without the column boxes gets nothing rather than
+        # a second layout that looks almost right.
+        return RowBoxes(None, (), (), area.x)
+    return _column_boxes(cols, cfg, scale, row, top,
+                         height or track.band_h, track,
+                         figure_scale(area, cfg))
+
+
+def _column_boxes(cols, cfg, scale, row, y, h, track, step):
+    """One row laid out in the five columns — the Stage 4 geometry.
+
+    **THE PITCH IS THE ORIGINAL'S OWN, SCALED.** Each job column's
+    cells are laid at `colonyicons.column_pitch(job, count)`, which is
+    `COLDRAW::Calculate_Squish_Step_` (coldraw.cpp:12-33) transcribed,
+    multiplied by this column's HD width over its NATIVE width. So a
+    column that squeezes in the original squeezes here, by the same
+    amount, and a column that does not is drawn at the full 30-unit
+    pitch. The HD row is the original's walk under a scale factor
+    rather than a second layout that happens to look like it.
+
+    **IDENTITY IS BY INDEX, NOT BY POSITION, and that is what makes
+    the drawing free** (decision 48). Cell k of job j is slot k of the
+    game's own column j: `colonysend` injects
+    `colonyicons.slot_click_x(j, k, count)`, a NATIVE x computed from
+    the same `column_pitch`. Nothing here is transferred into that
+    call — the two share the index and the count, and the pixel each
+    works in is its own. A cell drawn anywhere in its column would
+    still click correctly; drawn at the original's pitch it also
+    LOOKS like the thing it clicks.
+
+    **THE CELLS START AT THE COLUMN'S OWN LEFT EDGE.** They used to
+    start one marker's width in; the markers are gone (see
+    `RowBoxes`) and the first cell moved left with them, which is
+    also where the original puts its first icon — `left_x` is the
+    column, `(30 - squish) * i + left_x` the slot (coldraw.cpp:349).
+
+    **THE DROP TARGET IS THE WHOLE COLUMN AND ALWAYS WAS**, which is
+    why removing the markers cost no click target and no invisible
+    button was kept in their place. It is the original's own field:
+    mode 1 adds `Add_Scroll_Field_(left_x, top_y, left_x, right_x + 8,
+    left_x, right_x, right_x - left_x + 8, 30, …)` (coldraw.cpp:409)
+    for every row and every job, unconditionally — the walk before it
+    may have emitted nothing, and the field is added anyway, so an
+    EMPTY column accepts a drop in the original exactly as it does
+    here.
+
+    **THE DEVIATION IN HEIGHT IS CLOSED — 8 September 2026.** The
+    drop rect was `bar_h`, 30 reference px of a 58 px row, 52 % of
+    the band, where the original's field is 30 px of a 31 px row
+    pitch (`top_y = 31*i + 34`, colsum.cpp:311, height 30) — 97 %.
+    A click in the outer 14 reference px of a row discarded the
+    selection where the original would have dropped. **The target is
+    the whole band now**, because the plate rect is the drop rect is
+    the cell rect and all three are `column x band` (decision 5).
+    Recorded as closed here, in `layout.json` under
+    `move._drop_target_note`, and in `dev:v3_projektstatus.md`.
+
+    **A PER-ROW CAPACITY DISPLAY IS AN OPEN DESIGN QUESTION FOR DATA.**
+    Not a gap to be filled by whoever reads this next, and not a
+    transcription waiting to be finished — there is nothing to
+    transcribe. The original shows headroom ONLY as a number, in the
+    bottom-left scan box, and only for the colony being scanned:
+    `Population (13/22)` from `E_Strings_(74)`, drawn by
+    `Draw_Colony_Scan_Info_` (colsum.cpp:1155, values at :1196-1205).
+    A row never carries it. **So a per-row display would be an HD
+    EXTENSION and would have to be marked as one**, in the same family
+    as the per-row detail line (`colonylist`, `list._hd_extension`).
+
+    What made it a question in the first place: they belong to the
+    COLONY and not to a job, so in a row that is three job columns
+    there is no place for them that is not a lie — a dashed box inside
+    the scientists column says "scientists", which is what spare
+    capacity is not.
+
+    **If it comes, it is built new against the six column boxes**, and
+    it does not bring back `growth`, `beyond` or `growth_gap`. Those
+    were parts of the allocation bar, which was an INVENTION and is
+    gone; a display built on a track that no longer exists would be a
+    second geometry beside the columns, which is the fault decision 5
+    is about.
+
+    **Where the old code is**, for anyone who wants to look at what it
+    drew rather than re-imagine it: the bar itself at `514ebb2`'s
+    parent, the two empty fields at work order 157's commit for 156's
+    part C.
+    """
+    from core import box
+    from . import colonyicons
+    regions = row_regions(row)
+    cells, targets = [], []
+    for job, key in enumerate(JOB_KEYS):
+        cx, cw = cols[key]
+        n_left, n_right = colonyicons.COLUMNS[job]
+        count = regions.spans[job][1]
+        # ONE PIXEL INSIDE THE PLATE'S LINE, and it is transcribed.
+        # The original's icons start at `left_x` — 101 / 236 / 378 —
+        # and its drawn cell boxes start at 100 / 235 / 377, measured
+        # on `colony_summary_native_split.png`. So the first icon sits
+        # exactly one pixel inside the box's own line, which is what
+        # keeps the line visible with a full column. The same `+1` at
+        # the top is what `figure_step` reserves.
+        start = cx + PLATE_LINE
+        room = max(1, cw - 2 * PLATE_LINE)
+        # THE FACTOR IS THE SPRITE STEP, NOT THE COLUMN RATIO.
+        # The step is the integer a 28 px native figure is drawn at
+        # (decision 26), derived from the band, and the stacking decision
+        # is that HD's extra width goes into the column RESERVATION
+        # and never into figure spacing. Scaling the pitch by the
+        # column ratio instead — 342 : 125, about 2.7 at 1080p —
+        # spends that reservation on spacing, and every cell and every
+        # drop target would move again the day Stage 3 draws sprites
+        # at the step. Corrected 7 September 2026; it was the ratio
+        # for one stop.
+        # ONE HOME for the step: `figure_step` above answers it from
+        # the band, `colonyfigures.FigureSet` loads the sprites at
+        # what it says, and a pitch and a sprite that disagree are a
+        # picture nothing would report. It was a hand-written table
+        # per resolution until 8 September 2026, which could agree
+        # with the band or not and nothing checked.
+        pitch = min(colonyicons.column_pitch(job, max(count, 1)),
+                    colonyicons.ICON_SPACING) * step
+        # AND A CLAMP THAT CAN EXPIRE, decision 44's shape. The
+        # original's own run is at most `right_x - left_x - 10` native
+        # px (the `spacing / -3` term in Calculate_Squish_Step_), so at
+        # the step it needs that times the step. Every supported
+        # window reserves more than that except 1280x720, where the
+        # reservation is 229 device px against 230 needed — see the
+        # status document for the table. Written as a min so the
+        # deviation ends the day the reservation is wide enough,
+        # rather than as a special case for one window.
+        if count and start + count * pitch > cx + cw - PLATE_LINE:
+            pitch = room / float(count)
+        # CELLS MAY NOT OVERLAP, and the arithmetic has to guarantee
+        # it rather than the numbers happening to. `int((k+1)*p) -
+        # int(k*p)` is either floor(p) or floor(p)+1, so a width of
+        # floor(p) can never reach the next cell. The gap is given up
+        # before the width is, because a cell narrower than a pixel is
+        # not a cell — at a small window a crowded column draws its
+        # squares touching, which is what the original's own squish
+        # does with its icons.
+        step_i = max(1, int(pitch))
+        gap = track.gap if step_i > track.gap + 1 else 0
+        cell_w = max(1, step_i - gap)
+        for k in range(count):
+            cells.append((job, k, pygame.Rect(
+                start + int(k * pitch), y, cell_w, h)))
+        targets.append((job, pygame.Rect(cx, y, cw, h)))
+    name = None
+    if "name" in cols:
+        nx, nw = cols["name"]
+        name = pygame.Rect(nx, y, nw, h)
+    return RowBoxes(name, tuple(cells), tuple(targets),
+                    cols[JOB_KEYS[-1]][0] + cols[JOB_KEYS[-1]][1])
+
+
+def drop_targets(area, cfg, scale, row):
+    """(job, Rect) per job — the whole column cell.
+
+    One rect per job and never two boxes that look alike and behave
+    differently, which is the trap decision 5 is about. It is the
+    original's own field: `Add_Scroll_Field_(left_x, top_y, …,
+    right_x - left_x + 8, 30, …)` (coldraw.cpp:409), added per row
+    and per job whether or not the column drew an icon, which is why
+    an empty column is a target here too.
+    """
+    return row_boxes(area, cfg, scale, row).targets
+
+
+def name_rect(area, cfg, scale, row):
+    """The colony name's own column — the FOURTH drop target, or None.
+
+    TRANSCRIBED. A drop on the name field is `Send_Cluster_(colony,
+    -1)` (colsum.cpp:909), and on the colony the cluster came from
+    that is the re-flag branch: `requested_job == -1` sets `0x200`
+    back and consults no rule (colmove.cpp:161-165), so the array
+    ends exactly as it started. It is the original's "put them back",
+    and it is the nearest thing this screen has to a cancel that is
+    not a leave-the-screen path.
+    """
+    return row_boxes(area, cfg, scale, row).name
+
+
+def on_name(area, cfg, scale, row, x):
+    """Is `x` over the colony name's column?"""
+    rect = name_rect(area, cfg, scale, row)
+    # `rect is None`, NOT `not rect`: a pygame.Rect of zero HEIGHT is
+    # falsy, and `row_boxes` is called without a band for every hit
+    # test — that is the whole point of the no-band form, and it
+    # would make this answer False for every click on the name.
+    if rect is None or not rect.width:
+        return False
+    return rect.x <= x < rect.x + rect.width
+
+
+def drop_band(area, cfg, scale, row, x):
+    """Which job `x` names while a pick is held, or None.
+
+    Outside all three is None, and None is a state: it discards the
+    selection rather than dropping. The growth boxes are outside —
+    they belong to the colony, not to a job.
+    """
+    for job, rect in drop_targets(area, cfg, scale, row):
+        if rect.width and rect.x <= x < rect.x + rect.width:
+            return job
+    return None
+
+
+def pick_zones(area, cfg, scale, row, figures=None):
+    """[(job, index, x0, x1)] — the x span a click picks each pop up in.
+
+    **THE ONE HOME FOR WHERE A FIGURE IS CLICKED, and it is built from
+    the same `row_boxes` the renderer blits at (decision 5).** Without
+    figures a zone is the coloured cell as drawn.
+
+    **WITH FIGURES A ZONE IS THE FIGURE AS SEEN.** The sprite is blitted
+    at the slot's left edge and runs past it (the overlap of a squished
+    column), its ink starts a master column or more into the canvas, and
+    a later figure hides an earlier one only where its own ink is — its
+    transparent columns let the earlier figure show through. So the
+    zones are measured on the sprites themselves, in drawing order
+    (later on top) and at the renderer's own y (`figure_origin_y`): each
+    figure's VISIBLE ink has a centre column, neighbours meet halfway
+    between their centres, the first zone starts at its slot's edge and
+    the last ends at its last inked column. A click on the centre of
+    what is visible of a figure picks up that figure, at every count and
+    every squish; the smoke test holds it for 1..20 figures.
+
+    **THE COVERING FIGURE KEEPS THE OVERLAP, AS IN THE ORIGINAL — measured
+    on the ink instead of the canvas, and that is a DEVIATION.**
+    `Do_Colony_Info_Pop_Stuff_For_Pop_` mode 3 (coldraw.cpp:362-366)
+    takes the first icon, in drawing order, with `x <= (30 - squish) *
+    (index + 1) + left_x`: a strip from each icon's left CANVAS edge to
+    the next one's, so the later-drawn icon owns from its own canvas
+    edge on. With 56 px and larger sprites that put a seen figure in its
+    neighbour's strip — a click on a figure picked up the one to its
+    right, or nothing in the gap HD left between cells (Data, 16 September
+    2026). Identity is untouched: the pick is still (job, index), and
+    `colonysend` still injects the original's own slot point for it.
+    """
+    zones = []
+    cells = row.get("cells") if isinstance(row, dict) else None
+    by_job = {}
+    for job, index, rect in row_boxes(area, cfg, scale, row).cells:
+        by_job.setdefault(job, []).append((index, rect))
+    for job, entries in by_job.items():
+        seen = _seen_centres(entries, cells, job, figures)
+        for k, (index, rect) in enumerate(entries):
+            if seen is None:
+                x0, x1 = rect.x, rect.x + rect.width
+            else:
+                centres, first, last_end = seen
+                x0 = first if k == 0 else (centres[k - 1] + centres[k]) / 2
+                x1 = (last_end if k + 1 == len(entries)
+                      else (centres[k] + centres[k + 1]) / 2)
+                x0, x1 = int(round(x0)), int(round(x1))
+            zones.append((job, index, x0, max(x0 + 1, x1)))
+    return zones
+
+
+def _seen_centres(entries, cells, job, figures):
+    """(centre column of each figure's visible ink, first zone start,
+    last zone end) for one job's cells, or None without figures."""
+    if figures is None or not cells or job >= len(cells) or not entries:
+        return None
+    import numpy as np
+    sprites = []
+    for index, rect in entries:
+        name = cells[job][index].figure if index < len(cells[job]) else None
+        surf = None if name is None else figures.get(name)
+        if surf is None:
+            return None
+        alpha = pygame.surfarray.array_alpha(surf).T > 16
+        y = figure_origin_y(0, 0, figures.ink_bottom(name))
+        sprites.append((rect.x, y, alpha))
+    left = min(x for x, _, _ in sprites)
+    top = min(y for _, y, _ in sprites)
+    width = max(x + a.shape[1] for x, _, a in sprites) - left
+    height = max(y + a.shape[0] for _, y, a in sprites) - top
+    covered = np.zeros((height, width), dtype=bool)
+    centres = [0.0] * len(sprites)
+    for k in range(len(sprites) - 1, -1, -1):      # the topmost first
+        x, y, alpha = sprites[k]
+        ox, oy = x - left, y - top
+        region = covered[oy:oy + alpha.shape[0], ox:ox + alpha.shape[1]]
+        visible = alpha & ~region
+        xs = np.nonzero(visible)[1]
+        if len(xs):
+            centres[k] = left + ox + float(xs.mean())
+        else:
+            centres[k] = x + alpha.shape[1] / 2.0
+        region |= alpha
+    for k in range(1, len(centres)):
+        centres[k] = max(centres[k], centres[k - 1] + 1)
+    last_x, _, last_alpha = sprites[-1]
+    ink_cols = np.nonzero(last_alpha.any(axis=0))[0]
+    last_end = last_x + (int(ink_cols[-1]) + 1 if len(ink_cols)
+                         else last_alpha.shape[1])
+    return centres, entries[0][1].x, max(last_end, centres[-1] + 1)
+
+
+def cell_at_x(area, cfg, scale, row, x, figures=None):
+    """(job, index) of the pop cell under `x`, or None.
+
+    Index is within that job's cells, in the order they are drawn —
+    which is the original's icon order (decision 48), because
+    `colonyrows` builds the row that way. Bare column past the last
+    cell answers None: there is nothing to pick up there. A pop in a
+    HELD cluster has no cell either — `build_rows` clears its `0x200`
+    exactly as `Get_Cluster_` does — so it cannot be picked twice.
+    """
+    for job, index, x0, x1 in pick_zones(area, cfg, scale, row, figures):
+        if x0 <= x < x1:
+            return job, index
+    return None
+
+
+def rows_drawn(area, cfg, scale, count):
+    """How many of `count` rows `render` would actually draw.
+
+    Exported so a caller — and the smoke test — can ask the question
+    without re-deriving the pitch. The whole fault this answers was
+    that nothing could ask it.
+    """
+    return len(row_bands(area, cfg, scale, count))
+
+
+def row_bands(area, cfg, scale, count):
+    """(top, height) for each row that FITS, in draw order.
+
+    Decision 5: one function makes the rect and both the drawing and
+    the hit-test call it. The hover selection reads the same bands
+    `render` lays out, so a row that is hovered is by construction a
+    row that is on screen — the last row is dropped rather than
+    clipped, which is exactly the case a second copy of this
+    arithmetic would get wrong.
+
+    **`count` is the length of the WINDOW, not of the list.** Since
+    the list scrolls, both callers pass `len(rows) - first`, and the
+    band index this returns is a position on screen. Turning that
+    back into an index into the rows is the screen's job, in
+    `screen._row_at`, because the screen is where the offset lives —
+    a band number used as a row number is the fault decision 5 exists
+    for, one scroll offset removed.
+
+    Fewer bands than `count` therefore means the tail of the window
+    is not drawn. That is still the honest shape: nothing below the
+    last band can be selected because nothing below it is there.
+
+    **THE WINDOW'S BANDS ARE `all_bands` CUT TO `count`**, so a band
+    is the same rectangle whether a colony sits in it or not — see
+    there for why the empty ones have to exist.
+    """
+    return all_bands(area, cfg)[:max(0, count)]
+
+
+def all_bands(area, cfg):
+    """(top, height) for every band of the window — `row_count` of
+    them, ALWAYS, whatever the colony count is.
+
+    **A BAND IS A PROPERTY OF THE WINDOW, NOT OF THE LIST — 9
+    September 2026.** The original's ten slots exist before any
+    colony is put in them (`_list_col[10]`, colsum.cpp:348), and its
+    cell plates are painted into COLSUM.LBX entry 0, the single
+    bitmap `Draw_Colony_Summary_Screen_` blits at colsum.cpp:461 —
+    so a plate is part of the picture and cannot be conditional on
+    anything. Counted on the original's own framebuffer
+    (`evidence/colony_summary_native_split.png`): eight colonies,
+    **ten plated bands**, the last two empty.
+
+    HD drew its plates inside the per-ROW renderer, so a player with
+    seven colonies got seven plated bands and 197 reference px of
+    bare panel below them — visible in every one of Data's four
+    screenshots of 8 September 2026 and in `list_geometry_vs_original`
+    before them. The claim that every band is plated was written in
+    the code, in the fundament under decision 51 and in the status
+    document, and was true in none of them; the drawing was the odd
+    one out and it is the drawing that moved.
+
+    The two functions are separate because the two questions are:
+    this one says where the bands ARE, `row_bands` says which of them
+    have a colony to draw. One arithmetic, so a plate and the row it
+    frames cannot land in different places (decision 5).
+    """
+    # `core.listgrid.all_bands` since brief 101: the last band takes the
+    # remainder, so the rows tile the window exactly.
+    from core import listgrid
+    return listgrid.all_bands(area, int(cfg.get("row_count", 10)))
+
+
+def held_figure_y(area, cfg, scale, count, point, step, ink_bottom):
+    """The y ONE held sprite is drawn at: the figure line of the row
+    under `point`, or the transcribed pointer offset outside the list.
+
+    `ink_bottom` is that sprite's own last inked row, because inside a
+    row the answer is `figure_origin_y`'s and that is per sprite. The
+    caller passes a small lambda rather than a number, so a cluster of
+    mixed races lands on one line and not on two.
+
+    **THE OFFSET IS TRANSCRIBED AND THE ANCHOR IS A DEVIATION —
+    12 September 2026.** `COLMOVE::Draw_Cluster_` hangs the cluster on
+    the raw pointer at (+5, -10) native px per sprite step
+    (colmove.cpp:7-37, called with `mouse::Pointer_X_/Y_()` at
+    colsum.cpp:509-511), and this returns the ROW's own figure line
+    instead whenever the pointer is in a row.
+
+    **WHY THE CONSTANT STOPPED WORKING, measured.** The two y agree
+    when the pointer sits half a sprite below the band top: the held
+    figure's centre is `pointer + 4*step` (`-10*step + 14*step`) and a
+    row figure's centre is `band_top + 18*step` (`4*step + 14*step`),
+    so they coincide at `pointer = band_top + 14*step`. In the
+    ORIGINAL that IS the middle of the row — its band is 30 native px
+    and its sprite 28, so half a sprite and half a band are the same
+    place. Ours is the list window divided by ten and is not the
+    sprite's height. Measured with the pointer at each band's centre,
+    held top against row-figure top:
+
+        1920x1080  band 58  step 2   190 against 189   +1
+        2560x1440  band 77  step 2   259 against 249  +10
+        3440x1371  band 73  step 2   245 against 237   +8
+        3840x2160  band 116 step 4   380 against 378   +2
+
+    1080p and 2160p agree to a pixel because their bands are within
+    two px of `28*step`; 1440p is ten px out because its band is 77
+    against a 56 px sprite — the slack `figure_step` leaves when step
+    3 does not fit. That is the "figure hanging in the air over the
+    row" it was reported as.
+
+    **3440x1371 WAS ADDED AFTER A SECOND REPORT — 12 September 2026,
+    and it was already correct.** That size is what a single 3440x1440
+    display GRANTS for the two largest window-size options (F7) (`App._set_mode`),
+    so it is the window this project is actually looked at in, and it
+    had never been measured. Re-measured live against the running game
+    on the reference save: the held cluster inks from the row's own
+    figure line at every y of every band, in the arithmetic and in the
+    pixels, exactly as at the three sizes the fix was verified at. The
+    row above shows what the OLD anchor would have done there. The
+    check covers four sizes now and the blit two.
+
+    What still hangs on the pointer at that size is everything OUTSIDE
+    the list's bands — above y 156 and below y 891 of a 3440x1371
+    window — and any band the empire has no colony for, because an
+    empty band is not a row and cannot be dropped on. Both are the
+    transcription and neither is a float.
+
+    **WHAT IS KEPT.** `CLUSTER_FIGURE_OFFSET`'s x is untouched and the
+    y is still what applies OUTSIDE the list, which is most of the
+    screen and the only place the original's own picture can be
+    compared. What changes is inside a row, where the original's
+    constant expresses "on this row's figure line" and ours no longer
+    did.
+    """
+    py = point[1]
+    for top, height in row_bands(area, cfg, scale, count):
+        if top <= py < top + height:
+            return figure_origin_y(top, height, ink_bottom)
+    return py + zoomtables.CLUSTER_FIGURE_OFFSET[1] * step
+
+
+def figure_size(area, cfg):
+    """The figure's CANVAS in device px — **DEVIATION from decision
+    28**, 12 September 2026, Data's decision after seeing A, B and C.
+
+    Decision 28 is "an integer swap, never scaled": a master is drawn
+    at 1x, 2x, 3x or 4x and at nothing between, so the sprite on
+    screen is the game's own pixels, larger. `figure_step` still
+    answers that integer and the mod contract is still written in it
+    (decision 50: `@2x.png`, `@3x.png`, `@4x.png`, and
+    `doc/modding_figures.md` is generated from it). What changes is
+    the SIZE the sprite is drawn at:
+
+        room = band - PLATE_LINE            the band less the plate's
+                                            own bottom line
+        size = room                         when room is at least
+                                            FIGURE_SIZE_SNAP bigger
+                                            than MASTER_ROWS * step
+             = MASTER_ROWS * step           otherwise
+
+    **WHY, measured.** The step is the largest integer whose figure
+    fits the band, and at two of the four shipped sizes the band is
+    nowhere near a multiple of it: 77 px at 2560x1440 and 73 at
+    3440x1371 against a 56 px figure, so a quarter of the row is
+    empty and the colonists sit in a strip with air above them. The
+    band at 1920x1080 is 58 against the same 56, which is why nobody
+    saw it.
+
+    **WHAT IT COSTS, and it is the whole of the cost.** Nearest
+    neighbour at a fractional size keeps every colour exactly — no
+    blending, no half-tones, still the game's palette — and breaks
+    the PIXEL GRID: some master rows become three device rows and
+    others two. At 1:1 that is invisible (Data's A/B/C crops, and the
+    3x zoom is where it can be seen at all). The alternative that
+    keeps the grid even, an integer step up and a smoothscale down,
+    blends the colours and was rejected on the same crops.
+
+    **THE SNAP IS WHAT MAKES THIS SAFE.** A size is only taken when it
+    buys at least a quarter of a master row; below that the figure
+    keeps the integer step and is bit for bit what it was. That is
+    what holds 1920x1080 and 3840x2160 unchanged, and it is asserted
+    rather than assumed.
+
+    Marked in `colonyfigures.FigureSet`, in `layout.json` under
+    `list._figure_size_deviation`, in `dev:doc/v3_fundament.md` on
+    decision 28, in `dev:v3_projektstatus.md` and in a smoke check.
+    """
+    step = figure_step(area, cfg)
+    room = band_height(area, cfg) - PLATE_LINE
+    plain = MASTER_ROWS * step
+    return room if room - plain >= FIGURE_SIZE_SNAP else plain
+
+
+def figure_scale(area, cfg):
+    """Device px per master row — `figure_size` over `MASTER_ROWS`.
+
+    A float, and the only reason it exists is that the PITCHES are in
+    master units: the cell pitch is the original's own squish step
+    times this, and the held cluster's `(5, -10)` and 20 are
+    `zoomtables`' native constants times this. Where the size is the
+    integer step's, this is that integer exactly and every pitch is
+    the number it was.
+    """
+    return figure_size(area, cfg) / float(MASTER_ROWS)
+
+
+def figure_origin_y(top, height, ink_bottom):
+    """Where one row figure is blitted, y — the ONE home.
+
+    `ink_bottom` is the LAST INKED ROW of the stepped sprite about to
+    be drawn (`colonyfigures.FigureSet.ink_bottom`), so the answer is
+    per sprite and not per row.
+
+    **THE ANCHOR IS THE BAND'S BOTTOM — DEVIATION, 12 September 2026,
+    Data's decision.** The original anchors at the TOP: its icon row
+    is `31*i + 38`, three native px below its band's own `31*i + 35`
+    (colsum.cpp:283-291 and :685). Transcribing THAT put every figure
+    three px under the band's top and left whatever the band had over
+    28 rows as empty space BELOW it — and our bands are not the
+    original's. Its band is 31 native px against a 28 px sprite, a
+    slack of three; ours is `list_area` divided by ten and is
+    whatever the window makes it: 58 px at 1920x1080 against a 56 px
+    sprite, but 73 at 3440x1371 and 77 at 2560x1440, which leave 17
+    and 21 px of it. All of that slack sat under the figures, and a
+    row's colonists floated over their own row.
+
+    So the slack goes ABOVE instead, and what is put on the row's
+    floor is the INK:
+
+        origin = plate_inner_floor - ink_bottom
+        plate_inner_floor = top + height - 1 - PLATE_LINE
+
+    **THE CANVAS IS NOT THE FIGURE.** Anchoring the canvas was the
+    first attempt and it still floated at every size, because a
+    master's ink stops before its canvas does: 51 of the 54 ink to
+    row 23 of 28 and the three Bulrathi to row 24, so a canvas on the
+    floor hangs its sprite 4 master rows up — 8 device px at step 2
+    and 16 at step 4. The transparent tail was the float.
+
+    **WHAT THE ORIGINAL DOES, and where this parts from it.** At
+    native scale the two anchors agree: its canvas ends on its band's
+    last row (`FIGURE_BOTTOM_NATIVE`), its ink ends on the row above
+    its plate's bottom border, and the four rows of tail are spent on
+    the border and the two rows under it. A step of 1 would reproduce
+    that exactly. At step 2 and up the tail is 8 and 16 px and there
+    is no border thick enough to hide it — the original never has to
+    answer this, because it never steps. So: our figures are placed
+    by their INK, which is the transcription of what is SEEN, and not
+    by their canvas, which is the transcription of an offset. The
+    cost is that the three Bulrathi sprites, whose ink is one row
+    taller, come up one row against their neighbours where the
+    original leaves them one row lower. That is the DEVIATION, and it
+    is one deviation with the edge it is anchored to and not two.
+
+    **IT CANNOT PUSH THE SPRITE OUT OF THE TOP.** `figure_step` picks
+    a step that needs `29 * step` rows of band, and the tallest ink
+    is 25 master rows, so the sprite's ink starts at least `4 * step`
+    px below the band's top. That rule is more conservative than an
+    ink anchor requires and is deliberately left alone: relaxing it
+    would change the step at window sizes nobody is looking at, which
+    is a different decision from this one.
+
+    Marked in `colonylist` where the blit is, in `layout.json` under
+    `list._figure_anchor_deviation`, in `dev:v3_projektstatus.md` and in
+    a smoke check.
+    """
+    return top + height - 1 - PLATE_LINE - ink_bottom
+
+
+def row_at(area, cfg, scale, count, point):
+    """Index of the drawn row under `point`, or None.
+
+    None also covers a point inside `area` but past the last drawn
+    row — the pad and the tail the bands do not reach. The original
+    has the same dead strip: its rows are fields, and the space below
+    them belongs to no field at all.
+    """
+    px, py = point
+    if not (area.x <= px < area.right):
+        return None
+    for i, (top, height) in enumerate(row_bands(area, cfg, scale, count)):
+        if top <= py < top + height:
+            return i
+    return None
+
+

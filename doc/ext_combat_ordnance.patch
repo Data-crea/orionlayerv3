@@ -1,0 +1,70 @@
+Engine: the ordnance in flight, "CMSL" (open fix 55).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part B; reserved by
+work order 193) — orion2re f506bc6c on orionlayer-local (before: 9b7dcba0), this
+file's diff byte for byte (index lines included). Required by
+tools/version_check.py since work order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_ordnance.patch
+
+and a rebuild. It comes back off with `git revert f506bc6c` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    Missiles, torpedoes and fighters live in MOX::_missile (300 x
+    s_missile, 0x1A bytes, sizes.h asserts it); none of it was serialized,
+    and a missile's target (target_unit_idx) is what a client needs to show
+    the threat and to aim anti-missile fire. Block "CMSL", written after
+    CMBT while open fix 52's gate is up: version, battle serial, the record
+    size, the number of live entries (type above 0, the test
+    COMBINIT::Tactical_Combat_ uses), and each as int16 index + the struct
+    as it is — the index is what _missile_field[] and a missile's target
+    refer to. The "hit radii" 193 listed are not a stored value; they are
+    computed per shot from positions both blocks carry.
+
+    Only reads. An engine without OrionLayer behaves exactly as before. One
+    marker, `OrionLayer, open fix 55.`, on the block's first comment line.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 3afad020..2c0b688e 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1489,6 +1489,35 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         }
+         WriteBytes(buf, legal, sizeof(legal));
+     }
++
++    // 20. The ordnance in flight: "CMSL", written ONLY while a battle is live,
++    //     after CMBT. OrionLayer, open fix 55.
++    //
++    //     Missiles, torpedoes and fighters live in MOX::_missile (300 x
++    //     s_missile, 0x1A bytes each — sizes.h asserts it); an entry is live
++    //     while its type is above 0 (the loop in COMBINIT::Tactical_Combat_).
++    //     Each live entry as the struct holds it, with its index — the index
++    //     is what _missile_field[] and a missile's target refer to.
++    if (g_combat_live && MOX::_missile != nullptr) {
++        int16_t live = 0;
++        for (int i = 0; i < 300; i++) {
++            if (MOX::_missile[i].type > 0) ++live;
++        }
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'L');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, (int16_t)g_combat_serial);
++        Write8(buf, (uint8_t)sizeof(s_missile));
++        Write16(buf, live);
++        for (int16_t i = 0; i < 300; i++) {
++            if (MOX::_missile[i].type > 0) {
++                Write16(buf, i);
++                WriteBytes(buf, &MOX::_missile[i], sizeof(s_missile));
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

@@ -1,0 +1,189 @@
+{
+  "1920x1080": [
+    {
+      "name": "identity_panel",
+      "rect": [
+        20,
+        85,
+        1880,
+        415
+      ],
+      "style": {
+        "label": "Identity Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "ruler_header",
+      "rect": [
+        64,
+        121,
+        465,
+        94
+      ],
+      "style": {
+        "label": "Ruler Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "ruler_input",
+      "rect": [
+        97,
+        267,
+        399,
+        87
+      ],
+      "style": {
+        "label": "Ruler Input",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "banner_header",
+      "rect": [
+        573,
+        98,
+        675,
+        75
+      ],
+      "style": {
+        "label": "Banner Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "banner_grid",
+      "rect": [
+        573,
+        175,
+        675,
+        312
+      ],
+      "style": {
+        "label": "Banner Grid",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "home_header",
+      "rect": [
+        1281,
+        121,
+        508,
+        94
+      ],
+      "style": {
+        "label": "Home Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "home_input",
+      "rect": [
+        1314,
+        267,
+        442,
+        87
+      ],
+      "style": {
+        "label": "Home Input",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "preview_panel",
+      "rect": [
+        20,
+        520,
+        1880,
+        458
+      ],
+      "style": {
+        "label": "Preview Panel",
+        "font_scale": 1.0,
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "preview_image",
+      "rect": [
+        518,
+        521,
+        1381,
+        456
+      ],
+      "style": {
+        "label": "Homeworld Artwork",
+        "font_scale": 1.0,
+        "skin": "image",
+        "pannable": true,
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ],
+        "fade_left": 0.42
+      }
+    },
+    {
+      "name": "preview_header",
+      "rect": [
+        20,
+        536,
+        1880,
+        52
+      ],
+      "style": {
+        "label": "Preview Header",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "preview_banner",
+      "rect": [
+        164,
+        577,
+        354,
+        354
+      ],
+      "style": {
+        "label": "Preview Banner",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "preview_text",
+      "rect": [
+        595,
+        640,
+        774,
+        270
+      ],
+      "style": {
+        "label": "Preview Text",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "busy_panel",
+      "rect": [
+        28,
+        93,
+        1864,
+        46
+      ]
+    },
+    {
+      "name": "busy_text",
+      "rect": [
+        52,
+        100,
+        1816,
+        32
+      ]
+    }
+  ]
+}

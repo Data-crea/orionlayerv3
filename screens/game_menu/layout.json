@@ -1,0 +1,546 @@
+{
+  "_comment": "The GAME menu overlay (SCREEN_GAME, 8): wording, row rules and message ids. Geometry is boxes.json; every box there is the original's rectangle scaled by 2.25, and `native` below says which rectangle, per box. At load the whole group is seated into the frame's opening, which is fitted to the galaxy map's cutout (gmframe.seat, work order 125); `_anchor_note` records the earlier anchor.",
+  "_anchor_note": "SUPERSEDED BY WORK ORDER 125 (16 September 2026) - kept as the record of 122's reading, which is still true of the original. TRANSCRIBED POSITION, 16 September 2026 (decision 69). LOADSAVE::Add_Game_Popup_Fields_ (loadsave.cpp:176-293) puts all four in-game dialogs at one fixed top-left, MOX::_popup_base_x = 0x90, _popup_base_y = 0x19 (:182-183, :205-206, :231-232; the centred branch at :225-229 is the MAIN MENU's Load), and _Draw_Main_Game_Popup_ draws GAME.LBX picture 0 there (:1356); pictures 0, 8, 11 and 14 are all 279x378, measured in the LBX headers. So the popup's centre is native (283.5, 214), which is 51.68 % across and 48.0 % down the map window (22,22)-(527,421) (Add_Grid_Field_, mainscr.cpp:1427) - near its centre and not on it, and nowhere near the 640x480 window's (320, 240). HD transcribes that PROPORTION against the galaxy map's own map_area box: in reference px the target is (90 + 0.5168 * 1422, 66 + 0.48 * 885) = (824.9, 490.8), and every box in boxes.json moved by (-53, +10) from the centred-4:3 placement, which put the body's centre at (878, 481). The smoke test holds the body's centre to the proportion within 1 ref px, so a galaxy frame that moves map_area fails it. help_popup is not part of the group: it is centred on the galaxy map's map_area, like the galaxy map's own. WHAT HD DOES NOW: the frame is fitted to the galaxy map's map_area cutout and every box here is seated into its opening by one move and one factor at load (gmframe.seat, HD DEVIATION); these rects are the unscaled design geometry that seating starts from, and an F3 save writes them back through the inverse.",
+  "_dialog_fit_note": "HD DEVIATION, work order 123 (Data): the confirmation (native 310 px wide) and the slot warning (331 px) are wider than the popup (279 px) and overhang it in the original. In boxes.json each group - confirm_* and warning_* - is scaled by ONE factor, body width over panel width (628/698 = 0.8997, 628/745 = 0.8430), rects and font sizes alike, about the panel's centre, then centred horizontally on the body; the vertical centre stays the original's (confirm 527, warning 549 ref px). No question gains a line at 1080p, 1440p or 2160p (HESTRNGS 186, 187, 178-180, checked before the change). NO returns to the game menu as in the original (Do_Main_Game_Popup_, loadsave.cpp:1240-1283: the popup loop continues with _screen_data 0), the slot warning to the Load dialog.",
+  "sliders": {
+    "_note": "TRANSCRIBED, work order 124 C. Add_Game_Popup_Fields_ adds both volumes as scroll fields (loadsave.cpp:200-201): x = base + 0x3e = 206, y = base + 0xc2 = 219 (music) and base + 0xd8 = 241 (sound), width 0x9b = 155, height 0xc = 12, range 0..0x9c = 156. fields::Find_Bar_Position_ (fields.cpp:1702-1743) sets value = (pointer_x - 206) * 156 / 155, clamped; it runs while the press is held (Push_Field_Down_ -> Draw_Field_, fields.cpp:2124, 2837-2840), so dragging is the original's. The input loop then stores level = value * 100 / 155 in _settings.music_level / sound_fx_level, and 5 or less switches the channel off (Set_Music_For_Game_Popup_ / Set_Sound_For_Game_Popup_, loadsave.cpp:1685-1740); opening the dialog sets value = level * 155 / 100 (:1139-1140). The bar is GAME.LBX picture 7, 155 x 12, drawn clipped to 206 .. 206 + value (_Draw_Main_Game_Popup_, :1338-1409; picture 7 at :1385-1409): ten blocks whose x ranges and rows are measured off that picture below, so a block can show partly lit. The words are artwork of picture 0, typed here.",
+    "native_x": 206,
+    "width": 155,
+    "height": 12,
+    "range_max": 156,
+    "music_y": 219,
+    "sound_y": 241,
+    "block_rows": [
+      2,
+      9
+    ],
+    "blocks": [
+      [
+        3,
+        14
+      ],
+      [
+        18,
+        29
+      ],
+      [
+        33,
+        44
+      ],
+      [
+        48,
+        59
+      ],
+      [
+        64,
+        75
+      ],
+      [
+        79,
+        90
+      ],
+      [
+        94,
+        105
+      ],
+      [
+        109,
+        121
+      ],
+      [
+        125,
+        136
+      ],
+      [
+        140,
+        151
+      ]
+    ],
+    "words": {
+      "music": "Music",
+      "sound": "Sound Fx"
+    }
+  },
+  "frame": {
+    "_note": "Decision 69: Data's fixed frame image around the popup body, plain-scaled with one factor so the opening covers the body box plus gmframe.BLEED, and centred on it. `opening` is the image's one transparent hole (alpha < 16, MIN_AREA 2000) as tools/frame_holes.find_holes measures it; the smoke test holds the two equal. Its aspect, 879:1193 = 0.737, is the body's 628:850 = 0.739, so the opening is the body. The octagon's interior is transparent: gmframe fills the opening from the cockpit texture before the frame is drawn, opaque and undimmed."
+  },
+  "native": {
+    "body": [
+      144,
+      25,
+      423,
+      403
+    ],
+    "menu_save": [
+      184,
+      68,
+      274,
+      95
+    ],
+    "menu_load": [
+      291,
+      68,
+      381,
+      95
+    ],
+    "menu_new": [
+      184,
+      113,
+      274,
+      140
+    ],
+    "menu_quit": [
+      291,
+      113,
+      381,
+      140
+    ],
+    "menu_settings": [
+      184,
+      332,
+      274,
+      358
+    ],
+    "menu_return": [
+      295,
+      332,
+      385,
+      358
+    ],
+    "settings_title": [
+      154,
+      34,
+      413,
+      58
+    ],
+    "settings_rows": [
+      170,
+      64,
+      398,
+      285
+    ],
+    "settings_accept": [
+      241,
+      363,
+      315,
+      382
+    ],
+    "slot_list": [
+      170,
+      49,
+      390,
+      359
+    ],
+    "load_load": [
+      181,
+      362,
+      248,
+      383
+    ],
+    "load_cancel": [
+      315,
+      363,
+      382,
+      383
+    ],
+    "save_save": [
+      181,
+      363,
+      248,
+      383
+    ],
+    "save_cancel": [
+      315,
+      363,
+      382,
+      383
+    ],
+    "confirm_panel": [
+      161,
+      117,
+      471,
+      343
+    ],
+    "confirm_text": [
+      204,
+      145,
+      428,
+      271
+    ],
+    "confirm_yes": [
+      235,
+      302,
+      286,
+      323
+    ],
+    "confirm_no": [
+      345,
+      302,
+      396,
+      323
+    ],
+    "warning_panel": [
+      154,
+      144,
+      485,
+      335
+    ],
+    "warning_text": [
+      208,
+      172,
+      434,
+      292
+    ],
+    "volume_panel": [
+      194,
+      185,
+      371,
+      290
+    ],
+    "music_label": [
+      206,
+      195,
+      356,
+      212
+    ],
+    "music_bar": [
+      206,
+      219,
+      361,
+      231
+    ],
+    "sound_bar": [
+      206,
+      241,
+      361,
+      253
+    ],
+    "sound_label": [
+      206,
+      261,
+      356,
+      278
+    ]
+  },
+  "_native_note": "640x480 rectangles from Add_Game_Popup_Fields_ (loadsave.cpp:176-293), Confirmation_Box_ (gendraw.cpp:153-175, CONFIRM.LBX drawn at 0xa1,0x75) and Message_Box_Exploding_ (gendraw.cpp:90-127, WARNING.LBX at 0x9a,0x90, 0x14B x 0xBF). body, settings_title and slot_list are read off the native screenshots, not the source: the popup's frame is artwork (GAME.LBX 0, 29, 11, 14).",
+  "words": {
+    "menu": {
+      "save": "SAVE GAME",
+      "load": "LOAD GAME",
+      "new": "NEW GAME",
+      "quit": "QUIT GAME",
+      "settings": "SETTINGS",
+      "return": "RETURN"
+    },
+    "settings": {
+      "title": "GAME SETTINGS",
+      "accept": "ACCEPT"
+    },
+    "load": {
+      "load": "LOAD",
+      "cancel": "CANCEL"
+    },
+    "save": {
+      "save": "SAVE",
+      "cancel": "CANCEL"
+    },
+    "confirm": {
+      "yes": "YES",
+      "no": "NO"
+    },
+    "_artwork_note": "Every word above is ARTWORK in the original \u2014 GAME.LBX entries 1-6, 10, 12, 13, 15, 29 (Load_Game_Popup_Pictures_, loadsave.cpp:1177-1207) and CONFIRM.LBX (gendraw.cpp:167-175). There is no string to extract, so they are typed here from the native screenshots, per decision 15.",
+    "confirm_unknown": "Confirm?",
+    "warning_unknown": "The game refused slot {n}.",
+    "_unknown_note": "HD STATE: shown only when the overlay did not see which button led here (it was opened into a confirmation or warning) or, for the warning, without MSG_SAVE_SLOTS; the original prints H 186/187 and H 178-180 (loadsave.cpp:1241, :1258, :934-940).",
+    "string_missing": "String {id}: run tools/hestrings_extract.py",
+    "orionlayer": {
+      "heading": "OrionLayer",
+      "floor": "Map floor",
+      "colours": "Player colours",
+      "floor_steps": {
+        "off": "Off",
+        "light": "Light",
+        "haze": "Haze"
+      },
+      "presets": {
+        "original": "Original",
+        "okabe_ito": "Okabe-Ito"
+      },
+      "restart": "Restart to apply",
+      "glass": "Panel glass",
+      "frame_rate": "Frame rate",
+      "frame_rate_steps": {
+        "30": "30",
+        "60": "60",
+        "120": "120",
+        "monitor": "Monitor ({hz} Hz)",
+        "unlimited": "Unlimited"
+      },
+      "painted": "Painted detail",
+      "painted_steps": {
+        "auto": "Auto ({k}x)",
+        "normal": "Normal (4x)",
+        "high": "High (8x)"
+      },
+      "mods": "Mod folder",
+      "mod_steps": {
+        "on": "On",
+        "off": "Off"
+      },
+      "mod_files": "{n} files",
+      "mod_none": "no folder",
+      "mod_wait": "Extracting the game's pictures \u2014 this can take a while ({i}/{n})",
+      "mod_done": "Ready \u2014 restart to use the mod folder",
+      "mod_failed": "{n} step(s) failed \u2014 see the log",
+      "monsters": "Monster values",
+      "monster_steps": {
+        "on": "On",
+        "off": "Off"
+      },
+      "frame": "Frame colour",
+      "reset": "Reset",
+      "tone": "Frame tone",
+      "language": "Language",
+      "language_wait": "Reading game files ({i}/{n})",
+      "language_done": "{made} game file(s) found",
+      "_language_steps_note": "each language in its own words, as language switches name them (not translated)",
+      "language_steps": {
+        "en": "English",
+        "de": "Deutsch"
+      },
+      "livery": "Livery",
+      "glass_steps": {
+        "on": "On",
+        "off": "Off"
+      },
+      "fill": "Box fill",
+      "fill_tone": "Box fill tone"
+    },
+    "livery": {
+      "_hd_extension": "HD EXTENSION `livery` (work order 220, decisions 1-6, 8, 9): the livery window's words; screens/game_menu/gmlivery.py, core/livery.py. MOO2 has no such window.",
+      "title": "LIVERY",
+      "pattern": "Pattern",
+      "pattern_full": "Full",
+      "pattern_light": "Light plates",
+      "pattern_stripes": "Stripes",
+      "pattern_outer": "Outer hull",
+      "pattern_mixed": "Mixed",
+      "core": "Core colour",
+      "core_strong": "Strong",
+      "core_dark": "Dark",
+      "core_light": "Light",
+      "core_muted": "Muted",
+      "second": "Second colour",
+      "none": "None",
+      "second_full": "Not with Full",
+      "hue": "Hue",
+      "sat": "Saturation",
+      "val": "Brightness",
+      "strength": "Strength",
+      "note": "From the next battle on",
+      "reset": "Reset",
+      "back": "Back",
+      "frigate": "Frigate",
+      "destroyer": "Destroyer",
+      "cruiser": "Cruiser",
+      "battleship": "Battleship",
+      "titan": "Titan",
+      "doom_star": "Doom Star",
+      "station": "Station",
+      "look": "Look {n}"
+    }
+  },
+  "settings_rows": {
+    "label_ids": [
+      166,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      391
+    ],
+    "_label_note": "HAROLD::H_Message_ 0xA6-0xB1 and 0x187, in row order (_Draw_Options_Game_Popup_, loadsave.cpp:1503-1523).",
+    "alt": [
+      "(ALT-F1)",
+      "(ALT-F2)",
+      "(ALT-F3)",
+      "",
+      "(ALT-F4)",
+      "(ALT-F5)",
+      "(ALT-F6)",
+      "(ALT-F7)",
+      "(ALT-F8)",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "_alt_note": "Literals of the SCREEN path, loadsave.cpp:1504-1520, which is what the running game shows. The bitmap path used for the slide animation prints a different set (:1474-1487: F5-F8 on rows 5-8, no F4) and HD has no slide; reproduced as orion2re shows it, not repaired. Open fix 18.",
+    "checkbox": 0.706,
+    "_checkbox_note": "the checkbox field is 12 px tall on a 17 px pitch (loadsave.cpp:215, :218)",
+    "label_x": 0.114,
+    "_label_x_note": "label at draw_x + 4 + width of GAME.LBX 9 = native 196 in the 170..398 row (:1500)",
+    "alt_x": 0.772,
+    "_alt_x_note": "text_x2 = text_x1 + 0x96 = native 346 (:1501)"
+  },
+  "slot_rows": {
+    "row": 0.774,
+    "_row_note": "a slot field is 24 px on the 31 px pitch (loadsave.cpp:263)",
+    "name_x": 0.027,
+    "_name_x_note": "text_x = popup base + 0x20 = native 176 in the 170..390 list (:850)",
+    "detail_y": 0.452,
+    "_detail_y_note": "stardate and date print at text_y + 14 of 31 (:885, :894)",
+    "date_x": 0.482,
+    "_date_x_note": "the date at text_x + 100 = native 276 (:894)",
+    "invalid": "* INVALID *",
+    "_invalid_note": "literal, loadsave.cpp:856 \u2014 the engine also writes it into the description (:260, :271)",
+    "empty": 388,
+    "_empty_note": "H 388 '... empty slot ...': the stardate is not printed for a slot whose description is this string (:884)",
+    "omission_icon": "OMISSION: the game-type icon at the right of every row (GAME.LBX 16/17/18, loadsave.cpp:833-846) is not drawn \u2014 that artwork is not extracted, and a word in its place would be an invention."
+  },
+  "confirm": {
+    "new": 186,
+    "quit": 187
+  },
+  "warning": {
+    "1": 178,
+    "2": 179,
+    "3": 180
+  },
+  "save_empty_slot_deviation": "DEVIATION: an empty slot starts the HD name edit empty. The original copies the slot's description, '... empty slot ...', into the field (loadsave.cpp:517); its first backspace clears it (fields.cpp:1191-1193), and a typed character appends to it where the field width allows (fields.cpp:1196-1216, source reading). Kept deliberately (16 September 2026): HD sends a backspace before the name, so the game receives the typed name, or its own default name when nothing was typed (loadsave.cpp:541-548).",
+  "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there.",
+  "own_help": {
+    "_note": "HD EXTENSION (work order 212): help for OrionLayer's own rows, which the game's HELP.LBX does not have; help.json names an entry by its key, German in assets/shared/lang/de.json",
+    "orionlayer.frame_rate": {
+      "title": "FRAME RATE",
+      "body": "How often OrionLayer draws a new picture: 30, 60 or 120 times a second, as often as your monitor shows one (the default), or as often as the computer can. The battle's animations and sounds last the same at every setting; a higher rate only makes motion smoother, a lower one spares the computer. Applied at once."
+    },
+    "orionlayer.painted": {
+      "title": "PAINTED DETAIL",
+      "body": "How finely OrionLayer holds the painted battle pictures of your mod folder: ships, stations, planets. High keeps them at up to 8 times the original's pixels: sharper when you zoom in on a ship, but they take more memory, and a shield flare on a painted ship takes longer to draw the first time. Normal keeps them at up to 4 times: lighter, and softer close up. Auto picks by your window: Normal up to 2560 pixels wide, High above. A picture is never enlarged, and the game's own pictures are not touched. Applied from the next battle on."
+    },
+    "orionlayer.floor": {
+      "title": "MAP FLOOR",
+      "body": "Lifts the black floor of the galaxy map a little, for screens on which pure black looks switched off: Off draws the map as the original does, Light and Haze lift it by two steps measured from the floor picture itself. Only the map changes. Applied at once."
+    },
+    "orionlayer.colours": {
+      "title": "PLAYER COLOURS",
+      "body": "The eight colours OrionLayer draws the empires in \u2014 their stars' names, ships, banners and lists: Original keeps the game's own, Okabe-Ito uses eight colours that stay apart for most kinds of colour blindness. The swatches show the set. Applied at the next start."
+    },
+    "orionlayer.monsters": {
+      "title": "MONSTER VALUES",
+      "body": "On: the Planets screen shows a guarding monster's values in its picture window \u2014 its stage, size, structure, armour, shields, weapons and specials, as the game holds them. Off: only its type, as the original shows it. Applied at once."
+    },
+    "orionlayer.frame": {
+      "title": "FRAME COLOUR",
+      "body": "The colour of OrionLayer's frames: the lines and edges round the boxes, the buttons' edges and the accent words. Click the bar to choose a hue. RESET returns to the measured blue of the original and resets the frame tone too. The boxes' fill has its own colour (Box fill). Applied at once."
+    },
+    "orionlayer.tone": {
+      "title": "FRAME TONE",
+      "body": "How strong and how bright the frame colour is: the left bar runs from grey to the full colour, the right one from black to silver. It changes the lines only, never the fill of a box. RESET on the frame colour row returns both. Applied at once."
+    },
+    "orionlayer.glass": {
+      "title": "PANEL GLASS",
+      "body": "Whether the background shows through OrionLayer's boxes. Off: every box is filled with the box fill colour, solid. On: the boxes are glass, and the bar sets how much shows through \u2014 further left clearer, at the right end solid; a box over a bright background stays dense enough for its words to be read. The bar works only while the glass is on and keeps its value while it is off. Applied at once."
+    },
+    "orionlayer.mods": {
+      "title": "MOD FOLDER",
+      "body": "On: OrionLayer looks for pictures and texts in your own mod folder first (MODDING.md says where it is and how files are named); switching it on extracts the game's pictures there once, which can take a while. Off: only OrionLayer's own files. Applied at the next start."
+    },
+    "orionlayer.language": {
+      "title": "LANGUAGE",
+      "body": "The language of OrionLayer's own words and of the game's texts: English or German. For German the game's German files are looked for when you choose it. Applied at the next start."
+    },
+    "orionlayer.livery": {
+      "title": "LIVERY",
+      "body": "Opens the livery window, where you choose how the painted ships of the battle are coloured: which plates take the owner's colour, in which tone of it, a second colour of your own for your fleet, and how strongly. Shown only while your mod folder is on and holds painted ships with livery masks. The game's own pictures are not touched."
+    },
+    "livery.preview": {
+      "title": "PREVIEW",
+      "body": "A painted ship in your own colour, drawn by the battle's own code with exactly the choices made here: what you see is what the next battle shows."
+    },
+    "livery.hull": {
+      "title": "HULL TYPE",
+      "body": "Steps through the hull types your mod folder has painted, frigate to titan and the Doom Star. Only the preview changes."
+    },
+    "livery.look": {
+      "title": "LOOK",
+      "body": "Steps through the looks of this hull type, 1 to 8. Only the preview changes."
+    },
+    "livery.owners": {
+      "title": "ALL EIGHT OWNERS",
+      "body": "The same pattern, core colour and strength on all eight player colours, so you see at a glance whether the fleets stay apart. Yours is underlined, and only yours carries your second colour: the other fleets never do."
+    },
+    "livery.pattern": {
+      "title": "PATTERN",
+      "body": "Which plates take the owner's colour: Light plates, Stripes, Outer hull or Mixed, the masks a modder supplies with a ship, or Full: all the grey plating at the lighter strength, without masks. A ship without masks for the chosen pattern is drawn as Full. Applies to every fleet."
+    },
+    "livery.core": {
+      "title": "CORE COLOUR",
+      "body": "The tone of the owner's colour on the coloured plates: Strong is the colour as it is; Dark, Light and Muted are made from it by one rule, the same for every player. Applies to every fleet, each in its own colour."
+    },
+    "livery.second": {
+      "title": "SECOND COLOUR",
+      "body": "Any colour for the pattern's second zone, or None: pick the hue, then the saturation and the brightness. Only your own fleet carries it, so it cannot make another fleet's colour ambiguous. Not available under Full, which has no second zone."
+    },
+    "livery.strength": {
+      "title": "STRENGTH",
+      "body": "How strongly the painted plates take the colour, from faint to full. Applies to every fleet."
+    },
+    "livery.reset": {
+      "title": "RESET",
+      "body": "Back to the defaults: Light plates, Strong, no second colour, full strength."
+    },
+    "livery.back": {
+      "title": "BACK",
+      "body": "Back to the settings. Your choices are kept with your settings, not with a save game, and apply from the next battle on."
+    },
+    "orionlayer.fill": {
+      "title": "BOX FILL",
+      "body": "The colour that fills every box of OrionLayer: panels, popups, fields, table rows and headers, buttons. Click the bar to choose a hue. The other fills follow it \u2014 rows, headers and buttons darker than a panel, a chosen entry lighter. RESET returns to the starting colour and resets the box fill tone too. The frame colour does not change it. Applied at once."
+    },
+    "orionlayer.fill_tone": {
+      "title": "BOX FILL TONE",
+      "body": "How strong and how bright the box fill colour is: the left bar runs from grey to the full colour, the right one from black to the brightest fill at which every word stays readable. RESET on the box fill row returns both. Applied at once."
+    }
+  },
+  "orionlayer_rows": {
+    "_hd_extension": "HD EXTENSION (fundament 63, 64): five row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift, the player-colour preset and the monster values switch for the Planets panel (default on). The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for all three rows.",
+    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other. Work order 173 added the mod folder row (decision 72) inside the same body: the thirteen engine rows went from 38 to 36 (497 -> 468) and this box grew by the 29 they gave up (191 -> 221 at 622), so every OrionLayer row keeps its 30 px and nothing below moves. Work order 174 added the Panel glass row the same way: the engine rows 36 -> 34 (468 -> 442) and this box took those 26 px and the gap above ACCEPT (221 -> 264 at 596, ending 4 px above it); a row is 28 px now. Work order 200 C added the LANGUAGE row the same way: the engine rows 34 -> 32 (442 -> 416) and this box took those 26 px (264 -> 290 at 570), a row still 28 px. Work order 212 added the FRAME RATE row the same way: the engine rows 32 -> 30 (416 -> 390) and this box took those 26 px (290 -> 316 at 544); with the divider a third of a row, a row is 30.6 px (31.1 before). Work order 219 added the PAINTED DETAIL row the same way: the engine rows 30 -> 28 (390 -> 364) and this box took those 26 px (316 -> 342 at 518); a row is 30.2 px. Work order 227 added the BOX FILL rows (fill colour, fill tone; the glass switch sits on the Panel glass row): the engine rows 28 -> 26 (364 -> 338) gave 26 px and the dialog grew by 35 (body 850 -> 885, ACCEPT 865 -> 900), this box 342 -> 403 at 492; a row is 30.2 px as before.",
+    "bands": [
+      "divider",
+      "heading",
+      "floor",
+      "colours",
+      "monsters",
+      "frame",
+      "tone",
+      "glass",
+      "fill",
+      "fill_tone",
+      "frame_rate",
+      "painted",
+      "mods",
+      "language"
+    ],
+    "label_x": 0.114,
+    "_label_x_note": "the engine rows' own label column (settings_rows.label_x), so the two lists align",
+    "value_x": 0.5,
+    "swatch_x": 0.74,
+    "swatch_gap": 0.2,
+    "_swatch_note": "eight swatches from swatch_x to the right edge of the row, drawn from the SELECTED preset's base colours (core/playercolors.base), so they cannot disagree with what a restart will produce; swatch_gap is the gap between two as a share of one swatch",
+    "divider_y": 0.5,
+    "_restart_note": "The restart note is drawn right-aligned in the HEADING band, directly above the preset row's swatches: four row heights leave no fifth for it. Shown only while the saved preset differs from the one palette.init applied (palette.active_preset), so it goes away by itself after the restart.",
+    "_value_x_note": "0.46 let 'Player colours' run into the preset name in the first offline render (14 September 2026); 0.50 leaves a gap at 1080p, and the swatches follow at 0.74",
+    "hue_end": 0.84,
+    "_hue_note": "Work order 170, HD EXTENSION: the frame colour row. The hue bar runs from value_x to hue_end of the row, RESET after it; a click on the bar sets the hue under the pointer, RESET returns to the measured blue. The divider band became a third of a row so the six rows fit the box it had.",
+    "_tone_note": "Work order 171, HD EXTENSION: the frame tone row under the hue row - a saturation bar (grey to the chosen colour) and a brightness bar (black to silver), splitting the hue bar's span. RESET on the hue row resets all three. The seven rows share the box it had; the divider stays a third of a row."
+  }
+}

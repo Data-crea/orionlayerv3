@@ -1,0 +1,108 @@
+Engine: a right click at a point, MSG_INJECT_RIGHT_CLICK 0x87 (open fix 61).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part A, "F12 view on
+the combat map ... the right mouse button is not passed on") — orion2re
+ab3f6892 on orionlayer-local (before: 96da4c4d), this file's diff byte for
+byte (index lines included). Required by tools/version_check.py since work
+order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_inject_right_click.patch
+
+and a rebuild. It comes back off with `git revert ab3f6892` or
+`patch -R -p1`, and a rebuild.
+
+WHAT IT IS FOR
+
+    The battle map is one grid field (combat1.cpp:111). A RIGHT click on it
+    turns the active ship to face the point: Get_Input_ returns the negated
+    field and the loop reads `_cur_combat_x + _xpos / 2` (combat1.cpp:
+    696-710). The wire had no right click at a point: INJECT_CLICK pushes the
+    left button only, and CANCEL_FIELD right-clicks a field's CENTRE — the
+    whole answer for a button, the wrong one for a grid. So the F12 view
+    could not turn a ship. The change is INJECT_CLICK with the right button,
+    under its own message type, so an engine without it drops the message
+    (ProcessInput's `default: break`) instead of taking it as a left click
+    (which would MOVE the ship).
+
+    Written only in src/ext; nothing runs unless a client sends 0x87, so an
+    engine without OrionLayer behaves exactly as before. One marker,
+    `OrionLayer, open fix 61.`, on one line at each of the three changed
+    places.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 248280bc..7c31af8f 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1836,6 +1836,35 @@ static void ProcessInput() {
+             g_hide_window = (cmd.param1 == 0);
+             break;
+ 
++        case MSG_INJECT_RIGHT_CLICK:
++            // OrionLayer, open fix 61. INJECT_CLICK with the right button: a grid field reads the point (the battle map's turn-to-face, combat1.cpp:696-710).
++            {
++                // CANCEL_FIELD right-clicks a field's CENTRE, which is
++                // the whole answer for a button and the wrong one for a
++                // grid field: the game reads _xpos/_ypos from the point.
++                g_injected_mouse_pending = true;
++                float wx = 0.0f;
++                float wy = 0.0f;
++                Game_Point_To_Window_Point_((float)cmd.param1,
++                                            (float)cmd.param2,
++                                            &wx, &wy);
++                SDL_Event down{};
++                down.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
++                down.button.button = SDL_BUTTON_RIGHT;
++                down.button.x = wx;
++                down.button.y = wy;
++                down.button.down = true;
++                SDL_PushEvent(&down);
++                SDL_Event up{};
++                up.type = SDL_EVENT_MOUSE_BUTTON_UP;
++                up.button.button = SDL_BUTTON_RIGHT;
++                up.button.x = wx;
++                up.button.y = wy;
++                up.button.down = false;
++                SDL_PushEvent(&up);
++            }
++            break;
++
+         case MSG_CANCEL_FIELD:
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index 23ed4df5..2e457bcb 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -222,6 +222,17 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_INJECT_RIGHT_CLICK: {
++        // OrionLayer, open fix 61. int16 x, int16 y; shorter is dropped, never guessed.
++        if (payload_len >= 4) {
++            InputCommand cmd{};
++            cmd.type = MSG_INJECT_RIGHT_CLICK;
++            memcpy(&cmd.param1, payload, 2);
++            memcpy(&cmd.param2, payload + 2, 2);
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_CANCEL_FIELD: {
+         if (payload_len >= 2) {
+             InputCommand cmd{};
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index 4d9d4c4b..400a6e93 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -42,6 +42,8 @@ constexpr uint16_t MSG_SET_JOBS      = 0x84;
+ constexpr uint16_t MSG_SELECT_SHIP   = 0x85;
+ // OrionLayer, open fix 43. Show (1) or hide (0) the engine's own window: uint8 show.
+ constexpr uint16_t MSG_SHOW_WINDOW   = 0x86;
++// OrionLayer, open fix 61. A RIGHT click at (x, y) in 640x480 space: int16 x, int16 y.
++constexpr uint16_t MSG_INJECT_RIGHT_CLICK = 0x87;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;

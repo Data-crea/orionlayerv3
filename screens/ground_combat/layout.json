@@ -1,0 +1,11 @@
+{
+  "_comment": "The ground combat (open fix 91's id 69), work order 232 C. Geometry is screens/ground_combat/gcgeom.py, the drawing gcdraw.py, the pictures gcart.py; the marks name every difference from the original, each held by check 090zzzj and named in dev:doc/state/ground_combat.md.",
+  "marks": {
+    "transcription_frame": "TRANSCRIPTION (work order 232 C) \u2014 the frame the engine's Draw_Colony_Combat_Screen_ drew last, recorded by its own drawing code (open fix 91): each unit's picture by side, kind and state at its frame and place (Do_Unit_Turn_, colgcbt.cpp:463-606; Action_Anim_ :313-330), each beam (Draw_CGCBT_Beam_, bolt::Bolt_Segment_), each explosion (FLCQUEUE) \u2014 HD computes no motion, so the motion and its pace are the original's.",
+    "transcription_boxes": "TRANSCRIPTION \u2014 the summary boxes' header in the side's colour, the bonus lines as Print_Data_ prints them, the troop totals with their figures and three lines in the attacker's colour in both boxes (colgcbt.cpp:279-386, :738-756, :929-985).",
+    "deviation_field_window": "DEVIATION \u2014 the scene from gcgeom.FieldMap.top down at one integer scale in the field panel, centred; the original shows the whole 640 x 480 picture under its boxes.",
+    "deviation_beam_jitter": "DEVIATION \u2014 a beam's colour jitter uses HD's own random; the engine's draws advance the fight's seed, which HD does not replay.",
+    "omission_ground_buildings": "OMISSION \u2014 the colony's buildings on the scene (COLONY::Draw_Colony_Bldgs_, colgcbt.cpp:862) are not drawn: HD places no building on a colony's ground yet ([colony.buildings], parked since work order 180).",
+    "hd_extension_shell": "HD EXTENSION \u2014 the screen shell (decisions 86-90): the title on the plate, the two boxes and the field as panels of the content rectangle."
+  }
+}

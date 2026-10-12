@@ -1,0 +1,37 @@
+OrionLayer open fix 84 — the field list is sent when its content changes
+========================================================================
+
+Work order 223 (Data's decision of 8 October 2026: applied on
+`orionlayer-local`, bundle in ~/claude/bundles/, nothing online). orion2re on
+`orionlayer-local`, on top of open fix 83. Every line under ORION2RE_EXT.
+
+The Extension API sent FIELD_LIST only when the field count, the screen id or
+a client's connection changed (ext_api.cpp's tick; open fix 2 added the
+connection). A view replaced by another with the same count under the same
+id went unseen: the race report for one race (RETURN, the Tech Review's tabs,
+its list) and Races' main list for two races are both 17 fields under
+screen 6, so after RETURN the client kept the report's list while the game
+was back on Races. The tick now serializes the list each pass and sends it
+when the bytes differ from the last list sent; the count test stays.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 753c6d6f..b4150da4 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2820,10 +2820,14 @@ void Tick(int16_t current_screen) {
+ 
+     // Send field list (only if changed)
+     int16_t fc = fields::_fields_count;
++    // OrionLayer, open fix 84. A list that changes with its count unchanged is sent too (the race report's RETURN to Races).
++    static std::vector<uint8_t> fields_buf;
++    static std::vector<uint8_t> fields_sent;
++    SerializeFields(fields_buf);
+     if (fc != g_last_fields_count || (events & EVT_SCREEN_CHANGED)
++        || fields_buf != fields_sent
+         || g_server.TakeFieldsDirty()) {
+-        static std::vector<uint8_t> fields_buf;
+-        SerializeFields(fields_buf);
++        fields_sent = fields_buf;
+         g_server.SendToSubscribers(SUB_FIELDS, MSG_FIELDS,
+                                     fields_buf.data(), fields_buf.size());
+         // Right after the list it belongs to: a client that gets a

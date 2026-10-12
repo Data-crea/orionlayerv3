@@ -1,0 +1,328 @@
+Extension API: aim an injected click where the caller said, and let
+that position survive until the input is consumed.
+
+This is `doc/orion2re_open_fixes.md` item 3, BOTH halves. They are one
+patch because either alone leaves the click broken: the first puts the
+event on the right pixel, the second stops the real mouse from pulling
+the pointer off it before the game looks.
+
+STATUS: needed for any injected click at all on a window that is not
+exactly 640x480 (first half), and for any injected click whose handler
+reads the POINTER rather than the event (second half). Together they
+are what the colony summary's population move waits on.
+
+    APPLIED LOCALLY on 4 September 2026, by decision, to the
+    orion2re working tree at ~/orion2re (engine 1.60.0, git
+    cf4d9617). Not a silent change: it is recorded here and under
+    item 3 of doc/orion2re_open_fixes.md, and it comes back off
+    with one line —
+
+        cd ~/orion2re && patch -R -p1 < \
+            ~/orionlayerv3/doc/ext_inject_click.patch
+
+    ONLY ONE OF THE THREE FILES IS JOES'. `src/ext/` is the
+    Extension API's own directory and is untracked in his tree, so
+    the ext_api.h and ext_api.cpp hunks are edits to our own code
+    and diverge from nothing. `src/game/platform.cpp` is his, and
+    that single hunk is the whole local divergence — the thing that
+    either conflicts visibly at the next update or vanishes
+    silently. The symptom of it vanishing is the population move
+    going quiet again in exactly the way it did before.
+
+    THE HUNKS BELOW ARE GENERATED, not hand-written: the edits
+    were made and then diffed, so the line numbers are the file's
+    own. An earlier hand-written version of this patch would not
+    have applied.
+
+FIRST HALF — THE CLICK IS AIMED IN THE WRONG SPACE
+
+    `MSG_INJECT_CLICK` pushed its point straight into the SDL event:
+
+        down.button.x = (float)cmd.param1;      ext_api.cpp:220
+
+    and the game reads every mouse event back through
+    `Map_Window_Point_To_Game_Point_` (platform.cpp:219), which calls
+    `SDL_RenderCoordinatesFromWindow` — WINDOW space to logical
+    640x480 space. So the caller's game coordinates were consumed as
+    window coordinates. On a 1828 px window, (510, 326) arrives near
+    (178, 114).
+
+    The comment directly above that line already said *"Push a mouse
+    click at (x, y) in 640x480 space"*. The fix makes the code keep
+    the promise the comment was already making, by calling the exact
+    inverse of the function the event will be read through:
+
+        SDL_RenderCoordinatesToWindow(renderer, x, y, &wx, &wy)
+
+    reached through `platform::g_main_window` (platform.h:31) and
+    `SDL_GetRenderer`. Being the inverse rather than a scale factor is
+    the point: letterboxing and non-integer scales come out right
+    without anyone computing them, and asking the renderer at the
+    moment of the click is the only way to be current, because the
+    window is `SDL_WINDOW_RESIZABLE` and shown and can change size
+    between one click and the next.
+
+    Why a client cannot do this itself: the window size is on no wire
+    message, and it is not generally measurable from outside either —
+    under GNOME on Wayland, `xdotool` and `xwininfo` see no window,
+    `org.gnome.Shell.Eval` is refused unless unsafe-mode is on, and
+    `Shell.Introspect.GetWindows` answers AccessDenied.
+
+    `MSG_CANCEL_FIELD` gets the same conversion. It builds its point
+    from a field rect, which is in game space, so it had the identical
+    defect reached through a different door.
+
+    If the renderer cannot be reached the point passes through
+    unchanged — the previous behaviour, not a silent zero.
+
+SECOND HALF — THE POINTER DOES NOT SURVIVE THE FRAME
+
+    `COLSUM::Get_Selected_Pop_` (colsum.cpp:1006) resolves which pop
+    icon was clicked from `mouse::Pointer_X_()`, not from the click
+    point. Aiming correctly is therefore not enough on its own:
+    measured 4 September 2026, twice, at a 640x480 window where the
+    first half is a no-op, the click reached the right FIELD and still
+    selected no icon.
+
+    "Carry the position with the event" is already how the engine
+    works and is not the missing piece:
+
+        Enqueue_Mouse_Input_Event_(x, y, buttons)   platform.cpp:132
+            carries the position in the queued event
+        mouse::Pointer_X_()                        mouse.cpp:51
+            calls Pump_Game_Input_Queue_() FIRST, then reads
+        User_Mouse_Handler_                        mouse.cpp:237
+            sets the logical position FROM the event
+
+    What defeats it is `Sync_Mouse_State_From_SDL_` (platform.cpp:825),
+    which runs every frame while the window has focus and does two
+    things:
+
+        Set_Present_Mouse_Position_(real_x, real_y)   :846
+        Enqueue_Mouse_Input_Event_(real_x, real_y, …) :852
+            when the real position differs from the logical one
+
+    and the second one is the sharp edge, because
+    `Enqueue_Mouse_Input_Event_` COALESCES: if the last queued event is
+    a mouse event with the same button state, it overwrites that
+    event's coordinates rather than appending (platform.cpp:138-147).
+    The injected button-up carries buttons = 0; so does the sync's
+    position event. The sync therefore rewrites the injected release's
+    coordinates to wherever the physical mouse is.
+
+    When the queue is finally pumped, the press is handled at the
+    injected point — which is why the right field is reached — and the
+    release then moves the logical pointer to the real mouse. By the
+    time `Get_Selected_Pop_` asks, the pointer has walked away.
+
+    The fix suppresses the sync while injected input is unconsumed.
+    Deterministic rather than timed: the flag is set when a click is
+    injected and cleared when the input queue drains, so the
+    suppression lasts exactly as long as the injected events are in
+    flight and not one frame longer.
+
+PRICE
+
+    While suppressed, the game does not see real mouse movement or
+    real button changes. That window is the one or two frames between
+    injecting and pumping. It cannot leak: the clear is in
+    `Pump_Game_Input_Queue_`, which is called by `Pointer_X_()`,
+    `Pointer_Y_()` and the main loop, so any code that asks about the
+    mouse at all ends the suppression. A player moving the physical
+    mouse during those frames loses that movement.
+
+    The alternative — tagging queued events with their origin and
+    refusing to coalesce across origins — is a bigger change to a hot
+    path, and it would still leave `Set_Present_Mouse_Position_` at
+    :846 overwriting the position outright.
+
+NOT A SOLUTION, AND DELIBERATELY NOT USED
+
+    `Sync_Mouse_State_From_SDL_` already returns early when
+    `g_window_focus_state == 0` (platform.cpp:826), so an injected
+    pointer survives while the window is unfocused. Nothing on the
+    wire reports focus, so a client cannot know it is in that state,
+    and "inject only while unfocused" would be behaviour depending on
+    something invisible. It explains why an injected click can appear
+    to work intermittently; it is not a way to live with the bug.
+
+    Setting the window to 640x480 is not a solution either. Under
+    Wayland it is reachable only by restarting, it has to be redone
+    every session, and no one can measure whether it is still true —
+    a state nobody can check is a state that goes quietly missing.
+
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -24,4 +24,10 @@
+ /// Set by ProcessInput(), consumed by Get_Input_() early return.
+ extern int16_t g_pending_field;
+ 
++/// True while an injected mouse event is queued and not yet
++/// pumped. Sync_Mouse_State_From_SDL_ stands aside while this is
++/// set, so the injected position survives to whoever reads
++/// mouse::Pointer_X_(). Cleared by Pump_Game_Input_Queue_().
++extern bool g_injected_mouse_pending;
++
+ } // namespace ext
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -5,6 +5,7 @@
+ #include "ext/ext_api.h"
+ #include "ext/ext_server.h"
+ #include "game/newgame.h"
++#include "game/platform.h"
+ 
+ #include <vector>
+ #include <cstring>
+@@ -13,12 +14,55 @@
+ 
+ bool g_hide_window = false;
+ int16_t g_pending_field = 0;
++bool g_injected_mouse_pending = false;
+ 
+ static Server g_server;
+ static int16_t g_last_screen = -99;
+ static int32_t g_last_stardate = -1;
+ static int16_t g_last_fields_count = -1;
+ 
++// ── Pointer coordinates ──────────────────────────────────
++
++/// Convert a 640x480 game point to the window point that maps back
++/// to it, so an injected mouse event survives the trip the game will
++/// put it through.
++///
++/// Every injected mouse event is read back by
++/// Map_Window_Point_To_Game_Point_ (platform.cpp:219), which calls
++/// SDL_RenderCoordinatesFromWindow: WINDOW space -> logical 640x480
++/// space. Pushing game coordinates raw therefore only lands correctly
++/// when the window happens to be exactly its creation size, and it is
++/// SDL_WINDOW_RESIZABLE and shown, so nothing keeps it there.
++///
++/// SDL_RenderCoordinatesToWindow is the exact inverse of the function
++/// the event will be read through, so the round trip is the identity
++/// at any window size, and letterboxing and non-integer scales come
++/// out right without anyone computing them. Asking the renderer at
++/// the moment of the click is also the only way to be current: the
++/// size can change between one click and the next, and no client can
++/// see it happen.
++///
++/// If the renderer cannot be reached the point is passed through
++/// unchanged, which is the previous behaviour rather than a silent
++/// zero.
++static void Game_Point_To_Window_Point_(float game_x, float game_y,
++                                        float* window_x,
++                                        float* window_y) {
++    *window_x = game_x;
++    *window_y = game_y;
++
++    SDL_Window* window = (SDL_Window*)platform::g_main_window;
++    if (window == nullptr) {
++        return;
++    }
++    SDL_Renderer* renderer = SDL_GetRenderer(window);
++    if (renderer == nullptr) {
++        return;
++    }
++    (void)SDL_RenderCoordinatesToWindow(renderer, game_x, game_y,
++                                        window_x, window_y);
++}
++
+ // ── Serialization helpers ────────────────────────────────
+ 
+ static void Write16(std::vector<uint8_t>& buf, int16_t v) {
+@@ -206,19 +250,36 @@
+             // Must send both DOWN and UP — the game's input loop
+             // waits for button release before returning.
+             {
++                // Hold the real-mouse sync off until these are
++                // consumed. Without it, Enqueue_Mouse_Input_Event_'s
++                // coalescing rewrites the injected RELEASE to the
++                // physical mouse position, and the pointer has walked
++                // away before the game reads it.
++                g_injected_mouse_pending = true;
++
++                // The comment above has always said "in 640x480
++                // space" and until now that was a promise the code
++                // did not keep: the point was pushed raw and read
++                // back as a WINDOW coordinate.
++                float wx = 0.0f;
++                float wy = 0.0f;
++                Game_Point_To_Window_Point_((float)cmd.param1,
++                                            (float)cmd.param2,
++                                            &wx, &wy);
++
+                 SDL_Event down{};
+                 down.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+                 down.button.button = SDL_BUTTON_LEFT;
+-                down.button.x = (float)cmd.param1;
+-                down.button.y = (float)cmd.param2;
++                down.button.x = wx;
++                down.button.y = wy;
+                 down.button.down = true;
+                 SDL_PushEvent(&down);
+ 
+                 SDL_Event up{};
+                 up.type = SDL_EVENT_MOUSE_BUTTON_UP;
+                 up.button.button = SDL_BUTTON_LEFT;
+-                up.button.x = (float)cmd.param1;
+-                up.button.y = (float)cmd.param2;
++                up.button.x = wx;
++                up.button.y = wy;
+                 up.button.down = false;
+                 SDL_PushEvent(&up);
+             }
+@@ -228,8 +289,14 @@
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::_fields_count) {
+                 const s_field& f = fields::_fields[cmd.param1];
+-                float cx = (float)((f.x + f.x_end) / 2);
+-                float cy = (float)((f.y + f.y_end) / 2);
++                // The field rect is in game space, so this centre
++                // needs the same conversion as an injected click —
++                // it is the same defect reached by a different door.
++                float cx = 0.0f;
++                float cy = 0.0f;
++                Game_Point_To_Window_Point_(
++                    (float)((f.x + f.x_end) / 2),
++                    (float)((f.y + f.y_end) / 2), &cx, &cy);
+ 
+                 SDL_Event down{};
+                 down.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -827,6 +827,19 @@
+ 				return;
+ 			}
+ 
++#ifdef ORION2RE_EXT
++			// An injected click already carries its position in the
++			// queued event and Pointer_X_() pumps before reading, so
++			// the design is sound. What breaks it is this function:
++			// it overwrites the position, and its enqueue coalesces
++			// over the injected release (same button state), pulling
++			// the pointer back to the physical mouse. Stand aside
++			// until the queue has been pumped.
++			if (ext::g_injected_mouse_pending) {
++				return;
++			}
++#endif
++
+ 			float mouse_x = 0.0f;
+ 			float mouse_y = 0.0f;
+ 			const SDL_MouseButtonFlags sdl_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
+@@ -1490,6 +1503,15 @@
+                 Queue_Key_Code_(event.key_code, event.scan_code);
+             }
+         }
++
++#ifdef ORION2RE_EXT
++        // The injected events have been handled, so the real mouse may
++        // speak again. Cleared here rather than after a frame count:
++        // this runs from Pointer_X_(), Pointer_Y_() and the main loop,
++        // so the suppression ends the moment anything asks about the
++        // mouse, and it cannot outlive the events it protects.
++        ext::g_injected_mouse_pending = false;
++#endif
+     }
+ 
+     void __cdecl Update_Cursor_Image_() {

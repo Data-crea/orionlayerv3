@@ -1,0 +1,114 @@
+Engine: what the acting unit's weapons can hit now, "CTGT" (open fix 54).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part B; reserved by
+work order 193) — orion2re 750434ef on orionlayer-local (before: f1e6c581), this
+file's diff byte for byte (index lines included). Required by
+tools/version_check.py since work order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_targets.patch
+
+and a rebuild. It comes back off with `git revert 750434ef` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    Whether a weapon slot can hit a unit or a missile is decided inside
+    CMBTFIRE::Fire_Ship_ at the moment of the shot: the target inside the
+    slot's arc (Get_Weapon_Arc_ of Relative_Bearing_ / _XY_), ammunition by
+    the slot's type (a torpedo fires with ammo 0, anything else needs
+    ammo), Weapon_In_Range_ and Target_Is_Legal_For_Weapon_ (cmbtfire.cpp).
+    A client that shows legal targets would have to recompute range, arcs
+    and every special rule — the kind of copy this project refuses (open
+    fix 48 sent the move verdict for the same reason). Block "CTGT", after
+    CRES while a battle is live and a unit acts: for the acting unit, one
+    byte per unit and one per live missile, bit k = slot k can hit it now.
+    Not in it: whether the player has the slot switched on (CMBT's
+    `active`) and the reload Fire_Ship_ does on its way (CMBT's shots_left
+    and status).
+
+    193 left one question open: whether the two functions have side
+    effects. Work order 194 read them and every helper they call —
+    Weapon_In_Range_, Target_Is_Legal_For_Weapon_, Weapon_Can_Fire_At_
+    Missiles_, Can_Bomb_Planet_, Range_To_Ship_(_Squares_), Range_To_
+    Missile_, Range_To_XY_(_With_Offset_), Ship_Center_Offsets_,
+    special::Range_, Relative_Bearing_(_XY_), angle::Get_Angle_,
+    Get_Weapon_Arc_, Ship_Is_In_Stasis_, Does_Combat_Ship_Have_Special_:
+    none writes game state, none draws a random number, none ticks. So an
+    engine without OrionLayer behaves exactly as before. One marker,
+    `OrionLayer, open fix 54.`, on the block's first comment line.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 37bfd2da..7ea40161 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1554,6 +1554,68 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, u.structure_max);
+         }
+     }
++
++    // 22. What the acting unit's weapons can hit now: "CTGT", written ONLY
++    //     while a battle is live and a unit acts, after CRES.
++    //     OrionLayer, open fix 54.
++    //
++    //     The engine's own verdict, as CMBTFIRE::Fire_Ship_ takes it for each
++    //     weapon slot (cmbtfire.cpp): the target inside the slot's arc
++    //     (Get_Weapon_Arc_ of Relative_Bearing_ / _XY_), ammunition by the
++    //     slot's type (a torpedo fires with ammo 0, anything else needs ammo),
++    //     Weapon_In_Range_ and Target_Is_Legal_For_Weapon_. All of them only
++    //     read (work order 194 read each and every helper they call: no write,
++    //     no random number). NOT in it: whether the player has the slot
++    //     switched on (`active`, CMBT has it) and the reload Fire_Ship_ does
++    //     on its way (shots_left / status, CMBT has both). Per unit, then per
++    //     live missile: one byte, bit k = slot k can hit it.
++    if (g_combat_live && MOX::_combat_data != nullptr && MOX::_missile != nullptr &&
++        MOX::_cur_ship >= 0 && MOX::_cur_ship < MOX::_combat_total_ship_count &&
++        MOX::_combat_total_ship_count <= 210) {
++        const int16_t src = MOX::_cur_ship;
++        const int16_t units = MOX::_combat_total_ship_count;
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'T');
++        buf.push_back((uint8_t)'G');
++        buf.push_back((uint8_t)'T');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, (int16_t)g_combat_serial);
++        Write16(buf, src);
++        auto slot_mask = [&](int16_t target, int16_t flag, uint8_t arc) {
++            uint8_t mask = 0;
++            for (int16_t k = 0; k < 8; k++) {
++                const s_combat_weapon_slot& w = MOX::_combat_data[src].weapons[k];
++                if (w.weapon_id == 0 || (arc & w.arc) == 0) continue;
++                const bool torpedo = TECHDATA::_weapons[w.weapon_id].type == WEAPON_TYPE_TORPEDO;
++                if (torpedo ? w.ammo != 0 : w.ammo == 0) continue;
++                if (CMBTFIRE::Weapon_In_Range_(k, src, target, flag, 0) != 0 &&
++                    CMBTFIRE::Target_Is_Legal_For_Weapon_(w.weapon_id, w.specials, target, flag) != 0) {
++                    mask |= (uint8_t)(1u << k);
++                }
++            }
++            return mask;
++        };
++        Write16(buf, units);
++        for (int16_t t = 0; t < units; t++) {
++            uint8_t mask = 0;
++            if (t != src && MOX::_combat_data[t].unit_status == 0 &&
++                (t != 0 || MOX::_cmbt_colony_id != -1)) {
++                mask = slot_mask(t, 0, CMBTDRW1::Get_Weapon_Arc_(CMBTDRW1::Relative_Bearing_(src, t)));
++            }
++            Write8(buf, mask);
++        }
++        int16_t live = 0;
++        for (int i = 0; i < 300; i++) {
++            if (MOX::_missile[i].type > 0) ++live;
++        }
++        Write16(buf, live);
++        for (int16_t m = 0; m < 300; m++) {
++            if (MOX::_missile[m].type <= 0) continue;
++            Write16(buf, m);
++            Write8(buf, slot_mask(m, 1, CMBTDRW1::Get_Weapon_Arc_(CMBTDRW1::Relative_Bearing_XY_(
++                src, MOX::_missile[m].x, MOX::_missile[m].y))));
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

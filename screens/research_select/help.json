@@ -1,0 +1,37 @@
+{
+  "_comment": "Right-click context help, transcribed from BILLHELP::_technology_select_help_list (billhelp.cpp:42-46, 3 entries, s_help_box {help_id, x1, y1, x2, y2} orion2.h:993), installed by BILLHELP::Technology_Select_Help_ (billhelp.cpp:126) and RE-INSTALLED on every redraw from tech.cpp:278-283. All three carry the SAME id, 254 - the select panel has one help entry and three rectangles for it, and all three lie OUTSIDE the panel. Inside the panel a right click is NOT help: it opens the description box for the choice under the pointer (tech.cpp:323-337), which this build does not draw - see screen.py's OMISSION list. `native` is the original's 640x480 rectangle and is the provenance; the HD region is resolved from the named box, as on every other screen.",
+  "_source": "billhelp.cpp:42-46",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 254,
+      "box": "science_room",
+      "native": [
+        0,
+        0,
+        163,
+        479
+      ]
+    },
+    {
+      "help_id": 254,
+      "box": "top_band",
+      "native": [
+        163,
+        0,
+        639,
+        25
+      ]
+    },
+    {
+      "help_id": 254,
+      "box": "bottom_band",
+      "native": [
+        163,
+        449,
+        639,
+        479
+      ]
+    }
+  ]
+}

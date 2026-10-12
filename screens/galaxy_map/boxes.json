@@ -1,0 +1,776 @@
+{
+  "1920x1080": [
+    {
+      "name": "map_area",
+      "rect": [
+        0,
+        75,
+        1611,
+        906
+      ],
+      "anchor_v": "stretch",
+      "style": {
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "sidebar",
+      "rect": [
+        1617,
+        85,
+        283,
+        846
+      ],
+      "style": {
+        "font_scale": 1.3
+      }
+    },
+    {
+      "name": "nav_turn",
+      "rect": [
+        1604,
+        987,
+        282,
+        73
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 26
+      }
+    },
+    {
+      "name": "nav_colonies",
+      "rect": [
+        41,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_planets",
+      "rect": [
+        297,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_fleets",
+      "rect": [
+        563,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_leaders",
+      "rect": [
+        817,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_races",
+      "rect": [
+        1086,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_info",
+      "rect": [
+        1348,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sb_stardate_text",
+      "rect": [
+        1646,
+        93,
+        236,
+        100
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_treasury_text",
+      "rect": [
+        1646,
+        209,
+        126,
+        132
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_treasury_icon",
+      "rect": [
+        1776,
+        236,
+        101,
+        88
+      ]
+    },
+    {
+      "name": "sb_command_text",
+      "rect": [
+        1646,
+        357,
+        119,
+        129
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_command_icon",
+      "rect": [
+        1769,
+        367,
+        108,
+        114
+      ]
+    },
+    {
+      "name": "sb_food_text",
+      "rect": [
+        1646,
+        502,
+        113,
+        118
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_food_icon",
+      "rect": [
+        1763,
+        523,
+        109,
+        85
+      ]
+    },
+    {
+      "name": "sb_freighters_text",
+      "rect": [
+        1646,
+        636,
+        126,
+        123
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_freighters_icon",
+      "rect": [
+        1776,
+        672,
+        108,
+        70
+      ]
+    },
+    {
+      "name": "sb_research_text",
+      "rect": [
+        1646,
+        775,
+        131,
+        148
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_research_icon",
+      "rect": [
+        1781,
+        789,
+        110,
+        134
+      ]
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        261,
+        108,
+        1080,
+        800
+      ]
+    },
+    {
+      "name": "system_box",
+      "rect": [
+        991,
+        458,
+        496,
+        439
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "system_title",
+      "rect": [
+        1006,
+        467,
+        466,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "system_view",
+      "rect": [
+        1011,
+        517,
+        456,
+        286
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_text",
+      "rect": [
+        1011,
+        811,
+        317,
+        38
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_close",
+      "rect": [
+        1343,
+        849,
+        129,
+        38
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_box",
+      "rect": [
+        1170,
+        544,
+        317,
+        353
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "fleet_title",
+      "rect": [
+        1180,
+        553,
+        297,
+        38
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_grid",
+      "rect": [
+        1190,
+        599,
+        278,
+        219
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "fleet_status",
+      "rect": [
+        1180,
+        826,
+        297,
+        29
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_close",
+      "rect": [
+        1264,
+        858,
+        129,
+        32
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "map_area",
+      "rect": [
+        0,
+        75,
+        1611,
+        906
+      ],
+      "anchor_v": "stretch",
+      "style": {
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "sidebar",
+      "rect": [
+        1617,
+        85,
+        283,
+        846
+      ],
+      "style": {
+        "font_scale": 1.3
+      }
+    },
+    {
+      "name": "nav_turn",
+      "rect": [
+        1604,
+        987,
+        282,
+        73
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 26
+      }
+    },
+    {
+      "name": "nav_colonies",
+      "rect": [
+        41,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_planets",
+      "rect": [
+        297,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_fleets",
+      "rect": [
+        563,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_leaders",
+      "rect": [
+        817,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_races",
+      "rect": [
+        1086,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "nav_info",
+      "rect": [
+        1348,
+        994,
+        250,
+        62
+      ],
+      "anchor_v": "bottom",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sb_stardate_text",
+      "rect": [
+        1646,
+        93,
+        236,
+        100
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_treasury_text",
+      "rect": [
+        1646,
+        209,
+        126,
+        132
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_treasury_icon",
+      "rect": [
+        1776,
+        236,
+        101,
+        88
+      ]
+    },
+    {
+      "name": "sb_command_text",
+      "rect": [
+        1646,
+        357,
+        119,
+        129
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_command_icon",
+      "rect": [
+        1769,
+        367,
+        108,
+        114
+      ]
+    },
+    {
+      "name": "sb_food_text",
+      "rect": [
+        1646,
+        502,
+        113,
+        118
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_food_icon",
+      "rect": [
+        1763,
+        523,
+        109,
+        85
+      ]
+    },
+    {
+      "name": "sb_freighters_text",
+      "rect": [
+        1646,
+        636,
+        126,
+        123
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_freighters_icon",
+      "rect": [
+        1776,
+        672,
+        108,
+        70
+      ]
+    },
+    {
+      "name": "sb_research_text",
+      "rect": [
+        1646,
+        775,
+        131,
+        148
+      ],
+      "style": {
+        "font_scale": 1.2,
+        "align": "left"
+      }
+    },
+    {
+      "name": "sb_research_icon",
+      "rect": [
+        1781,
+        789,
+        110,
+        134
+      ]
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        261,
+        108,
+        1080,
+        800
+      ]
+    },
+    {
+      "name": "system_box",
+      "rect": [
+        991,
+        458,
+        496,
+        439
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "system_title",
+      "rect": [
+        1006,
+        467,
+        466,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "system_view",
+      "rect": [
+        1011,
+        517,
+        456,
+        286
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_text",
+      "rect": [
+        1011,
+        811,
+        317,
+        38
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "system_close",
+      "rect": [
+        1343,
+        849,
+        129,
+        38
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_box",
+      "rect": [
+        1170,
+        544,
+        317,
+        353
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "fleet_title",
+      "rect": [
+        1180,
+        553,
+        297,
+        38
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_grid",
+      "rect": [
+        1190,
+        599,
+        278,
+        219
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "fleet_status",
+      "rect": [
+        1180,
+        826,
+        297,
+        29
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16,
+        "align": "center"
+      }
+    },
+    {
+      "name": "fleet_close",
+      "rect": [
+        1264,
+        858,
+        129,
+        32
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    }
+  ]
+}

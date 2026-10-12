@@ -1,0 +1,521 @@
+"""Drawing the battle — work order 197 C. Every rule is the original's, with
+its source (`dev:doc/combat_drawing_reading.md` — the reading, checked where
+noted); what HD does otherwise is marked.
+
+  background  black (outside a nebula `Fill_(0)`, cmbtdrw1.cpp:431-433), then
+              the star layers COMBAT.LBX 46 (35 in a nebula) / 47 / 48,
+              tiled — DEVIATION `star_parallax`: the original's two scroll
+              paths disagree (edge scroll 80/40/10 px per step, snap
+              +160/+80/+20 per cell, combinit.cpp:2458-2482, 2266-2276);
+              HD moves the layers at 1, 1/2 and 1/8 of the camera
+  legal cells the acting human unit's legal cells filled with palette 0x81,
+              box 20 / 40 / 60 px by size (cmbtdrw1.cpp:249-299)
+  a unit      its picture at the cell's centre offset (10 / 20 / 30 by size,
+              combinit.cpp:3019-3075) less 28 px, the facing's quadrant
+              tweak and (2, 3) (`Get_Draw_Ship_Offsets_`,
+              cmbtdrw1.cpp:1909-1976); the planet at its own offsets
+  the cursor  COMBAT.LBX 0x20 + {0, 1, 2} by size at (-3,-3) / (-5,-4) /
+              (-8,-8), frame (glow / 2) % 4 (cmbtdrw1.cpp:816-853)
+  ordnance    CMBTMISL[type * 16 + facing] at its world pixel less 12 (23 for
+              a torpedo); fighters CMBTFGTR[type * 16 + facing]
+              (cmbtmis.cpp:1044-1168) — HD draws one picture per stack
+              with its count, DEVIATION `ordnance_stack` (the original's
+              stack patterns are not transcribed yet)
+"""
+import pygame
+
+from . import cbart, cbview
+
+CELL = cbview.CELL
+LEGAL_INDEX = 0x81
+CENTRE = {0: 10, 1: 20, 2: 20, 3: 30, 4: 30, 5: 30}
+BASE_OFF = {0: -16, 1: -6, 2: 4}          # by (size + 1) // 2
+PLANET_CENTRE = {0: 30, 1: 40, 2: 60, 3: 70, 4: 80}
+PLANET_OFF = {0: (2, 2), 1: (0, 1), 2: (7, 7), 3: (4, 4), 4: (6, 6)}
+CURSOR = {0: (0x20, -3, -3), 1: (0x21, -5, -4), 2: (0x22, -8, -8)}
+MISSILE_TYPE = {14: 0, 15: 1, 16: 2, 17: 3, 18: 4, 19: 5, 20: 6, 40: 6}
+#: drawn with the torpedo layout, 23 px up and left; the Anti-Matter
+#: Torpedo (18) is drawn as a missile, 12 px (`Draw_Missile_`,
+#: cmbtmis.cpp:1146-1160; work order 212, [combat.fx_torpedo_offset])
+TORPEDOES = {19, 20, 40}
+PROTON = 19                 # WEAPON_PROTON_TORPEDO
+FIGHTER_TYPE = {31: 0, 29: 1, 30: 2, 28: 3}
+STAR_LAYERS = ((46, 0.125), (47, 0.5), (48, 1.0))
+
+
+def sprite_origin(unit):
+    """World px of the unit's picture's top-left (`Get_Draw_Ship_Offsets_`)."""
+    size = max(0, min(5, int(unit["size_class"])))
+    x = unit["x"] * CELL + BASE_OFF[min(2, (size + 1) // 2)]
+    y = unit["y"] * CELL + BASE_OFF[min(2, (size + 1) // 2)]
+    q = max(0, (int(unit["facing_dir"]) - 1) // 4)
+    if q in (1, 2):
+        x -= 2
+    if q in (2, 3):
+        y -= 1
+    return x - 2, y - 3
+
+
+def centre(unit):
+    size = max(0, min(5, int(unit["size_class"])))
+    return (unit["x"] * CELL + CENTRE[size], unit["y"] * CELL + CENTRE[size])
+
+
+#: Bytes of pictures of the CURRENT zoom level the cache keeps although the
+#: last frame did not draw them (work order 202 B): the glow frames between
+#: their steps, an effect's other frames. At 12x a unit's four glow
+#: pictures are ~2 MB each, so 64 MB keeps a large battle's at every zoom.
+#: Pictures of another level are let go as soon as no frame draws them.
+IDLE_BYTES = 64 * 2 ** 20
+
+
+def _bytes(value):
+    """A cached entry's pixels: a surface, or a tuple that starts with one
+    (`cbshot`'s (picture, origin), the planet's (picture, size))."""
+    if isinstance(value, tuple) and value:
+        value = value[0]
+    if isinstance(value, pygame.Surface):
+        return value.get_pitch() * value.get_height()
+    return None
+
+
+def _level(key):
+    """The zoom a key was scaled for — its last element, as `scaled`,
+    `cbshot`'s bolts and `cbsfx`'s lines write it — or None."""
+    return key[-1] if isinstance(key, tuple) and key and \
+        isinstance(key[-1], float) else None
+
+
+class SpriteCache(dict):
+    """The battle's picture cache, BOUNDED BY BYTES (work order 202 B).
+
+    201 measured it at 3.5 GB after ten wheel steps in and ten out: every
+    zoom level's star layers stayed (`scaled` cleared only at 4000 entries,
+    and the 7680 x 5760 layers of 12x are 177 MB each). Now `begin(scale)`,
+    once a render, keeps every picture the last frame drew — the current
+    level's need, whatever its size — lets go of every other one scaled
+    for another zoom, and of the rest keeps the most recently drawn up to
+    `IDLE_BYTES`. A dict, so every caller keeps its `key in cache` and
+    `cache[key]`; reading an entry is what marks it drawn."""
+
+    def __init__(self):
+        super().__init__()
+        self.frame = 0
+        self._meta = {}              # key -> [bytes, last frame, source]
+
+    def begin(self, scale):
+        self.frame += 1
+        level = round(scale, 3)
+        # by the frame alone: the keys are of every shape (`cbshot`'s bolts,
+        # `scaled`'s pairs), and a tie must not compare them
+        idle = sorted(((m[1], k) for k, m in self._meta.items()
+                       if m[1] < self.frame - 1), key=lambda fk: fk[0])
+        spare = 0
+        for _f, k in idle:
+            lv = _level(k)
+            if lv is None or lv == level:
+                spare += self._meta[k][0]
+            else:
+                self._drop(k)
+        for _f, k in idle:
+            if spare <= IDLE_BYTES:
+                break
+            if k in self._meta:
+                spare -= self._meta[k][0]
+                self._drop(k)
+
+    def _drop(self, key):
+        self._meta.pop(key, None)
+        dict.pop(self, key, None)
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        n = _bytes(value)
+        if n is not None:
+            self._meta[key] = [n, self.frame, None]
+        else:
+            self._meta.pop(key, None)
+
+    def __getitem__(self, key):
+        m = self._meta.get(key)
+        if m is not None:
+            m[1] = self.frame
+        return super().__getitem__(key)
+
+    def hold(self, key, source):
+        """Keep `source` alive with its scaled copy: the key is its id(),
+        and an id is reused once the object is gone."""
+        if key in self._meta:
+            self._meta[key][2] = source
+
+    def clear(self):
+        super().clear()
+        self._meta.clear()
+
+    def nbytes(self, drawn_only=False):
+        return sum(m[0] for m in self._meta.values()
+                   if not drawn_only or m[1] >= self.frame)
+
+
+def scaled(surf, scale, cache):
+    """`surf` at `scale` times the stored drawing's size — a painted picture
+    at k times that size (`cbart.hd_factor`, HD EXTENSION `hd_painted`)
+    shrinks by k more, smoothly, and keeps its detail where the camera is
+    closer than k."""
+    key = (id(surf), round(scale, 3))
+    if key not in cache:
+        k = cbart.hd_factor(surf)
+        w = max(1, round(surf.get_width() * scale / k))
+        h = max(1, round(surf.get_height() * scale / k))
+        if k > 1 and (w, h) != surf.get_size():
+            out = cbart.smooth(surf, (w, h))
+            # a whole-surface alpha (a painted ship under the cloak,
+            # `cbcloak.picture`) is not in the pixels `smooth` averages:
+            # carried over, or the cloaked ship was drawn opaque at every
+            # zoom below its painted factor (work order 221)
+            if surf.get_alpha() is not None and surf.get_alpha() < 255:
+                out.set_alpha(surf.get_alpha())
+            cache[key] = out
+        else:
+            cache[key] = pygame.transform.scale(surf, (w, h))
+        if isinstance(cache, SpriteCache):
+            cache.hold(key, surf)
+        elif len(cache) > 4000:     # a caller's own dict
+            cache.clear()
+    return cache[key]
+
+
+def draw_background(surface, cam, art, nebula, cache):
+    # LOOK EXCEPTION picture: the battle field's space (006f's named area)
+    surface.fill((0, 0, 0), cam.area)
+    if not art.available:
+        return
+    clip = surface.get_clip()
+    surface.set_clip(pygame.Rect(cam.area))
+    for entry, factor in STAR_LAYERS:
+        if nebula and entry == 46:
+            entry = 35
+        layer = art.surface("combat", entry)
+        if layer is None:
+            continue
+        img = scaled(layer, cam.scale, cache)
+        w, h = img.get_size()
+        sx = -(cam.ox * factor * cam.scale) % w
+        sy = -(cam.oy * factor * cam.scale) % h
+        x = cam.area[0] + sx - w
+        while x < cam.area[0] + cam.area[2]:
+            y = cam.area[1] + sy - h
+            while y < cam.area[1] + cam.area[3]:
+                surface.blit(img, (x, y))
+                y += h
+            x += w
+    surface.set_clip(clip)
+
+
+def draw_legal(surface, cam, art, combat, unit):
+    size = max(0, min(5, int(unit["size_class"])))
+    box = {0: 20, 1: 40, 2: 40}.get(size, 60)
+    rgb = (art.palette_with().get(LEGAL_INDEX, (40, 40, 90))
+           if art.available else (40, 40, 90))
+    from core import combatblocks as cb
+    shade = pygame.Surface((max(1, round(box * cam.scale)),) * 2,
+                           pygame.SRCALPHA)
+    shade.fill((*rgb, 150))
+    for x in range(cb.GRID_W):
+        for y in range(cb.GRID_H):
+            if cb.legal(combat["legal"], x, y):
+                surface.blit(shade, cam.to_window(x * CELL, y * CELL))
+
+
+def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
+               planet_pic=None, phased_shown=True, fades=None, now=0.0,
+               fast=False):
+    """Every live unit as `Draw_Ship_` draws it (cmbtdrw1.cpp:2498-2655):
+    a cloaked unit darkened, a phased one its outline or nothing (`cbcloak`,
+    work order 210 C1; `phased_shown`: the acting unit is the local
+    player's), the absorber's glow, the picture, then ONE lasting overlay —
+    the stasis ball, else the plasma web, else the black hole (work order
+    210 C2, `lasting_overlay`)."""
+    from . import cbcloak
+    for i, u in enumerate(combat["units"]):
+        if u["unit_status"] != 0 or (i and u["structure_max"] <= 0) or \
+                u.get("_hidden"):        # a teleport playing (`cbplay`)
+            continue
+        if i == 0:
+            if planet_pic is not None:
+                size = planet_pic[1]
+                ox, oy = PLANET_OFF.get(size, (7, 7))
+                surface.blit(scaled(planet_pic[0], cam.scale, cache),
+                             cam.to_window(u["x"] * CELL + ox,
+                                           u["y"] * CELL + oy))
+            continue
+        glow = glow_frame(u, i, glow_clock)
+        flag = int(u.get("special_status_flag", 0))
+        fade = fades.step(i, now, fast) if fades is not None else None
+        ox, oy = sprite_origin(u)
+        dx, dy = u.get("_off", (0, 0))      # a move being played (cbplay)
+        at = cam.to_window(ox + dx, oy + dy)
+        if fade is not None:
+            # `Draw_Cloak_`: the facing's glow-0 frame, darkened by the
+            # fade's own mode and step (cmbtspec.cpp:106-117)
+            pic = cbcloak.picture(art, colours, u, 0, "cloak", fade[1],
+                                  fade[0])
+            if pic is not None:
+                surface.blit(scaled(pic, cam.scale, cache), at)
+            continue
+        if flag == cbcloak.PHASED:
+            pic = cbcloak.picture(art, colours, u, glow, "outline") \
+                if phased_shown else None
+            if pic is not None:
+                surface.blit(scaled(pic, cam.scale, cache), at)
+            continue
+        if u.get("reflected_damage_pool", 0) > 0 and \
+                not u.get("plasma_web_damage") and \
+                u.get("stasis_source_idx", 255) == 255 and \
+                u.get("black_hole_source_idx", 255) == 255:
+            draw_absorber(surface, cam, art, u, i, glow_clock, cache,
+                          (dx, dy))
+        if flag in cbcloak.CLOAKED:
+            pic = cbcloak.picture(art, colours, u, glow, "cloak",
+                                  (glow_clock + i * 2) % 16, 3)
+        else:
+            pic = unit_picture(art, colours, u, glow)
+        if pic is None:
+            wx, wy = centre(u)
+            pygame.draw.circle(surface, (160, 170, 200),
+                               [int(v) for v in cam.to_window(wx, wy)],
+                               max(3, int(8 * cam.scale)), 1)
+            continue
+        surface.blit(scaled(pic, cam.scale, cache), at)
+        lasting_overlay(surface, cam, art, u, glow_clock, cache, (dx, dy))
+
+
+def lasting_overlay(surface, cam, art, u, clock, cache, off=(0, 0)):
+    """TRANSCRIPTION `lasting_overlay` (work order 210 C2): what stays on a
+    held unit for as long as it is held, after its picture, one of three
+    (`Draw_Ship_`, cmbtdrw1.cpp:2641-2653):
+      stasis      `stasis_source_idx` set: the ball, frame 0, at 100 %
+                  (`Draw_Stasis_Ball_(i, 100, 0, 0)`, cmbtspec.cpp:273-355)
+      plasma web  `plasma_web_damage` above 0: the web by size and facing at
+                  frame `_ship_frame % frames` (`Draw_Plasma_Web_`,
+                  :357-450)
+      black hole  `black_hole_source_idx` set: CMBTSFX 46/45/45/44/44/43 by
+                  size, frame `(_ship_frame / 2) % 8`, + 8 once the hole's
+                  flag is past 1 (`Draw_BHG_`, cmbtfire.cpp:963-1002)
+    Each centred on the unit, glassed by its own table (the shield's for
+    the ball, `_plasma_web_remap_colors`, `_bhg_remap_colors`;
+    combinit.cpp:854-990, `cbart.CombatArt.glass`)."""
+    from . import cbsfx
+    wx, wy = centre(u)
+    wx, wy = wx + off[0], wy + off[1]
+    if u.get("stasis_source_idx", 255) != 255:
+        e, mirror, flip = cbsfx.stasis_ball(art, u)
+        pic = art.surface("cmbtsfx", e, 0, None, mirror, flip,
+                          glass="shield")
+    elif int(u.get("plasma_web_damage", 0)) > 0:
+        e, mirror, flip = cbsfx.web_picture(u)
+        n = max(1, art.frame_count("cmbtsfx", e))
+        pic = art.surface("cmbtsfx", e, int(clock) % n, None, mirror, flip,
+                          glass="plasma_web")
+    elif u.get("black_hole_source_idx", 255) != 255:
+        e = cbsfx.BHG.get(int(u["size_class"]), 44)
+        frame = (int(clock) // 2) % 8 + (0 if u.get("black_hole_flag") == 1
+                                         else 8)
+        pic = art.surface("cmbtsfx", e, frame, glass="bhg")
+    else:
+        return
+    if pic is None:
+        return
+    img = scaled(pic, cam.scale, cache)
+    x, y = cam.to_window(wx, wy)
+    surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
+
+
+def draw_tractors(surface, cam, art, combat, cache):
+    """TRANSCRIPTION `lasting_tractor` (work order 210 C2): every live unit
+    whose `special_cooldown` names a live other unit holds it with CMBTSFX 2
+    frame 6 along the line between their centres, under the units
+    (`Draw_Continuing_Tractor_`, cmbtspec.cpp:140-173, drawn by
+    `Full_Draw_Combat_Screen_` before the ships, cmbtdrw1.cpp:506-515)."""
+    from . import cbsfx
+    units = combat["units"]
+    for i, u in enumerate(units):
+        t = int(u.get("special_cooldown", 255))
+        if u["unit_status"] != 0 or t == 255 or t == i or t >= len(units) \
+                or units[t]["unit_status"] != 0:
+            continue
+        a = tuple(int(v) for v in centre(u))
+        b = tuple(int(v) for v in centre(units[t]))
+        cbsfx.texture_line(surface, cam, cache, art.surface(
+            "cmbtsfx", 2, 6, glass="tractor"), a, b)
+
+
+def missile_at(ordnance, cam, x, y, me):
+    """The enemy missile or fighter group under window point (x, y)."""
+    for m in (ordnance or {}).get("missiles", []):
+        mx, my = cam.to_window(m["x"], m["y"])
+        if abs(mx - x) < 14 * cam.scale and abs(my - y) < 14 * cam.scale \
+                and m.get("owner") != me:
+            return m["index"]
+    return None
+
+
+def player_colours(state):
+    """Each player's colour, from the player records on the wire."""
+    from core.structs import player as player_struct
+    out = {}
+    for i, raw in enumerate(getattr(state, "player_raw", None) or []):
+        try:
+            out[i] = int(player_struct.SPEC.parse(raw).color)
+        except (ValueError, IndexError):
+            pass
+    return out
+
+
+def absorber_entry(size_class):
+    """CMBTSFX entry of the Energy Absorber's glow (cmbtfire.cpp:933-936;
+    C's division truncates)."""
+    size = max(0, min(5, int(size_class)))
+    return 0x33 + int((-1 - size) / 2) - (1 if size == 4 else 0)
+
+
+def draw_absorber(surface, cam, art, u, i, clock, cache, off=(0, 0)):
+    """TRANSCRIPTION `energy_absorber` (work order 200): a unit whose Energy
+    Absorber holds a charge (`reflected_damage_pool`) glows behind its
+    picture — CMBTSFX 0x33 + (-1 - size) / 2, one less for size 4, its frame
+    (ship_frame / 2 + unit) modulo its frames (`clock` is `_ship_frame`,
+    `screen.ship_frame`), centred on the unit
+    (`Draw_Energy_Absorber_`, cmbtfire.cpp:923-953, called before the
+    ship's own picture by `Draw_Ship_`, cmbtdrw1.cpp:2632-2637). Not drawn
+    in stasis, under a plasma web or in a black hole, as there (the hole's
+    test reads `black_hole_source_idx`, `draw_units`). Where the ship is
+    drawn, a move's offset `off` included: `Draw_Ship_` draws it at its
+    own position, the moving ship's in the move loop (work order 222)."""
+    entry = absorber_entry(u["size_class"])
+    n = max(1, art.frame_count("cmbtsfx", entry))
+    pic = art.surface("cmbtsfx", entry, (clock // 2 + i) % n)
+    if pic is None:
+        return
+    img = scaled(pic, cam.scale, cache)
+    wx, wy = centre(u)
+    x, y = cam.to_window(wx + off[0], wy + off[1])
+    surface.blit(img, (x - img.get_width() // 2, y - img.get_height() // 2))
+
+
+#: TRANSCRIPTION `monster_file` (work order 215): a unit built by no player
+#: — the Antarans (8) as much as a monster (10..) — is drawn from
+#: MONSTER.LBX, `previous_owner < MAX_PLAYERS` picks CMBTSHP
+#: (cmbtdrw1.cpp:2535-2545); `previous_owner > 9` is only the glow's test.
+MAX_PLAYERS = 8
+
+
+def from_monster_file(u):
+    """Whether `u`'s picture is MONSTER.LBX's (`monster_file`)."""
+    return int(u["previous_owner"]) >= MAX_PLAYERS
+
+
+#: `Combat_Ship_Done_`: bit 2 of `combat_status_flags` (cmbtfir2.cpp:957,
+#: `Test_Bit_Field_` bit 2 is 0x04, struct.cpp:20-26), set by the DONE
+#: button only (combat1.cpp:852), the whole byte cleared when the unit's
+#: side's turn starts (`Init_Ship_For_Start_Of_Turn_`, combat1.cpp:1270),
+#: the bit on capture (cmbtfir2.cpp:1855).
+DONE_BIT = 0x04
+
+
+def engines_off(u):
+    """TRANSCRIPTION `dark_engines` (work order 222, Data's decision 2):
+    the unit is drawn at frame 0, its engines off — its player pressed
+    DONE this turn, or it was captured (`is_captured`, set for good by a
+    capture that is not telepathic, cmbtfir2.cpp:1841-1845) — for every
+    unit, monsters too (`Draw_Ship_`'s four quadrants,
+    cmbtdrw1.cpp:2563-2610)."""
+    return bool(int(u.get("combat_status_flags", 0)) & DONE_BIT) or \
+        int(u.get("is_captured", 0)) != 0
+
+
+def glow_frame(u, i, glow_clock):
+    """The unit's glow frame: 0 while its engines are off (`engines_off`);
+    a player's or an Antaran's the cycle {1,2,3,2} phased by the unit, a
+    monster's (`previous_owner > 9`) its four frames in turn, frame 0
+    included (cmbtdrw1.cpp:2499-2508; TRANSCRIPTION `monster_glow`, work
+    order 215)."""
+    if engines_off(u):
+        return 0
+    if int(u["previous_owner"]) <= 9:
+        return (1, 2, 3, 2)[((glow_clock // 2) + i) % 4]
+    return (glow_clock // 2) % 4
+
+
+def unit_picture(art, colours, u, glow=0):
+    """A unit's picture: its builder's colour (`previous_owner`), a
+    monster's or an Antaran's own (`monster_file`), at glow frame `glow`."""
+    owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
+    return art.ship(colours.get(owner, 0), u["picture_num"], u["facing_dir"],
+                    glow, monster=from_monster_file(u))
+
+
+def draw_cursor(surface, cam, art, unit, glow_clock, cache):
+    size = max(0, min(5, int(unit["size_class"])))
+    entry, dx, dy = CURSOR[0 if size == 0 else 1 if size <= 2 else 2]
+    frames = art.frame_count("combat", entry)
+    pic = art.surface("combat", entry, (glow_clock // 2) % max(1, frames))
+    if pic is None:
+        return
+    surface.blit(scaled(pic, cam.scale, cache),
+                 cam.to_window(unit["x"] * CELL + dx, unit["y"] * CELL + dy))
+
+
+def final_target(missiles, m):
+    """`Final_Flyer_Target_` (cmbtmis.h:64-70): an anti-missile rocket's
+    chain followed to the unit at its end."""
+    by_index = {int(o["index"]): o for o in missiles}
+    seen = set()
+    while m.get("is_anti_missile_rocket") and int(m["index"]) not in seen:
+        seen.add(int(m["index"]))
+        m = by_index.get(int(m.get("target_unit_idx", -1)))
+        if m is None:
+            return None
+    return int(m.get("target_unit_idx", -1))
+
+
+def ordnance_frame(missiles, m, ship_frame, cur_ship):
+    """TRANSCRIPTION `missile_frames` (work order 214): a missile cycles its
+    first three frames, `(_ship_frame + index) % 3`, while it is aimed at the
+    acting unit, the Proton Torpedo always; a fighter group while its final
+    target is the acting unit; otherwise frame 0 (`Draw_Missile_`,
+    cmbtmis.cpp:1130-1136; `Draw_Fighter_`, :1107-1111)."""
+    cycle = (ship_frame + int(m["index"])) % 3
+    if int(m["type"]) in FIGHTER_TYPE:
+        return cycle if final_target(missiles, m) == cur_ship else 0
+    if int(m.get("target_unit_idx", -1)) == cur_ship or \
+            int(m["type"]) == PROTON:
+        return cycle
+    return 0
+
+
+def draw_ordnance(surface, cam, art, ordnance, font_px, style, cache,
+                  ship_frame=0, cur_ship=None):
+    missiles = (ordnance or {}).get("missiles", [])
+    for m in missiles:
+        kind = int(m["type"])
+        facing = int(m["facing_dir"]) & 15
+        frame = ordnance_frame(missiles, m, ship_frame, cur_ship)
+        if kind in FIGHTER_TYPE:
+            pic = art.surface("cmbtfgtr", FIGHTER_TYPE[kind] * 16 + facing,
+                              frame)
+            off = 12
+            count = max(1, min(9, int(m["quantity"]) // 4))
+        elif kind in MISSILE_TYPE:
+            pic = art.surface("cmbtmisl", MISSILE_TYPE[kind] * 16 + facing,
+                              frame)
+            off = 23 if kind in TORPEDOES else 12
+            count = int(m["quantity"])
+        else:
+            continue
+        x, y = cam.to_window(m["x"] - off, m["y"] - off)
+        if pic is not None:
+            surface.blit(scaled(pic, cam.scale, cache), (x, y))
+        if count > 1 and style is not None:
+            from screens.leaders import ldrdraw as nd
+            nd.blit_text(surface, style, f"{count}", int(x), int(y),
+                         200, font_px, (230, 230, 120))

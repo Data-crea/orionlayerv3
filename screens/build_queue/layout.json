@@ -1,0 +1,19 @@
+{
+  "_comment": "The build popup (wire id 25), work order 180 C. Geometry and state: screens/build_queue/bqwire.py; drawing and marks: bqdraw.py. Each mark is held by check 090q and named in dev:v3_projektstatus.md.",
+  "words": {
+    "_note": "DEVIATION `button_words`: the six buttons carry their words in COLBLDG.LBX art (colbldg.cpp:346-364); HD draws them as HUD buttons with the words in code.",
+    "cancel": "CANCEL",
+    "ok": "OK",
+    "refit": "REFIT",
+    "design": "DESIGN",
+    "repeat": "REPEAT BUILD",
+    "auto": "AUTO BUILD"
+  },
+  "marks": {
+    "deviation_ship_row_dim": "NARROWED, work order 208 B8. A design LARGE or bigger is dimmed while the colony has no star base, star fortress or battlestation (colbldg.cpp:625-633, bqdraw.design_needs_base), as in the original. Still not dimmed: what Colony_Can_Build_Product_ refuses (:637-640) and a special ship whose Auto_Design_Type_ is 0 (:642-652).",
+    "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
+    "omission_delete_hint": "The original prints 'delete %s' over the queue row ITS pointer is on (colbldg.cpp:714-750); HD's pointer is not the game's, and the hint is not drawn.",
+    "hd_extension_summary_follows_hd_pointer": "The summary shows the item under HD's pointer, where the original's follows its own (_scanned_prod, colbldg.cpp:825); hovering sends nothing.",
+    "deviation_one_edge": "Work order 226 D: a list column is its shell panel, the original's inner box round the list is not drawn again inside it; the picture, summary and description boxes are cells of the middle panel (the shell's field); the lists' words stand at the shell's inset from the panel's inner line (Data's screenshot of 9 October 2026: no inset, two edges)."
+  }
+}

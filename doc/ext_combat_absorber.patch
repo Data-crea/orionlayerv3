@@ -1,0 +1,29 @@
+OrionLayer open fix 74 — the Energy Absorber's discharge as a battle event
+=======================================================================
+
+Work order 210 (Part B3, Data's decision 3). orion2re on `orionlayer-local`, on top of
+a8b5640b (open fix 70). src/game only, every line under ORION2RE_EXT.
+
+`Energy_Absorber_Attack_` (cmbtfire.cpp:1787-1854) fires weapon 0x2E through
+`BEAMS::Beam_SFX_` with the stored charge and may destroy its target, and it
+reported nothing: HD saw the charge go and the target's structure fall, or a
+`destroy` with no visible cause. It now records the CEV_BEAM_SHOT the drawing
+is: source, target, flag 0, slot -1 (no weapon slot), weapon 0x2E, the damage
+result bits, the damage past shields and the shield's share — after the
+damage, before the target's death (CEV_DESTROY follows from Destroy_Ship_).
+
+diff --git a/src/game/cmbtfire.cpp b/src/game/cmbtfire.cpp
+index f747a30d..82740465 100644
+--- a/src/game/cmbtfire.cpp
++++ b/src/game/cmbtfire.cpp
+@@ -1820,6 +1820,10 @@ namespace CMBTFIRE {
+         }
+ 
+         int16_t is_dead = Is_Combat_Ship_Dead_(target_ship_idx);
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 74. The discharge as the beam shot it is drawn as: weapon 0x2E, no slot (-1), its damage past shields and absorbed, before the target's death.
++        ext::Combat_Event(ext::CEV_BEAM_SHOT, source_ship_idx, target_ship_idx, 0, -1, 0x2e, (int16_t)damage_result_flags, damage, shield_hit_result);
++#endif
+ 
+         if (MOX::_apply_damage_to_planet != 0 && MOX::_super_fast_flag == 0) {
+             if (CMBTDRW1::Ship_Completely_On_Screen_(target_ship_idx) == 0) {

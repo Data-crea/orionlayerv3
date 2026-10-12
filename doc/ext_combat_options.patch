@@ -1,0 +1,68 @@
+OrionLayer open fix 68 — the battle's OPTIONS panel on the wire
+================================================================
+
+Work order 200 (Part A, step A2). orion2re 095ebac4 on `orionlayer-local`,
+on top of a8381e60 (open fix 67). src/ext only.
+
+WHAT IS MISSING. OPTIONS (the battle panel's info button, hotkey O) flips
+MOX::_order_info_flag and slides COMBAT.LBX 9 up over the buttons
+(Move_Options_Background_, cmbtdrw1.cpp:1463); its five lights are MOX's
+flags for the missile warning, fast animations, legal moves, shield arcs
+and the grid (Draw_Option_Panel_Lights_, cmbtdrw1.cpp:1307-1322), toggled
+by five hidden fields (combat1.cpp:465-495). The flags are copied from
+_settings when a battle starts (combinit.cpp:529-534) and written back only
+when it ends (combinit.cpp:1177-1178), so the settings record on the wire
+is stale for the whole battle; whether the panel is up was not on the wire
+at all. A client could neither show the panel nor its lights, nor draw the
+grid, the shield arcs or the legal moves as the battle holds them.
+
+WHAT THE PATCH ADDS. Snapshot section 26, "COPT", after CPOP, written only
+while a battle is live: a version byte, int16 the battle's serial and
+MOX::_order_info_flag (0 while the panel is up), then five bytes — the
+missile warning, fast animations, legal moves, shield arcs and grid flags,
+the panel's lights in its own order.
+
+BEHAVIOUR WITHOUT ORIONLAYER: unchanged. The block is read only; nothing
+in the game changes.
+
+HOW TO REVERT. git revert 095ebac4.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index aa70fced..0d840a43 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1760,6 +1760,34 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, (uint8_t)len);
+         buf.insert(buf.end(), msg, msg + len);
+     }
++
++    // 26. The battle's OPTIONS panel: "COPT", written ONLY while a battle is
++    //     live, after CPOP. OrionLayer, open fix 68.
++    //
++    //     OPTIONS (the info button, hotkey O) flips MOX::_order_info_flag and
++    //     slides COMBAT.LBX 9 over the buttons (Move_Options_Background_,
++    //     cmbtdrw1.cpp:1463); its five lights are MOX's flags for the missile
++    //     warning, fast animations, legal moves, shield arcs and the grid
++    //     (Draw_Option_Panel_Lights_, :1307-1322), toggled by five hidden
++    //     fields (combat1.cpp:465-495). The flags are copied from _settings
++    //     when the battle starts (combinit.cpp:529-534) and back only when
++    //     it ends (:1177-1178), so the settings record on the wire is stale
++    //     for the whole battle, and neither the panel nor the flags were on
++    //     the wire. Read only; nothing here changes the game.
++    if (g_combat_live && MOX::_combat_data != nullptr) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'T');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, (int16_t)g_combat_serial);
++        Write16(buf, MOX::_order_info_flag);              // 0: the panel is up
++        Write8(buf, (uint8_t)MOX::_msl_impact_warning_flag);
++        Write8(buf, (uint8_t)MOX::_speedx2_flag);
++        Write8(buf, (uint8_t)MOX::_draw_legal_boxes_flag);
++        Write8(buf, (uint8_t)MOX::_shields_flag);
++        Write8(buf, (uint8_t)MOX::_grid_flag);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

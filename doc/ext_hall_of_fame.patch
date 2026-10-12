@@ -1,0 +1,153 @@
+Engine: the Hall of Fame's entries on the wire, "HOFM" (open fix 50).
+
+STATUS: APPLIED 29 September 2026 by work order 188 (Part 6, the Hall of
+Fame in HD), under the order's advance approval of the engine fixes a part
+needs ("Engine fixes: approved in advance for this run") — orion2re
+65b41b66 on orionlayer-local (before: 6859e163), this file's diff byte for
+byte (index lines included). Required by tools/version_check.py since work
+order 188.
+
+PROOF ON THE TIP IT WAS APPLIED TO (work order 188): in a scratch clone of
+orionlayer-local at 6859e163 this file applied with `patch -p1 --dry-run`
+and `patch -p1`, no offset, no fuzz, the applied tree's diff equal to it;
+ext_api.cpp and score.cpp compiled alone with the build's own command
+(-fsyntax-only), exit 0; two controls were refused by the compiler, exit 1
+each — `SCORE::_entry_to_flash` misspelt `_entry_to_flsh` in ext_api.cpp,
+`ext::g_hof_live` misspelt `g_hof_liv` in score.cpp. Then applied to
+~/orion2re (no offset), built (ninja, no error) and committed.
+
+To revert, from ~/orion2re on the orionlayer-local branch: `git revert
+65b41b66` or `patch -R -p1`; then rebuild. See the entry,
+doc/orion2re_open_fixes.md 50.
+
+WIRE LAYOUT — "HOFM", written LAST, while 14 is reported and the screen
+takes input: uint8 version 1, int16 the file's version (0x82), int16 the
+flashed entry (-1 none), uint8 count (10), then per row in the display
+order: int16 record, int16 score, int16 race id, uint8 difficulty, and three
+strings each uint8 length + raw bytes — the player's name, the race's name,
+the difficulty's word as the engine loaded it.
+
+WHAT IT IS FOR
+SCORE::Hall_Of_Fame_Screen_ draws its ten entries from SCORE::_hof (HOF.M2)
+in the order Init sorted them and the difficulty words from ESTRINGS; none
+of it was serialized, and the game-end way in runs it under the return
+screen's id. HD cannot read HOF.M2 itself (decision 60's reasoning: the
+engine may rewrite the file on entry, HD's folder need not be the game's,
+the words are the engine's). The patch reports 14 on both ways in and puts
+the table on the wire while the screen takes input — in the display order,
+each entry's record, score, race id, difficulty and its word, the player's
+and the race's names — with the entry the screen flashes.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 03b33614..5881e870 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1089,6 +1089,46 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, COMBFIND::_target.num_player_targets);
+         }
+     }
++
++    // 17. The Hall of Fame: "HOFM", written ONLY while it takes input (it
++    //     reports 14 on both ways in), and LAST. OrionLayer, open fix 50.
++    //
++    //     SCORE::Hall_Of_Fame_Screen_ draws its ten entries from SCORE::_hof
++    //     in the order Init sorted them (_hi->sort_list, score descending)
++    //     and the difficulty words from ESTRINGS into _difficulty_string —
++    //     none of it was serialized. Sent in the DISPLAY order, as the file
++    //     holds it: the record, the score, the race id, the difficulty and
++    //     its word as the engine loaded it, the player's and the race's
++    //     names; and the entry the screen flashes (a new record at game end).
++    if (current_screen == SCREEN_HALL_OF_FAME && g_hof_live && SCORE::_hi != nullptr) {
++        buf.push_back((uint8_t)'H');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'M');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, SCORE::_hof.version);
++        Write16(buf, SCORE::_entry_to_flash);
++        Write8(buf, 10);
++        for (int i = 0; i < 10; i++) {
++            const int16_t r = SCORE::_hi->sort_list[i][1];
++            const bool ok = r >= 0 && r < 10;
++            Write16(buf, r);
++            Write16(buf, ok ? SCORE::_hof.scores[r] : 0);
++            Write16(buf, ok ? SCORE::_hof.race_ids[r] : 0);
++            const int8_t d = ok ? SCORE::_hof.difficulties[r] : 0;
++            Write8(buf, (uint8_t)d);
++            const char* strs[3] = {
++                ok ? SCORE::_hof.player_names[r] : "",
++                ok ? SCORE::_hof.race_names[r] : "",
++                (d >= 0 && d < GAME_DIFFICULTY_COUNT) ? SCORE::_difficulty_string[d] : ""};
++            const size_t caps[3] = {20, 20, 15};
++            for (int k = 0; k < 3; k++) {
++                const size_t len = strnlen(strs[k], caps[k]);
++                Write8(buf, (uint8_t)len);
++                WriteBytes(buf, strs[k], len);
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -1576,6 +1616,9 @@ ScreenOverride::~ScreenOverride() {
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 50. The Hall of Fame takes input (ext_api.h).
++bool g_hof_live = false;
++
+ // OrionLayer, open fix 29. The generic message box that is up (ext_api.h).
+ MessageBoxView g_message_box = {0, nullptr, nullptr, -1, -1, 0};
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index da9bce42..833d8871 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -78,6 +78,12 @@ struct ListFieldGuard {
+     ~ListFieldGuard();
+ };
+ 
++/// OrionLayer, open fix 50. True while SCORE::Hall_Of_Fame_Screen_ takes input:
++/// set once it has read the file and sorted it, cleared when it leaves —
++/// SCORE::_hi outlives the screen and the first tick at 14 comes before the
++/// file is read, so the pointer alone cannot say the table is current.
++extern bool g_hof_live;
++
+ /// OrionLayer, open fix 29. The generic message box that is up: which kind,
+ /// its title and text as the caller handed them (raw, FMTPARA codes and
+ /// all), the field id of each answer and a timed box's ticks — the text
+diff --git a/src/game/score.cpp b/src/game/score.cpp
+index 4ad68dfb..0348df5a 100644
+--- a/src/game/score.cpp
++++ b/src/game/score.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 50. The Hall of Fame on the wire.
++#endif
+ 
+ namespace SCORE {
+     s_hof _hof;
+@@ -314,6 +317,12 @@ namespace SCORE {
+ 
+         SCORE::_hi->current_input_state = -1000;
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 50. 14 on both ways in (the end of a game runs this under its return screen) and the table on the wire while it takes input.
++        const ext::ScreenOverride ext_screen_guard(SCREEN_HALL_OF_FAME);
++        ext::g_hof_live = true;
++#endif
++
+         do {
+             SCORE::_hi->prev_input_state = SCORE::_hi->current_input_state;
+             input_val = fields::Get_Input_();
+@@ -349,6 +358,9 @@ namespace SCORE {
+ 
+         } while (!exit_screen);
+ 
++#ifdef ORION2RE_EXT
++        ext::g_hof_live = false;  // OrionLayer, open fix 50. The table is no longer the screen's.
++#endif
+         ERIC::Fast_Fade_Out_();
+         MOX::_current_screen = MOX::_return_screen;
+         fields::Clear_Fields_();

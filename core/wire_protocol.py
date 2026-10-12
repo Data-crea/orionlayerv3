@@ -1,0 +1,209 @@
+"""orion2re Extension API — wire-protocol constants and raw parsing.
+
+Pure stdlib (only `struct`), no other project imports, so this can
+be imported by dev:tools/ext_diag.py and dev:tools/ext_diag_race.py without
+compromising their "must still work if the rest of the project is
+broken" design goal — while still being the single place the byte
+layout is defined.
+
+Before this module existed, the frame header, message-type/
+subscription constants, and the FIELD_LIST (13 bytes/field) parser
+were each reimplemented independently in core/game_state.py,
+dev:tools/ext_diag.py, and dev:tools/ext_diag_race.py — three copies of the
+same byte offsets, silently able to drift out of sync with each
+other and with ext_api_dokumentation_v3.md.
+
+See ext_api_dokumentation_v3.md for the authoritative protocol
+description (frame format, message types, field-list layout).
+"""
+import struct
+
+from core import lang
+
+MAGIC = 0x4F325845          # "O2XE"
+PROTO_VERSION = 1
+
+# Message types
+MSG_HELLO         = 0x01
+MSG_HELLO_REPLY   = 0x01
+MSG_STATE         = 0x10
+MSG_FIELDS        = 0x11
+MSG_VISUAL        = 0x12
+MSG_EVENT         = 0x13
+MSG_ACTIVATE      = 0x80
+MSG_INJECT_KEY    = 0x81
+MSG_INJECT_CLICK  = 0x82
+MSG_CANCEL_FIELD  = 0x83
+#: Set the job of one or more pops in ONE colony, applied whole
+#: or not at all. `doc/ext_move_pop.patch` adds it engine-side;
+#: `tools/version_check.py` fails on a tree without it, because
+#: an unpatched engine drops the message and moves nothing.
+#: Fundament 52.
+MSG_SET_JOBS      = 0x84
+#: Select or deselect ONE ship in the open fleet box: int16 ship_idx,
+#: uint8 selected. NOT IN THE ENGINE until
+#: `doc/ext_fleet_select_ship.patch` (open fix 21) is applied, and an
+#: engine without it drops the message — so HD sends it only while the
+#: snapshot carries open fix 20's FSEL block, and reads the effect back
+#: off that block instead of assuming it.
+MSG_SELECT_SHIP   = 0x85
+#: Show (1) or hide (0) the engine's OWN window: uint8 show. Open fix 43
+#: (`doc/ext_engine_window_on_request.patch`, applied by work order 186);
+#: F12 sends it. An engine without the fix drops it, and nothing else
+#: depends on it being taken — the picture is on the wire either way.
+MSG_SHOW_WINDOW   = 0x86
+#: A RIGHT click at (x, y) in 640x480 space: int16 x, int16 y. Open fix
+#: 61 (`doc/ext_inject_right_click.patch`, work order 194). CANCEL_FIELD
+#: right-clicks a field's CENTRE, which answers a button but not a grid
+#: field — the battle map reads the point (turn to face, combat1.cpp:
+#: 696-710). The F12 view sends it; an engine without the fix drops it,
+#: as every unknown type (`default: break`), so nothing happens there —
+#: never a left click in its place.
+MSG_INJECT_RIGHT_CLICK = 0x87
+#: One battle action (decision 52): uint16 battle serial, int16 the acting
+#: unit, uint8 op (`core.combatblocks.COMMANDS`), int16 a, b, c. Open fix
+#: 58 (`doc/ext_combat_commands.patch`, work order 194): consumed where the
+#: human's input is read, the original's own code then does the action; the
+#: engine says taken or refused in CMEV (event 18). An engine without the fix
+#: drops it. WIRE ONLY: no screen sends it yet.
+MSG_COMBAT_COMMAND = 0x88
+#: Open fix 64 (work order 197): the Races screen's spies and missions as one
+#: list — uint8 n, n x (uint8 player, uint8 spies, uint8 mission 1-3 or 0
+#: kept), uint8 agent pool; all or nothing, only while the screen is up.
+MSG_SET_SPIES = 0x89
+#: Open fix 89 (work order 230 E): a key code as the engine's platform layer
+#: translates F1-F10 (0x3B00-0x4400), Alt+F1-F10 (0x6800-0x7100) and
+#: Alt+letter (scan << 8, 0x1000-0x3200) — the keys MSG_INJECT_KEY cannot
+#: carry; the engine drops any other code.
+MSG_INJECT_RAW_KEY = 0x8A
+#: Open fix 92 (work order 233): colonists of the colony screen's colony to
+#: another colony of the player at the same star — int16 source colony, int16
+#: destination colony, uint8 n, n x uint8 pop index; the engine settles all
+#: of them or none, only while the colony screen shows the source.
+MSG_SETTLE_POPS = 0x8B
+
+#: How many STATE/VISUAL pairs after an injected command can still
+#: describe the world BEFORE it. One — so a caller that waits for an
+#: effect must let that one go by.
+#:
+#: `ext::Tick()` runs `ProcessInput()` first and serializes the
+#: snapshot and the frame afterwards, in the same tick
+#: (ext_api.cpp:341-386), so the message that follows a send was
+#: built from the world the send has not reached yet: the command has
+#: been handed over, not consumed. Measured 5 September 2026 — one
+#: increment of the colony summary's list window read the old `_first`
+#: at pair 1 and the new one at pair 2, every time.
+#:
+#: **IT IS NOT A SETTLING TIME, AND DECISION 21 IS WHY THAT HAS TO BE
+#: SAID.** Nothing may advance because a count or a clock ran out;
+#: what ends a wait is the caller's own predicate about the world.
+#: This is a bolt against one specific way that predicate can lie —
+#: it can have been true before the send. Two is the whole structural
+#: gap (the consuming tick, and the first tick that can show the
+#: effect); three would start skipping evidence, waiting past a step
+#: that landed on the first eligible pair.
+#:
+#: It lives here because it is a property of the PROTOCOL's tick
+#: ordering, not of any screen — and because there are two wait
+#: shapes that need it and cannot share code: a blocking one in the
+#: tools and a frame-driven one in the screens.
+EFFECT_PAIRS = 2
+
+#: Server -> client: the GAME popup's ten save slots, sent right after a
+#: FIELD_LIST while the Load or Save dialog is up. NOT IN THE ENGINE
+#: until `doc/ext_save_slots.patch` is applied; without it the message
+#: never arrives and the HD dialogs show slot numbers only (an HD
+#: STATE, decision 60). Open fix 14.
+MSG_SAVE_SLOTS    = 0x14
+
+#: One slot record in MSG_SAVE_SLOTS: int8 status, int8 game type,
+#: char[37] description, char[25] stardate, char[25] date.
+SAVE_SLOT_RECORD_SIZE = 1 + 1 + 37 + 25 + 25
+
+MSG_NAMES = {
+    0x01: "HELLO_REPLY", 0x10: "STATE_SNAPSHOT",
+    0x11: "FIELD_LIST",  0x12: "VISUAL_FRAME",
+    0x13: "EVENT",       0x14: "SAVE_SLOTS",
+}
+
+
+def _cstr(raw):
+    """A fixed char[] as the engine holds it: up to the first NUL."""
+    return lang.wire_text(raw.split(b"\0", 1)[0])
+
+
+def parse_save_slots(data):
+    """Parse a MSG_SAVE_SLOTS payload.
+
+    Returns {"screen_data": 2|3, "slots": [dict(status, game_type,
+    description, active_marked, stardate, date)]}. The strings are the
+    engine's own, formatted by the engine — `Get_Save_Game_Date_Strings_`
+    and `Get_Star_Date_Strings_` (loadsave.cpp:645-718) — so whatever
+    they print (a year of 126, no month on a first visit) is what a
+    client draws, and nothing here reformats them.
+
+    `active_marked`: the active slot's description carries the colour
+    codes `Embed_Special_Color_Codes_` wraps it in, `\\x03 ... \\x01`
+    (loadsave.cpp:1655-1667); they are removed exactly as
+    `Remove_Embedded_Special_Codes_` removes them (:1672-1680).
+    """
+    screen_data, count = data[0], data[1]
+    slots, pos = [], 2
+    for _ in range(count):
+        status, game_type = struct.unpack_from('<bb', data, pos)
+        desc_raw = data[pos + 2:pos + 39]
+        marked = desc_raw[:1] == b"\x03"
+        desc = _cstr(desc_raw)
+        if marked:
+            desc = desc[1:].split("\x01", 1)[0]
+        # the player's own words: never translated (work order 208 A6)
+        from core import lang
+        desc = lang.stored(desc)
+        slots.append(dict(
+            status=status, game_type=game_type, description=desc,
+            active_marked=marked,
+            stardate=_cstr(data[pos + 39:pos + 64]),
+            date=_cstr(data[pos + 64:pos + 89])))
+        pos += SAVE_SLOT_RECORD_SIZE
+    return {"screen_data": screen_data, "slots": slots}
+
+# Subscription flags (bitmask in HELLO)
+SUB_STATE  = 0x01
+SUB_FIELDS = 0x02
+SUB_VISUAL = 0x04
+SUB_EVENTS = 0x08
+
+FIELD_RECORD_SIZE = 13  # bytes per FIELD_LIST entry
+
+
+def frame_header(msg_type, payload, seq=0, flags=0):
+    """Build one O2XE frame: 8B frame header + 8B message header +
+    payload."""
+    msg_header = struct.pack('<HHI', msg_type, flags, seq)
+    body = msg_header + payload
+    return struct.pack('<II', MAGIC, len(body)) + body
+
+
+def parse_frame_header(header_bytes):
+    """Unpack the 8-byte frame header. Returns (magic, length)."""
+    return struct.unpack('<II', header_bytes)
+
+
+def parse_field_list_raw(data):
+    """Parse a FIELD_LIST payload into raw tuples.
+
+    Returns a list of (index, x, y, x_end, y_end, field_type,
+    hotkey) — the byte layout ext_api_dokumentation_v3.md documents
+    under "Field list" (13 bytes/field). Callers that want objects
+    (core.game_state.FieldInfo) or dicts wrap this; the byte offsets
+    themselves live only here.
+    """
+    count = struct.unpack_from('<h', data, 0)[0]
+    out = []
+    pos = 2
+    for _ in range(count):
+        idx, x, y, xe, ye, ft = struct.unpack_from('<hhhhhh', data, pos)
+        hk = data[pos + 12]
+        out.append((idx, x, y, xe, ye, ft, hk))
+        pos += FIELD_RECORD_SIZE
+    return out

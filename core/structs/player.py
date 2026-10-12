@@ -1,0 +1,377 @@
+"""s_player — VERIFIED spec (3854 bytes), partial.
+
+Only the fields the HD screens actually read. The record is large
+and mostly diplomacy/tech state; adding a field is cheap, so this
+grows on demand rather than mapping all ~130 members up front.
+
+Offsets are not hand-counted. They come from compiling orion2re's
+own `src/game/orion2.h` with the `#pragma pack(push, 1)` the header
+itself sets, then reading offsetof() for each member. sizeof came
+out at exactly 3854, matching PLAYER_SIZE / the 0xF0E in sizes.h —
+if any offset had drifted, the size would not land on the assert.
+Reproduced against orion2re 1.60 on 2 September 2026; every offset
+below was exact.
+
+**WHICH EVIDENCE STANDS, PER FIELD.** `verified=True` on this spec
+is spec-wide and the evidence is not, so it is worth being explicit.
+The flag rests on that compile — a HEADER plus a STATIC ASSERT — for
+every field here except the six the colony summary's sidebar draws,
+which have a second source as of 3 September 2026 and are listed
+below.
+
+What the static assert proves: the LAYOUT. If any member's offset
+were wrong the total would not land on 0xF0E. What it cannot prove:
+WHICH member is which, wherever two are interchangeable. The clearest
+case is on this screen — `surplus_food` (276) and `surplus_bc` (278)
+are two bytes apart, both int16, both net flows, both printed with an
+explicit sign, and the struct is exactly as large either way round.
+
+**ALL SIX SIDEBAR SCALARS WERE READ AGAINST THE ORIGINAL'S OWN BOX
+on 3 September 2026, and they agree — six of six.** That is the
+second source decision 23 asks for, and `dev:tools/struct_probe.py
+players --sidebar` is what collected it: it prints the six beside the
+labels and signs the original uses, in the original's own order, for
+a human to hold against the game's Colonies screen.
+
+**The pair that mattered is settled by the numbers being different.**
+`surplus_food` (276) and `surplus_bc` (278) are adjacent int16 net
+flows, both printed with an explicit sign, and the struct is exactly
+as large either way round — swapped, both stay plausible and no
+assert anywhere would notice. In the reading that settled it the
+original showed Food **-10** and Income **+30**: opposite signs and
+different magnitudes, so a swap would have put -10 on the Income line
+and +30 on the Food line and been visible at a glance. Two numbers
+that happened to be close, or both positive, would have proved
+nothing about which is which; these could not both be true under the
+swap.
+
+  bc @50                 YES, against Reserve.
+  surplus_bc @278        YES, against Income, +30.
+  total_pop @266         YES, against Population — and previously,
+                         incidentally, as the 39 that agreed with
+                         the sidebar when `owner` and `n_pops` were
+                         verified.
+  surplus_freighters @56 YES, against Freighters.
+  surplus_food @276      YES, against Food, -10.
+  research_produced @272 YES, against Research.
+
+  race @37               YES, but incidentally rather than here:
+                         `struct_probe colonies --pop-nibble` read
+                         it for five players as 5, 2, 3, 4, 0 while
+                         the pop nibble decoded to each colony's
+                         owner instead — see core/structs/colony.py,
+                         which needed the two to disagree and they
+                         did.
+
+What is still header-only is everything this spec carries that no
+screen has drawn yet. `verified=True` was never a claim about those,
+and the compile is still what it rests on; what changed is that the
+six the colony summary draws are no longer resting on it alone.
+
+
+Sidebar semantics, from mainscr_main.cpp's sidebar drawing:
+  treasury line     bc, then surplus_bc as a signed second line
+  command points    "(command_points - command_points_used)
+                     (command_points)"
+  food              surplus_food, signed
+  freighters        "surplus_freighters (n_freighters)"
+  research          research_breakthrough != 0 -> "breakthrough";
+                    current_research_field == 0 -> "none"; otherwise the
+                    chance for this turn, the turns left and the points
+                    produced, through `core/research.py` and
+                    `tech_fields` below (work order 129 D). The older note
+                    here ended at the two words and the sidebar printed
+                    accumulated points, which was the unmarked deviation
+                    that order removed.
+
+`contact` is an 8-byte array indexed by player; non-zero means the
+local player has met that empire. Star names in Get_Star_Name_ use
+it to decide whether an owned system shows its owner's colour.
+"""
+import struct as _struct
+
+from core import lang
+
+from core.structs import Spec
+
+SIZE = 0xF0E   # 3854
+
+MAX_PLAYERS = 8
+
+SPEC = Spec("s_player", SIZE, [
+    ("picture",                 0, "i8"),
+    ("name",                    1, "str20"),
+    ("race_name",              21, "str15"),
+    ("eliminated",             36, "u8"),
+    ("race",                   37, "u8"),
+    ("color",                  38, "u8"),
+    ("personality",            39, "u8"),
+    ("objectives",             40, "u8"),
+    ("home_planet_id",         41, "i16"),
+    ("research_breakthrough",  48, "i8"),
+    ("tax_rate",               49, "u8"),
+    ("bc",                     50, "i32"),
+    ("n_freighters",           54, "i16"),
+    ("surplus_freighters",     56, "i16"),
+    ("command_points",         58, "i16"),
+    ("command_points_used",    60, "i16"),
+    ("total_pop",             266, "i16"),
+    ("food_produced",         268, "i16"),
+    ("industry_produced",     270, "i16"),
+    ("research_produced",     272, "i16"),
+    ("bc_produced",           274, "i16"),
+    ("surplus_food",          276, "i16"),
+    ("surplus_bc",            278, "i16"),
+    # THE INFO SCREEN'S FIELDS, work order 175 D: the maintenance chart
+    # (info.cpp:462-498, :691-725), the contact count the active list
+    # reads (bill.cpp:577-590), the four history rings (bill.cpp:
+    # 546-556) and the saved tab / metric bits (bill.cpp:379-382,
+    # info.cpp:1208). Header route (offsets asserted by the compiler) and
+    # `tools/info_check.py` over every save: maintenance adds up to its
+    # total, the bits stay in their ranges.
+    ("total_maintenance",     280, "i32"),
+    ("maintenance",           284, "i16[6]"),
+    ("research_accumulated",  591, "i32"),
+    ("current_research_field", 901, "i8"),
+    # current_research_application — the APPLICATION inside that field.
+    # TWO SOURCES, 22 September 2026 (work order 165 part A): the header
+    # route puts it at 902, and live it read 196, whose field through
+    # the app->field table `dev:tools/research_cost_check.py` holds to
+    # techdata.cpp is 45 — which is exactly what the VERIFIED
+    # `current_research_field` beside it says. A byte that is not the
+    # current application has no reason to resolve to the current field.
+    # …AND IT IS READ UNSIGNED, though the header says `int8_t`.
+    # Application ids run past 127 — the one live read that verified
+    # this offset was 196 — so the engine's own signed type gives -60
+    # for it and every lookup against `_technology_applications` misses.
+    # Found by running change mode live on 22 September 2026, an hour
+    # after the offset was promoted on a probe that had read the raw
+    # byte and never gone through the spec. The header route fixes the
+    # OFFSET and the WIDTH; it does not promise the C type is the one
+    # a reader wants, and this is what that looks like.
+    ("current_research_application", 902, "u8"),
+    # tech_fields[TECH_FIELD_COUNT] — the per-field research status, and
+    # the only one the sidebar needs: 3 means "already researched"
+    # (colcalc.cpp:436-438). TWO SOURCES, 17 September 2026 (work order
+    # 129 C): orion2re's own headers compiled with their `#pragma pack(1)`
+    # (compat.h, types.h, settler.h, consts.h, orion2_consts.h, orion2.h in
+    # a throwaway unit outside their tree) put it at 296 with
+    # `sizeof(s_player) == 0xf0e`, the assert in sizes.h:21; and live on
+    # SAVE4 and SAVE5 it reads 0..3 across the 83 entries, with the
+    # currently researched field at 2, which is what makes
+    # `Player_N_Turns_Until_Research_Complete_` reproduce the original's
+    # own "~18 turns" and "~17 turns" beside it.
+    ("tech_fields",           296, "u8[83]"),
+    # tech_applications[TECH_APP_COUNT] — the per-APPLICATION research
+    # status (0 unavailable, 1 available to pick, 3 researched;
+    # `TECH_RESEARCH_STATUS`, orion2_consts.h:1321-1325). It is what
+    # decides which CHOICE ROWS the research screen offers under each
+    # category's field (`TECH::Init_Entry_Data_`, tech.cpp:602-624).
+    #
+    # PROMOTED OUT OF `unverified.py` 22 September 2026, work order 165
+    # part A, when its second source finally came in. Both, in order:
+    #
+    #   * the header route (work order 130 C) puts it at 379, 212 bytes
+    #     wide, with `sizeof(s_player) == 0xf0e` — the assert in
+    #     sizes.h:21. `dev:tools/struct_header_check.py` re-runs that compile
+    #     on every suite.
+    #   * live, three agreements at once, none of which a misplaced
+    #     offset survives: every one of the 212 bytes is a
+    #     TECH_RESEARCH_STATUS and nothing else; all 52 RESEARCHED
+    #     applications have their own field marked researched in the
+    #     VERIFIED `tech_fields` above; and the application the
+    #     VERIFIED-in-the-same-run `current_research_application` names
+    #     as in progress reads 1, available — a field you are working on
+    #     is not a field you have finished. Its two siblings under field
+    #     45 read 1 as well, which is what an unfinished category looks
+    #     like.
+    #
+    # WHAT THE SECOND SOURCE DOES NOT PROVE, said rather than glossed:
+    # that status 1 means "this row APPEARS on the game's own screen".
+    # That claim is tested every time the screen runs —
+    # `researchlist.validate_against_fields` holds the reconstruction to
+    # the game's own FIELD_LIST on every entry — and the screen still
+    # hands over to the fallback when they disagree.
+    ("tech_applications",     379, "u8[212]"),
+    # THE RACES SCREEN'S FIELDS, work order 175 C. Header route (the
+    # compiler asserts every offset, `dev:tools/struct_header_check.py`) and,
+    # as the second source, the game's own invariants over every save on
+    # this disk (`dev:tools/races_check.py`): a treaty is the same seen from
+    # both sides, relations stay in -100..100, a treaty is 0..6 (the six
+    # `_treaty_labels`, estrings.cpp:91-97, and 6 total war, which the
+    # screen clamps to label 5, racescrn.cpp:151-155), spies count in
+    # bits 0-5 — 14 of 14 saves on this disk, 26 September 2026.
+    # `struct s_ship_design ship_designs[6]` (orion2.h:1809) — the five
+    # designs the build popup offers (colbldg.cpp:219-238, i < 5) and a
+    # sixth slot. Work order 180 C. BOTH SOURCES: the header route puts it
+    # at 906 (asserted by dev:tools/struct_header_check.py from this line), and
+    # the compiler over the same headers gives `sizeof(s_ship_design)` 99,
+    # `name` at 0 (char[16]) and `cost` at 94 (int16) — `DESIGN_SIZE`,
+    # `design_name`, `design_cost` below; LIVE on SAVE4 (27 September 2026,
+    # a scratch engine carrying open fix 40) the five names read here —
+    # Scout, Rafale, Corvette, Corsair, Paladin — are the five the native
+    # popup lists, and the five costs — 27, 126, 115, 358, 824 — are the
+    # ones the engine's own `Colony_Product_Cost_` sent for ids -50..-54.
+    ("ship_designs",          906, "u8[594]"),
+    ("n_times_established_contact", 1521, "i8[8]"),
+    ("current_trade_agreement_level", 1545, "i16[8]"),
+    ("current_research_agreement_level", 1579, "i16[8]"),
+    ("total_research",       1613, "i16"),
+    ("total_ships",          1615, "i16"),
+    ("total_colonies",       1649, "i16"),
+    ("relations",            1660, "i8[8]"),
+    ("treaty",               1676, "i8[8]"),
+    ("trade_treaty",         1684, "i8[8]"),
+    ("research_treaty",      1692, "i8[8]"),
+    ("tribute_treaty",       1700, "i16[8]"),
+    ("fleet_history",        2372, "i8[350]"),
+    ("tech_history",         2722, "i8[350]"),
+    ("population_history",   3072, "i8[350]"),
+    ("production_history",   3422, "i8[350]"),
+    ("spies",                3772, "u8[8]"),
+    ("history_btns",         3780, "i8"),
+    ("ignoring",             3781, "u8"),
+], verified=True)
+
+CONTACT_OFFSET = 1512      # sbyte contact[MAX_PLAYERS]
+TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
+#: uint8_t tech_applications[TECH_APP_COUNT]; TECH_APP_COUNT is 212
+#: (orion2_consts.h:1388, orion2re 1.60). Not a spec field — the
+#: table is not decoded yet — but the offset is wanted as an ANCHOR:
+#: a live read that gets race, traits and this right and the sidebar
+#: scalars wrong is telling you about the scalars, not the record.
+#: Advanced City Planning lives in this table; see
+#: colonyrows.max_population, which does NOT apply it.
+#: THE SAME OFFSET AS THE SPEC FIELD ABOVE, kept as a constant because
+#: two callers want the NUMBER and not the parsed array: the live probe
+#: (`dev:tools/struct_probe.py`) slices a raw record with it, and the
+#: suite's own stand-in builder writes into a raw record at it. Reading
+#: the data goes through the spec field; this is the anchor.
+TECH_APPLICATIONS_OFFSET = 379
+TECH_APPLICATIONS_COUNT = 212
+#: `TECH_RESEARCH_STATUS_AVAILABLE`, orion2_consts.h:1323 — the value
+#: that means a choice row is offered.
+TECH_APPLICATION_STATUS_AVAILABLE = 1
+TRAIT_COUNT = 31
+TRAIT_OMNISCIENCE = 27     # TRAIT enum, orion2_consts.h
+#: orion2_consts.h:971. A Creative player gets EVERY application
+#: of the field being researched, which is why the research
+#: panel marks every row of it (`Display_Entry_Text_`,
+#: tech.cpp:661-666). TRAIT_UNCREATIVE (21) is not tested there:
+#: it changes what the player GETS, not what is marked.
+TRAIT_CREATIVE = 22
+
+
+#: What KIND of number each sidebar scalar is. They are not one
+#: kind, and the difference decides what a reader may do with them:
+#:
+#:   stock      a balance that persists between turns. Differencing
+#:              two turns gives a flow.
+#:   net flow   already a per-turn difference, signed, and the sign
+#:              is meaningful — the original prints these with %+d.
+#:   gross      a per-turn amount with nothing subtracted. NOT
+#:              comparable with a net flow, and adding it to one is
+#:              the mistake this table exists to prevent.
+#:   count      a cardinality. Never negative in normal play, and a
+#:              negative one is a bug or a misread offset.
+#:
+#: Ordered as COLSUM::Draw_Empire_Info_ prints them (colsum.cpp:418,
+#: orion2re 1.60), which is also the order in the colony summary's
+#: layout.json. `dev:tools/struct_probe.py players --sidebar` reads the
+#: six from SPEC above and annotates them with this.
+SIDEBAR_KINDS = {
+    "bc":                 ("stock",
+                           "treasury carried between turns"),
+    "surplus_bc":         ("net flow",
+                           "income minus maintenance, per turn"),
+    "total_pop":          ("count", "colonists across the empire"),
+    "surplus_freighters": ("count",
+                           "freighters free, not a per-turn change "
+                           "— the name says surplus, the number is "
+                           "a cardinality"),
+    "surplus_food":       ("net flow",
+                           "produced minus eaten, per turn"),
+    "research_produced":  ("gross",
+                           "RP generated this turn, nothing "
+                           "subtracted — not a net of anything"),
+}
+
+#: Already-trusted offsets, carried by `--sidebar` as controls.
+#: `race` and `traits` are the two with a live corroboration on
+#: record (see the docstring); `tech_applications` rides along
+#: because a wrong record shows up there first — it is the largest
+#: member and the furthest from the scalars.
+SIDEBAR_ANCHORS = ("race", "traits", "tech_applications")
+
+
+def contacts(view):
+    """Per-player contact flags; contacts(v)[n] is truthy when the
+    local player has met player n."""
+    return list(_struct.unpack_from(
+        f"<{MAX_PLAYERS}b", view.raw, CONTACT_OFFSET))
+
+
+def traits(view):
+    """The 31 racial trait values (signed)."""
+    return list(_struct.unpack_from(
+        f"<{TRAIT_COUNT}b", view.raw, TRAITS_OFFSET))
+
+
+def has_omniscience(view):
+    """Galactic lore via the racial pick.
+
+    NOT the whole story: HAROLD::Player_Is_Omniscient_ also returns
+    true when any hired leader carries the Galactic Lore skill, which
+    lives in the leader records. Treat a False here as "no lore from
+    traits", not as "no lore".
+    """
+    return traits(view)[TRAIT_OMNISCIENCE] != 0
+
+
+#: `s_ship_design` (orion2.h:1732): 99 bytes, `name` char[16] at 0,
+#: `cost` int16 at 94 — the compiler's numbers, see `ship_designs`.
+SHIP_DESIGNS_OFFSET, DESIGN_SIZE, DESIGN_SLOTS = 906, 99, 6
+DESIGN_NAME_LEN, DESIGN_COST_OFFSET = 16, 94
+
+
+def design_name(view, i):
+    """Design i's name, as `Selection_Name_` reads it for ids -50 - i."""
+    if not 0 <= int(i) < DESIGN_SLOTS:
+        return None
+    o = SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
+    # a stored name: never translated (work order 208 A6, `lang.Stored`)
+    return lang.stored(lang.wire_text(
+        view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0]))
+
+
+#: `s_ship_design.size` at 16 — the same place as the ship record's own
+#: design copy (`ship.py` `size`, verified).
+DESIGN_SIZE_OFFSET = 16
+
+
+def design_size(view, i):
+    """Design i's hull size (0 frigate .. 5 doom star), or None."""
+    if not 0 <= int(i) < DESIGN_SLOTS:
+        return None
+    return view.raw[SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
+                    + DESIGN_SIZE_OFFSET]
+
+
+def design_cost(view, i):
+    if not 0 <= int(i) < DESIGN_SLOTS:
+        return None
+    return _struct.unpack_from(
+        "<h", view.raw,
+        SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i) + DESIGN_COST_OFFSET)[0]
+
+
+def command_point_surplus(view):
+    return view.command_points - view.command_points_used
+
+
+def parse(raw):
+    return SPEC.parse(raw)
+
+
+def parse_all(raw_list):
+    return SPEC.parse_all(raw_list)

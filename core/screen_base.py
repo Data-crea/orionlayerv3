@@ -1,0 +1,549 @@
+"""Base class for all HD screens.
+
+Every screen inherits from ScreenBase and implements:
+  enter()   — called when the screen becomes active
+  update()  — per-frame data update (no rendering)
+  render()  — draw to surface
+  exit()    — cleanup when leaving
+
+Every screen stands on the background `core.backgrounds` resolves
+for it (work order 173): its own picture, else the universal one.
+"""
+import contextlib
+import os
+import time
+import pygame
+
+from core.pressfeedback import Pressed
+from core.box import load_boxes
+from core.screenhelp import HelpMixin
+from core import backgrounds
+from core.hud import screenframe
+
+
+class ScreenBase(HelpMixin):
+    """Base class for all OrionLayer screens.
+
+    Right-click context help comes from `core.screenhelp.HelpMixin`:
+    every screen has the behaviour, and a screen opts in by shipping
+    a `help.json`.
+    """
+
+    SCREEN_NAME = ""
+    GAME_SCREEN_ID = None   # orion2re screen ID for auto-switching,
+                            # None for sub-screens (manual switch_to)
+    IS_OVERLAY = False      # True → renders ABOVE the active screen
+                            # (popups: build queue, colonization, ...)
+    OVERLAY_DIM = 120       # 0-255 darkening under the overlay
+    BOXES_FILE = "boxes.json"
+    USE_FRAME = False       # True → the frame place (screenframe); no image (decision 71)
+    FRAME_TITLE = ""        # Text rendered in the frame's title bar
+    FRAME_BTN_LEFT = None   # ("CANCEL", field_id) or None
+    FRAME_BTN_RIGHT = None  # ("ACCEPT", field_id) or None
+    #: The screen shell (work order 225, `core.hud.shell.Shell`): a screen
+    #: that wears it sets one in `__init__`; None draws nothing.
+    shell = None
+    #: True on a screen fitted into the shell's content rectangle (work
+    #: order 225); the suite holds every such screen to the shell's rules.
+    SHELL_WORN = False
+    #: A TRANSCRIBED screen in the shell: its native regions, each carried
+    #: into one of its own boxes — [(box name, native rect, hit[, fill])],
+    #: `core.panelmap.PanelMap.for_screen`. None: no map, the 4:3 island.
+    REGIONS = None
+    #: A PICTURE screen in the shell (the audience's room): the box its 4:3
+    #: picture fills — the rectangle's full height, centred, every panel
+    #: of the screen inside it. None: a panel screen.
+    SHELL_STAGE = None
+
+    def __init__(self, app):
+        self.app = app
+        self._init_help()
+        self.boxes = []
+        self.active = False
+        self._screen_dir = ""
+        self._btn_flash = None   # ("left"|"right", start_time)
+        self.pressed = Pressed()  # a held press on a word (pressfeedback)
+
+    @property
+    def layout(self):
+        """The layout this screen's drawing and hit tests ask. A
+        transcribed screen in the shell answers with its `PanelMap`
+        (`core.panelmap`, built from `REGIONS`), which places its NATIVE
+        rectangles in its panels — except inside `island()`; reference
+        boxes, the shell and the help popup always use `ref_layout`."""
+        m = getattr(self, "_native_map", None)
+        if m is None or getattr(self, "_at_island", False):
+            return self.app.layout
+        return m
+
+    @contextlib.contextmanager
+    def island(self):
+        """Native rectangles at the 4:3 island, as before work order 225:
+        the original's dialogs over a transcribed screen (a hire popup, a
+        native box, a help box) keep their geometry."""
+        was, self._at_island = getattr(self, "_at_island", False), True
+        try:
+            yield
+        finally:
+            self._at_island = was
+
+    def build_native_map(self):
+        """The PanelMap of `REGIONS` from this screen's boxes, or None."""
+        from core import panelmap
+        self._native_map = panelmap.PanelMap.for_screen(
+            self, self.REGIONS) if self.REGIONS else None
+
+    @property
+    def ref_layout(self):
+        """The app's layout: reference px to the window, for boxes."""
+        return self.app.layout
+
+    @property
+    def colors(self):
+        return self.app.colors
+
+    @property
+    def style(self):
+        return self.app.style
+
+    def enter(self, game_state=None):
+        """Screen becomes active. Load boxes, background, assets."""
+        self.active = True
+        # Base project dir — editor saves ALWAYS go here, never to mods
+        self._screen_dir = os.path.join(
+            self.app.screens_dir, self.SCREEN_NAME
+        )
+        self._reload_boxes()
+        self._update_box_layout()
+        self.build_native_map()
+        self._load_background()
+        self._load_help_regions()
+
+    def asset_path(self, *parts):
+        """Resolve a file in this screen's folder (mods first).
+
+        Example: self.asset_path("assets", "logo.png")
+        Returns an absolute path or None.
+        """
+        return self.app.res.screen_file(self.SCREEN_NAME, *parts)
+
+    def _reload_boxes(self):
+        """Load boxes.json through mod resolution."""
+        path = self.asset_path(self.BOXES_FILE)
+        self.boxes = load_boxes(path, self.app.win_w,
+                                self.app.win_h) if path else []
+        # A button box's glyph, by the screen's and the box's names
+        # (work order 179; `core.hud.glyphs`).
+        from core.hud import glyphs
+        for box in self.boxes:
+            # NO GLYPH on a screen in the shell (work order 225, decision 91).
+            box.icon = None if self.SHELL_WORN else \
+                glyphs.for_button(self.SCREEN_NAME, box.name)
+
+    def render_backdrop(self, surface):
+        """This screen as it stands BEHIND a box or a turn-time popup the
+        App draws over it (`core.overlays`, work order 196 A): its page,
+        and no dialog of its own — the App's box is the dialog. The default
+        is the screen's own render; a screen that draws the engine's modals
+        itself, or that can be asked while exited, says otherwise."""
+        self.render(surface)
+
+    def wants_original(self):
+        """True when this screen cannot vouch for what it would draw.
+
+        Decision 22 promises the game stays playable on a screen HD
+        does not know. This is the same promise one step in: a screen
+        that DOES know the id but cannot trust its own picture — an
+        extractor file absent, a reconstruction the game's field list
+        contradicts — hands over to the original view rather than draw
+        a list it cannot vouch for.
+
+        `App._showing_original` asks this, so such a screen gets the
+        game's own picture AND the click forwarding that came with it
+        in work order 130 A. False here: a screen says so for itself.
+        """
+        return False
+
+    def no_view_reason(self, game_state):
+        """A sentence when the game shows something this screen KNOWS it
+        has no HD view for — a dialog of its own id, not data still on its
+        way. The F12 notice then stands at once and says it, instead of
+        holding the last frame for the data hold (work order 208 B3).
+        None: nothing known (the default)."""
+        return None
+
+    def claims(self, game_state):
+        """May this screen take its GAME_SCREEN_ID for this snapshot?
+
+        True by default. A screen whose whole content hangs on a block an
+        engine may not send (the colony screen and open fix 35, work order
+        180 B) says False without it, and the dispatcher then treats the
+        id as one no HD screen claims — decision 22's picture, the same
+        path as before the screen existed, with no hold and no failure."""
+        return True
+
+    def finishing(self, game_state):
+        """True while this screen still plays what belongs to it although
+        the game has moved on (work order 202 D: the battle's last events
+        arrive with the first snapshot after it). While it says so the
+        dispatcher keeps it (`Dispatcher.update_from_game`) and the App
+        draws it and nothing else — no next screen, no box, no picture of
+        the game's (`main.App._showing_original`); F12 still shows the
+        game. False by default."""
+        return False
+
+    def handover_is_modal(self):
+        """True when `wants_original()` is a MODAL NET's verdict — "a modal
+        HD has no view for" (`core/modalnet.py`) — and not a screen that
+        cannot vouch for its data. The hand-over gate (work order 180 A2)
+        holds both the same way; only the second is counted as a failure
+        when it outlasts the hold, because the net is allowed for exactly
+        what it does."""
+        return False
+
+    def modal_is_box(self):
+        """True when the modal `handover_is_modal()` reports is a BOX over
+        this screen's own page — a list that REPLACED the page, the
+        screen's own data already there — so no late data can come that
+        would end the gate's hold. The gate then shows it once its list
+        has stood still for `handover.MODAL_SETTLE` snapshots (work order
+        187, option C). False keeps the full hold: an unknown list may be
+        a transition whose own list is still to come (the main menu's
+        opening animation, work order 180 A1).
+
+        This default answers for a screen whose hand-over is a MODAL NET
+        (`core/modalnet.py` — the main menu's `_net`, select race's `_net`,
+        the galaxy map's `_modal.net`): a box only once the screen's own
+        list was seen this visit (`Net.box`). Screens with a GAME_BOX state
+        answer for themselves."""
+        net = getattr(self, "_net", None) or \
+            getattr(getattr(self, "_modal", None), "net", None)
+        return bool(getattr(net, "box", False))
+
+    def exit(self):
+        """Screen deactivated. Clean up."""
+        self.active = False
+        self.boxes = []
+        self.help.close()
+
+    def update(self, game_state=None):
+        """Per-frame data update. No rendering here."""
+        pass
+
+    def new_snapshot(self, game_state):
+        """True the first time this screen sees `game_state` — once per
+        snapshot (`GameClient` makes a new state for each), however often
+        a frame calls `update`. A bound that waits for the game counts
+        these, never frames: the frame rate is the player's (decision 79)
+        and must not shorten a wait (work order 212, decision 78)."""
+        fresh = game_state is not getattr(self, "_snapshot_seen", None)
+        self._snapshot_seen = game_state
+        return fresh
+
+    def render(self, surface):
+        """Draw the screen. Background, boxes, frame, content, help."""
+        if not self.draws_this_frame():
+            return
+        self._render_background(surface)
+        for box in self.boxes:
+            box.render(surface, self.ref_layout, self.style)
+        if self.USE_FRAME:
+            self._render_frame(surface)
+        self.render_content(surface)
+        self.render_shell(surface)
+        self.render_help(surface)
+
+    def render_shell(self, surface):
+        """The screen's shell (title plate and buttons), when it wears one.
+        A screen that draws its own `render` calls this before its help."""
+        if self.shell is not None:
+            self.shell.render(surface, self.ref_layout, self.style)
+
+    def shell_click(self, screen_x, screen_y):
+        """The key of the shell button under the click, or None; the shell
+        answers for its own geometry (decision 5)."""
+        if self.shell is None:
+            return None
+        return self.shell.button_at(self.ref_layout, screen_x, screen_y)
+
+    def draws_this_frame(self):
+        """False when the screen has nothing it may draw AT ALL.
+
+        Not the same question as `wants_original`: that one asks for
+        the GAME's picture; this one asks for nothing, so whatever is
+        already on the surface stands — for an OVERLAY that is the
+        parent screen underneath it.
+
+        Work order 166 part A: the research panel says False while the
+        game has not built its field list, so change mode shows the HD
+        galaxy map it is a panel over, rather than an empty frame that
+        fills in a third of a second later. A screen that is not an
+        overlay has nothing underneath and draws its own empty self
+        instead — the Fleets screen's answer to the same moment (work
+        order 142 A).
+        """
+        return True
+
+    def render_content(self, surface):
+        """What the screen draws OVER its boxes. The base draws nothing.
+
+        **THE HELP POPUP HAS TO BE LAST**, and this hook is what makes
+        that true for a screen that draws content of its own. A screen
+        that calls `super().render(surface)` and then draws is drawing
+        over a popup that has already been painted — found on the two
+        research screens while work order 165 part C built the
+        description box, which is the same popup: right-click help
+        opened there and the panel's own text was painted across it.
+        """
+        return None
+
+    def editor_note(self, box):
+        """One line about `box` for the F3 editor's info bar, or None.
+
+        **The screen owns what a box MEANS; the editor owns the
+        chrome.** A geometry value that is derived — a row band, a
+        sprite step, a lower bound the editor must report and never
+        clamp — has no rect for the editor to show, so without this
+        the person dragging is dragging blind.
+
+        It replaces a `hasattr(scr, "_race_by_id")` in
+        `core.editor.overlay.draw_info`: generic editor code that
+        named ONE screen and reached into it. A hook is the same
+        information with the knowledge on the side that has it.
+
+        Plain text. The overlay appends it to the box's own line and
+        does not parse it.
+        """
+        return None
+
+    def handle_click(self, screen_x, screen_y):
+        """Handle click in screen coordinates.
+
+        Checks frame Cancel/Accept buttons first, then boxes with
+        field_ids. Returns the clicked box or None.
+        """
+        if self.help_consumes_click(screen_x, screen_y):
+            return None
+        side = self._frame_button_side(screen_x, screen_y)
+        if side:
+            self._btn_flash = (side, time.monotonic())
+        fid = self._frame_button_hit(screen_x, screen_y)
+        if fid is not None:
+            if self.app.connected:
+                self.app.client.activate_field(fid)
+            return None
+        for box in self.boxes:
+            if box.contains(screen_x, screen_y) and box.field_id is not None:
+                if self.app.connected:
+                    self.app.client.activate_field(box.field_id)
+                return box
+        return None
+
+    def handle_key_event(self, event):
+        """Full pygame KEYDOWN event: kept for `handle_key`'s default, then
+        the keycode to `handle_key`.
+
+        Screens with text input override this to access
+        event.unicode (see core/widgets/text_input.py); one that does not
+        answer a key itself calls `keyfwd.forward` (or this) for it.
+        """
+        self._key_event = event
+        self.handle_key(event.key)
+
+    def handle_key(self, key):
+        """A key the screen does not answer itself: to the game by the one
+        rule every screen shares (`core/keyfwd.py`, work order 230 E) —
+        where the original's answer is a field of the live list, never an
+        Enter into the engine's pointer or a blind ESC."""
+        if self.help_consumes_key(key):
+            return
+        event = getattr(self, "_key_event", None)
+        if event is None or getattr(event, "key", None) != key:
+            event = pygame.event.Event(pygame.KEYDOWN, {
+                "key": key, "mod": 0, "unicode": chr(key) if 32 <= key < 127
+                else ""})
+        from core import keyfwd
+        keyfwd.forward(self, event)
+
+    def handle_left_release(self, screen_x, screen_y):
+        """The press ends (core.pressfeedback)."""
+        self.pressed.release()
+
+    def handle_left_cancel(self):
+        """The press ends while HD holds its frame or shows the game's
+        picture (`core.pointergate`, work order 226 A): the gesture ends
+        and nothing is sent. A screen with a drag drops it here."""
+        self.pressed.release()
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        """Update hover state for all boxes."""
+        for box in self.boxes:
+            box.hover = box.contains(screen_x, screen_y)
+
+    def handle_mousewheel(self, direction, mx, my):
+        """Wheel. Default: only an open help popup takes it.
+
+        Defined here rather than only on the screens that scroll
+        something, because the main loop routes the wheel by
+        `hasattr` — without this, a long help entry would be
+        unscrollable on Main Menu and New Game.
+        """
+        return self.help_consumes_wheel(direction)
+
+    def on_resize(self):
+        """Window resized. Reload boxes for new resolution, rescale bg."""
+        if self._screen_dir:
+            self._reload_boxes()
+        self._update_box_layout()
+        self.build_native_map()
+        self._scale_background()
+        self.help.clear_cache()
+
+    # --- Background (automatic for all screens) ---
+
+    def _load_background(self):
+        """The screen's BACKGROUND SLOT — decision 71, filled by work
+        order 173: `core.backgrounds` resolves the picture (the screen's
+        own, else Data's universal one, else the placeholder; the mod
+        folder's file of the same name first, decision 72) and keeps one
+        cover-scaled copy per window size for every screen that shares
+        it. Nothing is held here that a resize could leave stale.
+
+        The shared cockpit texture used to be the fallback here. It was
+        part of the cockpit look decision 71 replaces, so it is no longer
+        drawn behind a screen; the file stays in the tree.
+        """
+
+    def _scale_background(self):
+        """Nothing to do: `core.backgrounds` scales per window size."""
+
+    @property
+    def _bg_scaled(self):
+        """The background at the window's size (a popup's `backdrop`)."""
+        return backgrounds.scaled(self.SCREEN_NAME, self.app.win_w,
+                                  self.app.win_h,
+                                  first=self.background_first())
+
+    def background_first(self):
+        """A file this screen wears AHEAD of the background chain, or None
+        (`core.backgrounds.source_path`; the Leaders screen's own picture
+        place, work order 237)."""
+        return None
+
+    def _render_background(self, surface):
+        """The background slot's picture, or the dark placeholder."""
+        backgrounds.draw(surface, self.SCREEN_NAME,
+                         first=self.background_first())
+
+    # --- Box helpers ---
+
+    def box_rect(self, name):
+        """Get ref rect [x, y, w, h] from a named box.
+
+        Applies content_offset from the box style so all content
+        rendering is shifted without touching individual renderers.
+        """
+        for box in self.boxes:
+            if box.name == name:
+                x, y, w, h = box.ref_rect
+                co = box.style.get("content_offset")
+                if co:
+                    return (x + co[0], y + co[1], w, h)
+                return box.ref_rect
+        return None
+
+    def box_screen_rect(self, name):
+        """A named box's WINDOW rect as `Box.update_layout` placed it —
+        anchors included (work order 170) — or None. Where a box may be
+        anchored to the window's edge, this is the rect to draw and hit
+        with; `layout.rect(box_rect(name))` is the content-area rect."""
+        for box in self.boxes:
+            if box.name == name and box.screen_rect is not None:
+                return pygame.Rect(box.screen_rect)
+        return None
+
+    def box_style(self, name):
+        """A named box's style dict, or {} when there is no such box.
+
+        Extracted 17 September 2026 (work order 126 I): colony summary,
+        galaxy map, empire identity (`_box_style`) and planets
+        (`planetdraw._style`) each carried this loop, identical but for
+        the name — the fourth copy of a lookup whose siblings live here.
+        """
+        for box in self.boxes:
+            if box.name == name:
+                return box.style
+        return {}
+
+    def box_font_scale_stored(self, name):
+        """A box's `font_scale` as boxes.json holds it. No auto-factor.
+
+        **USE THIS WHEREVER `Layout.font_size` IS APPLIED AFTERWARDS.**
+        `box_font_scale` multiplies by `win_h / 1080` and `font_size`
+        multiplies by the window scale as well, so the two together
+        square the resolution factor: 1.0 at 1080p, 1.78 at 1440p and
+        **4.0 at 2160p against an intended 2.0**. Where a box carries
+        a value that was tuned by eye with both in place, that is what
+        makes the tuning land; where it carries none — every box on
+        the colony summary — there is nothing to cancel it and the
+        text comes out twice the size at 4K.
+
+        Extracted 7 September 2026 from `screenhelp._help_font_scale`,
+        which had worked this out for the help popup and solved it
+        privately. The colony summary's empire readouts were the
+        second case, and a second private copy is how the third one
+        gets written too.
+        """
+        for box in self.boxes:
+            if box.name == name:
+                return box.style.get("font_scale", 1.0)
+        return 1.0
+
+    def box_font_scale(self, name):
+        """A box's font_scale times the resolution auto-factor.
+
+        For a caller that sizes text DIRECTLY. A caller that then goes
+        through `Layout.font_size` wants `box_font_scale_stored` —
+        see there for what taking both does.
+        """
+        return self.box_font_scale_stored(name) * (self.app.win_h / 1080.0)
+
+    # --- Internal ---
+
+    def _update_box_layout(self):
+        """Set window rects for all boxes. Once on enter/resize."""
+        for box in self.boxes:
+            box.update_layout(self.ref_layout)
+
+    def _render_frame(self, surface):
+        """The HUD's title plate and the two frame buttons — decision 71.
+        See `core.hud.screenframe`."""
+        screenframe.render(self, surface)
+
+    def hud_frame_button_rect(self, side):
+        """Where frame button `side` is drawn AND hit (decision 5); the
+        click is still handled here, in `handle_click` (decision 13)."""
+        return screenframe.button_rect(self, side)
+
+    def _get_active_frame(self):
+        """The skin frame's geometry (`core/frame.py`). Frame variants
+        (`FRAME_VARIANT`, a subfolder of frame/) went with the 9-slice
+        drawing in work order 189 — none was ever drawn after decision 71."""
+        return self.style.frame
+
+    def _frame_button_side(self, screen_x, screen_y):
+        """Which frame button was hit: 'left', 'right' or None.
+
+        Use this when a button has no field_id yet (unwired) but
+        should still trigger local behaviour. Since decision 71 it asks
+        the HUD buttons, through the rect they are drawn in."""
+        return screenframe.side_at(self, screen_x, screen_y)
+
+    def _frame_button_hit(self, screen_x, screen_y):
+        """Check if a click hit a frame button. Returns field_id or None."""
+        side = self._frame_button_side(screen_x, screen_y)
+        if side == "left":
+            return self.FRAME_BTN_LEFT[1]
+        if side == "right":
+            return self.FRAME_BTN_RIGHT[1]
+        return None

@@ -1,0 +1,26 @@
+{
+  "source_size": [
+    1672,
+    941
+  ],
+  "content_inset": {
+    "left": 65,
+    "right": 65,
+    "top": 95,
+    "bottom": 19
+  },
+  "button_bar_left": {
+    "x": 106,
+    "y": 861,
+    "width": 233,
+    "height": 39,
+    "note": "Dark panel in bottom-left corner tile, for Cancel"
+  },
+  "button_bar_right": {
+    "x_from_right": 113,
+    "y": 861,
+    "width": 232,
+    "height": 39,
+    "note": "Dark panel in bottom-right corner tile, for Accept"
+  }
+}

@@ -1,0 +1,189 @@
+# OrionLayer v3 — what does not belong in the repository.
+#
+# The rule is the one the help texts already established: anything
+# DERIVED is generated, never committed. Two reasons, and the second
+# is the one that matters. Git stores images as whole blobs, not as
+# diffs, so every regeneration of an icon set leaves a full extra copy
+# in the history forever — and these are exactly the sets that get
+# regenerated. And artwork extracted from a copy of Master of Orion 2
+# is not ours to redistribute.
+#
+# Everything ignored here is rebuilt by `python tools/setup.py`, which
+# then runs the smoke test to prove the tree is complete.
+#
+# The hand-made inputs (`_src/` masters, the sidebar sheet, the nebula
+# and star artwork, the black hole source) were committed until work
+# order 241. Since then NO picture is in the repository: they are in the
+# base pack outside the tree (`core/basepack.py`, `basepack.json`), and
+# the last block of this file ignores every picture format, after every
+# rule above, so no `!` exception can bring one back.
+
+# --- Generated artwork (tools/setup.py rebuilds all of it) ---
+# Each of these was checked byte-for-byte: regenerating produces the
+# committed file exactly. That check is the whole licence to ignore
+# them, and it is why stars/ is NOT in this list — see below.
+screens/galaxy_map/assets/ships/*/
+!screens/galaxy_map/assets/ships/_src/
+screens/galaxy_map/assets/black_hole.png
+screens/galaxy_map/assets/icons/*.png
+!screens/galaxy_map/assets/icons/_source_sheet.png
+# The colony output panel's six icons, cut from _src/output/ by
+# tools/make_output_icons.py (decision 56). The smoke test rebuilds
+# them into a scratch directory and compares bytes.
+screens/colony_summary/assets/output/
+# The ten planet surface pictures, cut unscaled from
+# _src/surfaces/planet_surfaces.png by tools/make_surface_tiles.py
+# (brief 97, decision 58). The smoke test rebuilds and compares bytes.
+screens/colony_summary/assets/surfaces/
+# Brief 92's inspection crops and contact sheet of the three sheets —
+# a picture for Data to name the icons from, not an input to anything.
+screens/colony_summary/assets/_src/output/cut/
+
+# The HUD pieces code cannot draw — twelve icons and the title plate —
+# cut unscaled from assets/shared/hud/galaxy_hud.png by tools/hud_cut.py
+# (decision 71). The smoke test rebuilds them into a scratch directory
+# and compares bytes.
+assets/shared/hud/cut/
+
+# --- Contact sheets (diagnostic output of --sheet) ---
+**/_contact_sheet.png
+
+# --- Derived from the user's own MOO2 installation ---
+# Extracted by tools/help_extract.py. Not ours to ship.
+assets/shared/help/help_*.json
+
+# The original's PRODUCTION NAMES, from the player's own install:
+# building names (tools/techname_extract.py, techname.lbx) and
+# option strings (tools/estrings_extract.py, estrings.lbx). Both
+# feed one column through core/prodname.py and neither is ours.
+# The user's own TECHNAME.LBX, so it is theirs and not ours to ship
+# (decisions 38, 40, 42); the loader carries a format version and the
+# colony screen explains an absent file rather than drawing nothing.
+assets/shared/names/
+
+# UNMODIFIED sprites out of STARBG.LBX, used as test fixtures. The
+# HD artwork in nebula/ is derived work and stays; this is the
+# original, pixel for pixel, and it is the one place in the tree
+# that carried it. `tools/nebula_extract.py /path/to/starbg.lbx`
+# puts it back. Without it the smoke test cannot check nebula shape
+# or brightness — it says so instead of passing quietly.
+screens/galaxy_map/assets/nebula_ref/
+
+# UNMODIFIED sprites out of RACEICON.LBX — the population figures the
+# colony screens draw, per race and per profession, plus the shared
+# native and android. Same rule as nebula_ref/ and the same reason:
+# these are the original's own pixels out of somebody's installation,
+# not ours to ship. `tools/raceicon_extract.py` puts them back.
+# Unlike nebula_ref/ NOTHING IN THE TREE READS THIS ONE — it is a
+# reference for a person comparing HD icons against the original, so
+# the smoke test neither needs it nor mentions it, and must pass with
+# it absent.
+screens/colony_summary/assets/raceicon_ref/
+
+# The BASE FIGURE SET the colony screens draw: 54 masters at 28x28,
+# cut from the same RACEICON.LBX by the same tool. Decision 50 — the
+# shipped product DRAWS the game's own figures; the repository does
+# not HOLD them. A mod overrides them one file at a time here, and a
+# mod's own figures live in mods/<name>/assets/shared/figures/ and
+# are the mod author's to commit.
+assets/shared/figures/
+
+# The colony screen's window masks and its built frame plates are
+# GONE — Phase B, 12 September 2026, decision 55. Both entries stood
+# here until then: the masks were rendered from layout_reference.json
+# by tools/frame_mask.py and the plates nine-sliced from the galaxy
+# map's master by tools/frame_build.py, both derived under decision 49
+# with a byte-for-byte rebuild as the licence. The screen wears one
+# fixed image then, screens/colony_summary/assets/frame.png — no image
+# at all since decision 71, and work order 190 removed the file — so
+# there is nothing generated left on this screen to ignore, and the
+# tools that made them are deleted rather than merely unused.
+
+# --- Local state ---
+# settings.json is NOT ignored: it holds window size, skin, language
+# and the localhost port, no secrets, and `load_settings()` falls back
+# to partial defaults without it — a fresh clone should start in the
+# state the project was last known good in, not in a half-default one.
+*.log
+# The PLAYER's own OrionLayer settings (floor lift, colour preset) —
+# user data, never shipped; core/usersettings.py is its one home. The
+# `.corrupt` copy is the unreadable file it moves aside, the `.tmp` its
+# atomic write.
+user_settings.json
+user_settings.json.corrupt
+user_settings.json.tmp
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Editors and OS ---
+.vscode/
+.idea/
+*~
+*.swp
+.DS_Store
+
+# --- Review leftovers ---
+# `git show <sha> > diff.txt` and its variants: a diff log is derived
+# from the history it was taken out of (decision 40), so it never
+# belongs in the tree. Ignored rather than forbidden, because reading
+# a commit into a file beside the tree is a reasonable way to review
+# one.
+diff*.txt
+
+# --- Delivery leftovers (the ZIP era; git replaces all of this) ---
+*.zip
+tools/tree_manifest.sha256
+screens/fleets/assets/gamedata/
+# The Leaders screen's own artwork out of the player's OFFICER.LBX,
+# MAINPUPS.LBX and FONTS.LBX (tools/officer_art_extract.py, work order
+# 167) — the original's pixels, so the Fleets rule and the same reason.
+screens/leaders/assets/gamedata/
+# The Races screen's portraits, overlay and spy icons out of the player's
+# RACES.LBX (tools/races_art_extract.py, work order 175) — the same rule.
+screens/races/assets/gamedata/
+# The Ship Designer's pictures and palette out of the player's
+# DESIGN.LBX and FONTS.LBX (tools/design_art_extract.py, work order 185).
+screens/ship_design/assets/gamedata/
+# The audience's rooms, ambassadors and palettes out of the player's
+# DIPLOMAT.LBX (tools/audience_art_extract.py, work order 185) — the same rule.
+screens/audience/assets/gamedata/
+# The Info screen's Tech Review pictures out of the player's APP_PICS.LBX and
+# FONTS.LBX (tools/info_art_extract.py, work order 196) — the same rule.
+screens/info/assets/gamedata/
+# The tactical battle's ships, planets, ordnance, effects and palette out of
+# the player's CMBT*.LBX, BEAMS, SPHERSFX, COMBAT, MONSTER and FONTS.LBX
+# (tools/combat_art_extract.py, work order 197) — the same rule.
+screens/combat/assets/gamedata/
+# The colony screen's sky, grounds, system-display planets and palette out of
+# the player's PLANETS.LBX, COLONY2.LBX, COLSYSDI.LBX and FONTS.LBX
+# (tools/colony_art_extract.py, work order 223) — the same rule.
+screens/colony/assets/gamedata/
+# The invasion's troops, explosions, popup icons, planets, colonists and the
+# popup's palette out of the player's COLGCBT.LBX, COLONY.LBX, MAINPUPS.LBX,
+# COLONY2.LBX, CMBTPLNT.LBX, RACEICON.LBX and FONTS.LBX
+# (tools/invasion_art_extract.py, work order 232) — the same rule.
+screens/ground_combat/assets/gamedata/
+
+# F8 screenshots (main.App._save_screenshot) go to the player's own folder
+# since work order 219; one here came from the working directory and is a
+# picture of the game, never a file of the repository.
+/orionlayer_[0-9]*.png
+
+# --- No picture in the repository (work order 241, Data's rule of 11 October
+# 2026: code and pictures fully apart). Last, so it wins over every `!` above;
+# the smoke suite holds the same by file signature for what is tracked.
+*.png
+*.PNG
+*.jpg
+*.JPG
+*.jpeg
+*.webp
+*.gif
+*.bmp
+*.tga
+*.svg
+*.ico

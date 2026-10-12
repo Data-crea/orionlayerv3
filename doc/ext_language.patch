@@ -1,0 +1,177 @@
+OrionLayer open fix 70 — the player's language, and its files from another install
+==================================================================================
+
+Work order 200 (Part C, German). orion2re on `orionlayer-local`, on top of
+f031cbad (open fix 69). src/game only, every line under ORION2RE_EXT.
+
+WHAT IS MISSING. The original reads its language from LANGUAGE.INI at
+start (Set_Mox_Language_, mox2.cpp:222-236) and opens each language's own
+files by it: GER_HELP.LBX (textbox.cpp:25), HGSTRNGS.LBX (harold.cpp:1531),
+estrGERM.lbx (estrings.cpp:18), HERODATG.LBX (harold.cpp:51), GERTECD.LBX
+(design.cpp:1025), GERSKLLS.LBX (officer.cpp:3474), GERCRDTS.LBX
+(mainmenu.cpp:604), the German font. This build reads the file and throws
+the number away: `MOX::_settings.language = 0` (mox2.cpp:235), and again in
+Reload_Language_Strings_ (loadsave.cpp:1788). And an install bought in one
+language holds that language's files only, so a player with an English and
+a German MOO2 has the German files in the other folder.
+
+WHAT THIS ADDS.
+  1. ORION2RE_LANGUAGE (0-4, the settings dialog's numbers: 1 German), read
+     where the build forced 0 (`MOX2::Ext_Language_`). Unset: 0, as before.
+  2. ORION2RE_LANGUAGE_DIR: the last place a READ is looked for when the
+     game's folder (and the original's CD path, ORIONCD.INI) cannot serve it
+     (vfs_detail::Resolve_Raw_Asset_Path_). Writes never reach it — vfs::fopen
+     refuses every mode but read. Unset: nothing changes.
+  3. ORION2RE_LANGUAGE_FILES (comma separated, any case): the files the
+     language owns, read from ORION2RE_LANGUAGE_DIR FIRST. An English
+     install can hold English copies under the German names (Data's
+     DIPLOMSG.LBX and EVENTMSG.LBX are DIPLOMSE / EVENTMSE byte for byte), so
+     "last" would read the English text; every other file stays the game
+     folder's own (its patched HELP.LBX, HESTRNGS.LBX, CMBTSHP.LBX).
+
+OrionLayer's start sets both from the player's settings (core/lang.
+engine_env): Deutsch in Game Settings, and the folder named with
+tools/language_files.py, and the German files as the owned list.
+
+NOT CHANGED. The settings dialog's own language choice still reloads the
+strings (loadsave.cpp:449-456) — into the language the starter asked for,
+as it reloaded into 0 before. MOX.SET keeps the language byte the game
+writes (byte 210 of its session part); it is set again at every start.
+
+Proof (work order 200): a German engine with an English game folder and
+the German files of a Steam 1.31 in the other folder — the turn summary,
+the leader offer, the battle panel, the audience ("Womit kann ich dienen"),
+the sidebar's "Spielzüge" and "FP" in German, natively.
+diff --git a/src/game/loadsave.cpp b/src/game/loadsave.cpp
+index a46bfb88..62f02b97 100644
+--- a/src/game/loadsave.cpp
++++ b/src/game/loadsave.cpp
+@@ -1785,7 +1785,11 @@ namespace LOADSAVE {
+     }
+ 
+     void __cdecl Reload_Language_Strings_() {
++#ifdef ORION2RE_EXT
++        MOX::_settings.language = MOX2::Ext_Language_();  // OrionLayer, open fix 70.
++#else
+         MOX::_settings.language = 0;
++#endif
+         HAROLD::Load_H_Strings_();
+         RUSS::Load_Russ_Strings_();
+         ESTRINGS::Load_E_Strings_();
+diff --git a/src/game/mox2.cpp b/src/game/mox2.cpp
+index 998afc16..df8e11ab 100644
+--- a/src/game/mox2.cpp
++++ b/src/game/mox2.cpp
+@@ -219,6 +219,15 @@ namespace MOX2 {
+         MOX::_global_esc = 0;
+     }
+ 
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 70. The language the starter asks for (ORION2RE_LANGUAGE, 0-4 as the settings dialog's: 1 German; set by OrionLayer's start from the player's choice), else 0 as before the fix — this build forces 0 where the original read language.ini.
++    uint8_t Ext_Language_() {
++        const char* value = SDL_getenv("ORION2RE_LANGUAGE");
++        const int language = value != nullptr ? atoi(value) : 0;
++        return (uint8_t)(language >= 0 && language <= 4 ? language : 0);
++    }
++#endif
++
+     void __cdecl Set_Mox_Language_() {
+         char dir_buffer[80];
+         char line_buffer[80];
+@@ -232,7 +241,11 @@ namespace MOX2 {
+             atoi(line_buffer + 4);
+         }
+ 
++#ifdef ORION2RE_EXT
++        MOX::_settings.language = Ext_Language_();  // OrionLayer, open fix 70.
++#else
+         MOX::_settings.language = 0;
++#endif
+         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "mox2: Set_Mox_Language complete language=%d", (int)MOX::_settings.language);
+     }
+ 
+diff --git a/src/game/mox2.h b/src/game/mox2.h
+index d51136a4..b6dd7f91 100644
+--- a/src/game/mox2.h
++++ b/src/game/mox2.h
+@@ -21,6 +21,9 @@ namespace MOX2 {
+ 
+     /** Attempts to read language.ini, then restores the language setting to its default value. */
+     void __cdecl Set_Mox_Language_();
++#ifdef ORION2RE_EXT
++    uint8_t Ext_Language_();  // OrionLayer, open fix 70.
++#endif
+ 
+     /** Loads the alternate data path from orioncd.ini and verifies required assets are reachable. */
+     void __cdecl Set_Mox_Alt_Path_();
+diff --git a/src/game/vfs_path.cpp b/src/game/vfs_path.cpp
+index 23900a1e..3b39b2d8 100644
+--- a/src/game/vfs_path.cpp
++++ b/src/game/vfs_path.cpp
+@@ -191,9 +191,52 @@ namespace vfs_detail {
+         return resolve_layers(g_vfs_state.package_layers);
+     }
+ 
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 70. `asset_path` in ORION2RE_LANGUAGE_DIR, the player's other install with the language's files; read only.
++    static bool Resolve_Language_Asset_Path_(const char* asset_path, char* resolved_path, size_t resolved_path_size) {
++        const char* language_dir = SDL_getenv("ORION2RE_LANGUAGE_DIR");
++        char language_base[VFS_MAX_PATH];
++        char candidate_path[VFS_MAX_PATH];
++        return language_dir != nullptr && language_dir[0] != '\0' &&
++               Build_Base_Path_(language_dir, language_base, sizeof(language_base)) &&
++               Build_Candidate_Path_(language_base, "", asset_path, candidate_path, sizeof(candidate_path)) &&
++               Resolve_Candidate_Path_(candidate_path, resolved_path, resolved_path_size);
++    }
++
++    // OrionLayer, open fix 70. A file the language owns (named in ORION2RE_LANGUAGE_FILES, comma separated, any case): an English install can hold English copies under the German names (DIPLOMSG.LBX, EVENTMSG.LBX), so these come from the language's folder FIRST.
++    static bool Language_Owns_(const char* asset_path) {
++        const char* names = SDL_getenv("ORION2RE_LANGUAGE_FILES");
++        if (names == nullptr || names[0] == '\0') {
++            return false;
++        }
++        const char* slash = strrchr(asset_path, '/');
++        const char* base = slash != nullptr ? slash + 1 : asset_path;
++        const size_t base_length = strlen(base);
++        for (const char* cursor = names; *cursor != '\0';) {
++            const char* end = strchr(cursor, ',');
++            const size_t length = end != nullptr ? (size_t)(end - cursor) : strlen(cursor);
++            if (length == base_length && strncasecmp(cursor, base, length) == 0) {
++                return true;
++            }
++            if (end == nullptr) {
++                break;
++            }
++            cursor = end + 1;
++        }
++        return false;
++    }
++#endif
++
+     bool Resolve_Raw_Asset_Path_(const char* asset_path, char* resolved_path, size_t resolved_path_size) {
+         char candidate_path[VFS_MAX_PATH];
+ 
++#ifdef ORION2RE_EXT
++        if (Language_Owns_(asset_path) &&
++            Resolve_Language_Asset_Path_(asset_path, resolved_path, resolved_path_size)) {
++            return true;  // OrionLayer, open fix 70.
++        }
++#endif
++
+         if (Build_Candidate_Path_(g_vfs_state.base_path, "", asset_path, candidate_path, sizeof(candidate_path)) &&
+             Resolve_Candidate_Path_(candidate_path, resolved_path, resolved_path_size)) {
+             return true;
+@@ -205,6 +248,13 @@ namespace vfs_detail {
+             return true;
+         }
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 70. A read the game folder cannot serve is looked for last in ORION2RE_LANGUAGE_DIR (GER_HELP.LBX, HGSTRNGS.LBX, ...); read only, never written, unset = before the fix.
++        if (Resolve_Language_Asset_Path_(asset_path, resolved_path, resolved_path_size)) {
++            return true;
++        }
++#endif
++
+         return false;
+     }
+ 

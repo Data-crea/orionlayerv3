@@ -1,0 +1,365 @@
+"""Box — a UI element with a position in reference space.
+
+Loaded from boxes.json per screen. Each box has a rect
+in 1080p reference space, an optional field_id, and an
+optional anchor for widescreen positioning.
+"""
+import json
+import os
+import pygame
+from core.config import REF_W
+
+
+class Box:
+    """A UI element with reference rect and optional field ID."""
+
+    def __init__(self, data):
+        self.name = data["name"]
+        #: The button's glyph (`core.hud.glyphs`), set by the screen.
+        self.icon = None
+        # **A RECT IS OPTIONAL — 12 September 2026.** A screen may
+        # DERIVE its boxes and carry only their names: the colony
+        # summary's twenty come from `layout_reference.json` and
+        # `list_columns` through `colonyplates.reseat`, which runs in
+        # `_reload_boxes` before anything reads a rect. `None` until
+        # then, and `update_layout` draws nothing for a box that still
+        # has none rather than inventing one.
+        self.ref_rect = tuple(data["rect"]) if "rect" in data else None
+        self.field_id = data.get("field_id")
+        self.anchor = data.get("anchor")  # None, "right", "left"
+        # None, "top", "bottom", "stretch" — see `Layout.vertical`.
+        self.anchor_v = data.get("anchor_v")
+        self.style = data.get("style", {})
+        self.data_field = data.get("data_field")
+        self.hidden = data.get("hidden", False)
+        self.screen_rect = None
+        self.hover = False
+        # **SET BY WHOEVER SEATS THE BOX, AND IT KEEPS THE FILE
+        # HONEST.** A screen may derive its rectangles — the colony
+        # summary's come from `layout_reference.json` and
+        # `list_columns` through `colonyplates.seat` — and a box that
+        # got its rect that way must not have it written back by an
+        # editor save, or the second copy this removed reappears the
+        # first time somebody presses F3 and S. Not read from the
+        # file and never written to it: it is a property of where the
+        # rect came from in THIS run.
+        self.derived = False
+        # A screen that SEATS its boxes (moves and scales the file's rects
+        # at load, the GAME menu) sets the inverse here, so an editor save
+        # writes the file's geometry and never the seated rect. None: the
+        # rect is written as it is.
+        self.to_file = None
+        # Runtime overrides for the "text" skin. Never serialized: a
+        # value a screen computes this frame must not end up in
+        # boxes.json when the editor saves.
+        self.text = None
+        self.text_color = None
+
+    def update_layout(self, layout):
+        """Compute window rect from reference rect, if it has one."""
+        if self.ref_rect is None:
+            self.screen_rect = None
+            return
+        x, y, w, h = self.ref_rect
+        sw = int(w * layout.scale)
+        sy, sh = layout.vertical(y, h, self.anchor_v)
+
+        # Content area boundaries (16:9 area centered in window)
+        content_right = layout.offset_x + REF_W * layout.scale
+
+        if self.anchor == "right":
+            ref_margin = REF_W - x - w
+            sx = int(content_right) - sw - int(ref_margin * layout.scale)
+        elif self.anchor == "left":
+            sx = int(x * layout.scale + layout.offset_x)
+        else:
+            sx = int(x * layout.scale + layout.offset_x)
+
+        self.screen_rect = pygame.Rect(sx, sy, sw, sh)
+
+    def contains(self, screen_x, screen_y):
+        """Hit test in screen coordinates."""
+        if self.screen_rect:
+            return self.screen_rect.collidepoint(screen_x, screen_y)
+        return False
+
+    def _scaled_glow_offsets(self, layout):
+        """Convert glow offsets from reference to pixel space."""
+        glows_ref = self.style.get("glows")
+        if not glows_ref:
+            return None
+        offsets = {}
+        for key in ("tl", "tr", "bl", "br"):
+            if key in glows_ref:
+                ox, oy = glows_ref[key]
+                offsets[key] = (int(ox * layout.scale),
+                                int(oy * layout.scale))
+        return offsets if offsets else None
+
+    def render(self, surface, layout, style_renderer):
+        """Draw the box using the style renderer."""
+        if self.hidden or self.screen_rect is None:
+            return
+        skin = self.style.get("skin", "panel")
+        label = self.style.get("label", "")
+        font_size = layout.font_size(self.style.get("font_size", 16))
+
+        if skin == "button":
+            style_renderer.draw_button(
+                surface, self.screen_rect,
+                label=label, hover=self.hover,
+                font_size=font_size, style=self.style,
+                glow_offsets=self._scaled_glow_offsets(layout),
+                glow_rotations=self.style.get("glow_rot"),
+                icon=self.icon,
+            )
+        elif skin == "asset":
+            r = self.screen_rect
+            asset_path = self.style.get("asset", "")
+            style_renderer.draw_asset(
+                surface, asset_path, r.x, r.y, r.w, r.h)
+        elif skin == "inner_panel":
+            r = self.screen_rect
+            style_renderer.draw_inner_panel(
+                surface, r.x, r.y, r.w, r.h)
+        elif skin == "text":
+            self._render_text(surface, style_renderer, font_size)
+        elif skin == "thin_border":
+            # `"fill": true` — a group whose TEXT stands on it: the HUD
+            # panel's fill under the words instead of the background
+            # (work order 173 measured Select Race's race names at 3.4:1
+            # on the universal picture, 9.4:1 on the old placeholder).
+            style_renderer.draw_thin_border(
+                surface, self.screen_rect, layout.scale,
+                filled=bool(self.style.get("fill")),
+                dense=self.style.get("glass") == "dense")
+        elif skin == "none":
+            # **THE FRAME IS THE BORDER.** A box whose rect is a
+            # transparent hole in the screen's frame image already has
+            # its outline painted around it by the artwork; drawing a
+            # skin as well gives it two, offset by the bleed. Added for
+            # the Fleets v4 frame (work order 146), where thirty-two
+            # boxes sit in holes.
+            #
+            # It has to be a NAMED skin and not a missing `style`: the
+            # default is "panel" two lines below this, so a box with no
+            # style draws a filled panel with its own chamfered
+            # outline — which is exactly what appeared inside the v4
+            # holes the first time they were rendered.
+            pass
+        elif skin == "panel":
+            style_renderer.draw_panel(surface, self.screen_rect)
+            if label:
+                text_col = style_renderer.colors.get(
+                    "text", {}).get("primary", [190, 200, 230])
+                style_renderer.draw_label(
+                    surface, label,
+                    self.screen_rect.x, self.screen_rect.y
+                    + (self.screen_rect.h - font_size) // 2,
+                    font_size=font_size,
+                    color=tuple(text_col[:3]),
+                    center=True, width=self.screen_rect.w,
+                )
+        else:
+            pygame.draw.rect(surface, (60, 80, 120),
+                             self.screen_rect, 1)
+
+    def _render_text(self, surface, style_renderer, font_size):
+        """Bare text in the box rect — no panel, no border.
+
+        The string is `self.text` when a screen has filled it in,
+        otherwise the box's own `style.label`. Position, size, font
+        size and alignment stay in boxes.json, so the box is
+        draggable in F3 like any other.
+        """
+        text = self.text if self.text is not None else self.style.get(
+            "label", "")
+        if not text:
+            return
+        color = self.text_color
+        if color is None:
+            color = self.style.get("color")
+        if color is None:
+            color = style_renderer.colors.get("text", {}).get(
+                "primary", [190, 200, 230])
+        surf = style_renderer.render_text(text, font_size,
+                                          tuple(color[:3]))
+        r = self.screen_rect
+        align = self.style.get("align", "left")
+        if align == "center":
+            x = r.x + (r.w - surf.get_width()) // 2
+        elif align == "right":
+            x = r.right - surf.get_width()
+        else:
+            x = r.x
+        y = r.y + (r.h - surf.get_height()) // 2
+        surface.blit(surf, (x, y))
+
+    def to_dict(self):
+        """Serialize box back to dict for saving."""
+        # **`role` AND `locked` ARE GONE — 12 September 2026, the
+        # redundancy audit.** Both were in the data model, both were
+        # serialized, and nothing in the tree ever branched on either:
+        # `role` was written by the editor for a new box and read back
+        # only to be written again, and `locked` was never even
+        # written. What a box IS is answered by
+        # `core/editor/boxclass.py`, from the screen's own rules.
+        d = {"name": self.name}
+        if self.ref_rect is not None and not self.derived:
+            d["rect"] = (self.to_file(self.ref_rect) if self.to_file
+                         else list(self.ref_rect))
+        if self.field_id is not None:
+            d["field_id"] = self.field_id
+        if self.anchor:
+            d["anchor"] = self.anchor
+        if self.anchor_v:
+            d["anchor_v"] = self.anchor_v
+        if self.style:
+            d["style"] = self.style
+        if self.data_field:
+            d["data_field"] = self.data_field
+        if self.hidden:
+            d["hidden"] = True
+        return d
+
+    def __repr__(self):
+        fid = f" field={self.field_id}" if self.field_id is not None else ""
+        return f"<Box '{self.name}' {self.ref_rect}{fid}>"
+
+
+def _resolution_key(win_w, win_h):
+    """Build resolution key string, e.g. '1920x1080'."""
+    return f"{win_w}x{win_h}"
+
+
+def closest_resolution(keys, target_w, target_h):
+    """The closest "WxH" key to a window, by pixel-count difference.
+
+    Decision 1's fallback chain, in its one home. `keys` is anything
+    iterable of "WxH" strings — a boxes.json dict, or the resolution
+    list a per-resolution ASSET set exists at, which is the second
+    caller (`colony_summary` picking a built frame plate). Malformed
+    keys are skipped rather than raising, because the same file may
+    carry a `_comment`.
+
+    Made public 7 September 2026 when the second caller arrived. It
+    was never copied: a screen choosing an image and a screen choosing
+    a box list are asking one question, and two answers to it would
+    drift the day somebody changes "closest by area" to "closest by
+    width" in one of them.
+    """
+    target_pixels = target_w * target_h
+    best_key = None
+    best_diff = float("inf")
+    for key in keys:
+        parts = key.split("x")
+        if len(parts) != 2:
+            continue
+        try:
+            w, h = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        diff = abs(w * h - target_pixels)
+        if diff < best_diff:
+            best_diff = diff
+            best_key = key
+    return best_key
+
+
+def load_boxes(source, win_w=1920, win_h=1080):
+    """Load boxes for a specific resolution from boxes.json.
+
+    source: either a boxes.json file path (mod-resolved) or a
+    screen directory containing boxes.json.
+
+    File format:
+      New (dict): {"1920x1080": [...], "3440x1440": [...]}
+      Legacy (list): [...] — treated as "1920x1080"
+
+    Fallback chain: exact key → closest resolution → empty list.
+    When falling back, boxes are deep-copied so edits don't affect
+    the source resolution.
+    """
+    if source and os.path.isdir(source):
+        path = os.path.join(source, "boxes.json")
+    else:
+        path = source
+    if not path or not os.path.exists(path):
+        return []
+    with open(path, "r") as f:
+        raw = json.load(f)
+
+    # Legacy format: plain list → treat as 1920x1080
+    if isinstance(raw, list):
+        key = _resolution_key(win_w, win_h)
+        if key == "1920x1080":
+            return [Box(entry) for entry in raw]
+        # Fallback: scale from legacy data as starting point
+        return [Box(_copy_entry(entry)) for entry in raw]
+
+    # New format: dict keyed by resolution
+    key = _resolution_key(win_w, win_h)
+    if key in raw:
+        return [Box(entry) for entry in raw[key]]
+
+    # Fallback: find closest resolution
+    fallback = closest_resolution(raw, win_w, win_h)
+    if fallback and raw[fallback]:
+        return [Box(_copy_entry(entry)) for entry in raw[fallback]]
+    return []
+
+
+def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080):
+    """Save boxes for the current resolution into boxes.json.
+
+    Preserves other resolutions already stored in the file.
+    Migrates legacy list format to dict on first save.
+    """
+    path = os.path.join(screen_dir, "boxes.json")
+    key = _resolution_key(win_w, win_h)
+
+    # Load existing data to preserve other resolutions
+    res_dict = {}
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            raw = json.load(f)
+        if isinstance(raw, list):
+            # Migrate legacy list → dict under "1920x1080"
+            res_dict["1920x1080"] = raw
+        elif isinstance(raw, dict):
+            res_dict = raw
+
+    # Write current resolution
+    res_dict[key] = [b.to_dict() for b in boxes]
+
+    with open(path, "w") as f:
+        json.dump(res_dict, f, indent=2)
+        # THE TREE'S JSON CONVENTION ENDS A FILE WITH A NEWLINE, and
+        # this writer dropped it — so every F3 save left boxes.json
+        # one byte short of it and the next hand edit showed up in the
+        # diff as "\ No newline at end of file" beside the real
+        # change. `tools/frame_holes.py` already worked round it on
+        # its own side and its comment named this line. Fixed at the
+        # source, 20 September 2026, and held by a smoke check over
+        # every tracked .json.
+        f.write("\n")
+
+
+def get_stored_resolutions(screen_dir):
+    """Return list of resolution keys stored in boxes.json."""
+    path = os.path.join(screen_dir, "boxes.json")
+    if not os.path.exists(path):
+        return []
+    with open(path, "r") as f:
+        raw = json.load(f)
+    if isinstance(raw, list):
+        return ["1920x1080"]
+    if isinstance(raw, dict):
+        return list(raw.keys())
+    return []
+
+
+def _copy_entry(entry):
+    """Deep-copy a box dict so edits don't mutate the source."""
+    import copy
+    return copy.deepcopy(entry)

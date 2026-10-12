@@ -1,0 +1,124 @@
+{
+  "_comment": "Right-click help for the build popup, transcribed from _colony_building_queue_screen_help_list (erichelp.cpp:49-63), installed by Set_Building_Queue_Screen_Help_List_ (erichelp.cpp:141, called at colbldg.cpp:488 and :514). First hit wins; 512 'general' covers everything but the border and stays last.",
+  "_source": "orion2re orionlayer-local, erichelp.cpp:49-63",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": [
+    {
+      "help_id": 501,
+      "native": [
+        13,
+        9,
+        184,
+        469
+      ]
+    },
+    {
+      "help_id": 502,
+      "native": [
+        203,
+        9,
+        285,
+        103
+      ]
+    },
+    {
+      "help_id": 503,
+      "native": [
+        302,
+        10,
+        462,
+        103
+      ]
+    },
+    {
+      "help_id": 504,
+      "native": [
+        482,
+        10,
+        626,
+        308
+      ]
+    },
+    {
+      "help_id": 505,
+      "native": [
+        204,
+        114,
+        461,
+        302
+      ]
+    },
+    {
+      "help_id": 506,
+      "native": [
+        207,
+        332,
+        458,
+        465
+      ]
+    },
+    {
+      "help_id": 507,
+      "native": [
+        490,
+        342,
+        623,
+        363
+      ]
+    },
+    {
+      "help_id": 508,
+      "native": [
+        492,
+        379,
+        552,
+        397
+      ]
+    },
+    {
+      "help_id": 509,
+      "native": [
+        561,
+        379,
+        621,
+        397
+      ]
+    },
+    {
+      "help_id": 510,
+      "native": [
+        503,
+        411,
+        615,
+        431
+      ]
+    },
+    {
+      "help_id": 537,
+      "native": [
+        493,
+        447,
+        554,
+        465
+      ]
+    },
+    {
+      "help_id": 511,
+      "native": [
+        560,
+        447,
+        623,
+        465
+      ]
+    },
+    {
+      "help_id": 512,
+      "native": [
+        1,
+        1,
+        638,
+        478
+      ]
+    }
+  ]
+}

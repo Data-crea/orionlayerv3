@@ -1,0 +1,1303 @@
+{
+  "panel": {
+    "thin_border": [
+      55,
+      65,
+      85
+    ]
+  },
+  "button": {
+    "text": [
+      180,
+      195,
+      225,
+      255
+    ],
+    "_pressed_note": "pressed_text is TRANSCRIBED (core/pressfeedback.py): the orange of every pressed button picture the GAME button and the GAME menu use, palette index 126 through the main screen's palette. The load and save rows use it too, as an HD INVENTION.",
+    "pressed_text": [
+      252,
+      136,
+      0
+    ]
+  },
+  "text": {
+    "primary": [
+      190,
+      200,
+      230,
+      255
+    ],
+    "secondary": [
+      120,
+      135,
+      170,
+      255
+    ],
+    "title": [
+      220,
+      200,
+      130,
+      255
+    ]
+  },
+  "background": [
+    6,
+    8,
+    16,
+    255
+  ],
+  "main_menu": {
+    "credit_role": [
+      220,
+      180,
+      60
+    ],
+    "credit_name": [
+      180,
+      210,
+      240
+    ],
+    "version": [
+      130,
+      106,
+      36
+    ]
+  },
+  "new_game": {
+    "category_title": [
+      160,
+      180,
+      210
+    ],
+    "value_label": [
+      100,
+      210,
+      210
+    ],
+    "toggle_label": [
+      160,
+      180,
+      210
+    ]
+  },
+  "select_race": {
+    "heading": [
+      138,
+      180,
+      232
+    ],
+    "label": [
+      90,
+      122,
+      168
+    ],
+    "value": [
+      200,
+      202,
+      212
+    ],
+    "good": [
+      80,
+      200,
+      120
+    ],
+    "bad": [
+      212,
+      160,
+      74
+    ],
+    "neutral": [
+      138,
+      180,
+      232
+    ],
+    "flavor": [
+      144,
+      152,
+      176
+    ],
+    "highlight": [
+      100,
+      210,
+      140
+    ],
+    "keyword": [
+      140,
+      185,
+      240
+    ],
+    "subtitle": [
+      120,
+      104,
+      176
+    ],
+    "separator": [
+      60,
+      80,
+      120
+    ],
+    "selected": [
+      120,
+      170,
+      255
+    ],
+    "border": [
+      50,
+      70,
+      110
+    ],
+    "cell_bg": [
+      16,
+      20,
+      38,
+      160
+    ],
+    "name_selected": [
+      180,
+      220,
+      255
+    ],
+    "gold": [
+      212,
+      160,
+      74
+    ]
+  },
+  "custom_race": {
+    "panel_header": [
+      120,
+      170,
+      255
+    ],
+    "heading": [
+      138,
+      180,
+      232
+    ],
+    "label": [
+      90,
+      122,
+      168
+    ],
+    "value": [
+      200,
+      202,
+      212
+    ],
+    "selected": [
+      120,
+      170,
+      255
+    ],
+    "unselected": [
+      60,
+      70,
+      100
+    ],
+    "pick_pos": [
+      80,
+      200,
+      120
+    ],
+    "pick_neg": [
+      216,
+      88,
+      78
+    ],
+    "neutral": [
+      138,
+      180,
+      232
+    ],
+    "dim": [
+      80,
+      90,
+      120
+    ],
+    "cat_header": [
+      91,
+      155,
+      213
+    ],
+    "option_label": [
+      206,
+      212,
+      226
+    ],
+    "option_selected": [
+      236,
+      242,
+      255
+    ],
+    "box_border": [
+      42,
+      66,
+      104
+    ],
+    "row_selected_bg": [
+      74,
+      54,
+      128,
+      170
+    ],
+    "row_selected_border": [
+      146,
+      108,
+      226
+    ],
+    "check_mark": [
+      86,
+      214,
+      122
+    ],
+    "scroll_bg": [
+      22,
+      30,
+      52
+    ],
+    "scroll_thumb": [
+      70,
+      95,
+      150
+    ],
+    "desc_heading": [
+      198,
+      124,
+      246
+    ],
+    "desc_body": [
+      206,
+      212,
+      226
+    ],
+    "desc_hint": [
+      120,
+      132,
+      160
+    ],
+    "highlight": [
+      100,
+      210,
+      140
+    ],
+    "keyword": [
+      140,
+      185,
+      240
+    ],
+    "icon_outline": [
+      168,
+      186,
+      214
+    ],
+    "popup_text": [
+      216,
+      88,
+      78
+    ]
+  },
+  "widgets": {
+    "input_border": [
+      60,
+      80,
+      120
+    ],
+    "input_focus": [
+      120,
+      170,
+      255
+    ],
+    "input_text": [
+      220,
+      235,
+      255
+    ],
+    "input_placeholder": [
+      100,
+      110,
+      140
+    ],
+    "input_caret": [
+      140,
+      185,
+      240
+    ]
+  },
+  "empire_identity": {
+    "header": [
+      120,
+      170,
+      255
+    ],
+    "hint": [
+      168,
+      176,
+      196
+    ],
+    "banner_selected": [
+      70,
+      140,
+      255
+    ],
+    "banner_hover": [
+      60,
+      90,
+      150
+    ],
+    "empire_title": [
+      120,
+      170,
+      255
+    ],
+    "preview_label": [
+      110,
+      160,
+      240
+    ],
+    "preview_value": [
+      235,
+      240,
+      250
+    ],
+    "icon": [
+      80,
+      160,
+      255
+    ]
+  },
+  "galaxy_map": {
+    "map_background": [
+      4,
+      5,
+      12
+    ],
+    "_floor_lift_note": "Map floor LIFT for OLED panels, an HD EXTENSION (fundament 63): MOO2 has no user-adjustable floor. Added to the floor AFTER it is drawn, whichever path ran (map_background.png or the map_background fill), by screens/galaxy_map/floorlift.py. Step `off` is (0,0,0) and means NO lift, not a black floor: the floor graphic already averages (1.7, 3.7, 7.9). The two other steps are MEASURED against that graphic, not against black (14 September 2026, all 1,573,352 pixels of map_background.png, per channel): `light` lifts pure black to the floor's MEDIAN (1, 2, 5), `haze` to its 90th PERCENTILE (4, 10, 20). Neither clips a single pixel at 255. On a non-OLED panel a lifted floor is a grey veil, which is why the default is off.",
+    "floor_lift_light": [
+      1,
+      2,
+      5
+    ],
+    "floor_lift_haze": [
+      4,
+      10,
+      20
+    ],
+    "star_name": [
+      150,
+      152,
+      166
+    ],
+    "star_name_outline": [
+      0,
+      0,
+      0
+    ],
+    "wormhole": [
+      128,
+      150,
+      190,
+      90
+    ],
+    "_travel_line_note": "TRANSCRIBED, not chosen: the destination line tables _ship_direction_line_green/red_colors (mainscr.cpp:105-106), indices 6E 6F 72 74 74 72 6F 6E and 49 4A 4D 4F 4F 4D 4A 49, in the order the colour wave steps through them (screens/galaxy_map/maplines.py). RGB of the main palette, read twice on 15 September 2026 (brief 121) and identical: live off VISUAL_FRAME and from FONTS.LBX entry 1 (s_palette_entry flag, r, g, b; 6-bit x 4).",
+    "travel_line_green": [
+      [
+        0,
+        20,
+        0
+      ],
+      [
+        4,
+        56,
+        4
+      ],
+      [
+        8,
+        112,
+        8
+      ],
+      [
+        72,
+        144,
+        56
+      ],
+      [
+        72,
+        144,
+        56
+      ],
+      [
+        8,
+        112,
+        8
+      ],
+      [
+        4,
+        56,
+        4
+      ],
+      [
+        0,
+        20,
+        0
+      ]
+    ],
+    "travel_line_red": [
+      [
+        48,
+        4,
+        4
+      ],
+      [
+        64,
+        8,
+        8
+      ],
+      [
+        116,
+        24,
+        24
+      ],
+      [
+        156,
+        48,
+        44
+      ],
+      [
+        156,
+        48,
+        44
+      ],
+      [
+        116,
+        24,
+        24
+      ],
+      [
+        64,
+        8,
+        8
+      ],
+      [
+        48,
+        4,
+        4
+      ]
+    ],
+    "hover_ring": [
+      170,
+      200,
+      255
+    ],
+    "home_ping": [
+      255,
+      214,
+      130
+    ],
+    "status": [
+      140,
+      155,
+      190
+    ],
+    "owner_0": [
+      196,
+      74,
+      56
+    ],
+    "owner_1": [
+      206,
+      172,
+      34
+    ],
+    "owner_2": [
+      86,
+      166,
+      70
+    ],
+    "owner_3": [
+      226,
+      226,
+      234
+    ],
+    "owner_4": [
+      126,
+      174,
+      216
+    ],
+    "owner_5": [
+      196,
+      130,
+      88
+    ],
+    "owner_6": [
+      162,
+      104,
+      136
+    ],
+    "owner_7": [
+      238,
+      132,
+      12
+    ],
+    "_ship_note": "Player ship tint multipliers, MOX::_main_palette_player_colors order (red, yellow, green, silver, blue, brown, purple, orange); screens/galaxy_map/ships.py lifts each toward white by TINT_KEEP_WHITE before multiplying. Moved here from code defaults in ships.py on 14 September 2026 (decision 14), values unchanged; the tinted player sprites were compared byte for byte. NOT derivable from owner_*: no single lift reproduces them (measured, max channel error 51).",
+    "ship_0": [
+      214,
+      72,
+      52
+    ],
+    "ship_1": [
+      232,
+      196,
+      40
+    ],
+    "ship_2": [
+      78,
+      186,
+      76
+    ],
+    "ship_3": [
+      222,
+      230,
+      238
+    ],
+    "ship_4": [
+      108,
+      156,
+      232
+    ],
+    "ship_5": [
+      204,
+      132,
+      84
+    ],
+    "ship_6": [
+      176,
+      96,
+      204
+    ],
+    "ship_7": [
+      255,
+      138,
+      20
+    ],
+    "panel_background": [
+      8,
+      11,
+      20
+    ],
+    "nav_hover": [
+      22,
+      34,
+      60
+    ],
+    "nav_text": [
+      196,
+      208,
+      236
+    ],
+    "sidebar_divider": [
+      44,
+      56,
+      84
+    ],
+    "_system_window_note": "The star system window's look, work order 230 C (Data's decision 3): black with stars, the frame and the title in the original's lettering blue. TRANSCRIBED from FONTS.LBX entry 1's palette and BUFFER0.LBX 0x49: system_window_bg the view's ground (0, 12, 0); system_blue 0x41, the title's letters and the frame (sys.cpp:944); system_title_shadow 0x3D (sys.cpp:986); system_title_panel 0x49's title panel; system_info_text 0x43 (sys.cpp:1359); the four info edges Draw_Highlight_Box_'s 0x42 / 0x41 / 0x3F / 0x40 (misc.cpp:396-438). The title's letters are system_blue raised to decision 94's word floor (screens/galaxy_map/syswindow.py at_floor).",
+    "system_window_bg": [
+      0,
+      12,
+      0
+    ],
+    "system_blue": [
+      80,
+      108,
+      144
+    ],
+    "system_title_shadow": [
+      32,
+      40,
+      76
+    ],
+    "system_title_panel": [
+      24,
+      24,
+      32
+    ],
+    "system_info_text": [
+      104,
+      140,
+      176
+    ],
+    "system_info_edge_outer_lit": [
+      92,
+      124,
+      160
+    ],
+    "system_info_edge_inner_lit": [
+      80,
+      108,
+      144
+    ],
+    "system_info_edge_outer_dim": [
+      56,
+      76,
+      108
+    ],
+    "system_info_edge_inner_dim": [
+      68,
+      92,
+      128
+    ]
+  },
+  "colony_summary": {
+    "panel_background": [
+      8,
+      14,
+      23
+    ],
+    "_panel_background_note": "#080E17, DATA'S TABLE (dev:doc/briefs/95-palette.png, 'Grundflaeche / Panels'), 13 September 2026, and it is EVERY panel on this screen: colonyplates.render_fills lays it into each cutout that layout.json's `panels` marks true, and colonyempire and the move notice read it too. A colour choice in the project's own palette (decision 34), not a transcription - the original's panels are whatever COLSUM.LBX entry 0 painted. The header and the galaxy inset name their own keys in `panels` and are the only two that differ. Was (8, 11, 20). `nav_background` stood beside this until the same day and nothing on this screen read it; the galaxy map's own went with work order 190, when nothing read it any more.",
+    "nav_hover": [
+      22,
+      34,
+      60
+    ],
+    "nav_active": [
+      30,
+      48,
+      88
+    ],
+    "nav_text": [
+      196,
+      208,
+      236
+    ],
+    "label": [
+      128,
+      146,
+      180
+    ],
+    "value": [
+      206,
+      216,
+      238
+    ],
+    "warn": [
+      214,
+      88,
+      74
+    ],
+    "row_name": [
+      206,
+      216,
+      238
+    ],
+    "row_name_dim": [
+      147,
+      154,
+      169
+    ],
+    "_row_name_note": "TRANSCRIBED - the scanned colony's name is BRIGHT and the others are dimmed. COLSUM::Draw_Colony_Summary_For_Colony_ calls COLONY::Set_Colony_Font_To_Blue_(2, colony_idx == COLONY::_g_colony_n) (colsum.cpp:554), and that function picks _font_bright_color_array when the flag is set and _font_color_array when it is not (colony.cpp:533-546). THE DRIVER IS THE SCANNED COLONY, _g_colony_n - the same state that fills the description panel (Draw_Colony_Scan_Info_, colsum.cpp:1155) - and NOT a separate hover, so the two cannot be given different sources. A COLOUR AND NOTHING ELSE: no rectangle, no frame; the only Fill_/Line_ calls in colsum.cpp are the scroll thumb (:759-765). THE ORIGINAL'S OWN VALUES, two independent sources agreeing: the arrays are palette indices {245, 253, 252} normal and {244, 133, 132} bright (colony.cpp:139 and :141) with slot [1] the glyph and [0] the shadow, and measured off the original's own framebuffer on natives_autosave the scanned row's ink is (128, 160, 188) = index 133 and every other row's is (108, 104, 140) = index 253. WHAT IS TRANSCRIBED HERE IS THE RELATIONSHIP, NOT THE RGB: this screen draws in the project's own palette (decision 34), so the scanned name keeps the colour the list already had and the dimmed one is that colour at the original's own dim/bright luma ratio, 0.712. Adopting the original's absolute values would put a 109-luma name on an 8,11,20 panel that is darker than the original's, which is a different question from the one being transcribed.",
+    "slider_fill": [
+      28,
+      28,
+      164
+    ],
+    "slider_light": [
+      60,
+      60,
+      212
+    ],
+    "slider_dark": [
+      0,
+      0,
+      108
+    ],
+    "slider_track_dot": [
+      0,
+      0,
+      0
+    ],
+    "row_a": [
+      10,
+      18,
+      30
+    ],
+    "row_b": [
+      17,
+      30,
+      46
+    ],
+    "row_selected": [
+      24,
+      43,
+      114
+    ],
+    "_row_fill_note": "HD EXTENSION - decision 57, Data's table of 13 September 2026 (dev:doc/briefs/95-palette.png): row_a #0A121E and row_b #111E2E alternate down the list by LIST INDEX (A, B, A, B from the top of the sorted list, so a scroll or a sort never breaks the stripe), and the scanned colony's row is filled row_selected #182B72. THE ORIGINAL HAS NONE OF THIS: the only Fill_/Line_ calls in colsum.cpp are the scroll thumb (:759-765) and its only per-row state is the NAME's colour (Set_Colony_Font_To_Blue_, colsum.cpp:554, see _row_name_note). The selected fill is driven by the SAME variable as that name colour - colonyselect.Selection.colony, the transcription of _g_colony_n - so the fill and the bright name cannot disagree. WHY THERE IS NO row_hover KEY although the table gives a hover colour (#18345A): on this screen the row under the pointer IS the scanned colony, transcribed from colsum.cpp:880-890 (hover moves _g_colony_n), so a hovered row is always the selected row and the selected fill wins - a hover key would be a colour nothing can ever show. Drawn in colonylist.render UNDER the cell outlines. Data's decision (a), 13 September 2026.",
+    "plate_outline": [
+      41,
+      57,
+      76
+    ],
+    "_plate_outline_note": "#29394C, Data's table ('Trennlinien'), 13 September 2026: the 1 px outline around every cell of every band of the colony list (colonylist.render through StyleRenderer.draw_plate, decision 51 - a DEVIATION IN KIND, since the original paints its cell plates into the COLSUM.LBX bitmap). It had no entry here and lived as a code default (55, 65, 85) in colonylist; it has no code default now (palette.require, decision 14). ONLY THE LIST'S CELLS: the header plates are drawn with panel.thin_border, a key every screen shares, and planet_output's own line is output_separator - both unchanged.",
+    "header_background": [
+      9,
+      17,
+      29
+    ],
+    "header_text": [
+      121,
+      168,
+      232
+    ],
+    "_header_note": "Data's table, 13 September 2026: header background #09111D and header text #79A8E8 (the table says 'ca.'). Colour choices in the project's own palette (decision 34), not transcriptions and not an extension: the header window is ours already (colonyheader, a marked DEVIATION). The background reaches the header cutout through layout.json `panels.header`, which names this key instead of the panel base; the text is the five column words, and `label` - which the scan box, the sidebar and the scroll arrows also read - is untouched.",
+    "galaxy_inset_fill": [
+      0,
+      0,
+      0
+    ],
+    "_galaxy_inset_fill_note": "BLACK, and it is a measurement rather than a taste. MOVED HERE FROM layout.json's `panels` on 13 September 2026 (brief 96): a colour belongs in the skin, and `panels.galaxy_inset` now names this key. The panel fill this screen lays down elsewhere is panel_background; the ORIGINAL's own inset region measures (0, 8, 0) over 2475 of about 2700 samples in the 640x480 frame at native (380, 349, 128, 91). So the box always had a fill - the cockpit texture was never showing through - and black moves TOWARD the original rather than away from it. It is a per-box fill and not a change to colonyinset, which deliberately draws no background of its own: Draw_Galaxy_Map_Box_ fills black only when _using_colony_screen_palette == 0 (movebox.cpp:36-38) and this screen sets that flag, so the original inherits whatever the screen put there and so do we.",
+    "output_separator": [
+      38,
+      50,
+      76
+    ],
+    "_output_separator_note": "HD EXTENSION - the line between two rows of planet_output (decision 56, layout.json output._separator_note). The original draws no line in that box, so there is no palette index to transcribe: this is a design value, a dim blue between panel_background (8, 11, 20) and label (128, 146, 180), chosen so the line groups a row without competing with its text. Data's to change on the side-by-side.",
+    "_slider_note": "TRANSCRIBED from COLSUM::Draw_Bar_Indicator_ (colsum.cpp:747-771). The thumb is Fill_(621, y1, 626, y2, 229) with Line_ borders in 230 on the top and left edges and 228 on the bottom and right (:762-765), and the track's four corners are Dot_(...,80) at y 40 and y 311 (:767-770). The palette indices resolved against the game's own live palette on natives_autosave: 229 -> (28,28,164), 230 -> (60,60,212), 228 -> (0,0,108), 80 -> (0,0,0). These are ABSOLUTE values and not a relationship, unlike the name colours above: the slider is a control with no counterpart in this project's palette to keep faith with, and colonyfirst already reads index 229 back off the framebuffer to recover _first - so a different blue here would make the drawing and the reading disagree about what the same thing looks like."
+  },
+  "planets": {
+    "_owner_note": "The Planets list prints a row in its OWNER's colour and brighter under the pointer - PLNTSUM::Colony_Owner_Colors_ / Player_Colors_ (plntsum.cpp:2204-2252): the planet's colony owner's player colour, the neutral ramp when nobody holds it, and highlight type 1 for the scanned row (Summary_Screen_Print_Data_, plntsum.cpp:62-70). Data's decision (a), brief 101 Stop 1: owner colours and the original's highlights, keyed here; the mockup's scheme is dropped. THE BASE COLOURS ARE NOT REPEATED: an owned row reads galaxy_map.owner_<player colour>, the one home of the eight player colours. What is here is what the galaxy map has no key for - the neutral ramp and the eight hover shades. The original resolves both through Font_Colors2_ against its own palette (base = colour * 6 - 0x31, hover shade +3/+5 against +2/+4), which this project cannot read (the palette-index lesson in colonyinset.py), so the values are this skin's: the owner colour lifted toward white by about a third. Highlight type 2 (the armed send, unreachable) waits with the send brief and has no key yet.",
+    "neutral": [
+      104,
+      128,
+      124
+    ],
+    "_neutral_note": "TRANSCRIBED FROM THE PALETTE, brief 101 (Data's answer 4 after Stop 3). An unowned row prints through Colony_Owner_Colors_(-1, 0) -> Player_Colors_(-1, 0) -> MISC::Font_Colors2_(4, 0x40, 0x41) (plntsum.cpp:2204-2232, misc.cpp:71-80): colour slots 1-7 are 0x41 and slot 0 is 0x40. Measured on the native frame of screen 32 on slot 8 (fixture_reference_3502.4.GAM): the neutral climate text of row 1 is 110 px of index 65 (0x41) and 20 of index 64, nothing else. Index 0x41 in the Planets screen's own palette (fonts::Load_Palette_(6, ...), plntsum.cpp:1965) is (104, 128, 124) - the value above, read from the palette the snapshot carries, not from a screenshot by eye. neutral_hover and the owner hover shades are still this skin's values.",
+    "neutral_hover": [
+      240,
+      244,
+      252
+    ],
+    "owner_hover_0": [
+      236,
+      128,
+      110
+    ],
+    "owner_hover_1": [
+      240,
+      214,
+      96
+    ],
+    "owner_hover_2": [
+      140,
+      212,
+      124
+    ],
+    "owner_hover_3": [
+      250,
+      250,
+      255
+    ],
+    "owner_hover_4": [
+      176,
+      212,
+      244
+    ],
+    "owner_hover_5": [
+      232,
+      176,
+      140
+    ],
+    "owner_hover_6": [
+      204,
+      154,
+      184
+    ],
+    "owner_hover_7": [
+      255,
+      176,
+      84
+    ],
+    "_status_note": "The status line's three colours - Summary_Screen_Print_Scanned_ (plntsum.cpp:1918-1925) picks _red_colors, _green_colors or _hi_neutral_colors by its status 1 / 2 / 0. Values are this skin's, for the same palette reason as above: red for a black hole or a blocked or unreachable system, green for a reachable one (armed send only), neutral for a star name or 'unexplored'.",
+    "status_red": [
+      222,
+      84,
+      70
+    ],
+    "status_green": [
+      104,
+      214,
+      110
+    ],
+    "status_neutral": [
+      214,
+      222,
+      240
+    ],
+    "control_text": [
+      196,
+      208,
+      236
+    ],
+    "control_disabled_text": [
+      104,
+      112,
+      130
+    ],
+    "heading_text": [
+      200,
+      210,
+      238
+    ],
+    "_control_note": "The side column's words and fills - the sort keys, the five restrictions, the two send buttons and RETURN. The original draws those as PLNTSUM.LBX sprites with no string behind them; the fills are the colony summary's nav_active / nav_hover values, repeated under this screen's own keys so a skin can tell the two screens apart. control_disabled_text is a send button whose field the game did not add (Add_Plntsum_Fields_, plntsum.cpp:708-718)."
+  },
+  "game_menu": {
+    "_note": "GAME menu overlay. Palette CHOICES, not transcriptions (decision 53: Data's to change): the original's words are artwork and its rows are drawn in font colour sets from MISC::Font_Colors2_ (loadsave.cpp:904-924) that no extractor reads. Picked to sit near the native screenshots \u2014 light buttons, orange rows and options, the active slot brighter, blue checkboxes.",
+    "_slider_note": "The volume bars' three block colours are MEASURED off the native framebuffer (GAME.LBX pictures 0 and 7 through the galaxy palette, work order 124 C): a lit block runs from (0, 0, 180) at its edge to (96, 136, 252) at its centre, an unlit one is (24, 28, 64).",
+    "slider_off": [
+      24,
+      28,
+      64
+    ],
+    "slider_on": [
+      0,
+      0,
+      220
+    ],
+    "slider_glow": [
+      96,
+      136,
+      252
+    ],
+    "button_text": [
+      206,
+      212,
+      226
+    ],
+    "title": [
+      206,
+      212,
+      226
+    ],
+    "row_text": [
+      222,
+      146,
+      58
+    ],
+    "row_active": [
+      255,
+      214,
+      120
+    ],
+    "row_detail": [
+      190,
+      128,
+      60
+    ],
+    "option_text": [
+      232,
+      140,
+      40
+    ],
+    "message": [
+      232,
+      140,
+      40
+    ],
+    "hd_state": [
+      140,
+      150,
+      180
+    ],
+    "orionlayer_divider": [
+      60,
+      80,
+      120
+    ],
+    "orionlayer_heading": [
+      150,
+      175,
+      220
+    ]
+  },
+  "banner": {
+    "_note": "Player banner cloth tint per MOO2 colour, (multiply, add) on the greyscale cloth - core/banner.py's table, measured by Data on the reference screenshot, mid-tone +-1 (banner_v4 package). Moved here from literals in core/banner.py on 14 September 2026 (decision 14); values unchanged. Orange carries an ADD because its target is above the source cloth's red maximum. NOT derivable from galaxy_map owner_*: the add is not constant across the eight (measured 14 September 2026), so this table stays explicit per preset.",
+    "red": {
+      "multiply": [
+        162,
+        6,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "yellow": {
+      "multiply": [
+        249,
+        213,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "green": {
+      "multiply": [
+        6,
+        152,
+        44
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "silver": {
+      "multiply": [
+        124,
+        157,
+        173
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "blue": {
+      "multiply": [
+        7,
+        6,
+        192
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "brown": {
+      "multiply": [
+        166,
+        82,
+        49
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "purple": {
+      "multiply": [
+        110,
+        6,
+        157
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "orange": {
+      "multiply": [
+        255,
+        121,
+        6
+      ],
+      "add": [
+        18,
+        8,
+        0
+      ]
+    }
+  },
+  "banner_hd": {
+    "_note": "Tint table of the HD banner stand, which has more dynamic range than the other two assets: same target hue, different mid-tone (core/banner.py). Moved here from literals on 14 September 2026, values unchanged; explicit per preset for the same reason as `banner`.",
+    "red": {
+      "multiply": [
+        146,
+        6,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "yellow": {
+      "multiply": [
+        225,
+        192,
+        6
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "green": {
+      "multiply": [
+        6,
+        137,
+        39
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "silver": {
+      "multiply": [
+        112,
+        141,
+        156
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "blue": {
+      "multiply": [
+        6,
+        6,
+        173
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "brown": {
+      "multiply": [
+        149,
+        74,
+        44
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "purple": {
+      "multiply": [
+        99,
+        6,
+        141
+      ],
+      "add": [
+        0,
+        0,
+        0
+      ]
+    },
+    "orange": {
+      "multiply": [
+        255,
+        121,
+        6
+      ],
+      "add": [
+        2,
+        1,
+        0
+      ]
+    }
+  },
+  "player_presets": {
+    "_note": "Player-colour PRESETS \u2014 an HD EXTENSION (fundament 63): MOO2 assigns its eight player colours fixed. The preset `original` is not a table here: it IS the skin's own galaxy_map owner_*/ship_*, planets owner_hover_* and the banner/banner_hd sections. Every other preset is eight BASE colours in `order`, and palette.init derives the four tables from them by `rule` before any screen imports a colour (decision 18). A preset change therefore needs a restart.",
+    "rule": {
+      "_deviation": "DEVIATION \u2014 OUR RULE, NOT THE ORIGINAL'S. Measured 14 September 2026: none of the original's tables follows from owner_* by one relation (ship_* vs owner_*: lift k per channel -0.22..1.00, max error 51; owner_hover_* vs owner_*: k 0.27..1.00, max error 52; the banner add is (0,0,0) for seven colours and (18,8,0) for orange). So a preset the game never had is filled by this invented rule: owner = base; ship = base + (255 - base) * k_ship; owner_hover = base + (255 - base) * k_hover; banner and banner_hd multiply = base with add (0,0,0). The original's orange add is a hand correction for one colour a preset does not have and is not reproduced. Data's decision (b), 14 September 2026.",
+      "k_ship": 0.07,
+      "_k_ship_protocol": "Criterion (Data, 14 September 2026): no preset ship darker than the darkest ORIGINAL ship, per zoom step; k_ship is the smallest k >= 0 that holds for all eight colours. Measured on screens/galaxy_map/assets/ships/player/0..3.png (88x95, 80x86, 72x77, 64x69) through ships.TintCache's own path (TINT_KEEP_WHITE lift, then BLEND_RGB_MULT), relative luminance (linearised sRGB, Rec.709 weights), alpha-weighted over the tinted sprite. Darkest original: red, 0.1085 / 0.1088 / 0.1083 / 0.1082. Okabe-Ito at k=0: blue 0.0971 / 0.0973 / 0.0969 / 0.0968 \u2014 darker, so k > 0. Bisection gives 0.0674 on all four steps; stored rounded UP to 0.07, the safe side of a floor. Mean luminance for the record only: original 0.1841, preset 0.2040 (step 0).",
+      "k_hover": 0.45,
+      "_k_hover_protocol": "Luminance ratio owner_hover / owner over the eight original colours (same luminance): red 2.033, yellow 1.578, green 1.823, silver 1.254, blue 1.584, brown 1.764, purple 2.036, orange 1.526; mean 1.6997. k_hover chosen so the Okabe-Ito mean ratio matches: 0.4503 by bisection, stored as 0.45 (Data: four decimals claim a precision a spread of 1.25..2.04 does not have); at 0.45 the mean is 1.6990, -0.04 %. KNOWN LIMIT: a WHITE base cannot get lighter, its ratio is 1.0, so the white player has no visible hover mark in the Planets list. Not solved now; if it bothers in play the answer is an off-white base, decided with a picture."
+    },
+    "deuteranopia_min_delta_e": 10.0,
+    "_deuteranopia_note": "Smallest pairwise distance of the eight base colours after a deuteranopia simulation (Vienot, Brettel & Mollon 1999, matrix in linear sRGB) in CIELAB dE76, required of every COLOUR-BLIND preset and checked on a player's own base table at load, as a warning. Measured 14 September 2026: okabe_ito 17.2 (yellow / orange); the ORIGINAL table is 3.8 (green / brown) and cannot meet any useful threshold, which is the reason the preset exists \u2014 so `original` is reported, not held to it.",
+    "okabe_ito": {
+      "_source": "Okabe, M. & Ito, K. (2002, rev. 2008), Color Universal Design (CUD): How to make figures and presentations that are friendly to colorblind people, https://jfly.uni-koeln.de/color/ \u2014 eight colours chosen to stay distinguishable for protanopia and deuteranopia.",
+      "colour_blind": true,
+      "_white": "DEVIATION FROM OKABE-ITO: its black (0,0,0) is replaced by white (255,255,255). The original has a white player (silver), and black would be invisible on the map floor.",
+      "_mapping": "Over the original's banner order, each original colour to its nearest relative: red -> vermilion, yellow -> yellow, green -> bluish green, silver -> white, blue -> blue, orange -> orange. The remaining two by distance to owner_*: brown -> reddish purple (79.9) and purple -> sky blue (144.8), total 224.7 against 243.6 the other way. Also the nearer relative for the people the preset is for: to a deuteranope purple IS a blue, the red share that makes it purple is what they do not see. The deuteranopia check cannot overturn this: the mapping only orders the same eight colours.",
+      "base": {
+        "red": [
+          213,
+          94,
+          0
+        ],
+        "yellow": [
+          240,
+          228,
+          66
+        ],
+        "green": [
+          0,
+          158,
+          115
+        ],
+        "silver": [
+          255,
+          255,
+          255
+        ],
+        "blue": [
+          0,
+          114,
+          178
+        ],
+        "brown": [
+          204,
+          121,
+          167
+        ],
+        "purple": [
+          86,
+          180,
+          233
+        ],
+        "orange": [
+          230,
+          159,
+          0
+        ]
+      }
+    }
+  },
+  "fleets": {
+    "_note": "The Fleets screen's colours, THE ORIGINAL'S OWN, resolved from the game's palette (FONTS.LBX entry 9, which fonts::Load_Palette_(8, 0, 255) installs at flt1.cpp:557) at the indices the engine names. `_source` gives the index and the engine line for each. They are still read through palette.col, so a skin or a colour-blind palette overrides them exactly as before; what changed is that the DEFAULT is no longer this project's guess at the original.",
+    "slot_fill": [
+      0,
+      0,
+      36
+    ],
+    "slot_edge": [
+      0,
+      0,
+      128
+    ],
+    "scroll_track": [
+      8,
+      8,
+      80
+    ],
+    "scroll_thumb": [
+      24,
+      12,
+      252
+    ],
+    "scroll_arrow": [
+      184,
+      228,
+      136
+    ],
+    "_panel_paragraph_note": "The colony/transport/outpost paragraph (work order 159). THE LAYOUT IS A TRANSCRIPTION AND THIS COLOUR IS NOT. Print_Scanned_Ship_Data_ sets font style 3 with MISC::Get_Mox_Font_Colors_(3, 111, 116, ...) and _mox_font_colors_offset = 0x72 (flt2.cpp:566-571), which builds a ramp over MOO2 PALETTE INDICES 111..116 - the palette lives in the player's own installation, and resolving it to RGB needs that file plus a native screenshot of this panel to confirm against. Neither was available to work order 159, which was forbidden a live run, so the value below is the panel's existing label colour and is marked here rather than presented as the original's. Parked in dev:doc/briefs/159-parked-for-data.md.",
+    "panel_paragraph": [
+      72,
+      144,
+      56
+    ],
+    "label": [
+      72,
+      144,
+      56
+    ],
+    "label_dim": [
+      8,
+      112,
+      8
+    ],
+    "_source": {
+      "label": "palette 116 = FLT2::_normal_colors.colors[1] (flt2.cpp:4), the shade every Print_ on this screen writes in",
+      "label_dim": "palette 114 = FLT2::_normal_colors.colors[2] (flt2.cpp:4), the darker shade of the same set",
+      "scroll_thumb": "palette 0xA6 = Fill_FltScrn_Scroll_Bar_'s start colour under SCREEN_FLEET (flt1.cpp:273-278)",
+      "scroll_track": "palette 0xA1 = the same fill's end, which decrements every second column across width 0xC (flt1.cpp:296-300)",
+      "scroll_arrow": "palette 119 = FLT2::_normal_colors.colors[1] + 3, the brightening flt2.cpp:652 applies",
+      "slot_fill": "NO PALETTE INDEX EXISTS. The grid plates are painted into FLEET.LBX 0 (flt1.cpp:1130), not filled by code, so there is no index to cite. Sampled from that entry's own plate at fltgeom.native_cells()[0]; with the artwork extracted the plate itself is drawn and this is only the margin around it.",
+      "slot_edge": "NO PALETTE INDEX EXISTS \u2014 as slot_fill. The rivet highlight of the same plate.",
+      "relocation_line": "palette 6,7,7,8,8,9,9,10 \u2014 the s_colors table FLT1::Draw_Fltscrn_Relocation_Lines_ builds (flt1.cpp:1460-1467), resolved through FONTS.LBX entry 9. A GREY ramp, not green: the Fleets mockup's green lines are an invention, and the galaxy map's relocation table (0x6E,0x6F,0x70) is a different table on a different screen (mainscr.cpp:684).",
+      "radio_on": "the lit filter button's own field, measured from FLEET.LBX entry 9 frame 1 \u2014 the frame Add_Radio_Button_Field_ draws when the status is 1 (flt1.cpp:1255-1256). Its dominant pixel is (8,8,80) = palette 0xA1, the dark end of the same blue ramp Fill_FltScrn_Scroll_Bar_ runs (flt1.cpp:273-278). HD draws the FIELD and its own label, not the original's whole button: FLEET.LBX 9 and 10 carry the words baked in, and under the v4 frame the border is the frame's.",
+      "cell_selected": "HD INVENTION. The original marks a selected ship with FLEET.LBX 17 (_selected_box_seg, 59x58) drawn at (x-2, y+1) (flt1.cpp:93-103) - a light frame on the well's edge. That art is MOO2's and is never in this tree, so HD draws a line of its own on the same edge, in the frame's own light metal rather than the blue it used before.",
+      "cell_hover": "HD INVENTION, and a SECOND mark: the original draws a different sprite for the HOVERED ship - Draw_Box_Around_Scanned_Ship_ with scanned_box, 62x61 (flt1.cpp:89-91). Dimmer than cell_selected, because the two must not be mistaken for each other.",
+      "box_panel": "HD INVENTION. The panel HD puts around the game's own message box (screens/fleets/fltbox.py). The box's PIXELS are the game's; the panel around them is ours, and it has no counterpart in the original, which draws the box straight onto its screen.",
+      "box_edge": "HD INVENTION. The same panel's outline."
+    },
+    "relocation_line": [
+      [
+        52,
+        52,
+        60
+      ],
+      [
+        60,
+        60,
+        68
+      ],
+      [
+        60,
+        60,
+        68
+      ],
+      [
+        72,
+        72,
+        80
+      ],
+      [
+        72,
+        72,
+        80
+      ],
+      [
+        80,
+        80,
+        88
+      ],
+      [
+        80,
+        80,
+        88
+      ],
+      [
+        88,
+        88,
+        96
+      ]
+    ],
+    "radio_on": [
+      8,
+      8,
+      80
+    ],
+    "cell_selected": [
+      216,
+      232,
+      255
+    ],
+    "cell_hover": [
+      120,
+      152,
+      200
+    ],
+    "box_panel": [
+      18,
+      20,
+      26
+    ],
+    "box_edge": [
+      150,
+      170,
+      200
+    ]
+  }
+}

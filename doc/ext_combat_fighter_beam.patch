@@ -1,0 +1,39 @@
+OrionLayer open fix 77 — the fighter pass's beam and group
+==========================================================
+
+Work order 212 (Part E, Data's decision 6). orion2re on `orionlayer-local`,
+on top of open fix 71. Every line under ORION2RE_EXT.
+
+`Fighter_Combat_SFX_` (cmbtmis.cpp:875-970) draws, at each fighter pass, the
+group firing its owner's best point-defence beam (`_fighter_beam_type`,
+initship.cpp:1061-1091) from a quarter of its fighters at the target point;
+none of it was on the wire. Where the original draws the pass, CEV_FIGHTER_BEAM
+is recorded after CEV_FIGHTER_PASS: the missile, the beam weapon, the group's
+x and y (px), its facing and quantity, the target point (px).
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 9c5a56ef..f59226cd 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -178,6 +178,7 @@ enum CombatEventType : uint8_t {
+     CEV_COMMAND = 18,       // op, result (0 taken, else why refused), a, b — OrionLayer, open fix 58.
+     CEV_SOUND = 19,         // sound id, handle, ticks since the last other event — OrionLayer, open fix 79.
+     CEV_SOUND_CHANGE = 20,  // handle (-1 every sound), change (1 fade, 2 loop, 3 pitch), value, ticks — OrionLayer, open fix 79.
++    CEV_FIGHTER_BEAM = 21,  // missile, beam weapon, group x px, y px, facing, quantity, target x px, y px — OrionLayer, open fix 77.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+diff --git a/src/game/cmbtmis.cpp b/src/game/cmbtmis.cpp
+index 321ed49f..cabb96a1 100644
+--- a/src/game/cmbtmis.cpp
++++ b/src/game/cmbtmis.cpp
+@@ -417,6 +417,9 @@ namespace CMBTMIS {
+                 ext::Combat_Event(ext::CEV_FIGHTER_PASS, missile_idx, source_unit_idx, target_unit_idx, type, missile->fighter_count, dmg_accum, sys_dmg_accum);  // OrionLayer, open fix 56.
+ #endif
+                 if (MOX::_apply_damage_to_planet == 1 && MOX::_super_fast_flag == 0) {
++#ifdef ORION2RE_EXT
++                    ext::Combat_Event(ext::CEV_FIGHTER_BEAM, missile_idx, MOX::_fighter_beam_type[CMBTMIS::Missile_Owner_(missile_idx)], missile->x, missile->y, missile->facing_dir, missile->quantity, x, y);  // OrionLayer, open fix 77. What the pass draws.
++#endif
+                     Fighter_Combat_SFX_(missile_idx, x, y, dmg_accum, sys_dmg_accum);
+                 }
+ 

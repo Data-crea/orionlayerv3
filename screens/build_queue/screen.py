@@ -1,0 +1,294 @@
+"""The build popup (wire id 25) — work order 180 C.
+
+`COLBLDG::Build_Queue_Popup_` in the HUD style; see `bqwire` for when it
+claims its id (open fixes 35, 38, 39, 40 — applied by work order 181) and
+`bqdraw` for what it draws.
+
+**SELECTING AN ITEM IS AN ORDER** (the order's words), so nothing goes out
+but what the player clicks or types, each field found in the list on the
+wire at that moment (decision 20) and through `core.colony_guard`:
+
+    a building row      its `_building_fields[i]` — toggles it in the queue
+    a ship/other row    its `_military_fields[i]` — adds it (a separator
+                        row sends nothing)
+    a queue row         its `_queue_fields[i]` — select / move / delete
+    OK, Cancel, Refit, Design, Repeat Build   their buttons
+    Auto Build          INJECT_CLICK inside its rect: a radio takes no
+                        activation (decision 20; fields.cpp:1292-1298)
+    ESC  <  >  B  Q 1-9 0   their hot-key fields
+
+The summary follows HD's own pointer — the original's follows ITS
+pointer (`_scanned_prod`, colbldg.cpp:825), which an HD window cannot
+move — so hovering sends nothing — HD EXTENSION `summary_follows_hd_pointer`.
+"""
+import logging
+
+import pygame
+
+from core import colony_guard, prodname
+from core.buildnames import BuildingNames
+from core.hestrings import printf
+from core.hud import shell
+from core.estrings import EStrings
+from core.screen_base import ScreenBase
+from screens.colony_summary import colonyrows
+from screens.leaders import ldrdraw as nd
+
+from . import bqdraw, bqwire as w
+
+log = logging.getLogger("build_queue")
+
+KEYS = {pygame.K_ESCAPE: "\x1b", pygame.K_LESS: "<", pygame.K_GREATER: ">",
+        pygame.K_b: "B", pygame.K_q: "Q"}
+KEYS.update({getattr(pygame, f"K_{d}"): str(d) for d in range(10)})
+
+
+class Names:
+    def __init__(self, state, buildings, strings):
+        self._state = state
+        self._buildings, self._strings = buildings, strings
+        self._ships = prodname.ShipNames(state, getattr(state, "player_num", 0))
+
+    def product(self, pid, state):
+        name, st = prodname.production_name(pid, self._buildings,
+                                            self._strings, self._ships)
+        return name or "", st
+
+    def planet_name(self, colony):
+        return colonyrows.planet_name(
+            colony, getattr(self._state, "planets_raw", None) or [],
+            getattr(self._state, "stars", None) or [])
+
+
+#: THE SCREEN SHELL (work order 225): the original's three columns, each a
+#: panel of its own (boxes.json), each carrying its native region
+#: (`core.panelmap`): the buildings list; the picture, summary, description
+#: and the queue; the other list with the screen's buttons under it
+#: (decision 90: the original has room for them there). The three are
+#: widened in proportion (the order's rule where it is not clear which
+#: panel takes the width).
+#:
+#: EACH REGION IS WHAT IS DRAWN IN IT (work order 239, as 238 on Leaders),
+#: so every box stands the shell's `panel_inset` inside its panel. A list's
+#: frame window IS its panel (DEVIATION `one_edge`), so the two lists keep
+#: theirs; the right column also holds the screen's buttons, under its
+#: list's window (10-308): its region runs to the buttons' foot (465),
+#: not to the original's 469, and from the buildings' window's top (9),
+#: since both lists' rows start at y 20 (colbldg.cpp:275, :308) and so
+#: stand level across the screen.
+#: DEVIATION `buttons_flush`: the original's buttons stand 8 native px in
+#: from the column's left edge and 3 from its right, which the panel's
+#: scale made 33 / 17 px at 1920x1080. HD draws and hits the block
+#: (`w.BUTTONS_BOX`) as a band spanning the column's width (`core.panelmap`
+#: `across`), so its outer buttons stand the panel inset from the panel on
+#: both sides, as every box does.
+_RIGHT = (w.OTHERS_BOX[0], w.BUILDINGS_BOX[1], w.OTHERS_BOX[2],
+          w.BUTTONS_BOX[3])
+REGIONS = (("left_panel", w.BUILDINGS_BOX, True),
+           ("middle_panel", (203, 9, 462, 469), True),
+           ("right_buttons", w.BUTTONS_BOX, True, False, False,
+            "right_panel"),
+           ("right_panel", _RIGHT, True))
+
+
+class BuildQueueScreen(ScreenBase):
+    SCREEN_NAME = "build_queue"
+    GAME_SCREEN_ID = w.GAME_SCREEN_ID
+    USE_FRAME = False
+    SHELL_WORN = True
+    REGIONS = REGIONS
+
+    def __init__(self, app):
+        super().__init__(app)
+        self._state = self._view = None
+        self._hover = None
+        lang = (getattr(app, "settings", None) or {}).get("language", "en")
+        self._strings = EStrings(lang)
+        self._buildings = BuildingNames(lang)
+        self._data = self.app.res.load_json(
+            "screens/build_queue/layout.json", {}) or {}
+        # The title plate carries the screen's title, "Build List for %s"
+        # (E 210, colbldg.cpp), which the original prints over the queue.
+        self.shell = shell.Shell(title=self._title)
+
+    def _title(self):
+        if self._view is None or not self._view.draws:
+            return ""
+        names = Names(self._state, self._buildings, self._strings)
+        return printf(self.e(bqdraw.E_TITLE) or "",
+                      names.planet_name(self._view.colony))
+
+    def claims(self, game_state):
+        return w.claims(game_state)
+
+    def wants_original(self):
+        return self._view is not None and not self._view.draws
+
+    def handover_is_modal(self):
+        return self._view is not None and self._view.state == w.GAME_BOX
+
+    def modal_is_box(self):
+        # GAME_BOX is reached only after every block has been checked: the
+        # screen's data is there and a box has replaced its list.
+        return self.handover_is_modal()
+
+    def fallback_reason(self):
+        return self._view.reason if self._view is not None else ""
+
+    def no_view_reason(self, game_state):
+        """REFIT's ship list stands under the popup's id 25: its CANCEL is
+        `Add_Button_Field_(0x112, 0x1B8, …)` in both of its stages
+        (colrefit.cpp:357-386, :600-606). Since work order 223 it is
+        `screens/refit`'s; it falls back here only when the list came
+        without the colony's COLS block (`refit.claims`)."""
+        if getattr(game_state, "current_screen", -1) != 25:
+            return None
+        for f in getattr(game_state, "fields", None) or []:
+            if getattr(f, "index", 0) and f.field_type == 0 and \
+                    (f.x, f.y) == (0x112, 0x1B8):
+                return "The refit list came without its colony's block"
+        return None
+
+    def e(self, index):
+        return self._strings.string(index)
+
+    def maintext(self):
+        """MAINTEXT's setting descriptions, read once (work order 226 D)."""
+        if getattr(self, "_maintext", None) is None:
+            from core.maintext import MainText
+            lang = (getattr(self.app, "settings", None) or {}).get(
+                "language", "en")
+            self._maintext = MainText(lang)
+        return self._maintext
+
+    def parts(self):
+        """The ship part names a design's paragraph uses (Refit's)."""
+        if getattr(self, "_parts", None) is None:
+            from core.shipparts import ShipPartNames
+            lang = (getattr(self.app, "settings", None) or {}).get(
+                "language", "en")
+            self._parts = ShipPartNames(lang)
+        return self._parts
+
+    def word(self, key):
+        return (self._data.get("words") or {}).get(key, key.upper())
+
+    def turns_left(self, state, view, product):
+        """E 544 only for what the colony is producing now
+        (colbldg.cpp:1154-1164), from open fix 38; else None."""
+        p = getattr(state, "colony_product", None)
+        if p is None or view.colony.producing[0] != product or \
+                p["producing"] != product:
+            return None
+        return p["turns"]
+
+    def update(self, game_state=None):
+        if game_state is not None and game_state is not self._state:
+            self._state = game_state
+            self._view = w.View(game_state)
+
+    def render(self, surface):
+        self._render_background(surface)
+        if self._view is not None and self._view.draws:
+            names = Names(self._state, self._buildings, self._strings)
+            bqdraw.draw(surface, self, self._view, self._state, names,
+                        self._hover)
+        self.render_shell(surface)
+        self.render_help(surface)
+
+    # ── Input ────────────────────────────────────────────────────────
+
+    def _live(self):
+        return getattr(self.app.client.state, "fields", None) or []
+
+    def send(self, field, label):
+        if field is None or not self.app.connected:
+            return False
+        state = self.app.client.state
+        try:
+            colony_guard.check(field, getattr(state, "current_screen", -1))
+        except colony_guard.Refused as err:
+            log.warning("build queue: %s — %s", label, err)
+            return False
+        log.info("build queue: %s -> field %d", label, field.index)
+        self.app.client.activate_field(field.index)
+        return True
+
+    def _row_under(self, x, y):
+        """(kind, index, field, product) of the row under an HD point."""
+        v = self._view
+        for kind, entries, rows in (("building", v.buildings,
+                                     v.building_rows),
+                                    ("other", v.others, v.other_rows)):
+            for i, (e, f) in enumerate(zip(entries, rows)):
+                if nd.field_hit(self.layout, f, x, y):
+                    return kind, i, f, e["id"]
+        for i, f in enumerate(v.queue):
+            if nd.field_hit(self.layout, f, x, y):
+                return "queue", i, f, v.items[i] if i < len(v.items) else -1
+        return None
+
+    def help_extra_rect(self, spec):
+        """help.json's regions are the original's native rectangles, and
+        the page stands where the original's does. Without this hook they
+        resolved to nothing and no right click here ever opened help —
+        found by work order 200 B's walk against the original's list."""
+        native = spec.get("native")
+        return nd.rect(self.layout, native) if native else None
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        super().handle_mouse_motion(screen_x, screen_y)
+        self._hover = None
+        if self._view is not None and self._view.draws:
+            hit = self._row_under(screen_x, screen_y)
+            if hit is not None and hit[0] != "queue" and \
+                    hit[3] != w.SEPARATOR:
+                self._hover = hit[3]
+
+    def handle_click(self, screen_x, screen_y):
+        if self.help_consumes_click(screen_x, screen_y):
+            return None
+        v = self._view
+        if v is None or not v.draws:
+            return None
+        fields = self._live()
+        for key, ident in (("OK", w.OK), ("Cancel", w.CANCEL),
+                           ("Refit", w.REFIT), ("Design", w.DESIGN),
+                           ("Repeat", w.REPEAT)):
+            f = w.live_field(fields, ident)
+            if f is not None and nd.field_hit(self.layout, f, screen_x,
+                                              screen_y):
+                self.send(f, key)
+                return None
+        radio = w.live_field(fields, w.AUTO_BUILD)
+        if radio is not None and nd.field_hit(self.layout, radio, screen_x,
+                                              screen_y) \
+                and self.app.connected:
+            x, y = (radio.x + radio.x_end) // 2, (radio.y + radio.y_end) // 2
+            log.info("build queue: Auto Build -> INJECT_CLICK (%d, %d)", x, y)
+            self.app.client.inject_click(x, y)
+            return None
+        hit = self._row_under(screen_x, screen_y)
+        if hit is None:
+            return None
+        kind, i, f, product = hit
+        if product == w.SEPARATOR:
+            return None           # the handler ignores it (:1681-1718)
+        live = next((g for g in fields if (g.x, g.y, g.x_end, g.y_end) ==
+                     (f.x, f.y, f.x_end, f.y_end)), None)
+        self.send(live, f"{kind} row {i}")
+        return None
+
+    def handle_key(self, key):
+        if self.help_consumes_key(key) or not (self._view and
+                                               self._view.draws):
+            return
+        ch = KEYS.get(key)
+        if ch is None:
+            # R, D, E (colbldg.cpp:360-364): the one rule every screen
+            # shares (work order 230 E)
+            super().handle_key(key)
+            return
+        field = next((f for f in self._live() if f.index != 0 and
+                      f.hotkey == ord(ch)), None)
+        self.send(field, f"key {ch!r}")

@@ -1,0 +1,259 @@
+{
+  "1920x1080": [
+    {
+      "name": "table"
+    },
+    {
+      "name": "list_area"
+    },
+    {
+      "name": "planet_info"
+    },
+    {
+      "name": "colony_panel"
+    },
+    {
+      "name": "galaxy_inset"
+    },
+    {
+      "name": "sort_name",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_population",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_food",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_industry",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_science",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_producing",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_bc",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "return",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "header"
+    },
+    {
+      "name": "planet_disc"
+    },
+    {
+      "name": "planet_name",
+      "style": {
+        "skin": "text",
+        "font_size": 24
+      }
+    },
+    {
+      "name": "planet_paragraph",
+      "style": {
+        "skin": "text"
+      }
+    },
+    {
+      "name": "planet_output"
+    },
+    {
+      "name": "planet_surface",
+      "style": {
+        "skin": "image",
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ],
+        "fade_left": 0.2,
+        "fade_right": 0.2
+      }
+    },
+    {
+      "name": "empire_stats"
+    },
+    {
+      "name": "col_name"
+    },
+    {
+      "name": "col_farmers"
+    },
+    {
+      "name": "col_workers"
+    },
+    {
+      "name": "col_scientists"
+    },
+    {
+      "name": "col_building"
+    },
+    {
+      "name": "col_scroll"
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      }
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "table"
+    },
+    {
+      "name": "list_area"
+    },
+    {
+      "name": "planet_info"
+    },
+    {
+      "name": "colony_panel"
+    },
+    {
+      "name": "galaxy_inset"
+    },
+    {
+      "name": "sort_name",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_population",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_food",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_industry",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_science",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_producing",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "sort_bc",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "return",
+      "style": {
+        "font_size": 18
+      }
+    },
+    {
+      "name": "header"
+    },
+    {
+      "name": "planet_disc"
+    },
+    {
+      "name": "planet_name",
+      "style": {
+        "skin": "text",
+        "font_size": 24
+      }
+    },
+    {
+      "name": "planet_paragraph",
+      "style": {
+        "skin": "text",
+        "font_scale": 1.6
+      }
+    },
+    {
+      "name": "planet_output"
+    },
+    {
+      "name": "planet_surface",
+      "style": {
+        "skin": "image",
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ],
+        "fade_left": 0.2,
+        "fade_right": 0.2
+      }
+    },
+    {
+      "name": "empire_stats"
+    },
+    {
+      "name": "col_name"
+    },
+    {
+      "name": "col_farmers"
+    },
+    {
+      "name": "col_workers"
+    },
+    {
+      "name": "col_scientists"
+    },
+    {
+      "name": "col_building"
+    },
+    {
+      "name": "col_scroll"
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "_comment": "Right-click context help. Transcribed from EVANHELP::_static_fleet_screen_help_list (evanhelp.cpp:153-166, twelve entries, s_help_box {help_id, x1, y1, x2, y2} orion2.h:993), installed by EVANHELP::Set_Fleet_Screen_Help_List_ (evanhelp.cpp:378-407) at entry (flt1.cpp:549), on every loop iteration (:802) and after the detailed ship view (:624). `native` is the original's 640x480 rectangle and is provenance only - HD resolves each region from its own boxes. Regions are tested in order and the first hit wins, like fields::Check_Help_List_ (fields.cpp:2924-2932).",
+  "_source": "evanhelp.cpp:153-166, :378-407",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "_no_screen_wide_entry": "THE LIST HAS NO SCREEN-WIDE ENTRY, and that is load-bearing rather than an omission. A right click outside every region returns -field_idx and not -1, because _mouse_cancel_disabled is set once by Main_Screen_ (mainscr_main.cpp:281) and nothing clears it (fields.cpp:1360, :1513) - which is how a right click on an OWN big icon reaches CMBTDRW1::Detailed_View_Ship_ (flt2.cpp:929-933). An occupied icon slot carries no help rectangle for exactly that reason.",
+  "_no_help_over_the_map": "There is no entry over the inset galaxy map (15..319, 52..233): the original gives it none, so `inset_map` has none here.",
+  "_dynamic_entry": "Help 360 is APPENDED after these twelve (help_list_count starts at 12, evanhelp.cpp:379), so every entry below wins against it. Its shape depends on how many big icons were added: with none, one rectangle (0x158, 0x35)-(0x24f, 0x161) = (344, 53)-(591, 353); otherwise one per EMPTY slot i = added..19 at (0x156 + 64*(i%4), 0x34 + 64*(i/4))-(0x196 + \u2026, 0x72 + \u2026) = (342 + 64c, 52 + 64r)-(406 + 64c, 114 + 64r). NOTE THE PITCH: the help slots step 64 while the icons step 62 x 60 (flt2.cpp:122, :126) and are 58 x 57 (:288-290). Transcribed as it stands, not unified. It cannot be a static region because it is per-slot and count-dependent, so FleetsScreen.open_help_at appends it after this table, in the engine's own order.",
+  "regions": [
+    {
+      "help_id": 361,
+      "box": "scroll_column",
+      "native": [
+        605,
+        59,
+        619,
+        349
+      ]
+    },
+    {
+      "help_id": 363,
+      "box": "status_text",
+      "native": [
+        66,
+        248,
+        267,
+        268
+      ]
+    },
+    {
+      "help_id": 364,
+      "box": "prev_fleet",
+      "native": [
+        19,
+        249,
+        50,
+        267
+      ]
+    },
+    {
+      "help_id": 365,
+      "box": "next_fleet",
+      "native": [
+        283,
+        249,
+        313,
+        267
+      ]
+    },
+    {
+      "help_id": 366,
+      "box": "ship_panel",
+      "native": [
+        13,
+        280,
+        319,
+        465
+      ]
+    },
+    {
+      "help_id": 368,
+      "box": "btn_all",
+      "native": [
+        348,
+        380,
+        421,
+        407
+      ]
+    },
+    {
+      "help_id": 369,
+      "box": "btn_relocate",
+      "native": [
+        441,
+        380,
+        529,
+        407
+      ]
+    },
+    {
+      "help_id": 370,
+      "box": "btn_scrap",
+      "native": [
+        549,
+        380,
+        621,
+        407
+      ]
+    },
+    {
+      "help_id": 371,
+      "box": "btn_leaders",
+      "native": [
+        342,
+        430,
+        414,
+        456
+      ]
+    },
+    {
+      "help_id": 372,
+      "box": "btn_support",
+      "native": [
+        425,
+        435,
+        485,
+        453
+      ]
+    },
+    {
+      "help_id": 373,
+      "box": "btn_combat",
+      "native": [
+        487,
+        435,
+        546,
+        453
+      ]
+    },
+    {
+      "help_id": 374,
+      "box": "btn_return",
+      "native": [
+        556,
+        430,
+        628,
+        456
+      ]
+    }
+  ]
+}

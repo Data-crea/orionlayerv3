@@ -1,0 +1,553 @@
+{
+  "files": {
+    "assets/shared/background_cockpit.png": [
+      1603685,
+      "dd56f3b0d5aa17dd336b159fa88ebd1534f4246d17c75da092a11e4c487133cb"
+    ],
+    "assets/shared/backgrounds/main_menu.png": [
+      2191429,
+      "1f8876e533a3356aaa4bad03fccddd8fa32d953a078ea65135433f038de0e241"
+    ],
+    "assets/shared/backgrounds/universal.png": [
+      1574980,
+      "97d29c29541ca14b200db097a5062c0cdabeb3ed0c8ecc6fdf7fda1c7543cfc4"
+    ],
+    "assets/shared/banner/banner_cloth.png": [
+      1415960,
+      "2b90cd10a4cf07aafda94fe315145be7bec4c7b701874e334256c4e907b9648b"
+    ],
+    "assets/shared/banner/banner_frame.png": [
+      2231351,
+      "2456ed8d127450d06231b4edbff117a8ce1c5ec0fd2707733231acda3867d65f"
+    ],
+    "assets/shared/banner/emblems/alkari.png": [
+      828379,
+      "d369578fe490e74f3724d7fdd8ee142079fe481139eb259cb5beaba576706a6f"
+    ],
+    "assets/shared/banner/emblems/bulrathi.png": [
+      737063,
+      "d65cc630530d29bdc63563913cf1aaa1e511d1c08f42ed80459707ae56030920"
+    ],
+    "assets/shared/banner/emblems/darlok.png": [
+      676540,
+      "1a9d3b2ad090ad5c30860f8586334791ec10e4694f07a76ca3ae57cc3bff8b26"
+    ],
+    "assets/shared/banner/emblems/elerian.png": [
+      741000,
+      "86c8d316cf5b91bb49ebb7a0f6763e47491d76d86910b6ab3f74ba76b2d80864"
+    ],
+    "assets/shared/banner/emblems/gnolam.png": [
+      495741,
+      "caaa15203b547dc851cccc343d64a6245d35d97ea06504a00337fcb22c59af0a"
+    ],
+    "assets/shared/banner/emblems/human.png": [
+      507137,
+      "ab956ec609cd6d583d09bb3cf3ad9d21ae73a725f11bc57b12fce1ffff0acacc"
+    ],
+    "assets/shared/banner/emblems/klackon.png": [
+      779806,
+      "062ea1b97fd011936a2687ac1194b21cba1f346ebae4e568b7253601d6e91d20"
+    ],
+    "assets/shared/banner/emblems/meklar.png": [
+      437204,
+      "1b8f12976dfb21a920b346f84aa041441c0d3bee29f85b50cf4bf7f476149933"
+    ],
+    "assets/shared/banner/emblems/mrrshan.png": [
+      821246,
+      "7ffd852b7485c2cddf80496f4fc6fd296eb005c9d154827a678d7d949626b3bb"
+    ],
+    "assets/shared/banner/emblems/psilon.png": [
+      724299,
+      "095f372a1abee751b304fb6281f475d76a2c320097caf0155893c0c3718dc34c"
+    ],
+    "assets/shared/banner/emblems/sakkra.png": [
+      980565,
+      "6a50c67edf86f0da6bf13032527f523da4748113d19d05f60b9c437336d857c8"
+    ],
+    "assets/shared/banner/emblems/silicoid.png": [
+      758938,
+      "10c5d76dc4470360e04563137b27d3f81a254e17d5a4f04d3199b538bcf0a449"
+    ],
+    "assets/shared/banner/emblems/trilarian.png": [
+      312667,
+      "845f68881323683b32d2dca28a8d17d5a39c9223d92852fd15f27b7cf72c7c87"
+    ],
+    "assets/shared/banner/stand_hd_cloth.png": [
+      1079878,
+      "67bedaf4049b4e27452188167c27fa6983beff6b60f44690172b952aa0780d3a"
+    ],
+    "assets/shared/banner/stand_hd_frame_nobg.png": [
+      1226646,
+      "a9948ebe65ec6b3976d1de59e75206dc5582b338fd3723da1791bbd97cea7b40"
+    ],
+    "assets/shared/banner/stand_hd_gloss.png": [
+      58856,
+      "7c9ea842f4d4a0be4fd4ad463fdaac6f8f9f940f6ee52aa01205bc4b6d78d62f"
+    ],
+    "assets/shared/cursor.png": [
+      13154,
+      "3fbede5684a781b85991d64d94afdf9b926f068f2757fc3ec939ac64870fcad1"
+    ],
+    "assets/shared/hud/galaxy_hud.png": [
+      7362694,
+      "4066028aa90af38c4a43ae16ec0a5597abe20170c43f76101e3a7cd0b216b138"
+    ],
+    "screens/colony_summary/assets/_src/output/low_moral.png": [
+      709567,
+      "5bc347f5c49614f99b15e0e7839ddd5899084f97ee90fbcb302e9b7b5c7b616d"
+    ],
+    "screens/colony_summary/assets/_src/output/normal_moral.png": [
+      816972,
+      "9441ae254a32087973debc8f78c13e5aeb0d78e84dffafe1fe38e3b267ed354c"
+    ],
+    "screens/colony_summary/assets/_src/output/symbols.png": [
+      701274,
+      "a37a81cddf33b4230383b4fc5219f31d081244301e758b9c4cb925d77473a0c3"
+    ],
+    "screens/colony_summary/assets/_src/surfaces/planet_surfaces.png": [
+      2136173,
+      "0092f48571ff247d74af7d718c797f1055489a549ca561a17811f01c7e5612de"
+    ],
+    "screens/colony_summary/assets/planets/arid.png": [
+      7251,
+      "8a1671b49afd7d164bdf1c0425d782900cec2860843d4175f985903aef9e0993"
+    ],
+    "screens/colony_summary/assets/planets/barren.png": [
+      6684,
+      "60e3ee39232f36571026f0ac670ad8d1f75c90428006753585d08a0a3fa6a423"
+    ],
+    "screens/colony_summary/assets/planets/desert.png": [
+      6313,
+      "d32f22165ca1f8fa305f595151d75aa230cd2421e8b5366603c12ed3598a6713"
+    ],
+    "screens/colony_summary/assets/planets/gaia.png": [
+      6849,
+      "75f034b05c050ebc5a5e83ff8dd6eb395ca1c64775a7198932336e292cd39b50"
+    ],
+    "screens/colony_summary/assets/planets/ocean.png": [
+      6869,
+      "3b10bd8633b1066d2faf34478d2e62a8f1dae2af87c4ad66a9e6e8bd8d563d66"
+    ],
+    "screens/colony_summary/assets/planets/radiated.png": [
+      6581,
+      "299d3fb85274bbdf63d4f9adbf4a49823d0e8290527a870f151df7b36a629418"
+    ],
+    "screens/colony_summary/assets/planets/swamp.png": [
+      7064,
+      "db3a1d7cf9294123a4821f5b2c2546e395c5539a1d56ed21235318a93d5ca5e1"
+    ],
+    "screens/colony_summary/assets/planets/terran.png": [
+      7163,
+      "8d53c4f5d76f668848d55786a7186fc685093882ef081b6da938a7389e1a9789"
+    ],
+    "screens/colony_summary/assets/planets/toxic.png": [
+      6328,
+      "2273d7e6d2614144f587af2cb904c193b6a77cf3e1da005df9528b7cc6c97fc0"
+    ],
+    "screens/colony_summary/assets/planets/tundra.png": [
+      6801,
+      "dd1ae3a6cbe7071cd0078ad170f1b4d68c9dfb073654835c77c41c9bea311686"
+    ],
+    "screens/custom_race/assets/checkbox_off.png": [
+      123882,
+      "d0a3b51df54d0ca32d6647b350b27cc7752db21c7db175e8620db615a4bb2083"
+    ],
+    "screens/custom_race/assets/radio_off.png": [
+      499911,
+      "8c36331c418be78d31790c35bd4d97b8dd8c2088532829ff5bf972be1aa9b6aa"
+    ],
+    "screens/custom_race/assets/radio_on.png": [
+      1018121,
+      "1702710e0dad38c5935acfc04e4328fb5df8541e4cd2a18aafb375bad3142ff1"
+    ],
+    "screens/empire_identity/assets/homeworld.png": [
+      2987190,
+      "b04579469824b6ef6da8cdc09085b76bba51adaf702c63e0e18d697ce1090c45"
+    ],
+    "screens/galaxy_map/assets/_black_hole_src.png": [
+      121050,
+      "25228e3f9cf8016b25cb06ea271dc1742836a7fd4441edd2b0303678e7218891"
+    ],
+    "screens/galaxy_map/assets/gas_giant.png": [
+      9203,
+      "2ecc2865929aaea756ff32a60d16a694a99052c3156cf0a029a9d1fe1b0fc5ca"
+    ],
+    "screens/galaxy_map/assets/icons/_source_sheet.png": [
+      2508550,
+      "fb5620239db154a8632a0b0e55eda4d03429139a0b5b941a45ec19614df0ee0c"
+    ],
+    "screens/galaxy_map/assets/nebula/type_00.png": [
+      3406233,
+      "44d2c46b02128ab8f44871114a2c22b4fdf391db369fdb6a70557fc635e3bd12"
+    ],
+    "screens/galaxy_map/assets/nebula/type_01.png": [
+      3178380,
+      "9c8f56dadbf8457af71651f4eab0aca8073203402fa1be8d6e38e123dd4fc8b9"
+    ],
+    "screens/galaxy_map/assets/nebula/type_02.png": [
+      2537155,
+      "12bee2e22c9f763d0a781baf2a47519727c5c2790d1fd86ced0f04095518260c"
+    ],
+    "screens/galaxy_map/assets/nebula/type_03.png": [
+      2895537,
+      "01de108049b480a3b1fbcd65422c5d75b57f9b297b1f093e65671ecadf4ac773"
+    ],
+    "screens/galaxy_map/assets/nebula/type_04.png": [
+      2941210,
+      "fe099110403fbe3625355e556cc3ef2f18e0ea1c772bb0746ab0cd53c0fcf412"
+    ],
+    "screens/galaxy_map/assets/nebula/type_05.png": [
+      2828149,
+      "a61e3610868c3b5cd2c2b8ee77b42802821937fff6257efeffc731e657baf9b4"
+    ],
+    "screens/galaxy_map/assets/nebula/type_06.png": [
+      3020163,
+      "aa30be61330f9717c22eda290ad6d99075597a42b10f10a2e94bf035b92c3152"
+    ],
+    "screens/galaxy_map/assets/nebula/type_07.png": [
+      2765161,
+      "971f52218cf9bf7227c56edeb63371338084b1d5678c0f8b7bb57d0d610bd312"
+    ],
+    "screens/galaxy_map/assets/nebula/type_08.png": [
+      3713180,
+      "cd9ba60054c361a21f682a39a16b3ef47c2b222d7b97410381e9472bd54c8070"
+    ],
+    "screens/galaxy_map/assets/nebula/type_09.png": [
+      3232144,
+      "b8f8ff63f67941c0717480688408b7b3db11865264532304fd7ad2cea26b0542"
+    ],
+    "screens/galaxy_map/assets/nebula/type_10.png": [
+      3157182,
+      "c337d8267972bc91b1235049e63a952ccbb02b7fbdba631a5c092129b279264d"
+    ],
+    "screens/galaxy_map/assets/nebula/type_11.png": [
+      3362407,
+      "f823d79ec29e75d9b694069b9b1d61327a9b8544df241fe99b388b9814fcb7cc"
+    ],
+    "screens/galaxy_map/assets/ships/_src/crystal.png": [
+      1189832,
+      "7b7df890b9ae0be6c74eb3dfd4bb8b1e98393d6c9fac86dc6eb94e2141c30bc6"
+    ],
+    "screens/galaxy_map/assets/ships/_src/dragon.png": [
+      906490,
+      "caaf69f489df32a260ce1b7b69b63f0c46f899feb90271389fe9cf57bb597e25"
+    ],
+    "screens/galaxy_map/assets/ships/_src/eel.png": [
+      1268130,
+      "8c1f90d412a5602851125e0ca46990ad4f3b849322b733765f1998e41b7926c7"
+    ],
+    "screens/galaxy_map/assets/ships/_src/guardian.png": [
+      1035661,
+      "29ee15ab598ec13d6f04c7b788a6534b816e5d21fea98b29511120700b71774c"
+    ],
+    "screens/galaxy_map/assets/ships/_src/hydra.png": [
+      1176174,
+      "6dcfe6ae2781e651600e32120bfa6f2603b623c6c72b3707cec790027fe9dfa6"
+    ],
+    "screens/galaxy_map/assets/ships/_src/player.png": [
+      807981,
+      "9b91fdb9cb114b24cfe96fb4af8010a1381846f53c6fa10726a65c4aff615861"
+    ],
+    "screens/galaxy_map/assets/stars/blue/0.png": [
+      45417,
+      "8e63fc54749d9ed7386f98dfd51e6c1ec34af2a5b9746b79cf21ed99543db10f"
+    ],
+    "screens/galaxy_map/assets/stars/blue/1.png": [
+      26270,
+      "a25f3e2ab088281739e0049b9a28f5a96220f7068771c2ff5f8868779e430423"
+    ],
+    "screens/galaxy_map/assets/stars/blue/2.png": [
+      13791,
+      "aab452f3642d4b76a22cbab038c92cc7e0b17fa79c6542f0aa03ee2bd44584dd"
+    ],
+    "screens/galaxy_map/assets/stars/blue/3.png": [
+      7604,
+      "b6f4a6b1d7526ad46f92eb54bb46eebd34ad0cbd67c8e774e5be20866cfb6b36"
+    ],
+    "screens/galaxy_map/assets/stars/blue/4.png": [
+      3547,
+      "2faa31c0494f527f63eb520919cf3a44c4a58fa2a062ec315a327855fc2bfe49"
+    ],
+    "screens/galaxy_map/assets/stars/blue/5.png": [
+      2253,
+      "8d980d42d8256b925e0fba18c89e7b7ed48dac34dc8cf3b50d5acef72c090963"
+    ],
+    "screens/galaxy_map/assets/stars/brown/0.png": [
+      45631,
+      "75db0ffb201d731416a42b2533891817a4b9cde5980f76d3a416f86d8dabc2c6"
+    ],
+    "screens/galaxy_map/assets/stars/brown/1.png": [
+      23266,
+      "fd450085a944ac71cb7fa43612cd0d58515f8df040dc3a69af3ab1fe56a5265b"
+    ],
+    "screens/galaxy_map/assets/stars/brown/2.png": [
+      12036,
+      "3cdc837036806cd7319adebfc48e116ca362d9cedd73fa963d58e2e0ad2c7ce8"
+    ],
+    "screens/galaxy_map/assets/stars/brown/3.png": [
+      6751,
+      "b7f3941677fb35a5a438bf9a66545b62adf7f6022f60e0659126652c1b5b1865"
+    ],
+    "screens/galaxy_map/assets/stars/brown/4.png": [
+      3201,
+      "1e60788118fc6c7f8c0b970e3b8505025aff5816c899224a4210ca01fd21c937"
+    ],
+    "screens/galaxy_map/assets/stars/brown/5.png": [
+      2114,
+      "07fdbb5c7be17379e5afe134c095e9b9dfaa792e123c06b8616b1fe0fc9f8a06"
+    ],
+    "screens/galaxy_map/assets/stars/orange/0.png": [
+      46707,
+      "eebb0e2e30cbd8b9eacfcf0b5c3f8723f75a2e949cb05b374cbfc3e95da75421"
+    ],
+    "screens/galaxy_map/assets/stars/orange/1.png": [
+      25786,
+      "638a652c90934d253fe44f4d15e5f84e67d00f8caba6794b5283721638fcd1a9"
+    ],
+    "screens/galaxy_map/assets/stars/orange/2.png": [
+      13534,
+      "ebcee396028261f592d6bb8f1881f6b5dd11fc12582ab553b442c3492906821b"
+    ],
+    "screens/galaxy_map/assets/stars/orange/3.png": [
+      7652,
+      "c06e8b28e48831a502452f14eb14a161bb78fc2f133efb69f6c9c22bc3cf03a5"
+    ],
+    "screens/galaxy_map/assets/stars/orange/4.png": [
+      3854,
+      "a96d1b8e0267841a783dbeeba99f2bbe73dd50a3639b21e4d247f09b9b47da67"
+    ],
+    "screens/galaxy_map/assets/stars/orange/5.png": [
+      2501,
+      "86107f5e608673b60f22d385acb586f34fa984108ab6d72162dbf5e7417d3620"
+    ],
+    "screens/galaxy_map/assets/stars/red/0.png": [
+      45521,
+      "36fbbfbe0fd429dbf52f60b1a2c88ed9c159f14962900e3f50051d6826b01656"
+    ],
+    "screens/galaxy_map/assets/stars/red/1.png": [
+      24507,
+      "2fbef77ddb53584abbfaa199d85d2b051ae803114f2d51ba372942af1504c527"
+    ],
+    "screens/galaxy_map/assets/stars/red/2.png": [
+      13373,
+      "aba1d12a61e3094aa0db2c012337d8b563683392e0e75b89949e8ff31bad458a"
+    ],
+    "screens/galaxy_map/assets/stars/red/3.png": [
+      7669,
+      "37c097d6de57788c9e8d778e080892ad3f427a39074620c6e0ecaf409762e041"
+    ],
+    "screens/galaxy_map/assets/stars/red/4.png": [
+      3726,
+      "aa6213def8d762d0fc750689b887da31813620dbc52dbe9c0b04b2fad79b78ff"
+    ],
+    "screens/galaxy_map/assets/stars/red/5.png": [
+      2329,
+      "d903ecf0019501b095aea40e0de454b07fda550bee63045ddbe1a01bd4c2b8b9"
+    ],
+    "screens/galaxy_map/assets/stars/white/0.png": [
+      44460,
+      "30fd2c10753e425642f672e8974fafe827b9cfe0159bbdf3a8d9c72e8ec32ac1"
+    ],
+    "screens/galaxy_map/assets/stars/white/1.png": [
+      24003,
+      "f05d91175fd2ff9308b46010a36c0b5e0d7da51043c706eca0e6386bd878e6ca"
+    ],
+    "screens/galaxy_map/assets/stars/white/2.png": [
+      12767,
+      "1e4c5783ecb198f10010a2d10d06dcb2ab65d2f193889e38b76b6aa4a5f30f00"
+    ],
+    "screens/galaxy_map/assets/stars/white/3.png": [
+      7105,
+      "c09c92c8f0d8be8e0b09bf8e80275201c720b926cbc10cad8d5b181041c3a10b"
+    ],
+    "screens/galaxy_map/assets/stars/white/4.png": [
+      3379,
+      "925961a2b1aea0c8ff10115fb3c8ac5205026d62d37490f4ab868ed7e50d7954"
+    ],
+    "screens/galaxy_map/assets/stars/white/5.png": [
+      2079,
+      "48e486758c8c899e8d160179a32a74cbae7f3e88d4a2cddabf04c6c0bc5645a7"
+    ],
+    "screens/galaxy_map/assets/stars/yellow/0.png": [
+      45971,
+      "0c09838166e5ee7880a84ef9efb83f6d88e5b836fcee5d08f385d074d66aa8c5"
+    ],
+    "screens/galaxy_map/assets/stars/yellow/1.png": [
+      24886,
+      "f9db1f11928b5de1d378a8fef9c32e6ee3050446e27699763b3a87481df8bac5"
+    ],
+    "screens/galaxy_map/assets/stars/yellow/2.png": [
+      13317,
+      "041eeda5aefd4285ce7eecae84c8646ed3f14f6b02ab3d5d89ee5ea5c92c6ca4"
+    ],
+    "screens/galaxy_map/assets/stars/yellow/3.png": [
+      7433,
+      "08fd089827b03b4248033a7d5d79be6b30d611db840355d644384f88772fd918"
+    ],
+    "screens/galaxy_map/assets/stars/yellow/4.png": [
+      3968,
+      "d2a264573ec0e4b648f3cc9e3908a8327dac754147cf6afe095f2377d09f38b8"
+    ],
+    "screens/galaxy_map/assets/stars/yellow/5.png": [
+      2452,
+      "fc56330db856a9dbb61a3d8360c381a46910126aefba8b00c93e8e7e3f898fd5"
+    ],
+    "screens/main_menu/assets/logo.png": [
+      784417,
+      "3587dddf74b64eb6becfc18307bbe1eb271148b2d1225d806d02fc92d7f91c6f"
+    ],
+    "screens/new_game/assets/background.png": [
+      1298606,
+      "b593ebe70fd53e38ad74753d0c5d3a81f09ca74f7d08d78571d0342845c4193e"
+    ],
+    "screens/new_game/assets/difficulty/average.png": [
+      479404,
+      "fec6223f00e14f6ba4b29bdf58795ed2fd56d20ba85e3b386cf5094b3186d94d"
+    ],
+    "screens/new_game/assets/difficulty/easy.png": [
+      520545,
+      "35ac63b200f5a73486378ec79504a35cf4be9898e4b7ec81783ae9279364419b"
+    ],
+    "screens/new_game/assets/difficulty/hard.png": [
+      495903,
+      "377a53f9fc11dfda7364490188aa1b65181ddf27834c75927ba3efa7e20a47b3"
+    ],
+    "screens/new_game/assets/difficulty/impossible.png": [
+      468871,
+      "7afc98e739d799356abf44c2878c6a7c892bc00a6088d2320c65bc6cedea2e8b"
+    ],
+    "screens/new_game/assets/difficulty/tutor.png": [
+      480675,
+      "10c044592b15bccedc44fa01f0b27e3ee241aaf03d535f1e52d9563fe2228b9f"
+    ],
+    "screens/new_game/assets/galaxy_age/average.png": [
+      414900,
+      "5183231a6632ee86ffaa61b6f64880a6490e2ba5ebbd04ba1a542cd9df226c0f"
+    ],
+    "screens/new_game/assets/galaxy_age/mineral_rich.png": [
+      524028,
+      "847b4d0257c9dbe214c362743b2ed4297e8b2d691aade4998a15d4217985de6f"
+    ],
+    "screens/new_game/assets/galaxy_age/organic_rich.png": [
+      737720,
+      "8646a630bd484e28132d5d07ed39c048fe34587dec43891aa32157eef36cf07a"
+    ],
+    "screens/new_game/assets/galaxy_size/huge.png": [
+      412289,
+      "f14b3e10677ea866ab3bc49d285982876b96192682b832d30e26842fbda0d23d"
+    ],
+    "screens/new_game/assets/galaxy_size/large.png": [
+      457655,
+      "8b4bf2ebaa79fa00dcc38ad294a2ef2afc2761202f0086568d785696601afff9"
+    ],
+    "screens/new_game/assets/galaxy_size/maximum.png": [
+      3020694,
+      "c8c6d89f5b80b17ab4ed228e131949c04c1051bff0e6bf9b62015e2b33c52d5b"
+    ],
+    "screens/new_game/assets/galaxy_size/medium.png": [
+      317069,
+      "840fbf5b8ca4423180736b7d72f2e28e815daf88c02ae1b5b150d57c75544750"
+    ],
+    "screens/new_game/assets/galaxy_size/small.png": [
+      271920,
+      "c1f7fddcc78b227e9d8eb1251e4791d48dfd195fd22d761c8d5dfb5aec69967c"
+    ],
+    "screens/new_game/assets/players/2_players.png": [
+      634632,
+      "32b087634d125b1f7a058a635712db29bc738e55b2f601df1c79072b16eb1013"
+    ],
+    "screens/new_game/assets/players/3_players.png": [
+      579770,
+      "5aab15a5aa2af9daa08955c704a7c2fc12877735a68834039fdd1f7748e71fa8"
+    ],
+    "screens/new_game/assets/players/4_players.png": [
+      479199,
+      "a6f2aeb6d2a6142c552e3f00e18117af29ef09586bf45630aa89c477325f6d0f"
+    ],
+    "screens/new_game/assets/players/5_players.png": [
+      503663,
+      "9efc1932cc7cde6cc44e89bea16f6b3d6e889e6680659da247e4966b07b8ec77"
+    ],
+    "screens/new_game/assets/players/6_players.png": [
+      623725,
+      "5984728a47bbb602063bb6cdc1626b62d22f25e7ba6bde5afe77a4127cda7757"
+    ],
+    "screens/new_game/assets/players/7_players.png": [
+      602001,
+      "32723ba6fd50c78b03fd5c41bf0cd3c0e1f01b9675c688dcd0e5c576a4a87608"
+    ],
+    "screens/new_game/assets/players/8_players.png": [
+      610318,
+      "6a45638eb7d5498f30cb5471920d42df4f6b4a91c4a32f9294ca854ee1eb7424"
+    ],
+    "screens/new_game/assets/tech_level/advanced.png": [
+      706042,
+      "ed42fd887ca196a3b5c2c0118e84b546c090186546ba3802c0451a4e3fc647c6"
+    ],
+    "screens/new_game/assets/tech_level/average.png": [
+      655316,
+      "41aeac66dec3c41d5ceabaca5d9b78144d4805c60ca779a0e43cbbdcb7a88491"
+    ],
+    "screens/new_game/assets/tech_level/pre_warp.png": [
+      508666,
+      "6ff4a30ab42fcd1470fbc376137aac38388a4d0070829133b0a516f39e49f61e"
+    ],
+    "screens/select_race/assets/portraits/alkari.png": [
+      3041759,
+      "e2df2924b306ceefc162e54b016b1a469d915d2dc0394a013d85b41ab84ee87f"
+    ],
+    "screens/select_race/assets/portraits/bulrathi.png": [
+      288034,
+      "b88598eeca085d5aedabe848fa54ad772cdd117320ad250c20a72dffd59c6385"
+    ],
+    "screens/select_race/assets/portraits/custom.png": [
+      1585819,
+      "5fbf2198f4010b40132954a483054f0acd6a17a227de9b2ab3d9c543f0da9eac"
+    ],
+    "screens/select_race/assets/portraits/darlok.png": [
+      2776979,
+      "7a3e7c30f0a561fb94fc1424ec50cee20b3694ddbf2f5db5e75865fafb7ff11b"
+    ],
+    "screens/select_race/assets/portraits/elerian.png": [
+      3058121,
+      "cb770d7df38b3499c315e75758ecf6db0ef57a8589a027ba14f0f9806c84f266"
+    ],
+    "screens/select_race/assets/portraits/gnolam.png": [
+      2992480,
+      "39af9db083a31b5a4a31a6e5e0162f410024c58d54ea41016656150fa173f02a"
+    ],
+    "screens/select_race/assets/portraits/human.png": [
+      2828579,
+      "f1c19df76bdca4d08931420b9ebd4b32b4849828e4e3b0986adcffb73ee96a51"
+    ],
+    "screens/select_race/assets/portraits/klackon.webp": [
+      292638,
+      "3ef4977694323ae6c4cac26ac16962c9728bcf5d4e0131585ed8a99c5cfcd30a"
+    ],
+    "screens/select_race/assets/portraits/meklar.jpg": [
+      393491,
+      "88cd2775c8b4d8649743675f28e0225c1184e4c5bb655f73eb812df8de8a8080"
+    ],
+    "screens/select_race/assets/portraits/mrrshan.png": [
+      2972520,
+      "a6d4bf9ebae38a45ef935c8ad1a7cb640d579cbd39072a5ee62817e71a379634"
+    ],
+    "screens/select_race/assets/portraits/psilon.png": [
+      2883965,
+      "7f9ecaf302d7b5cea65f9c7480ad2603b2ed33e759c7f57c06c83d76ff73769d"
+    ],
+    "screens/select_race/assets/portraits/sakkra.png": [
+      2972057,
+      "990e2cc5431afb0f56db45a15b88ef0b70216d41b934a82e795529f15b69c772"
+    ],
+    "screens/select_race/assets/portraits/silicoid.jpg": [
+      511401,
+      "5ba679baa7b7f7329997e1737cff50e55e90637e62421733f99e31ce76d3f0a4"
+    ],
+    "screens/select_race/assets/portraits/trilarian.png": [
+      2874665,
+      "1a45ad5a126bc4be8b9f65e39538aaf8eebd37a7ae0836aea9db35c6471cf10f"
+    ]
+  },
+  "version": 1
+}

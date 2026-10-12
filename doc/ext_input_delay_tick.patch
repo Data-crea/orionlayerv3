@@ -1,0 +1,70 @@
+Engine: serialise during a screen's input delay (open fix 42).
+
+STATUS: APPLIED 29 September 2026 by work order 191 (Data's bug list,
+item 2: "Open Fix 42") — orion2re 96da4c4d on orionlayer-local (before:
+8f7bd9e3), this file's diff byte for byte (index lines included). Required
+by tools/version_check.py since work order 191. Written and proved by work
+order 184 (Part 2), parked for Data (doc/briefs/184-parked-for-data.md,
+item 1) until then.
+
+PROOF ON THE TIP IT WAS APPLIED TO (work order 191): in a scratch clone of
+orionlayer-local at 8f7bd9e3 this file applied with no offset and no fuzz;
+fields.cpp compiled alone with the build's own command (-fsyntax-only), and
+the control below was refused again, exit 1. Re-cut for that tip: only the
+`index` line changed (fields.cpp's blob moved on since 4bf152e4); the hunk
+is the one 184 proved.
+
+PROOF (work order 184, 27 September 2026): in a scratch clone of
+orionlayer-local 4bf152e4 (never on orionlayer-local itself) this file
+applied with `patch -p1 --dry-run` and `patch -p1`, no offset, no fuzz,
+and the applied tree equals the scratch commit; the scratch engine was
+built in full with the linux-debug preset (ORION2RE_EXT=ON) — no error —
+and a control, the same file with `MOX::_current_screen` misspelt
+`MOX::_current_scren` in fields.cpp, was refused by the compiler. The
+scratch engine then ran on the virtual display: see the entry,
+doc/orion2re_open_fixes.md 42.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_input_delay_tick.patch
+
+and a rebuild. It comes back off with `git revert 96da4c4d` or
+`patch -R -p1`, and a rebuild.
+
+WHAT IT IS FOR
+
+    fields::Get_Input_() returns 0 while a screen's input delay runs
+    (fields.cpp:161-164) and calls ext::Tick only after it (:167) — so
+    while a delay counts down, nothing reaches a client: no state, no
+    field list, no picture. The research panel sets a delay of five
+    passes of 110 ms (tech.cpp:286, :351-353), and its list reached
+    OrionLayer ~550 ms after the engine had built and drawn it — on every
+    entry, 66-80 % of the time from the click to the panel (work order
+    184, doc/briefs/184-research-timing.md). 42 call sites set a delay
+    (1, 2, 3, 5 or 20 passes); every one of those screens is heard
+    that much later.
+
+    The change ticks during the delay too, and changes nothing else: the
+    delay still returns 0 and still counts down, so the original ignores
+    input for exactly as long as before; a field activation that arrives
+    meanwhile waits in ext::g_pending_field, which is consumed only after
+    the delay, as before. One marker, `OrionLayer, open fix 42.`, on one
+    line at the one changed place.
+
+diff --git a/src/game/fields.cpp b/src/game/fields.cpp
+index 13df7b4b..3cff1b6c 100644
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -158,6 +158,12 @@ namespace fields {
+     int16_t __cdecl Get_Input_() {
+         platform::Check_Exit_();
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 42. The client hears the screen during its input delay too; the delay still returns 0 below.
++        if (_input_delay > 0) {
++            ext::Tick(MOX::_current_screen);
++        }
++#endif
+         if (_input_delay > 0) {
+             _input_delay--;
+             return 0;

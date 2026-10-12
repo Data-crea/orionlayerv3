@@ -1,0 +1,850 @@
+{
+  "1920x1080": [
+    {
+      "name": "list_area",
+      "rect": [
+        20,
+        85,
+        1491,
+        782
+      ]
+    },
+    {
+      "name": "side_panel",
+      "rect": [
+        1531,
+        85,
+        369,
+        975
+      ]
+    },
+    {
+      "name": "planet_panel",
+      "rect": [
+        20,
+        887,
+        522,
+        173
+      ]
+    },
+    {
+      "name": "picture_panel",
+      "rect": [
+        562,
+        887,
+        949,
+        173
+      ]
+    },
+    {
+      "name": "header",
+      "rect": [
+        28,
+        93,
+        1435,
+        44
+      ]
+    },
+    {
+      "name": "rows",
+      "rect": [
+        28,
+        141,
+        1435,
+        718
+      ]
+    },
+    {
+      "name": "scroll",
+      "rect": [
+        1467,
+        93,
+        36,
+        766
+      ]
+    },
+    {
+      "name": "galaxy_inset",
+      "rect": [
+        1539,
+        93,
+        353,
+        228
+      ]
+    },
+    {
+      "name": "status_line",
+      "rect": [
+        1539,
+        327,
+        353,
+        40
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_heading",
+      "rect": [
+        1539,
+        377,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_climate",
+      "rect": [
+        1539,
+        415,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_minerals",
+      "rect": [
+        1658,
+        415,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_size",
+      "rect": [
+        1777,
+        415,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_heading",
+      "rect": [
+        1539,
+        469,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "restrict_enemy",
+      "rect": [
+        1539,
+        509,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_gravity",
+      "rect": [
+        1539,
+        569,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_hostile",
+      "rect": [
+        1539,
+        629,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_minerals",
+      "rect": [
+        1539,
+        689,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_range",
+      "rect": [
+        1539,
+        749,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "send_colony",
+      "rect": [
+        1539,
+        837,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "send_outpost",
+      "rect": [
+        1539,
+        895,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "return",
+      "rect": [
+        1590,
+        990,
+        250,
+        62
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "planet_disc",
+      "rect": [
+        32,
+        895,
+        157,
+        157
+      ]
+    },
+    {
+      "name": "planet_name",
+      "rect": [
+        201,
+        911,
+        330,
+        44
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "planet_special",
+      "rect": [
+        201,
+        961,
+        330,
+        34
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
+    },
+    {
+      "name": "monster_sprite",
+      "rect": [
+        570,
+        895,
+        157,
+        157
+      ],
+      "style": {
+        "skin": "image",
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "monster_type",
+      "rect": [
+        739,
+        895,
+        210,
+        30
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 24
+      }
+    },
+    {
+      "name": "monster_stage",
+      "rect": [
+        739,
+        927,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_size",
+      "rect": [
+        739,
+        953,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_structure",
+      "rect": [
+        739,
+        979,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_armour",
+      "rect": [
+        739,
+        1005,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_shield",
+      "rect": [
+        739,
+        1031,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_weapons",
+      "rect": [
+        959,
+        895,
+        190,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_weapon_counts",
+      "rect": [
+        1151,
+        895,
+        40,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_specials",
+      "rect": [
+        1201,
+        895,
+        191,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ],
+  "2560x1440": [
+    {
+      "name": "list_area",
+      "rect": [
+        20,
+        85,
+        1491,
+        782
+      ]
+    },
+    {
+      "name": "side_panel",
+      "rect": [
+        1531,
+        85,
+        369,
+        975
+      ]
+    },
+    {
+      "name": "planet_panel",
+      "rect": [
+        20,
+        887,
+        522,
+        173
+      ]
+    },
+    {
+      "name": "picture_panel",
+      "rect": [
+        562,
+        887,
+        949,
+        173
+      ]
+    },
+    {
+      "name": "header",
+      "rect": [
+        28,
+        93,
+        1435,
+        44
+      ]
+    },
+    {
+      "name": "rows",
+      "rect": [
+        28,
+        141,
+        1435,
+        718
+      ]
+    },
+    {
+      "name": "scroll",
+      "rect": [
+        1467,
+        93,
+        36,
+        766
+      ]
+    },
+    {
+      "name": "galaxy_inset",
+      "rect": [
+        1539,
+        93,
+        353,
+        228
+      ]
+    },
+    {
+      "name": "status_line",
+      "rect": [
+        1539,
+        327,
+        353,
+        40
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_heading",
+      "rect": [
+        1539,
+        377,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "sort_climate",
+      "rect": [
+        1539,
+        415,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_minerals",
+      "rect": [
+        1658,
+        415,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "sort_size",
+      "rect": [
+        1777,
+        415,
+        115,
+        42
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_heading",
+      "rect": [
+        1539,
+        469,
+        353,
+        34
+      ],
+      "style": {
+        "font_size": 22
+      }
+    },
+    {
+      "name": "restrict_enemy",
+      "rect": [
+        1539,
+        509,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_gravity",
+      "rect": [
+        1539,
+        569,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_hostile",
+      "rect": [
+        1539,
+        629,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_minerals",
+      "rect": [
+        1539,
+        689,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "restrict_range",
+      "rect": [
+        1539,
+        749,
+        353,
+        56
+      ],
+      "style": {
+        "font_size": 19
+      }
+    },
+    {
+      "name": "send_colony",
+      "rect": [
+        1539,
+        837,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "send_outpost",
+      "rect": [
+        1539,
+        895,
+        353,
+        50
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "return",
+      "rect": [
+        1590,
+        990,
+        250,
+        62
+      ],
+      "style": {
+        "font_size": 21
+      }
+    },
+    {
+      "name": "planet_disc",
+      "rect": [
+        32,
+        895,
+        157,
+        157
+      ]
+    },
+    {
+      "name": "planet_name",
+      "rect": [
+        201,
+        911,
+        330,
+        44
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 30
+      }
+    },
+    {
+      "name": "planet_special",
+      "rect": [
+        201,
+        961,
+        330,
+        34
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 22
+      }
+    },
+    {
+      "name": "monster_sprite",
+      "rect": [
+        570,
+        895,
+        157,
+        157
+      ],
+      "style": {
+        "skin": "image",
+        "zoom": 1.0,
+        "crop": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "monster_type",
+      "rect": [
+        739,
+        895,
+        210,
+        30
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 24
+      }
+    },
+    {
+      "name": "monster_stage",
+      "rect": [
+        739,
+        927,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_size",
+      "rect": [
+        739,
+        953,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_structure",
+      "rect": [
+        739,
+        979,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_armour",
+      "rect": [
+        739,
+        1005,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_shield",
+      "rect": [
+        739,
+        1031,
+        210,
+        26
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_weapons",
+      "rect": [
+        959,
+        895,
+        190,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_weapon_counts",
+      "rect": [
+        1151,
+        895,
+        40,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18
+      }
+    },
+    {
+      "name": "monster_specials",
+      "rect": [
+        1201,
+        895,
+        191,
+        158
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 16
+      }
+    },
+    {
+      "name": "help_popup",
+      "hidden": true,
+      "style": {
+        "font_scale": 1.0
+      },
+      "rect": [
+        420,
+        170,
+        1080,
+        745
+      ]
+    }
+  ]
+}

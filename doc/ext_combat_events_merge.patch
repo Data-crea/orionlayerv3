@@ -1,0 +1,55 @@
+Engine: CMEV's missile merge and removal only for a live missile (open fix 63).
+
+STATUS: APPLIED 1 October 2026 by work order 197 (Part B.2, "exercise every
+CMEV event kind ... correct what is off") — orion2re ee844b0b on
+orionlayer-local (before: 6f69de27), this file's diff byte for byte (index
+lines included). Required by tools/version_check.py since work order 197.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_events_merge.patch
+
+and a rebuild. It comes back off with `git revert ee844b0b` or
+`patch -R -p1`, and a rebuild.
+
+WHAT IT IS FOR
+
+    The first battle with missiles (work order 197's scratch game: three
+    Doom Stars at Draconis) sent 287 "missile merge" and 294 "missile gone"
+    events for 15 launches. The original's merge loop in Fire_Missile_
+    (cmbtmis.cpp) goes on after Kill_Missile_ has zeroed the merged
+    missile, and every EMPTY slot then matches the zeroed record (type 0,
+    target 0, x 0, y 0): the game adds 0 to it and kills the empty missile
+    again — harmless, and left exactly as it is. Open fix 56's two hooks
+    reported each of those calls. Now each hook reports only while the
+    missile it names is live (type above WEAPON_NO_WEAPONS): the one real
+    merge, and each real removal. Checked against the state blocks by
+    tools/combat_consistency.py: 572 of 645 events off before, 0 of 73 after.
+
+    Written inside the existing #ifdef ORION2RE_EXT blocks of open fix 56 in
+    src/game/cmbtmis.cpp, one line before each hook; fix 56's own lines are
+    unchanged. Nothing runs without the extension, and with it only what is
+    reported changes: an engine without OrionLayer behaves exactly as
+    before. One marker, `OrionLayer, open fix 63.`, on one line at each of
+    the two changed places.
+
+diff --git a/src/game/cmbtmis.cpp b/src/game/cmbtmis.cpp
+index 60b2679a..321ed49f 100644
+--- a/src/game/cmbtmis.cpp
++++ b/src/game/cmbtmis.cpp
+@@ -1039,6 +1039,7 @@ namespace CMBTMIS {
+ 
+     void __cdecl Kill_Missile_(int16_t missile_idx) {
+ #ifdef ORION2RE_EXT
++        if (MOX::_missile[missile_idx].type > WEAPON_NO_WEAPONS)  // OrionLayer, open fix 63. An empty slot killed again is no missile gone.
+         ext::Combat_Event(ext::CEV_MISSILE_GONE, missile_idx, MOX::_missile[missile_idx].type, MOX::_missile[missile_idx].quantity, MOX::_missile[missile_idx].x, MOX::_missile[missile_idx].y);  // OrionLayer, open fix 56.
+ #endif
+         // Clear the missile data structure
+@@ -1289,6 +1290,7 @@ namespace CMBTMIS {
+ 
+                         MOX::_missile[i].quantity += MOX::_missile[missile_idx].quantity;
+ #ifdef ORION2RE_EXT
++                        if (MOX::_missile[missile_idx].type > WEAPON_NO_WEAPONS)  // OrionLayer, open fix 63. Once killed, the loop matches every empty slot: no event for those.
+                         ext::Combat_Event(ext::CEV_MISSILE_MERGE, missile_idx, i, MOX::_missile[i].quantity);  // OrionLayer, open fix 56.
+ #endif
+                         Kill_Missile_(missile_idx);

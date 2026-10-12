@@ -1,0 +1,60 @@
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 33e7e739..d6e2f0b0 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2491,6 +2491,11 @@ static void ProcessInput() {
+             Set_Spies_(cmd.pairs);  // OrionLayer, open fix 64.
+             break;
+ 
++        case MSG_INJECT_RAW_KEY:
++            // OrionLayer, open fix 89. Straight into the key queue, as platform.cpp queues a translated key (Queue_Key_Code_, :416-418).
++            key::Push_Key_Code_((uint32_t)(uint16_t)cmd.param1, (uint32_t)((uint16_t)cmd.param1 >> 8));
++            break;
++
+         case MSG_COMBAT_COMMAND:
+             // OrionLayer, open fix 58. Kept for the battle's next human input; a later one replaces it.
+             if (cmd.pairs.size() >= 11) {
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index 2cd53e13..ac1e6414 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -247,6 +247,26 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_INJECT_RAW_KEY: {
++        // OrionLayer, open fix 89. Only the codes platform.cpp makes for F1-F10, Alt+F1-F10 and Alt+letter.
++        if (payload_len >= 2) {
++            uint16_t code = 0;
++            memcpy(&code, payload, 2);
++            const uint16_t scan = (uint16_t)(code >> 8);
++            const bool fkey = (code & 0xFF) == 0 && scan >= 0x3B && scan <= 0x44;
++            const bool alt_fkey = (code & 0xFF) == 0 && scan >= 0x68 && scan <= 0x71;
++            const bool alt_letter = (code & 0xFF) == 0 &&
++                ((scan >= 0x10 && scan <= 0x19) || (scan >= 0x1E && scan <= 0x26) ||
++                 (scan >= 0x2C && scan <= 0x32));
++            if (fkey || alt_fkey || alt_letter) {
++                InputCommand cmd{};
++                cmd.type = MSG_INJECT_RAW_KEY;
++                cmd.param1 = (int16_t)code;
++                input_queue_.push_back(cmd);
++            }
++        }
++        break;
++    }
+     case MSG_SET_SPIES: {
+         // OrionLayer, open fix 64. The whole list (2 + 3n bytes, n <= 8), or nothing.
+         if (payload_len >= 2 && payload[0] <= 8 && payload_len == (size_t)2 + 3 * payload[0]) {
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index cd1b356e..d76d16e8 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -48,6 +48,8 @@ constexpr uint16_t MSG_INJECT_RIGHT_CLICK = 0x87;
+ constexpr uint16_t MSG_COMBAT_COMMAND = 0x88;
+ // OrionLayer, open fix 64. The Races screen's spies: uint8 n, n x (uint8 player, uint8 spies, uint8 mission 1-3 or 0 kept), uint8 agent pool.
+ constexpr uint16_t MSG_SET_SPIES      = 0x89;
++// OrionLayer, open fix 89. uint16: a key code as platform.cpp translates F1-F10 (0x3B00-0x4400), Alt+F1-F10 (0x6800-0x7100) and Alt+letter (scan << 8, 0x1000-0x3200); anything else is dropped.
++constexpr uint16_t MSG_INJECT_RAW_KEY = 0x8A;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;

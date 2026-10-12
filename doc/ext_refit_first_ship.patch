@@ -1,0 +1,52 @@
+OrionLayer open fix 85 — the refit ship list's first row on the wire ("RFIT")
+==========================================================================
+
+Work order 226 Part A (D6 of the GUI audit; Data's decision 1 of 9 October
+2026, as work order 224's parked file proposed: applied on `orionlayer-local`,
+bundle in ~/claude/bundles/, nothing online). orion2re on `orionlayer-local`,
+on top of open fix 84. Every line under ORION2RE_EXT (ext_api.cpp).
+
+The refit popup's ship list shows fifteen ships from COLREFIT::_first_ship,
+a static the arrows move (colrefit.cpp:241-260) and Update_First_Ship_
+recomputes from the scroll slider on every draw (:415). It was not on the
+wire, so OrionLayer counted the pages it sent itself, which decision 46 says
+a list window the game owns must not do: anything that moved the slider
+would put HD's cells on other ships than the game's. The snapshot now
+carries "RFIT" while the build popup's id (25) is up, after HLPL: a version
+byte, _first_ship and _n_ships_in_list. Read only.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index b4150da4..3831887d 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1823,6 +1823,30 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, h.y2);
+         }
+     }
++
++    // 28. The refit ship list's first row: "RFIT", written ONLY while
++    //     SCREEN_QUEUE_POPUP is up, after HLPL. OrionLayer, open fix 85.
++    //
++    //     The refit popups run under the build popup's id (colbldg.cpp:1590
++    //     calls COLREFIT::Colony_Refit_Popup_). Which ship the list's
++    //     first cell shows is COLREFIT::_first_ship: set to 0 when the
++    //     list opens (colrefit.cpp:77), moved by the two arrows
++    //     (Evaluate_Input_, :241-260) and recomputed from the scroll
++    //     slider by Update_First_Ship_ on every draw (:415), which a
++    //     client never sends. Sent with the list's length, the count a
++    //     client checks its own reading of Build_Ship_List_ against. The
++    //     value is meaningful while the ship list's fields are up; under
++    //     the design list and the build popup it is the last list's.
++    //     Read only; nothing here changes the game.
++    if (current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'R');
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'I');
++        buf.push_back((uint8_t)'T');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, COLREFIT::_first_ship);
++        Write16(buf, COLREFIT::_n_ships_in_list);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

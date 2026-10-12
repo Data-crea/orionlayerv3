@@ -1,0 +1,430 @@
+Engine: the battle's events, numbered, "CMEV" (open fix 56).
+
+STATUS: APPLIED 30 September 2026 by work order 194 (Part B; reserved by
+work order 193) — orion2re 5bd4c404 on orionlayer-local (before: 6f87c151), this
+file's diff byte for byte (index lines included). Required by
+tools/version_check.py since work order 194.
+
+It was applied, from ~/orion2re on the orionlayer-local branch, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_combat_events.patch
+
+and a rebuild. It comes back off with `git revert 5bd4c404` or `patch -R -p1`,
+and a rebuild.
+
+WHAT IT IS FOR
+
+    The original plays every effect inside a blocking loop and tells
+    nobody: ext::Tick runs only where the battle waits for input or between
+    AI steps, so a client that watches snapshots sees almost none of it —
+    work order 193 measured 1 beam picture of 9 and none of the warp-out.
+    Data's decision of 30 September 2026 lets the engine run ahead of HD's
+    animations, on the condition that HD shows no result and takes no input
+    before the player has seen the animation that belongs to it. That needs
+    the events themselves, in order, with their outcome.
+
+    Seventeen one-line hooks in seven combat files call ext::Combat_Event
+    with values that already exist at that point — a shot and its damage
+    past the shields and absorbed (per shot, Fire_Ship_), reflected damage,
+    bombs, special weapons fired, missile / torpedo / fighter launches,
+    merges, hits, fighter passes and every missile's end (Kill_Missile_),
+    moves (from, to, cost, teleport — recorded as the move starts, because
+    Move_Ship_'s step loop writes the position per step) and turns,
+    destructions with their death state, retreats, blast and plasma-web
+    damage, captures and raids. The call computes nothing, draws no random
+    number and never ticks; it copies into a ring of 1024 in src/ext, only
+    while a battle is live (open fix 52's gate — the bombardment that
+    reuses Fire_Ship_ outside a battle records nothing). Block "CMEV",
+    after FBSC on ANY screen while events are unsent: the first event's
+    number (from 1, across battles; a first above the client's next number
+    is a gap) and each event's battle serial, kind and eight int16. Every
+    state block in the same snapshot is the battle AFTER those events, so a
+    client that animates plays them and then shows that state.
+
+    Not events (read from CMBT's state instead): cloak, stasis, tractor and
+    black hole on/off. Engine behaviour of its own, not changed here: in
+    super-fast mode a beam never reduces a missile stack and the spherical
+    animation draws random numbers only when drawn (work order 194's
+    reading) — events report what the engine does either way.
+
+    An engine without OrionLayer behaves exactly as before: the ring is ext
+    state nothing in the game reads. One marker, `OrionLayer, open fix 56.`,
+    on one line at every changed place.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index a57bae95..00bb1e8a 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -29,6 +29,18 @@ static int16_t g_last_screen = -99;
+ static int32_t g_last_stardate = -1;
+ static int16_t g_last_fields_count = -1;
+ 
++// OrionLayer, open fix 56. The battle's events (ext_api.h): a ring of the last
++// 1024, numbered from 1; SerializeState drains what is new.
++struct CombatEventRecord {
++    uint32_t seq;
++    uint16_t serial;
++    uint8_t type;
++    int16_t a[8];
++};
++static CombatEventRecord g_combat_events[1024];
++static uint32_t g_combat_event_next = 1;   // the number the next event gets
++static uint32_t g_combat_event_sent = 1;   // the first number not yet sent
++
+ // ── Pointer coordinates ──────────────────────────────────
+ 
+ /// Convert a 640x480 game point to the window point that maps back
+@@ -1643,6 +1655,36 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write16(buf, bar.up_btn);
+         Write16(buf, bar.dn_btn);
+     }
++
++    // 24. What happened in the battle since the last snapshot: "CMEV", written
++    //     on ANY screen while there are events not yet sent (a battle's last
++    //     events drain into the first snapshot after it), after FBSC.
++    //     OrionLayer, open fix 56.
++    //
++    //     Numbered from 1 across battles; `first` above the client's next
++    //     number is a gap (the ring holds 1024, or no client was connected).
++    //     Every state block in the SAME snapshot (CMBT, CMSL, CRES) is the
++    //     battle after all of these — so a client that animates plays them,
++    //     then shows that state.
++    if (g_combat_event_sent < g_combat_event_next) {
++        uint32_t first = g_combat_event_sent;
++        if (g_combat_event_next - first > 1024) first = g_combat_event_next - 1024;
++        const uint16_t n = (uint16_t)(g_combat_event_next - first);
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'V');
++        Write8(buf, 1);                                   // block version
++        Write32(buf, (int32_t)first);
++        Write16(buf, (int16_t)n);
++        for (uint32_t s = first; s < g_combat_event_next; s++) {
++            const CombatEventRecord& e = g_combat_events[s % 1024];
++            Write16(buf, (int16_t)e.serial);
++            Write8(buf, e.type);
++            for (int k = 0; k < 8; k++) Write16(buf, e.a[k]);
++        }
++        g_combat_event_sent = g_combat_event_next;
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -2172,6 +2214,15 @@ CombatGuard::CombatGuard() : screen(SCREEN_EXT_COMBAT), previous(g_combat_live)
+     g_combat_result.valid = false;  // OrionLayer, open fix 57. A new battle: the last result goes.
+ }
+ 
++// OrionLayer, open fix 56. Combat_Event: the ring above SerializeState (ext_api.h).
++void Combat_Event(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
++                  int16_t a4, int16_t a5, int16_t a6, int16_t a7) {
++    if (!g_combat_live) return;
++    CombatEventRecord& e = g_combat_events[g_combat_event_next % 1024];
++    e = {g_combat_event_next, g_combat_serial, type, {a0, a1, a2, a3, a4, a5, a6, a7}};
++    ++g_combat_event_next;
++}
++
+ // OrionLayer, open fix 57. How the last battle ended (ext_api.h).
+ CombatResultView g_combat_result = {};
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index f5ed22ba..2874ccb5 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -144,6 +144,42 @@ extern CombatResultView g_combat_result;
+ void Record_Combat_Result(int16_t star_idx, int16_t colony_pop_lost,
+                           int16_t winner, bool fought);
+ 
++/// OrionLayer, open fix 56. What happens in a battle, in the order the engine does it.
++///
++/// The original plays every effect inside a blocking loop and tells nobody;
++/// ext::Tick runs only where the battle waits for input or between AI steps,
++/// so a client watching snapshots sees almost none of it (work order 193
++/// §6: 1 beam picture of 9). Each hook in the combat code calls
++/// Combat_Event with values that already exist at that point — it computes
++/// nothing, draws no random number and never ticks — and the event goes into
++/// a ring the next snapshot drains ("CMEV"), numbered, so a client can play
++/// the battle after the fact and see a gap as a gap. Recorded only while a
++/// battle is live (open fix 52's gate): the bombardment that reuses
++/// Fire_Ship_ outside a battle (COMBAT::Tactical_Bombardment_) records
++/// nothing.
++enum CombatEventType : uint8_t {
++    CEV_BEAM_SHOT = 1,      // source, target, flag (1 missile), slot, weapon, result bits, past shields, absorbed
++    CEV_REFLECT = 2,        // reflector, shooter, past shields, absorbed (damage reflected onto the shooter)
++    CEV_BOMB = 3,           // source, target, slot, weapon, hits
++    CEV_SPECIAL = 4,        // source, target, flag, slot, weapon (the effect is the state that follows)
++    CEV_MISSILE_LAUNCH = 5, // missile, source, target, anti-missile, slot, type, quantity, speed
++    CEV_MISSILE_MERGE = 6,  // missile, into, quantity after
++    CEV_MISSILE_HIT = 7,    // missile, source, target, type, quantity, past shields, absorbed, anti-missile
++    CEV_FIGHTER_PASS = 8,   // missile, source, target, type, passes left, past shields, absorbed
++    CEV_MISSILE_GONE = 9,   // missile, type, quantity, x, y (every end: hit, shot down, merged, dissipated)
++    CEV_MOVE = 10,          // unit, from x, from y, to x, to y, cost, teleport (recorded as the move starts)
++    CEV_ROTATE = 11,        // unit, from facing, to facing, step
++    CEV_DESTROY = 12,       // unit, death state, status before, owner, previous owner, x px, y px
++    CEV_RETREAT = 13,       // unit, x, y, owner, status (5: died while turning away)
++    CEV_BLAST_HIT = 14,     // source, unit, blast kind, past shields, absorbed
++    CEV_WEB_DAMAGE = 15,    // unit, past shields, absorbed
++    CEV_CAPTURE = 16,       // attacker, defender, result (0x32 taken, 0x31 destroyed, 0x33 failed), marines, defenders left, owner after
++    CEV_RAID = 17,          // attacker, target, raiders sent, raiders back, defenders left, damage
++};
++void Combat_Event(uint8_t type, int16_t a0 = 0, int16_t a1 = 0, int16_t a2 = 0,
++                  int16_t a3 = 0, int16_t a4 = 0, int16_t a5 = 0,
++                  int16_t a6 = 0, int16_t a7 = 0);
++
+ struct CombatGuard {
+     ScreenOverride screen;
+     bool previous;
+diff --git a/src/game/cmbtfir2.cpp b/src/game/cmbtfir2.cpp
+index d6f0f620..a7411dba 100644
+--- a/src/game/cmbtfir2.cpp
++++ b/src/game/cmbtfir2.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 56. The battle's events.
++#endif
+ 
+ #include "game/strbuild.h"
+ 
+@@ -1558,6 +1561,9 @@ namespace CMBTFIR2 {
+ 
+         sound::Fadeout_Sound_(sound_handle, 10);
+ 
++#ifdef ORION2RE_EXT
++        ext::Combat_Event(ext::CEV_RAID, attacker_idx, target_idx, *raiders, target_raiders, marines, total_damage);  // OrionLayer, open fix 56.
++#endif
+         target->marine_count = (int8_t)marines;
+         *raiders = target_raiders;
+ 
+@@ -1681,6 +1687,9 @@ namespace CMBTFIR2 {
+             result_msg_id = 0x33;
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext::Combat_Event(ext::CEV_CAPTURE, attacker_idx, defender_idx, result_msg_id, attacker_marines, defender_marines_current, defender->owner);  // OrionLayer, open fix 56.
++#endif
+         KEN::Ken_Get_Text_Message_(result_msg_id, tmp_buf, sizeof(tmp_buf));
+         strlcat(msg_buf, tmp_buf, sizeof(msg_buf));
+ 
+diff --git a/src/game/cmbtfire.cpp b/src/game/cmbtfire.cpp
+index 8fa08ab7..f747a30d 100644
+--- a/src/game/cmbtfire.cpp
++++ b/src/game/cmbtfire.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 56. The battle's events.
++#endif
+ 
+ namespace {
+     int16_t Apply_Ordnance_Bonus_(int16_t damage, int16_t owner) {
+@@ -275,6 +278,9 @@ namespace CMBTFIRE {
+             new_owner = (int8_t)MOX::_combat_attacker_player;
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext::Combat_Event(ext::CEV_DESTROY, ship_idx, death_state, ship.unit_status, ship.owner, ship.previous_owner, draw_x, draw_y);  // OrionLayer, open fix 56.
++#endif
+         ship.is_retreating = 0;
+         Retarget_Missiles_Aimed_At_(ship_idx);
+         COMBAT1::Remove_Continuing_Effect_Specials_(ship_idx);
+@@ -1330,6 +1336,9 @@ namespace CMBTFIRE {
+                                                 );
+                                                 primary_damage_total += primary_damage;
+                                                 secondary_damage_total += secondary_damage;
++#ifdef ORION2RE_EXT
++                                                ext::Combat_Event(ext::CEV_REFLECT, target_ship_idx, source_ship_idx, primary_damage, secondary_damage);  // OrionLayer, open fix 56.
++#endif
+                                             }
+ 
+                                             beam_fx_entries[beam_fx_count].result_flags |= (fire_result_flags & 1);
+@@ -1350,6 +1359,9 @@ namespace CMBTFIRE {
+ 
+                                             beam_fx_entries[beam_fx_count].is_damage_entry = 0;
+                                             total_hits_on_target += beam_hit_offset_x;
++#ifdef ORION2RE_EXT
++                                            ext::Combat_Event(ext::CEV_BEAM_SHOT, source_ship_idx, target_ship_idx, (int16_t)flag, weapon_slot_idx, weapon->weapon_id, fire_res, beam_hit_offset_x, beam_hit_offset_y);  // OrionLayer, open fix 56.
++#endif
+                                             weapon->shots_left--;
+                                             break;
+                                         }
+@@ -1368,11 +1380,17 @@ namespace CMBTFIRE {
+                                         case WEAPON_TYPE_BOMB: {
+                                             int16_t bomb_hits = Fire_Bomb_(source_ship_idx, target_ship_idx, weapon_slot_idx);
+                                             total_hits_on_target = bomb_hits;
++#ifdef ORION2RE_EXT
++                                            ext::Combat_Event(ext::CEV_BOMB, source_ship_idx, target_ship_idx, weapon_slot_idx, weapon->weapon_id, bomb_hits);  // OrionLayer, open fix 56.
++#endif
+                                             weapon->shots_left = 0;
+                                             weapon->ammo--;
+                                             break;
+                                         }
+                                         case WEAPON_TYPE_SPECIAL: {
++#ifdef ORION2RE_EXT
++                                            ext::Combat_Event(ext::CEV_SPECIAL, source_ship_idx, target_ship_idx, (int16_t)flag, weapon_slot_idx, weapon->weapon_id);  // OrionLayer, open fix 56.
++#endif
+                                             Fire_Special_Weapon_(source_ship_idx, sx, sy, target_ship_idx, weapon_slot_idx, flag);
+                                             if (weapon->weapon_id == WEAPON_STASIS_FIELD ||
+                                                 weapon->weapon_id == WEAPON_BLACK_HOLE_GENERATOR) {
+diff --git a/src/game/cmbtmis.cpp b/src/game/cmbtmis.cpp
+index 4600b183..60b2679a 100644
+--- a/src/game/cmbtmis.cpp
++++ b/src/game/cmbtmis.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 56. The battle's events.
++#endif
+ 
+ namespace CMBTMIS {
+     int8_t _missile_initiative = -1;
+@@ -410,6 +413,9 @@ namespace CMBTMIS {
+                     sys_dmg_accum += sys_dmg;
+                 }
+ 
++#ifdef ORION2RE_EXT
++                ext::Combat_Event(ext::CEV_FIGHTER_PASS, missile_idx, source_unit_idx, target_unit_idx, type, missile->fighter_count, dmg_accum, sys_dmg_accum);  // OrionLayer, open fix 56.
++#endif
+                 if (MOX::_apply_damage_to_planet == 1 && MOX::_super_fast_flag == 0) {
+                     Fighter_Combat_SFX_(missile_idx, x, y, dmg_accum, sys_dmg_accum);
+                 }
+@@ -492,6 +498,9 @@ namespace CMBTMIS {
+                     loop_count++;
+                 } while (loop_count < missile->quantity);
+             }
++#ifdef ORION2RE_EXT
++            ext::Combat_Event(ext::CEV_MISSILE_HIT, missile_idx, source_unit_idx, target_unit_idx, type, missile->quantity, dmg_accum, sys_dmg_accum, is_anti_missile_rocket);  // OrionLayer, open fix 56.
++#endif
+             Kill_Missile_(missile_idx);
+         }
+ 
+@@ -1029,6 +1038,9 @@ namespace CMBTMIS {
+     }
+ 
+     void __cdecl Kill_Missile_(int16_t missile_idx) {
++#ifdef ORION2RE_EXT
++        ext::Combat_Event(ext::CEV_MISSILE_GONE, missile_idx, MOX::_missile[missile_idx].type, MOX::_missile[missile_idx].quantity, MOX::_missile[missile_idx].x, MOX::_missile[missile_idx].y);  // OrionLayer, open fix 56.
++#endif
+         // Clear the missile data structure
+         memset(&MOX::_missile[missile_idx], 0, sizeof(s_missile));
+ 
+@@ -1254,6 +1266,9 @@ namespace CMBTMIS {
+                 target_coords_y = MOX::_missile[target_idx].y;
+             }
+ 
++#ifdef ORION2RE_EXT
++            ext::Combat_Event(ext::CEV_MISSILE_LAUNCH, missile_idx, source_idx, target_idx, is_anti_rocket, weapon_slot, MOX::_missile[missile_idx].type, MOX::_missile[missile_idx].quantity, MOX::_missile[missile_idx].speed);  // OrionLayer, open fix 56.
++#endif
+             if (MOX::_apply_damage_to_planet == 1 && (MOX::_super_fast_flag == 0 ||
+                (MOX::_missile[missile_idx].type != WEAPON_PROTON_TORPEDO &&
+                 MOX::_missile[missile_idx].type != WEAPON_DRAGON_BREATH))) {
+@@ -1273,6 +1288,9 @@ namespace CMBTMIS {
+                         i != missile_idx) {
+ 
+                         MOX::_missile[i].quantity += MOX::_missile[missile_idx].quantity;
++#ifdef ORION2RE_EXT
++                        ext::Combat_Event(ext::CEV_MISSILE_MERGE, missile_idx, i, MOX::_missile[i].quantity);  // OrionLayer, open fix 56.
++#endif
+                         Kill_Missile_(missile_idx);
+                     }
+                 }
+diff --git a/src/game/cmbtmov1.cpp b/src/game/cmbtmov1.cpp
+index a27f7142..5b24df1c 100644
+--- a/src/game/cmbtmov1.cpp
++++ b/src/game/cmbtmov1.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 56. The battle's events.
++#endif
+ 
+ namespace CMBTMOV1 {
+     namespace {
+@@ -81,6 +84,9 @@ void __cdecl Rotate_Ship_(int16_t ship_idx, int16_t target_facing, int16_t scree
+     saved_dont_draw = MOX::_dont_draw_ship;
+     MOX::_dont_draw_ship = ship_idx;
+ 
++#ifdef ORION2RE_EXT
++    if (ship->facing_dir != target_facing) ext::Combat_Event(ext::CEV_ROTATE, ship_idx, ship->facing_dir, target_facing, step);  // OrionLayer, open fix 56.
++#endif
+     while (ship->facing_dir != target_facing && ship->unit_status == 0) {
+         timer::Mark_Time_();
+         
+@@ -278,6 +284,9 @@ int16_t __cdecl Move_Cost_(int16_t ship_idx, int16_t target_x, int16_t target_y)
+             if (Teleporter_Destination_In_Range_(
+                     ship_idx, dest_x_px, dest_y_px)) {
+                 CMBTFIR2::Set_Teleporter_Used_(ship_idx);
++#ifdef ORION2RE_EXT
++                ext::Combat_Event(ext::CEV_MOVE, ship_idx, ship->x, ship->y, dest_x, dest_y, 0, 1);  // OrionLayer, open fix 56.
++#endif
+                 Draw_Teleporting_Ship_(ship_idx, dest_x, dest_y);
+                 skip_normal_move = true;
+             }
+@@ -363,6 +372,9 @@ int16_t __cdecl Move_Cost_(int16_t ship_idx, int16_t target_x, int16_t target_y)
+                 Rotate_Ship_(ship_idx, facing_dir, cur_x_px - MOX::_cur_combat_x * 20, cur_y_px - MOX::_cur_combat_y * 20);
+             }
+ 
++#ifdef ORION2RE_EXT
++            if (ship->unit_status == 0 && test_move_result == 0 && (start_x_px != dest_x_px || start_y_px != dest_y_px)) ext::Combat_Event(ext::CEV_MOVE, ship_idx, (int16_t)(start_x_px / 20), (int16_t)(start_y_px / 20), (int16_t)(dest_x_px / 20), (int16_t)(dest_y_px / 20), move_cost, 0);  // OrionLayer, open fix 56.
++#endif
+             if (ship->unit_status == 0 && test_move_result == 0 && (start_x_px != dest_x_px || start_y_px != dest_y_px)) {
+                 cur_x_px = start_x_px;
+                 cur_y_px = start_y_px;
+diff --git a/src/game/cmbtspec.cpp b/src/game/cmbtspec.cpp
+index d5039434..81f2e414 100644
+--- a/src/game/cmbtspec.cpp
++++ b/src/game/cmbtspec.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 56. The battle's events.
++#endif
+ 
+ #include <cstddef>
+ 
+@@ -1965,6 +1968,9 @@ namespace CMBTSPEC {
+                 facing = CMBTFIRE::Facing_Shield_(facing);
+                 CMBTFIRE::Apply_Ship_Damage_(ship_idx, &damage_out, &struct_damage, facing, 0, 0, 0, 0, 0);
+             }
++#ifdef ORION2RE_EXT
++            ext::Combat_Event(ext::CEV_BLAST_HIT, source_ship_idx, ship_idx, sfx_type, damage_out, struct_damage);  // OrionLayer, open fix 56.
++#endif
+ 
+             if (MOX::_apply_damage_to_planet == 1 && MOX::_super_fast_flag == 0) {
+                 BEAMS::Add_Damage_Indicator_For_Ship_(
+diff --git a/src/game/combat1.cpp b/src/game/combat1.cpp
+index db3db3d9..f9980c78 100644
+--- a/src/game/combat1.cpp
++++ b/src/game/combat1.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 56. The battle's events.
++#endif
+ 
+ #include "game/boarding.h"
+ 
+@@ -1619,6 +1622,9 @@ namespace COMBAT1 {
+             CMBTDRW1::Draw_Retreating_Ship_(ship_idx);
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext::Combat_Event(ext::CEV_RETREAT, ship_idx, ship->x, ship->y, ship->owner, ship->unit_status);  // OrionLayer, open fix 56.
++#endif
+         ship->unit_status = 5;
+         ship->is_retreating = 2;
+         CMBTFIRE::Retarget_Missiles_Aimed_At_(ship_idx);
+diff --git a/src/game/combinit.cpp b/src/game/combinit.cpp
+index 8d097743..c7e962f1 100644
+--- a/src/game/combinit.cpp
++++ b/src/game/combinit.cpp
+@@ -2989,6 +2989,9 @@ void __cdecl Plasma_Web_Damage_(int16_t owner_idx) {
+             BEAMS::Draw_Damage_Message_Queue_Until_Done_();
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext::Combat_Event(ext::CEV_WEB_DAMAGE, i, total_damage, struct_damage_total);  // OrionLayer, open fix 56.
++#endif
+         int16_t cause = CMBTFIRE::Is_Combat_Ship_Dead_(i);
+         if (cause != 0) {
+             CMBTFIRE::Destroy_Ship_(i, ship->x * 20, ship->y * 20, cause);

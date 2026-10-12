@@ -1,0 +1,24 @@
+OrionLayer open fix 71, amended — a battle command's action waits nothing either
+================================================================================
+
+Work order 212 (Part C, the measurement of 210's four cases again). orion2re on
+`orionlayer-local`, on top of open fix 77. Every line under ORION2RE_EXT.
+
+Fix 71 keeps the first wait after an input poll: in the idle battle it is
+the input loop's own tick. But after a battle command is taken (CEV_COMMAND
+with result 0, open fix 58) the action runs at once, and its first wait is
+an animation frame — 110 ms of the Stellar Converter's first frame, kept
+before this. A taken command now clears the poll mark.
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 37bfb30f..cac0d38b 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2462,6 +2462,7 @@ void Combat_Event(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
+     e = {g_combat_event_next, g_combat_serial, type, {a0, a1, a2, a3, a4, a5, a6, a7}};
+     ++g_combat_event_next;
+     if (type != CEV_SOUND && type != CEV_SOUND_CHANGE) g_battle_ticks = 0;  // OrionLayer, open fix 79. The ticks count from this event.
++    if (type == CEV_COMMAND && a1 == 0) g_polled_since_wait = false;  // OrionLayer, open fix 71, amended. A command taken: its action's first wait is a frame of it, not the input loop's.
+ }
+ 
+ // OrionLayer, open fix 79. The battle's sounds as events (ext_api.h).

@@ -1,0 +1,45 @@
+Engine: Select Race records _old_race before Racial_Option_Screen_ (open fix 5).
+
+STATUS: APPLIED, orion2re 6598052c on orionlayer-local (committed as found
+by work order 126, part A, 17 September 2026; row 3 of README's orion2re
+table). This file is that commit's diff byte for byte (`git diff
+6598052c~1 6598052c`, index line included). Filed by work order 192
+(29 September 2026): until then the fix had no patch file, so README's
+table named it and tools/version_check.py could not require it.
+
+PROOF (work order 192): the diff applies with `patch -p1 --dry-run`, no
+offset and no fuzz, both to its parent on orionlayer-local and to the
+upstream base cf4d9617; on the tip 96da4c4d it reverses (offset 21, from
+the later commits in racesel.cpp).
+
+It is applied, from ~/orion2re, with:
+
+    patch -p1 < ~/orionlayerv3/doc/ext_select_race_old_race.patch
+
+and a rebuild. It comes back off with `git revert 6598052c` or
+`patch -R -p1`, and a rebuild.
+
+WHAT IT IS FOR
+
+    Accepting a Custom Race could crash the Flag Screen with
+    "racesel.lbx [entry 138] could not be found": Draw_Flag_Screen_
+    computes the entry as race_index + _old_race * MAX_PLAYERS + 0x22,
+    and the stock-race branch of Race_Selection_Screen_ entered
+    Racial_Option_Screen_ with _old_race still at the displayed
+    portrait (13, the Custom Race one) — 0 + 13 * 8 + 34 = 138. The one
+    line sets it to the race chosen (0-12), as the lastrace.rac branch
+    already does. There is no marker comment: the line itself is the
+    marker, and nothing else in orion2re writes it.
+
+diff --git a/src/game/racesel.cpp b/src/game/racesel.cpp
+index 25ebccb1..445c3ec0 100644
+--- a/src/game/racesel.cpp
++++ b/src/game/racesel.cpp
+@@ -299,6 +299,7 @@ int16_t Race_Selection_Screen_(s_player* plr) {
+                         struct_::Copy_Structure_(plr->traits, _race_specials[i], sizeof(plr->traits));
+                         plr->race = (uint8_t)i;
+                         strlcpy(plr->race_name, MOX::_race_names[i], sizeof(plr->race_name));
++                        _old_race = static_cast<int16_t>(i);
+                         fields::Deactivate_Auto_Function_();
+                         fields::Clear_Fields_();
+                         if (Racial_Option_Screen_(plr) == 1) {

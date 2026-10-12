@@ -1,0 +1,541 @@
+"""What the galaxy map's two movable boxes show, and whether HD may show it.
+
+No pygame here, so every rule below is a plain function a test can call.
+
+IDENTITY (Data's decision A2, brief 111; work order 231 D). Since work
+order 231 the WIRE names the box (`wire_identity`): the system window's
+star is open fix 90's SYSW (`_moveable_box[0].id`), the fleet box's stack
+open fix 20's FSEL (`_fleet_box_ship_stack`, its chain from the stack's
+head node) and its place the map icon of that head node, where
+`Set_Popup_Draw_XY_` puts every fleet box (mainscr.cpp:1817; F1 / F2 take
+the same icon, `Cycle_Ship_Icons_` :3628-3635). So a box the ENGINE opened
+— F1, F2, F5, F6, the window again after the colony screen — is named as
+one HD opened. Without those blocks (an older engine) HD takes the name
+from its own last map click that went out, as before. Either way HD draws
+a box ONLY when the live field list agrees with the name:
+
+  * the window sits where `MAINSCR::Popup_XY_` (mainscr.cpp:1060-1082)
+    puts a box for that star or icon — the quadrant rule — and a fleet
+    box is then clamped into the map by
+    `FLEETPOP::Set_Fleet_Box_Data_Dimensions_` (fleetpop.cpp:1441-1452).
+    Measured live on three boxes (brief 110 Stop 1, run 113);
+  * system window: every planet field lies on the orbit ellipse of one
+    planet of that star, and every planet has one. A field is centred on
+    the window corner plus (0x0D + 0xA1, 0x2F + 0x5A) plus
+    `GEO::Get_Orbit_Display_X_Y_` (sys.cpp:1829-1834 with the offsets of
+    `Wrapper_For_Normal_System_Fields_`, mainscr.cpp:4391-4406), and that
+    position lies on `GEO::_orbit_consts[orbit + 1]` (geo.cpp:5-13). The
+    engine sorts the display slots by their y (`qsort_sys_disp_`,
+    sys.cpp:172 and :316), so the field ORDER says nothing about which
+    planet it is; the ellipse does, with no angle and no stardate. Live on
+    Yian: 1.015 on orbit 3 and 0.989 on orbit 4, and the orbit-3 field is
+    the one that opened "Yian Prime is an outpost planet";
+  * fleet box: one icon field per ship, at most nine
+    (fleetpop.cpp:648-650), 0x35 square (:164). The stack and its cell
+    order come off the wire, never out of `_ship[]` (open fix 20 revision
+    2, brief 119): FLEETPOP builds the cells along the chain from the
+    stack's head node (fleetpop.cpp:643-676), and
+    `SHIPSTAK::Sort_Ships_In_Stack_` (shipstak.cpp:261-278) has rewritten
+    which ship sits in which node with a qsort that is not stable. So a
+    box is drawn only while the FSEL block names an open box, and its
+    chain must be one stack of the snapshot's ships holding the clicked
+    one. The first visible cell is `first_visible_row * 3`
+    (fleetpop.cpp:643), on the wire since open fix 59 ("FBSC", work order
+    197 A2): a stack past nine ships is drawn from that row, and without
+    the block such a stack is not drawn at all — HD does not guess which
+    rows the engine shows.
+
+A mismatch draws nothing and says why. WHY DECISION 65'S GUARD HOLDS for a
+box HD did not open: the guard steps aside only while HD DRAWS the fleet
+box (`boxdraw.orders_ok`), and HD draws it only from the wire — the stack
+and its cells off FSEL's chain, the blue cells off FSEL's selected bytes,
+the box where the engine has it. So a star click is an order only while
+the player sees exactly the ships it moves, whoever opened the box; a box
+the name does not fit (a block missing, a chain that is not one stack, a
+box somewhere else) is not drawn, and the guard refuses the star click as
+it always did.
+
+THE TEXTS ARE THE ORIGINAL'S (HESTRNGS, `core/hestrings.py`):
+  * system title: H 0x16A "Star System %s" when the system may be viewed
+    (visited or Galactic Lore, not a black hole: `SYS::Ok_To_View_System_`,
+    sys.cpp:71-83) or when a colony there belongs to a player we have met
+    (`HAROLD::Contact_With_One_Colony_`); else H 0x16B (sys.cpp:691-707);
+  * an unviewable system's text: H (0x0F + spectral class)
+    (`Print_Empty_System_Data_`, sys.cpp:176, black hole 0x15);
+  * a viewable system with a wormhole: H 0x16C "Wormhole links %s" if its
+    far end is visited, else H 0x16D (sys.cpp:740-780);
+  * fleet title: H 0x66 "%s Fleet" with the race name for a player,
+    the ship's own name in capitals for a monster (fleetpop.cpp:615-627);
+  * fleet status (fleetpop.cpp:1094-1150 with
+    `Get_Absolute_Location_Scan_Info_`): H 0x67 "Orbiting %s" while
+    parked, H 0x69 / 0x6A "%d turn(s) to %s" on the way to a visited
+    star, H 0x6B / 0x6C "ETA %d turn(s)" to an unvisited one, H 0x68 for
+    Antares. `turns_left` carries no 20000 condition here, so on the turn
+    of the order the box already says "3 turns to" — the "eta N" label on
+    the MAP is the one that waits a turn (ships.cpp:472-475, run 114).
+    DEVIATION: the original prints this line only while no icon is
+    selected and nothing is hovered; HD does not follow that, and prints
+    the stack's own status whenever it prints no hover text;
+  * the HOVER TEXT (work order 196 H, Data's item 16 — TRANSCRIBED, the
+    original does it): with a ship of the box selected and a star under the
+    pointer, the line is the move to that star before it is ordered
+    (fleetpop.cpp:1063-1150, `hover_status`) — "%d turn(s) to %s" / "ETA %d
+    turn(s)", or the refusal: a black hole, an immobile fleet, "%d
+    parsec(s) out of range" (with the star's name when visited), flux; from
+    FMOV's verdict for that star (open fix 48), never recomputed.
+"""
+from dataclasses import dataclass
+
+from core import hestrings
+from core import mapcoords as mc
+from core.structs import colony as colony_struct
+from core.structs import planet as planet_struct
+from core.structs import player as player_struct
+from core.structs import ship as ship_struct
+from core.structs import star as star_struct
+from core import systemwindow
+from screens.galaxy_map import ships as ship_icons
+from screens.galaxy_map import sysfleets
+from screens.galaxy_map.boxscroll import FLEET_ICONS_MAX, scroll_window  # noqa: F401
+
+#: GEO::_orbit_consts, geo.cpp:5-13 — ellipse radii in TENTHS of a pixel;
+#: orbit n uses row n + 1 (geo.cpp:367-368).
+ORBIT_CONSTS = ((225, 118), (464, 242), (704, 372), (949, 502),
+                (1199, 632), (1423, 751), (1650, 873))
+#: The planet field's centre relative to the window corner, sys.cpp:1829-1834.
+ORBIT_CENTRE = (0x0D + 0xA1, 0x2F + 0x5A)
+#: Largest distance from 1.0 a planet field may sit off its ellipse. The
+#: engine rounds a position to whole pixels and the field to an integer
+#: half-diameter; the live fits were 0.989 and 1.015.
+ELLIPSE_TOLERANCE = 0.2
+#: A planet's field is square and no larger than this (`_rot_plan_dim`,
+#: 0x13 to 0x18, harold.cpp:1491-1494).
+PLANET_FIELD_MAX = 30
+FLEET_ICON_SPAN = 0x35          # fleetpop.cpp:164, x_end - x
+PLANET_TYPE_ASTEROID = 1        # orion2_consts.h:402
+H_SYSTEM, H_UNEXPLORED = 0x16A, 0x16B
+H_WORMHOLE, H_WORMHOLE_UNKNOWN = 0x16C, 0x16D
+H_STAR_CLASS = 0x0F
+H_FLEET, H_ORBITING, H_ANTARES = 0x66, 0x67, 0x68
+H_TURN, H_TURNS, H_ETA_TURN, H_ETA_TURNS = 0x69, 0x6A, 0x6B, 0x6C
+#: The hover's refusals, fleetpop.cpp:1122-1150.
+H_BLACK_HOLE, H_IMMOBILE, H_FLUX = 0x6D, 0x6E, 0x73
+H_RANGE_TURN, H_RANGE_TURNS, H_RANGE_ZERO, H_RANGE_UNKNOWN = \
+    0x6F, 0x70, 0x71, 0xEB
+
+
+@dataclass
+class Identity:
+    kind: str                   # "system" or "fleet"
+    star: int = -1
+    ship: int = -1              # the clicked icon's ship
+    icon: tuple = None          # its native (x, y) when clicked
+
+
+def remember(screen, plan, icons, order=False):
+    """Keep the click the game was sent as the next box's identity.
+
+    A star click sent while HD draws the fleet box (`order`, decision 65's
+    amendment) is a move order, not a system window: the game keeps the
+    fleet box open for whatever it leaves in it (mainscr_main.cpp:480-530),
+    so the fleet identity stays. Measured the hard way in run 119: the
+    order was refused (out of range), the box stayed, and HD had renamed
+    it a system window and stopped drawing it."""
+    if plan.send is None:
+        return
+    if plan.what == "star" and order:
+        return
+    if plan.what == "star":
+        screen._box_identity = Identity("system", star=plan.target)
+    elif plan.what == "icon":
+        icon = icons[plan.target]
+        nodes = ship_icons.wire_nodes(getattr(screen, "_state", None)) or []
+        ship = nodes[icon.node_idx] if 0 <= icon.node_idx < len(nodes) else -1
+        screen._box_identity = Identity("fleet", ship=ship,
+                                        icon=(icon.x, icon.y))
+
+
+def wire_identity(state, kind):
+    """The box's name from the wire, or None (an older engine, or no such
+    box open): "system" from SYSW's star, "fleet" from FSEL's stack — its
+    head node's ship and the map icon of that node."""
+    if kind == "system":
+        sysw = getattr(state, "system_window", None)
+        if sysw and sysw.get("star", -1) >= 0:
+            return Identity("system", star=sysw["star"])
+        return None
+    sel = getattr(state, "fleet_selection", None)
+    if not sel or sel.get("stack", -1) < 0 or not sel.get("chain"):
+        return None
+    head = sel["chain"][0]
+    if not 0 <= head < len(sel["ships"]):
+        return None
+    icon = next((i for i in getattr(state, "ship_icons", None) or []
+                 if i.node_idx == head), None)
+    if icon is None:
+        return None
+    return Identity("fleet", ship=sel["ships"][head], icon=(icon.x, icon.y))
+
+
+def popup_xy(index, x, y, w, h):
+    """MAINSCR::Popup_XY_: (253, 200) itself falls to the last branch."""
+    tall = h if index == 0 else 0
+    if x < 253 and y < 200:
+        return 527 - w, 421 - tall
+    if x < 253 and y > 200:
+        return 527 - w, 22
+    if x > 253 and y < 200:
+        return 22, 421 - tall
+    return 22, 22
+
+
+def fleet_xy(icon_x, icon_y, w, h):
+    """Set_Popup_Draw_XY_(2, icon) then the clamp into the map."""
+    x, y = popup_xy(2, icon_x - 21, icon_y - 21, w, h)
+    if x + w > mc.MAP_RIGHT:
+        x = mc.MAP_RIGHT - w
+    if y + h > mc.MAP_BOTTOM:
+        y = mc.MAP_BOTTOM - h
+    return x, y
+
+
+def _size(box):
+    """The box's width and height as the engine clamps it: the fleet box's
+    height counts its order buttons (`Set_Added_Button_Stuff_` adds their
+    heights, `Set_Fleet_Box_Data_Dimensions_` clamps with the sum,
+    fleetpop.cpp:813-856, :1440-1453); their fields lie under the whole-
+    window field, each inclusive of its last row (work order 229, live:
+    a box at Sol 32 px too low without its Transport button)."""
+    x0, y0, x1, y1 = box.rect
+    extra = sum(f.y_end - f.y + 1 for f in box.added_buttons())
+    return x1 - x0, y1 - y0 + extra
+
+
+def _msg(text, index, *values):
+    template = text.message(index) if text is not None else None
+    if template is None:
+        return ""
+    return hestrings.printf(template, *values) if values else template
+
+
+#: The fleet bar's row, native px below the window's corner: an icon's top
+#: is (0x19 - h) / 2 + 0xEC (`Get_System_Display_Ship_Icon_XY_`, sys.cpp:
+#: 2154-2157), at or below 0xEC for every picture up to 0x19 high; the
+#: lowest planet field's top is the orbit centre 0x5A + 0x2F plus the
+#: outermost half-axis 87.3 less half a planet, about 212 — above it.
+FLEET_ROW_TOP = 0xEC
+
+
+def planet_fields(box, ship_fields=()):
+    """The system window's planet fields: square hidden fields straight
+    after the close button and the title strip (sys.cpp:1781-1843). The
+    fleet bar's fields follow them (:1845-1870) and are hidden fields too;
+    they are not planets — by SYSW's slots (open fix 90) where the engine
+    sends them, by their row in any case."""
+    out = []
+    for f in box.fields[2:]:
+        span = f.x_end - f.x
+        if f.field_type != 7 or span != f.y_end - f.y \
+                or span > PLANET_FIELD_MAX or f.index in ship_fields \
+                or f.y - box.rect[1] >= FLEET_ROW_TOP:
+            break
+        out.append(f)
+    return out
+
+
+def match_planets(box, planets, ship_fields=()):
+    """{field index: planet record} by orbit ellipse, or None."""
+    x0, y0 = box.rect[:2]
+    ox, oy = x0 + ORBIT_CENTRE[0], y0 + ORBIT_CENTRE[1]
+    matched = {}
+    for f in planet_fields(box, ship_fields):
+        cx = f.x + (f.x_end - f.x) // 2
+        cy = f.y + (f.y_end - f.y) // 2
+        best = None
+        for p in planets:
+            rx, ry = (v / 10.0 for v in ORBIT_CONSTS[p["orbit"] + 1])
+            err = abs(((cx - ox) / rx) ** 2 + ((cy - oy) / ry) ** 2 - 1.0)
+            if best is None or err < best[0]:
+                best = (err, p)
+        if best is None or best[0] > ELLIPSE_TOLERANCE:
+            return None
+        # WHERE THE ENGINE PUTS IT, off the orbit centre (work order 223):
+        # the drawing places the planet there, not where HD would compute.
+        matched[f.index] = dict(best[1], at=(cx - ox, cy - oy))
+    if sorted(p["planet"] for p in matched.values()) != \
+            sorted(p["planet"] for p in planets):
+        return None
+    return matched
+
+
+def star_planets(state, star):
+    """The star's planets that get a field: not empty, not an asteroid."""
+    raws = getattr(state, "planets_raw", None) or []
+    out = []
+    for slot, index in enumerate(star_struct.planet_indices(star)):
+        if not 0 <= index < len(raws):
+            continue
+        p = planet_struct.parse(raws[index])
+        if p.planet_type == PLANET_TYPE_ASTEROID:
+            continue
+        out.append({"planet": index, "slot": slot, "orbit": int(p.orbit),
+                    "size": int(p.size), "climate": int(p.climate),
+                    "type": int(p.planet_type),
+                    "colony": int(p.colony_index)})
+    return out
+
+
+def star_belts(state, star):
+    """The orbits of the star's asteroid belts — they get no field, the
+    window draws them (sys.cpp:553-557)."""
+    raws = getattr(state, "planets_raw", None) or []
+    out = []
+    for index in star_struct.planet_indices(star):
+        if 0 <= index < len(raws):
+            p = planet_struct.parse(raws[index])
+            if p.planet_type == PLANET_TYPE_ASTEROID:
+                out.append(int(p.orbit))
+    return out
+
+
+def _local(state):
+    raws = getattr(state, "player_raw", None) or []
+    n = getattr(state, "player_num", 0)
+    return player_struct.parse(raws[n]) if 0 <= n < len(raws) else None
+
+
+def _contact(state, planets, local):
+    raws = getattr(state, "colonies_raw", None) or []
+    met = player_struct.contacts(local) if local is not None else []
+    me = getattr(state, "player_num", 0)
+    for p in planets:
+        if 0 <= p["colony"] < len(raws):
+            owner = colony_struct.parse(raws[p["colony"]]).owner
+            if owner == me or (0 <= owner < len(met) and met[owner]):
+                return True
+    return False
+
+
+def system_model(state, ident, box, text, omniscient):
+    """(model, None) or (None, reason)."""
+    if ident is None or ident.kind != "system":
+        return None, "no HD star click to name this window"
+    stars = getattr(state, "stars", None) or []
+    if not 0 <= ident.star < len(stars):
+        return None, f"star {ident.star} is not in the snapshot"
+    star = stars[ident.star]
+    w, h = _size(box)
+    nx, ny = mc.galaxy_to_native(star.x, star.y, state)
+    want = popup_xy(0, nx, ny, w, h)
+    if want != tuple(box.rect[:2]):
+        return None, (f"window at {tuple(box.rect[:2])}, {star.name} would "
+                      f"put it at {want}")
+    texts = window_texts(state, ident.star, text, omniscient)
+    planets = star_planets(state, star)
+    sysw = window_block(state, ident.star)
+    ships = systemwindow.ship_fields(state) if sysw else set()
+    matched = match_planets(box, planets, ships) if texts["viewable"] else {}
+    if matched is None:
+        return None, f"the planet fields do not fit {star.name}'s orbits"
+    # THE FLEET BAR (work order 231 C, Data's decision 3): the slots SYSW
+    # sends for this window, each whose field is one of the window's own.
+    # An unviewable window draws no bar, but its fields are there and a
+    # click on one is the original's (sys.cpp:692-731 return before
+    # `Draw_System_Ship_Icons_`; the fields, :1845-1870, do not ask).
+    fleets = sysfleets.entries(sysw["ships"], box.fields) if sysw else []
+    model = dict(texts, star=ident.star, name=star.name, planets=[],
+                 close=box.close.index if box.close is not None else None,
+                 belts=[], fleets=fleets,
+                 nodes={f.index: sysw["ships"][owner]["ship"]
+                        for owner, f in fleets})
+    if not model["viewable"]:
+        return model, None
+    for index, p in sorted(matched.items(), key=lambda kv: kv[1]["orbit"]):
+        model["planets"].append(dict(p, field=index))
+    model["belts"] = star_belts(state, star)
+    return model, None
+
+
+def window_block(state, star):
+    """SYSW (open fix 90) when it describes the window of `star`, else
+    None: a block about another star is another moment's."""
+    sysw = getattr(state, "system_window", None)
+    return sysw if sysw and sysw["star"] == star else None
+
+
+def window_texts(state, star_index, text, omniscient):
+    """The system window's words and whether its system may be viewed —
+    ONE rule for the galaxy map's window and the combat target window
+    (work order 228 B; both are `Draw_System_Display_Popup_`'s,
+    sys.cpp:679-780): {"kind", "viewable", "title", "body", "wormhole"}."""
+    stars = getattr(state, "stars", None) or []
+    star = stars[star_index]
+    me = getattr(state, "player_num", 0)
+    viewable = (not star_struct.is_black_hole(star)
+                and (star_struct.visited_by(star, me) or omniscient))
+    out = {"kind": "system", "viewable": viewable, "body": "",
+           "wormhole": ""}
+    if viewable or _contact(state, star_planets(state, star), _local(state)):
+        out["title"] = _msg(text, H_SYSTEM, star.name)
+    else:
+        out["title"] = _msg(text, H_UNEXPLORED)
+    if not viewable:
+        out["body"] = _msg(text, H_STAR_CLASS + int(star.spectral_class))
+        return out
+    far = getattr(star, "wormhole_star_id", -1)
+    if far is not None and 0 <= far < len(stars):
+        if star_struct.visited_by(stars[far], me):
+            out["wormhole"] = _msg(text, H_WORMHOLE, stars[far].name)
+        else:
+            out["wormhole"] = _msg(text, H_WORMHOLE_UNKNOWN)
+    return out
+
+
+def wire_stack(state, ships):
+    """(nodes, ship indices) of the stack the engine's fleet box shows, in
+    its cell order, from the FSEL block; or (None, reason). The chain must
+    be one stack of `ships` — status below 3, same location, x, y and
+    owner (`SHIPSTAK::Find_Ship_Stacks_`, shipstak.cpp:45-100) — or the
+    block and the ships are not one moment."""
+    sel = getattr(state, "fleet_selection", None)
+    if not sel:
+        return None, "no FSEL block (open fix 20 revision 2 is not in)"
+    if sel["stack"] < 0 or not sel["chain"]:
+        return None, "the engine reports no fleet box open"
+    chain = sel["chain"]
+    stack = [sel["ships"][n] for n in chain]
+    if not all(0 <= i < len(ships) for i in stack):
+        return None, f"the wire's chain names ships {stack} beyond the snapshot"
+    head = ships[stack[0]]
+    key = (head.location, head.x, head.y, head.owner)
+    if any(ships[i].status >= ship_struct.STATUS_STACK_SKIP
+           or (ships[i].location, ships[i].x, ships[i].y, ships[i].owner)
+           != key for i in stack):
+        return None, f"the wire's chain {stack} is not one stack of the ships"
+    return (chain, stack), None
+
+
+def fleet_model(state, ident, box, text):
+    """(model, None) or (None, reason)."""
+    if ident is None or ident.kind != "fleet":
+        return None, "no HD icon click to name this box"
+    raws = getattr(state, "ships_raw", None) or []
+    if not 0 <= ident.ship < len(raws):
+        return None, f"ship {ident.ship} is not in the snapshot"
+    ships = [ship_struct.parse(r) for r in raws]
+    found, why = wire_stack(state, ships)
+    if found is None:
+        return None, why
+    chain, stack = found
+    start, scroll, why = scroll_window(state, len(stack))
+    if why is not None:
+        return None, why
+    if ident.ship not in stack:
+        return None, (f"the clicked ship {ident.ship} is not in the stack "
+                      f"{stack} the engine's box shows")
+    w, h = _size(box)
+    want = fleet_xy(ident.icon[0], ident.icon[1], w, h)
+    if want != tuple(box.rect[:2]):
+        return None, (f"box at {tuple(box.rect[:2])}, the clicked icon "
+                      f"would put it at {want}")
+    icon_fields = [f for f in box.fields if f.field_type == 7
+                   and f.x_end - f.x == FLEET_ICON_SPAN
+                   and f.y_end - f.y == FLEET_ICON_SPAN]
+    # FLEETPOP adds a field for each VISIBLE icon only (fleetpop.cpp:150-
+    # 170, from `_first_fleet_movement_icon`), so the count is the window's.
+    visible = stack[start:start + FLEET_ICONS_MAX]
+    if len(icon_fields) != len(visible):
+        return None, (f"{len(icon_fields)} icon fields for a stack of "
+                      f"{len(stack)} from cell {start}")
+    stars = getattr(state, "stars", None) or []
+    # The head node's ship, as FLEETPOP titles the box (fleetpop.cpp:618,
+    # :625).
+    first = ships[stack[0]]
+    if first.owner < 9:
+        local = player_struct.parse(state.player_raw[first.owner]) \
+            if first.owner < len(state.player_raw or []) else None
+        title = _msg(text, H_FLEET, getattr(local, "race_name", ""))
+    else:
+        title = str(first.name).upper()
+    shown = visible
+    nodes = chain[start:start + FLEET_ICONS_MAX]
+    flags = state.fleet_selection["selected"]
+    me = getattr(state, "player_num", 0)
+    return {"kind": "fleet", "ship": ident.ship, "stack": shown,
+            "nodes": nodes, "count": len(stack), "scroll": scroll,
+            "owners": [ships[i].owner for i in shown],
+            "selected": [flags[n] for n in nodes],
+            "selectable": [ships[i].owner == me and ships[i].status in
+                           ORDERABLE_STATUS for i in shown],
+            "title": title, "status": fleet_status(state, first, stars, text),
+            "close": box.close.index if box.close is not None else None}, None
+
+
+#: `SHIPMOVE::Can_Order_Ship_`: status 0 and 2 always; status 1 (in
+#: transit) only with the communications tech — that branch is left to
+#: the engine's own check in open fix 21, so HD offers the click and the
+#: FSEL block says whether it took (decision 33 covers one comparison,
+#: not a tech tree).
+ORDERABLE_STATUS = (0, 1, 2)
+
+
+def hover_status(state, star_index, stars, text):
+    """`(text, refused)` for the star under the pointer, or None — the fleet
+    box's line while a ship of it is selected and a star is hovered
+    (`Get_Fleetpop_...`'s info types 1-8, fleetpop.cpp:1063-1150), from
+    FMOV's verdict for that star; None where the original falls back to the
+    scanned ship (info type 0), and without FMOV or a selected ship (the
+    hover line's own gate, `maplines.preview_line`)."""
+    move = getattr(state, "fleet_move", None)
+    sel = getattr(state, "fleet_selection", None)
+    if not move or not sel or sel.get("stack", -1) < 0 or \
+            not sel.get("chain") or star_index is None:
+        return None
+    if not any(sel["selected"][n] for n in sel["chain"]
+               if 0 <= n < len(sel["selected"])):
+        return None
+    verdicts = move["verdicts"]
+    if not 0 <= star_index < min(len(verdicts), len(stars)):
+        return None
+    v, star = verdicts[star_index], stars[star_index]
+    visited = star_struct.visited_by(star, getattr(state, "player_num", 0))
+    turns, parsecs = int(v["turns_left"]), int(v["parsecs"])
+    if v["moving"]:
+        if turns == 0:
+            return _msg(text, H_ORBITING, star.name), False
+        if visited:
+            return _msg(text, H_TURN if turns == 1 else H_TURNS, turns,
+                        star.name), False
+        return _msg(text, H_ETA_TURN if turns == 1 else H_ETA_TURNS,
+                    turns), False
+    if v["blackhole_blocks"]:
+        return _msg(text, H_BLACK_HOLE), True
+    if v["immobile"]:
+        return _msg(text, H_IMMOBILE), True
+    if v["out_of_range"]:
+        if visited:
+            return _msg(text, H_RANGE_TURN if parsecs == 1 else
+                        H_RANGE_TURNS, parsecs, star.name), True
+        return (_msg(text, H_RANGE_ZERO) if parsecs == 0 else
+                _msg(text, H_RANGE_UNKNOWN, parsecs)), True
+    if v["hyperspace_flux"]:
+        return _msg(text, H_FLUX), True
+    return None
+
+
+def fleet_status(state, ship, stars, text):
+    """The status line for the stack's first ship (see the module note)."""
+    if ship.status == 0:
+        if 0 <= ship.location < len(stars):
+            return _msg(text, H_ORBITING, stars[ship.location].name)
+        return ""
+    dest = ship_struct.absolute_location(ship.location)
+    turns = int(ship.turns_left)
+    if dest == len(stars):
+        return _msg(text, H_ANTARES)
+    if not 0 <= dest < len(stars):
+        return ""
+    if not star_struct.visited_by(stars[dest], getattr(state, "player_num", 0)):
+        return _msg(text, H_ETA_TURN if turns == 1 else H_ETA_TURNS, turns)
+    return _msg(text, H_TURN if turns == 1 else H_TURNS, turns,
+                stars[dest].name)

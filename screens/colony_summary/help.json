@@ -1,0 +1,30 @@
+{
+  "_comment": "Right-click context help. Transcribed from ERICHELP::_colony_summary_screen_help_list (erichelp.cpp:65, 22 entries, s_help_box {help_id, x1, y1, x2, y2} orion2.h:993), installed by ERICHELP::Set_Colony_Summary_Screen_Help_List_ (erichelp.cpp:145) from COLSUM::Colony_Summary_Screen_ (colsum.cpp:144, and again at :531). `native` is the original's 640x480 rectangle and is provenance only - HD resolves each region from its own geometry, because the HD layout puts the same control somewhere else (the whole bottom row moved in brief 97). Regions are tested in order and the first hit wins, like fields::Check_Help_List_ (fields.cpp:2916), so the screen-wide entry 513 stays last, where the original keeps it. Region kinds: `box` is a box name; `column` and `scroll` are this screen's own kinds, resolved in colony_summary/screen.py help_extra_rect from the same geometry the list draws and clicks with (decision 5) - wired in brief 98 Stop 2.",
+  "_source": "erichelp.cpp:65",
+  "_no_counterpart": "Help 520 (Buy Buttons, native 596,1-616,343) is the original's column of per-row Buy sprites to the right of the producing text (colsum.cpp:302). HD has no Buy column: the Buy control is a text button drawn INSIDE col_building (colonybuild.draw), which entry 519 already covers and which the walk reaches first. The entry stays here with its provenance and resolves to nothing, so the order is still the original's.",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. The deviation belongs to the panel rather than to any one region, so it is marked once per file, at the top level. Also marked in core/helppopup.py and asserted by the smoke test.",
+  "regions": [
+    { "help_id": 514, "scroll": "up",              "native": [619,  15, 627,  34] },
+    { "help_id": 515, "column": "name",            "native": [  8,   1,  95, 343] },
+    { "help_id": 516, "column": "farmers",         "native": [ 97,   1, 235, 343] },
+    { "help_id": 517, "column": "workers",         "native": [237,   1, 375, 343] },
+    { "help_id": 518, "column": "scientists",      "native": [377,   1, 514, 343] },
+    { "help_id": 519, "column": "building",        "native": [516,   1, 594, 343] },
+    { "help_id": 520, "no_counterpart": true,      "native": [596,   1, 616, 343] },
+    { "help_id": 521, "scroll": "track",           "native": [620,  39, 627, 312] },
+    { "help_id": 522, "scroll": "down",            "native": [620, 317, 629, 337] },
+    { "help_id": 523, "box": "planet_info",        "native": [  9, 349,  91, 439] },
+    { "help_id": 524, "box": "planet_output",      "native": [101, 349, 371, 439] },
+    { "help_id": 525, "box": "galaxy_inset",       "native": [381, 349, 510, 439] },
+    { "help_id": 526, "box": "empire_stats",       "native": [520, 349, 631, 439] },
+    { "help_id": 500, "box": "return",             "native": [537, 447, 612, 469] },
+    { "help_id": 527, "box": "sort_name",          "native": [ 92, 450, 138, 466] },
+    { "help_id": 528, "box": "sort_population",    "native": [140, 450, 217, 466] },
+    { "help_id": 529, "box": "sort_food",          "native": [219, 450, 260, 466] },
+    { "help_id": 530, "box": "sort_industry",      "native": [262, 450, 324, 466] },
+    { "help_id": 531, "box": "sort_science",       "native": [326, 450, 392, 466] },
+    { "help_id": 532, "box": "sort_producing",     "native": [394, 450, 479, 466] },
+    { "help_id": 533, "box": "sort_bc",            "native": [481, 450, 512, 466] },
+    { "help_id": 513, "screen": true,              "native": [  1,   1, 638, 478] }
+  ]
+}
