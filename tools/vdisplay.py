@@ -200,6 +200,15 @@ def engine_env(reason=None, base=None, out=print):
     env["DISPLAY"] = display
     env["XAUTHORITY"] = auth
     env["SDL_AUDIODRIVER"] = "dummy"
+    # orion2re v2 is built on SDL3, which reads its own names (work order
+    # 243) — and shows an error box through `zenity`, a GTK program that
+    # finds the user's Wayland session by itself: a v2 run's "NEWGAME.LBX
+    # entry 31 could not be found" opened on Data's desktop. Every toolkit
+    # a dialog could come from is held on this display.
+    env["SDL_VIDEO_DRIVER"] = "x11"
+    env["SDL_AUDIO_DRIVER"] = "dummy"
+    env["GDK_BACKEND"] = "x11"
+    env["QT_QPA_PLATFORM"] = "xcb"
     return env
 
 

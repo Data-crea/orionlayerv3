@@ -46,6 +46,16 @@ TOGGLE_ATTRS = {
 }
 
 
+
+def _values(info):
+    """A category's values for the connected engine: orion2re v2 orders the
+    civilisation levels anew and adds two values (`values_v2`, work order
+    243; `core.structs.layout.generation`)."""
+    from core.structs import layout
+    if layout.generation() >= 2 and "values_v2" in info:
+        return info["values_v2"]
+    return info.get("values", {})
+
 class NewGameScreen(ScreenBase):
     SCREEN_NAME = "new_game"
     GAME_SCREEN_ID = 13     # SCREEN_NEW_GAME
@@ -163,7 +173,7 @@ class NewGameScreen(ScreenBase):
         """Load ALL setting images up front so render never blocks on disk I/O."""
         cats = self._cfg.get("categories", {})
         for cat, info in cats.items():
-            for val_key, entry in info.get("values", {}).items():
+            for val_key, entry in _values(info).items():
                 filename = entry.get("image")
                 if filename:
                     self._get_setting_image(cat, filename)
@@ -264,7 +274,7 @@ class NewGameScreen(ScreenBase):
         self._labels = {}
         for cat, attr in STATE_ATTRS.items():
             value = getattr(game_state, attr, None)
-            entry = cats.get(cat, {}).get("values", {}).get(str(value))
+            entry = _values(cats.get(cat, {})).get(str(value))
             if entry:
                 self._current[cat] = entry.get("image")
                 self._labels[cat] = entry.get("label", "")

@@ -52,6 +52,13 @@ SPEC = Spec("s_settings", SIZE, [
     ("music_on", 19, "u8"),
     ("music_level", 20, "i8"),
     ("active_save_slot", 21, "i8"),
+    # multi_player_game_type — the multi-player setup's chosen type (2
+    # network, 1 the second radio, 4 hotseat), written by the radios'
+    # handlers (multplay.cpp `Multi_Player_Screen_`). Work order 243: the
+    # header's order in both engines (the first 40 members are the same
+    # text) and orion2re v2's LAYOUT give 22. v2 has no COMM INFO button,
+    # so the setup's list no longer says which type is chosen.
+    ("multi_player_game_type", 22, "u8"),
     # combat_legal_moves_flag — the battle's LEGAL BOXES option: the
     # original draws the acting human unit's legal cells only while it is
     # 1 (cmbtdrw1.cpp:477, set from here at combinit.cpp:533). Work order

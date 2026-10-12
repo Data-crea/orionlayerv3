@@ -585,6 +585,8 @@
     "HALT": "HALT",
     "No Leader Assigned": "Kein Anführer",
     "No Officer Assigned": "Kein Offizier",
-    "Assign a leader from the pool.": "Anführer aus dem Pool zuweisen."
+    "Assign a leader from the pool.": "Anführer aus dem Pool zuweisen.",
+    "Post Warp": "Nach Warp",
+    "Random": "Zufällig"
   }
 }

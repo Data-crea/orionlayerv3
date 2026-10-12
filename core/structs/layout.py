@@ -217,6 +217,15 @@ def offset(record, name, default):
     return m.offset if m is not None else default
 
 
+def generation():
+    """Which engine's behaviour a transcription follows: 2 for an engine
+    that sends its LAYOUT (orion2re 2.x with OrionLayer's changes, work
+    order 243), 1 for the engine the screens were first written against
+    (orion2re 1.60, `orionlayer-local`). The few places where v2 changed
+    what the original does ask this, each citing both sources."""
+    return 2 if _state["layout"] is not None else 1
+
+
 def has(record):
     """True when the installed layout describes `record`."""
     layout = _state["layout"]

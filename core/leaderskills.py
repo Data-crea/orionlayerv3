@@ -288,16 +288,30 @@ def maintenance(leaders, index, player, warlord_of):
     return max(1, (cost + 99) // 100)
 
 
-def captain_id_list(leaders, player, view_type):
+def captain_id_list(leaders, player, view_type, generation=None):
     """`Build_Captain_Id_List_` (officer.cpp:2705-2730): the leaders one
     view lists, in index order, at most four.
 
     `status >= 0 || status == 4` is the original's own test and the
     second half can never add anything; it is kept so the comparison
     with the source is a line-for-line read.
+
+    **orion2re v2 walks the other way** (work order 243): its
+    `Build_Captain_Id_List` (officer.cpp:2824-2852 of v2.0.0) counts from
+    the HIGHEST index down, `Leader_Is_Displayed` (:50-54) being the same
+    test without the dead half, and pages by four — the page moves only
+    with v2's "leaders_no_limit" option, whose two page buttons
+    (:66-78) HD does not offer, so HD lists page 0. `generation` is
+    `core.structs.layout.generation()` when not given.
     """
+    if generation is None:
+        from core.structs import layout
+        generation = layout.generation()
+    order = list(enumerate(leaders))
+    if generation >= 2:
+        order.reverse()
     out = []
-    for idx, rec in enumerate(leaders):
+    for idx, rec in order:
         status = int(rec.status)
         valid = status >= 0 or status == leader_struct.STATUS_FOR_HIRE
         if (valid and int(rec.player_index) == player

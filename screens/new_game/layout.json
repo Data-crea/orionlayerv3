@@ -150,6 +150,41 @@
           "image": "8_players",
           "label": "8 Players"
         }
+      },
+      "_values_v2_source": "orion2re v2 (work order 243) adds a random player count as the last value (newgame.cpp NEW_GAME_PLAYER_COUNT_RANDOM = MAX_PLAYERS - 1); the base pack has no picture for it yet.",
+      "values_v2": {
+        "0": {
+          "image": "2_players",
+          "label": "2 Players"
+        },
+        "1": {
+          "image": "3_players",
+          "label": "3 Players"
+        },
+        "2": {
+          "image": "4_players",
+          "label": "4 Players"
+        },
+        "3": {
+          "image": "5_players",
+          "label": "5 Players"
+        },
+        "4": {
+          "image": "6_players",
+          "label": "6 Players"
+        },
+        "5": {
+          "image": "7_players",
+          "label": "7 Players"
+        },
+        "6": {
+          "image": "8_players",
+          "label": "8 Players"
+        },
+        "7": {
+          "image": null,
+          "label": "Random"
+        }
       }
     },
     "tech_level": {
@@ -164,6 +199,25 @@
           "label": "Average"
         },
         "2": {
+          "image": "advanced",
+          "label": "Advanced"
+        }
+      },
+      "_values_v2_source": "orion2re v2 (work order 243) offers a fourth level and orders the buttons Pre-Warp, Average, Post-Warp, Advanced (newgame.cpp NEW_GAME_CIVILIZATION_POST_WARP = 2, NEW_GAME_CIVILIZATION_ADVANCED = 3); the base pack has no Post-Warp picture yet, so its panel shows the word alone.",
+      "values_v2": {
+        "0": {
+          "image": "pre_warp",
+          "label": "Pre Warp"
+        },
+        "1": {
+          "image": "average",
+          "label": "Average"
+        },
+        "2": {
+          "image": null,
+          "label": "Post Warp"
+        },
+        "3": {
           "image": "advanced",
           "label": "Advanced"
         }

@@ -104,6 +104,9 @@ class MultiplayerScreen(ScreenBase):
                 self._chain = None
 
     def words(self, key):
+        from core.structs import layout
+        if layout.generation() >= 2 and key in mpsetup.V2_WORDS:
+            return mpsetup.V2_WORDS[key]      # v2's artwork, work order 243
         return (self._data.get("words") or {}).get(key) or key.upper()
 
     # ── drawing ────────────────────────────────────────────────────────
@@ -167,7 +170,8 @@ class MultiplayerScreen(ScreenBase):
         panel = self.box_screen_rect("setup_panel") or shell.panels(L, True)
         hud.panel(surface, panel, s)
         btns = mpsetup.buttons(fields)
-        chosen = mpsetup.selected(fields)
+        chosen = mpsetup.selected(fields,
+                                  getattr(self._state, "settings_raw", None))
         bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
         gap = int(REF_GAP * s)
         halves = shell.split(shell.inner(panel, L), L, [1.0, 1.0])

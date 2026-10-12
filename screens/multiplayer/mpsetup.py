@@ -44,9 +44,31 @@ def classify(fields):
     return NONE
 
 
-def selected(fields):
-    """The type the list says is selected: J and C → online, J alone →
-    network, neither → hotseat (multplay.cpp:608-634)."""
+#: `multi_player_game_type` -> the radio's key (multplay.cpp: N sets 2,
+#: M sets 1, H sets 4 — the same in orion2re 1.60 and v2).
+GAME_TYPES = {2: "network", 1: "online", 4: "hotseat"}
+
+#: The words orion2re v2's own artwork puts on the first two radios
+#: (`data/base.zip`): the network type is ONLINE there, the second LAN.
+V2_WORDS = {"network": "ONLINE", "online": "LAN"}
+
+
+def selected(fields, settings_raw=None):
+    """The chosen type. orion2re v2 (work order 243) shows no COMM INFO, so
+    its list cannot say; the settings record can (`multi_player_game_type`,
+    the value the radios write). On the old engine the list says it: J and
+    C → online, J alone → network, neither → hotseat (multplay.cpp:608-634).
+    """
+    from core.structs import layout
+    if settings_raw and layout.generation() >= 2:
+        from core.structs import settings
+        try:
+            kind = GAME_TYPES.get(settings.parse(settings_raw)
+                                  .multi_player_game_type)
+        except ValueError:
+            kind = None
+        if kind:
+            return kind
     hk = by_hotkey(fields)
     if ord("J") in hk and ord("C") in hk:
         return "online"
