@@ -103,6 +103,12 @@ the original comes back.
   row while a leader stands in it, the empty row and the galaxy map box
   (`files/screens/leaders/assets/pictures/slot_1_background.png`). Paint
   them without a frame: OrionLayer draws the frame round them.
+  The galaxy map's ships and monsters go two ways: one icon
+  (`files/screens/galaxy_map/assets/ships/<kind>/2.png`) replaces exactly
+  that icon; a whole master
+  (`files/screens/galaxy_map/assets/ships/_src/<kind>.png`) replaces every
+  icon cut from it - OrionLayer cuts it at the next start. A single icon
+  beside a master still wins.
 - **`texts/<screen>/<key>.txt`** - a TEXT, by its key: `info.tab.reference`
   is `texts/info/tab.reference.txt`. Plain text, saved as UTF-8; a blank
   line starts a paragraph. Long texts wrap and scroll. OrionLayer's own
@@ -211,6 +217,7 @@ def names_txt(hud_sizes):
               "(names only - not ours to hand out):"]
     lines += [f"  files/{rel}  {s[0]} x {s[1]}"
               for rel, s in sorted(game_art().items())]
+    lines += ship_masters()
     lines += ["", "  the battle's pictures (work order 197), one PNG per "
               "stored drawing, used as painted:",
               "  files/screens/combat/assets/gamedata/<file>/<entry>_<frame>"
@@ -247,6 +254,32 @@ def names_txt(hud_sizes):
     lines += [f"  {modtexts.file_name(k)}" for k, src in keys.items()
               if src == "moo2"]
     return "\n".join(lines) + "\n"
+
+
+def ship_masters():
+    """NAMES.txt's lines for the galaxy map's ships and monsters, both ways
+    (work order 243, Data's decision): one icon, or a whole master."""
+    from PIL import Image
+    from core import shipcut
+    out = ["", "  the galaxy map's ships and monsters (work order 243), two "
+           "ways:",
+           f"  files/{usermod.SHIP_ICONS}/<kind>/<file>  ONE icon: replaces "
+           "exactly that icon (the files listed above)",
+           f"  files/{usermod.SHIP_MASTERS}/<kind>.png  a WHOLE master: "
+           "every icon of that kind is cut from it -",
+           "    the four steps 0.png .. 3.png and, for a monster, panel.png "
+           "(the Planets panel); a single icon beside it still wins.",
+           "    The player's master must be greyscale (it is tinted per "
+           "colour). Kinds, with the shipped master's size",
+           f"    (Data's own pictures, in the base pack under "
+           f"{shipcut.SRC_REL.replace(os.sep, '/')}/):"]
+    for kind in shipcut.KINDS:
+        path = basepack.source(os.path.join(shipcut.SRC_REL, f"{kind}.png"),
+                               ROOT)
+        size = (f"{Image.open(path).width} x {Image.open(path).height}"
+                if os.path.isfile(path) else "none shipped - yours adds it")
+        out.append(f"  files/{usermod.SHIP_MASTERS}/{kind}.png  {size}")
+    return out
 
 
 def leaders_pictures():

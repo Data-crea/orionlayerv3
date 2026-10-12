@@ -96,6 +96,15 @@ SLOTS = ("screens/*/assets/frame.png",
          "screens/leaders/assets/pictures/slot_[1234]_background.png",
          "screens/leaders/assets/pictures/slot_empty_background.png",
          "screens/leaders/assets/pictures/minimap_background.png")
+#: The galaxy map's ship masters (work order 243, Data's decision): a whole
+#: master `files/<SHIP_MASTERS>/<kind>.png` replaces every icon cut from it
+#: (`core.shipcut`: the four steps and the Planets panel's picture), cut
+#: once into `cache/` and drawn as cut; a single icon under
+#: `files/<SHIP_ICONS>/<kind>/<file>` still wins over the cut, because it
+#: names exactly that icon. A kind with no master in the base pack (the
+#: amoeba, the antaran) may get one this way.
+SHIP_MASTERS = "screens/galaxy_map/assets/ships/_src"
+SHIP_ICONS = "screens/galaxy_map/assets/ships"
 #: The optional file a mod states its frames' layouts in (195 §3.5).
 MOD_JSON = "mod.json"
 #: The two files that are values, not pictures.
@@ -213,7 +222,8 @@ def init(enabled=True, root=None):
                 continue
             if name.startswith("files/") and not os.path.exists(
                     os.path.join(BASE_DIR, target)) and not is_slot(target) \
-                    and not _in_base_pack(target):
+                    and not _in_base_pack(target) \
+                    and not target.startswith(SHIP_MASTERS + "/"):
                 log.warning("mod: %s replaces nothing (no %s in OrionLayer) "
                             "— ignored", name, target)
                 continue
@@ -285,6 +295,13 @@ def _known(name, target, base):
             return True
         log.warning("mod: %s — there is no screen called %s — ignored",
                     name, stem)
+        return False
+    if target.startswith(SHIP_MASTERS + "/"):
+        from core import shipcut
+        if stem in shipcut.KINDS:
+            return True
+        log.warning("mod: %s — there is no ship kind called %s (%s) — "
+                    "ignored", name, stem, ", ".join(shipcut.KINDS))
         return False
     if name.startswith("hud/"):
         from core.hud import art
@@ -373,10 +390,53 @@ def override(relpath, default_path):
     key = relpath.replace(os.sep, "/")
     src = _state["index"].get(key)
     if src is None:
-        return None
+        return _ship_cut(key)
     if key not in _state["checked"]:
         _state["checked"][key] = _checked_image(key, src, default_path)
     return _state["checked"][key]
+
+
+def _ship_cut(key):
+    """An icon cut from the mod folder's master of its kind, or None.
+
+    Made once per master (the cache is keyed by the master's bytes) and
+    handed out as cut: the cut is the shipped icons' own rule, so it is
+    not scaled to the default's size the way a single picture is."""
+    head, _, rest = key.partition(SHIP_ICONS + "/")
+    if head or "/" not in rest or rest.startswith("_src/"):
+        return None
+    kind, file = rest.split("/", 1)
+    master = _state["index"].get(f"{SHIP_MASTERS}/{kind}.png")
+    if master is None:
+        return None
+    if key in _state["checked"]:
+        return _state["checked"][key]
+    from core import shipcut
+    name = os.path.relpath(master, _state["root"]).replace(os.sep, "/")
+    try:
+        with open(master, "rb") as handle:
+            digest = hashlib.sha1(handle.read()).hexdigest()[:16]
+        folder = os.path.join(os.path.dirname(_state["root"]), CACHE, FOLDER,
+                              f"ships_{digest}", kind)
+        if not all(os.path.isfile(os.path.join(folder, f))
+                   for f in shipcut.files(kind)):
+            os.makedirs(folder, exist_ok=True)
+            for f, img in shipcut.cut(master, kind).items():
+                img.save(os.path.join(folder, f))
+            log.info("mod: %s — every %s icon cut from it (%s)", name, kind,
+                     ", ".join(shipcut.files(kind)))
+    except (OSError, ValueError) as err:
+        log.warning("mod: %s cannot be cut (%s) — the default is used",
+                    name, err)
+        for f in shipcut.files(kind):
+            if f"{SHIP_ICONS}/{kind}/{f}" not in _state["index"]:
+                _state["checked"][f"{SHIP_ICONS}/{kind}/{f}"] = None
+        return None
+    for f in shipcut.files(kind):
+        icon = f"{SHIP_ICONS}/{kind}/{f}"
+        if icon not in _state["index"]:     # a single icon keeps its own
+            _state["checked"][icon] = os.path.join(folder, f)
+    return _state["checked"].get(key)
 
 
 def _checked_image(key, src, default_path):

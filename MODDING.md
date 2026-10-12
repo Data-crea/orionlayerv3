@@ -663,8 +663,28 @@ larger than that, it is a deviation, not a measurement.
 
 The spread from step 0 to step 3 is only 23 %, so unlike the stars
 these four steps do not need four separate drawings — the shipped set
-is one master rendered four times. Hand-drawn steps still win, and
-dropping a single `2.png` into a mod replaces just that step.
+is one master rendered four times. The masters are Data's own HD
+pictures and come with the base pack
+(`screens/galaxy_map/assets/ships/_src/<kind>.png`, 1536 x 1024).
+
+**Your mod folder replaces them two ways** (work order 243):
+
+```
+files/screens/galaxy_map/assets/ships/<kind>/2.png      ONE icon
+files/screens/galaxy_map/assets/ships/_src/<kind>.png   a WHOLE master
+```
+
+- **One icon** replaces exactly that icon — one step, or a monster's
+  `panel.png` (its picture in the Planets panel). Another size is scaled
+  to the built-in one.
+- **A whole master** replaces every icon cut from it: OrionLayer cuts it
+  at the next start by the shipped icons' own rule (`core/shipcut.py`:
+  the four steps and, for a monster, `panel.png`) and keeps the cut in
+  the folder's `cache/`. A kind with no shipped master (`amoeba`,
+  `antaran`) gets one this way.
+- **Both at once:** the single icon wins for its own file, the master's
+  cut fills the rest. A master under a name that is not a kind is skipped
+  with one line in the log.
 
 **Aspect ratio matters more than it looks.** The original sprites and
 your artwork will not share proportions, and which edge you match
@@ -710,12 +730,13 @@ monster (`9` guardian, `10` amoeba, `11` crystal, `12` dragon,
 `13` eel, `14` hydra, `8` antaran), plus the sprite file actually
 used and whether it is a fallback.
 
-To generate a set from your own masters:
+To see a set cut from your own masters before you start the game (the
+same cut, written to a folder you name, with a contact sheet):
 
 ```bash
 python tools/make_ship_icons.py \
-  --src  mods/my_mod/screens/galaxy_map/assets/ships/_src \
-  --out  mods/my_mod/screens/galaxy_map/assets/ships --sheet
+  --src  <folder with your masters> \
+  --out  <a scratch folder> --sheet
 ```
 
 ### Wormhole links
