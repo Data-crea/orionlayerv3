@@ -16,6 +16,9 @@ and never touches anything else in the folder. `make` refuses a pack
 that differs from the manifest: a release zip is what `refresh` last
 recorded, file for file.
 
+The pack carries its licence, `LICENSE.txt` at its top (CC BY 4.0, Data's
+decision of work order 243); the manifest names it beside the pictures.
+
 `refresh` is how the manifest follows the maintainer's pack (work order
 242: Data swaps pictures daily and no picture needs a manual step;
 `dev:tools/close_run.py` runs it). It records every picture in the pack and
@@ -34,6 +37,11 @@ import zipfile
 TREE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PICTURE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tga",
                ".svg", ".ico")
+#: The pack's licence (Data's decision, work order 243: the pictures are
+#: under CC BY 4.0). Named in the manifest like a picture, so installing,
+#: making the release zip and the start's presence check all carry it: the
+#: credits travel with every copy of the pack.
+NOTICES = ("LICENSE.txt",)
 #: Where the code that asks for a picture lives (for naming a dropped one).
 CODE_DIRS = ("core", "screens", "tools", "mods")
 CODE_EXT = (".py", ".json")
@@ -98,14 +106,16 @@ def make(out, folder):
 
 
 def scan(folder):
-    """({relpath: [size, sha256]} of the pack's pictures, [left out])."""
+    """({relpath: [size, sha256]} of the pack's pictures and its licence,
+    [left out])."""
     files, other = {}, []
     for dirpath, dirnames, filenames in os.walk(folder):
         dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
         for name in sorted(filenames):
             full = os.path.join(dirpath, name)
             rel = os.path.relpath(full, folder).replace(os.sep, "/")
-            if name.startswith(".") or not name.lower().endswith(PICTURE_EXT):
+            if name.startswith(".") or not (name.lower().endswith(PICTURE_EXT)
+                                            or rel in NOTICES):
                 other.append(rel)
                 continue
             with open(full, "rb") as f:
@@ -166,7 +176,7 @@ def refresh(folder, path=basepack.MANIFEST, log=print):
             json.dump({"version": 1, "files": files}, f, indent=2,
                       sort_keys=True)
             f.write("\n")
-    log(f"{path}: {len(files)} pictures — {len(added)} added, {len(changed)} "
+    log(f"{path}: {len(files)} files — {len(added)} added, {len(changed)} "
         f"changed, {len(dropped)} dropped"
         + ("" if added or changed or dropped else ", unchanged"))
     return added, changed, dropped
