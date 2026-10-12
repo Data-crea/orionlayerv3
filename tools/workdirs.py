@@ -54,6 +54,10 @@ LOGS = path("logs")
 SCRATCH = path("scratch")
 TESTSAVES = path("testsaves")
 REFERENCES = path("references")
+#: Engine builds and source trees kept beside the working one (work order
+#: 243): the frozen orion2re 1.60 source the transcriptions cite, the old
+#: build. Never a player's path.
+ENGINES = path("engines")
 TO_DELETE = path("_to_delete")
 CREATED_LOG = path("logs", "home_created.txt")
 

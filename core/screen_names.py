@@ -72,6 +72,9 @@ SCREENS = {
     36: ("TECH_CHANGE",     "research_change"),
     39: ("REPORTS",         "reports"),
     40: ("TURN_SUMMARY",    "turn_summary"),
+    #: orion2re v2 added the credits (orion2_consts.h SCREEN_CREDITS);
+    #: HD has no screen for it (work order 243).
+    44: ("CREDITS",         None),
     #: 50 has no entry in the SCREEN enum — synthetic value used
     #: only by the ext-API patch in Racial_Option_Screen_ (racesel.cpp)
     #: while Custom Race's own input loop runs. See
@@ -140,11 +143,12 @@ SCREENS = {
 }
 
 #: The last value of orion2re's own SCREEN enum:
-#: SCREEN_SHOW_COMMAND_POINTS = 43 (orion2_consts.h:496). A synthetic id
+#: SCREEN_CREDITS = 44 in orion2re v2 (43, SCREEN_SHOW_COMMAND_POINTS, in
+#: 1.60, orion2_consts.h:496). A synthetic id
 #: must lie above it, or it means a real screen too. Copied by hand, so
 #: `tools/version_check.py` reads the enum and fails on a mismatch
 #: (decision 36), and the smoke test holds every synthetic entry above it.
-ENGINE_SCREEN_MAX = 43
+ENGINE_SCREEN_MAX = 44
 
 
 def engine_name(screen_id):

@@ -37,7 +37,7 @@ TARGET_FPS = 60
 #
 # A hand-copied number in a foreign tree drifts silently, so it has a
 # check instead of a reminder:  python tools/version_check.py
-ORION2RE_VERSION = "1.60.0"
+ORION2RE_VERSION = "2.0.0"
 
 
 def load_settings():

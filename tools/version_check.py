@@ -47,6 +47,40 @@ from core.config import ORION2RE_VERSION  # noqa: E402
 from workdirs import BUNDLES  # noqa: E402,F401 (198: a tree is cloned from one)
 
 DEFAULT_TREES = ["~/orion2re", "~/src/orion2re", "/tmp/orion2re-main"]
+#: THE SOURCE OrionLayer's transcriptions cite (work order 243). Every
+#: `file.cpp:line` in the tree, and every name a check holds a table to,
+#: is orion2re 1.60's (`orionlayer-local`): the engine moved to v2.0.0,
+#: which renamed almost every identifier and moved every line. That source
+#: stays readable as a worktree of `orionlayer-local`; `~/orion2re` counts
+#: while it is still 1.60.
+SOURCE_160 = os.path.join(os.environ.get("ORIONLAYER_WORK",
+                                         os.path.expanduser("~/claude")),
+                          "engines", "orion2re_160_source")
+
+
+def _same_version(label, engine):
+    """`GAME_VERSION_LABEL` names `ENGINE_VERSION`: "Version 1.60.0" and
+    "1.60.0" — or, as orion2re v2 writes them, "Version 2.00" and its
+    three-part number (work order 243): the same numbers, zeros at the end
+    aside."""
+    def nums(text):
+        parts = [int(n) for n in re.findall(r"\d+", text or "")]
+        while parts and parts[-1] == 0:
+            parts.pop()
+        return parts
+    return bool(label) and label.startswith("Version ") and \
+        nums(label) == nums(engine)
+
+
+def find_source_tree():
+    """The orion2re 1.60 source the citations name, or None."""
+    for cand in [SOURCE_160] + DEFAULT_TREES:
+        path = os.path.expanduser(cand)
+        version = os.path.join(path, "src", "version.h")
+        if os.path.isfile(version) and '"1.60' in open(
+                version, errors="replace").read():
+            return path
+    return None
 
 RE_ENGINE = re.compile(
     r'ENGINE_VERSION\s*\[\s*\]\s*=\s*"([^"]+)"')
@@ -81,7 +115,7 @@ LOCAL_PATCHES = {
     # nothing else in orion2re writes `_old_race` from the loop index.
     "doc/ext_select_race_old_race.patch": (
         os.path.join("src", "game", "racesel.cpp"),
-        "_old_race = static_cast<int16_t>(i);",
+        "old_race = static_cast<int16_t>(i);",
         "accepting a Custom Race can crash the Flag Screen on "
         "racesel.lbx [entry 138] (open fix 5)"),
     # Applied 17 September 2026 (work order 129 B, open fix 24): the two
@@ -154,7 +188,7 @@ LOCAL_PATCHES = {
         # The block's own marker. "FLTS" would not do: it is four
         # characters pushed one at a time, so the literal is not in the
         # source as a word.
-        "_fltscrn_stack_owner",
+        "fltscrn_stack_owner",
         "the snapshot carries none of the fleet screen's view state "
         "(open fix 27), so the HD screen cannot know which stack is "
         "shown, which ships are in the grid or which of them are "
@@ -170,7 +204,7 @@ LOCAL_PATCHES = {
     # (orion2re orionlayer-local f98b8547 and cc542e02).
     "doc/ext_present_no_vsync.patch": (
         os.path.join("src", "game", "platform.cpp"),
-        "Present_VSync_Interval_",
+        "ORION2RE_NO_VSYNC",
         "ORION2RE_NO_VSYNC=1 is ignored, so a session-launched engine "
         "hangs in its first logo frames whenever its window is not drawn "
         "(open fix 31) and runs at a frame a second behind a full-screen "
@@ -178,14 +212,14 @@ LOCAL_PATCHES = {
     "doc/ext_officer_screen_state.patch": (
         os.path.join("src", "ext", "ext_api.cpp"),
         # The block's own marker: "OFFS" is pushed a character at a time.
-        "_officer_star_displayed",
+        "officer_star_displayed",
         "the snapshot carries none of the Leaders screen's view state "
         "(open fix 30), so POOL, DISMISS, assigning, PREV/NEXT, the star "
         "display and the ship grid stay the HD STATE placeholder"),
     "doc/ext_info_screen_state.patch": (
         os.path.join("src", "ext", "ext_api.cpp"),
         # The block's own marker: "INFS" is pushed a character at a time.
-        "MOX::_bill_savegame[i]",
+        "bill_savegame[i]",
         "the snapshot carries neither the history divisors nor the turn "
         "messages (open fix 32), so the Info screen's History Graph draws "
         "no curves and its Turn Summary lists nothing"),
@@ -690,7 +724,7 @@ def main():
     if label is None:
         problems.append(
             "GAME_VERSION_LABEL not found in src/game/consts.h")
-    elif engine and label != f"Version {engine}":
+    elif engine and not _same_version(label, engine):
         # The two literals disagreeing is a bug in orion2re, not
         # here, but it decides which string the main menu shows.
         problems.append(
