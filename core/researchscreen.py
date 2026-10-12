@@ -300,9 +300,11 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         `else`, not a guess of ours.
         """
         raw = getattr(game_state, "settings_raw", b"") or b""
-        if len(raw) <= settings_spec.LANGUAGE_OFFSET:
+        try:
+            language = settings_spec.parse(raw).language
+        except ValueError:          # no settings block yet
             return COST_SUFFIX[0]
-        return cost_suffix(raw[settings_spec.LANGUAGE_OFFSET])
+        return cost_suffix(language)
 
     def _rebuild(self, game_state):
         """(entries, state, problems) for this frame's game state.

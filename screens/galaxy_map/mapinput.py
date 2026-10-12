@@ -50,8 +50,8 @@ def click(screen, screen_x, screen_y):
     title = screen.title_rect()
     if title.collidepoint(screen_x, screen_y):
         screen.pressed.press("title", title)
-        activate(screen, screen._data.get("actions", {}).get("game_menu"),
-                 "game menu")
+        activate_spec(screen, screen._data.get("game_menu_field"),
+                      "game menu")
         return True
 
     # Navigation buttons next — the HUD draws them over the map's floor,
@@ -60,7 +60,7 @@ def click(screen, screen_x, screen_y):
     for spec in screen._data.get("buttons", []):
         if screen.nav_hit(spec["key"], screen_x, screen_y):
             screen.pressed.press(spec["key"], screen.nav_rect(spec["key"]))
-            activate(screen, spec["field_id"], spec["key"])
+            activate_spec(screen, spec, spec["key"])
             return True
 
     # THE RESEARCH WINDOW OPENS CHANGE MODE — work order 165 part B.
@@ -173,6 +173,23 @@ def map_click(screen, view, sx, sy):
             screen._eta_lock = mapeta.hold(screen._state, screen._ships)
 
 
+def activate_spec(screen, spec, what):
+    """Activate the field `spec` names (type and native rect) in the LIVE
+    list (decision 20, `core/livefields.py`), or send nothing.
+
+    Until work order 243 the bottom bar, TURN and the GAME plate sent the
+    index the old engine gave each (6, 7, 10-15). orion2re v2 adds five
+    cheat hot keys before them (mainscr.cpp `Add_Cheats`), so every index
+    moved by five and COLONIES opened the score: an index is a different
+    field in every other list."""
+    f = mapboxes.live_field(getattr(screen._state, "fields", None), spec)
+    if f is None or not screen.app.connected:
+        log.info("Action: %s — not in the live field list, nothing sent",
+                 what)
+        return
+    activate(screen, f.index, what)
+
+
 def activate(screen, field_id, what=""):
     log.info("Action: %s (field %s)", what or field_id, field_id)
     if screen.app.connected and field_id is not None:
@@ -184,7 +201,6 @@ def key_down(screen, key):
         return True
     if boxdraw.handle_key(screen, key):
         return True
-    actions = screen._data.get("actions", {})
     ping_key = screen._ping_key()
     if ping_key is not None and key == ping_key:
         # Consumed here on purpose: forwarding it would hand
@@ -192,7 +208,8 @@ def key_down(screen, key):
         screen.ping_home()
         return True
     if key == pygame.K_g:
-        activate(screen, actions.get("game_menu"), "game menu")
+        activate_spec(screen, screen._data.get("game_menu_field"),
+                      "game menu")
         return True
     if key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS,
                pygame.K_MINUS, pygame.K_KP_MINUS):
@@ -212,7 +229,7 @@ def key_down(screen, key):
     for spec in screen._data.get("buttons", []):
         hotkey = spec.get("hotkey")
         if hotkey and key == ord(hotkey):
-            activate(screen, spec["field_id"], spec["key"])
+            activate_spec(screen, spec, spec["key"])
             return True
     return False
 

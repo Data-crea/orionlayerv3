@@ -33,70 +33,23 @@ September 2026 for letting the engine run ahead of HD's animations.
 """
 import struct as _st
 
-from core import lang
+from core.structs import combat as combat_struct
 
 GRID_W, GRID_H = 81, 68
-#: `s_combat_data` as CMBT writes it: the packed struct's bytes before
-#: `ship_image_seg` (0..197) and after it (206..316) — 309 bytes; the
-#: engine asserts both offsets and the size (ext_api.cpp, open fix 53).
-UNIT_SIZE = 309
-#: (name, offset in the 309-byte record, format) — orion2.h:595-658; after
-#: the pointer every offset is the struct's minus 8.
-UNIT_FIELDS = (
-    ("ship_idx", 30, "h"), ("owner", 32, "b"), ("x", 33, "b"),
-    ("y", 34, "b"), ("facing_dir", 35, "b"), ("unit_status", 36, "b"),
-    ("size_class", 37, "b"), ("shield_type", 38, "b"),
-    ("shield_arc_max", 39, "h"), ("shield_arc_current", 41, "4h"),
-    ("ftl_type", 49, "b"), ("computer_type", 50, "b"),
-    ("armor_type", 51, "b"), ("tac_val_attack", 52, "h"),
-    ("tac_val_defense", 54, "h"), ("tac_val_evade", 56, "h"),
-    ("combat_speed_base", 58, "b"), ("current_speed", 59, "h"),
-    ("movement_left", 61, "h"), ("special_status_flag", 64, "b"),
-    ("special_status_timer", 65, "B"),
-    # work order 210 C2: the tractor's target, 0xFF none (orion2.h:619,
-    # set by `Tractor_Beam_`, cmbtspec.cpp:681)
-    ("special_cooldown", 66, "B"),
-    # work order 199 C3: orion2.h's order between the verified neighbours
-    # (64 special_status_flag ... 72, 74, 75 ... 82 the weapon slots)
-    ("plasma_web_damage", 67, "h"), ("reflected_damage_pool", 69, "h"),
-    ("special_device_flags", 76, "5B"),
-    ("special_device_damage_flags", 178, "5B"),
-    ("combat_status_flags", 72, "B"),
-    ("stasis_source_idx", 74, "B"), ("is_retreating", 75, "b"),
-    ("structure_max", 170, "h"), ("crew_quality", 172, "b"),
-    ("officer_idx", 173, "h"), ("marine_count", 175, "B"),
-    ("is_captured", 176, "b"), ("weapon_ready_flags", 184, "8B"),
-    ("structure_damage", 192, "h"), ("armor_remaining", 194, "h"),
-    ("picture_num", 196, "h"),
-    ("drive_max_hits", 198, "h"), ("computer_max_hits", 200, "h"),
-    ("shield_max_hits", 250, "h"), ("drive_current_hits", 252, "h"),
-    ("computer_current_hits", 254, "h"), ("shield_current_hits", 304, "h"),
-    ("black_hole_flag", 306, "b"), ("black_hole_source_idx", 307, "B"),
-    ("previous_owner", 308, "B"),
-)
-#: `s_combat_weapon_slot` x 8 at 82, 11 bytes each (sizes.h asserts 11).
-WEAPON_OFFSET, WEAPON_SIZE = 82, 11
-WEAPON_FORMAT = "<hbbHhbbB"
+#: `s_combat_data` as CMBT writes it: the struct without its picture pointer
+#: (`core/structs/combat.py` holds the record and follows the engine's
+#: layout; 309 bytes on the old engine, which asserts both cut offsets and
+#: the size, ext_api.cpp, open fix 53).
+UNIT_SIZE = combat_struct.UNIT_SPEC.size
 CMBT_HEAD = "<BHhhhhhhhhhhhhhhh"   # version .. super_fast_flag
 CMBT_HEAD_SIZE = _st.calcsize(CMBT_HEAD)
 
 
 def unit(raw):
     """One CMBT unit record as a dict; `name` is the engine's (game text)."""
-    # the unit's stored name (work order 208 A6)
-    out = {"name": lang.stored(lang.wire_text(raw[:30].split(b"\0", 1)[0]))}
-    for name, at, fmt in UNIT_FIELDS:
-        vals = _st.unpack_from("<" + fmt, raw, at)
-        out[name] = list(vals) if len(vals) > 1 else vals[0]
-    out["weapons"] = []
-    for k in range(8):
-        (wid, count, arc, specials, ammo, active, shots,
-         status) = _st.unpack_from(WEAPON_FORMAT, raw,
-                                   WEAPON_OFFSET + k * WEAPON_SIZE)
-        out["weapons"].append({"weapon_id": wid, "count": count, "arc": arc,
-                               "specials": specials, "ammo": ammo,
-                               "active": active, "shots_left": shots,
-                               "status": status})
+    # the unit's stored name (work order 208 A6) — the spec's str field
+    out = combat_struct.record(combat_struct.UNIT_SPEC, raw)
+    out["weapons"] = combat_struct.weapon_slots(raw)
     return out
 
 
@@ -123,15 +76,15 @@ def _cmbt(data, pos):
     at += 2 * n_order
     size, units = _st.unpack_from("<Hh", data, at)
     at += 4
-    if size != UNIT_SIZE or not 0 <= units <= 210:
+    if size != combat_struct.UNIT_SPEC.resolved()[0] or not 0 <= units <= 210:
         return None, pos
     out["units"] = []
     for _ in range(units):
-        rec = data[at:at + UNIT_SIZE]
-        if len(rec) != UNIT_SIZE:
+        rec = data[at:at + size]
+        if len(rec) != size:
             return None, pos
         out["units"].append(unit(rec))
-        at += UNIT_SIZE
+        at += size
     nbytes = (GRID_W * GRID_H + 7) // 8
     bits = data[at:at + nbytes]
     if len(bits) != nbytes:
@@ -140,16 +93,8 @@ def _cmbt(data, pos):
     return out, at + nbytes
 
 
-#: `s_missile` (orion2.h:1249-1266), 0x1A bytes — sizes.h asserts it.
-MISSILE_SIZE = 26
-MISSILE_FIELDS = (("type", "h"), ("owner", "h"), ("source_unit_idx", "h"),
-                  ("target_unit_idx", "h"), ("is_anti_missile_rocket", "b"),
-                  ("x", "h"), ("y", "h"), ("hits_taken", "h"),
-                  ("quantity", "h"), ("specials", "H"), ("travel_dist", "h"),
-                  ("facing_dir", "b"), ("speed", "B"), ("fighter_count", "b"),
-                  ("pad", "b"), ("is_active", "b"))
-MISSILE_FORMAT = "<" + "".join(f for _n, f in MISSILE_FIELDS)
-assert _st.calcsize(MISSILE_FORMAT) == MISSILE_SIZE
+#: `s_missile`, whole: `core/structs/combat.py` (it follows the layout).
+MISSILE_SIZE = combat_struct.MISSILE_SPEC.size
 
 
 def _cmsl(data, pos):
@@ -157,14 +102,15 @@ def _cmsl(data, pos):
     live `s_missile` — type above 0)."""
     version, serial, size, n = _st.unpack_from("<BHBh", data, pos + 4)
     at = pos + 10
-    if version != 1 or size != MISSILE_SIZE or not 0 <= n <= 300 or \
+    want = combat_struct.MISSILE_SPEC.resolved()[0]
+    if version != 1 or size != want or not 0 <= n <= 300 or \
             at + n * (2 + size) > len(data):
         return None, pos
     missiles = []
     for _ in range(n):
         (index,) = _st.unpack_from("<h", data, at)
-        vals = _st.unpack_from(MISSILE_FORMAT, data, at + 2)
-        m = dict(zip((k for k, _f in MISSILE_FIELDS), vals))
+        m = combat_struct.record(combat_struct.MISSILE_SPEC,
+                                 data[at + 2:at + 2 + size])
         m["index"] = index
         missiles.append(m)
         at += 2 + size
@@ -317,8 +263,9 @@ def build_cmsl(missiles, serial=1):
     out = b"CMSL" + _st.pack("<BHBh", 1, serial, MISSILE_SIZE, len(missiles))
     for m in missiles:
         out += _st.pack("<h", m["index"])
-        out += _st.pack(MISSILE_FORMAT, *(int(m.get(k, 0))
-                                          for k, _f in MISSILE_FIELDS))
+        out += combat_struct.MISSILE_SPEC.pack(
+            {k: int(m.get(k, 0)) for k, _o, _f in
+             combat_struct.MISSILE_SPEC.fields})
     return out
 
 

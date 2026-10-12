@@ -22,8 +22,15 @@ happened to name.
                       SAVE11.GAM          written by nothing (126 D) — held too
                       MOX.SET             Save_Game_Settings_ (filedef.cpp:24,
                                           loadsave.cpp:1063, initgame.cpp:113)
+                      ORION2RE.SET        orion2re v2's settings file instead
+                                          of MOX.SET (GAME_SETTINGS_FILENAME,
+                                          consts.h:66; written by filedef.cpp
+                                          :28, initgame.cpp:131, loadsave.cpp
+                                          :996) — work order 243
                       HOF.M2              the Hall of Fame (score.cpp:205, :614)
                       lastrace.rac        the last custom race (racesel.cpp:704)
+                      ORION2RE.RAC        v2's last custom race instead
+                                          (racesel.cpp:7, :728) — work order 243
                       TEMP.TMP            the swap block (swap.cpp:24)
     OrionLayer        user_settings.json  the settings rows (usersettings.save),
                                           with .tmp and .corrupt beside it — in
@@ -62,7 +69,8 @@ import workdirs  # noqa: E402 — work order 199: a new ~/ entry is logged
 GAME_DIR = paths.game_dir()
 
 GAME_FILES = tuple(f"SAVE{n}.GAM" for n in range(1, 12)) + (
-    "MOX.SET", "HOF.M2", "lastrace.rac", "TEMP.TMP")
+    "MOX.SET", "ORION2RE.SET", "HOF.M2", "lastrace.rac", "ORION2RE.RAC",
+    "TEMP.TMP")
 LAYER_FILES = ("user_settings.json", "user_settings.json.tmp",
                "user_settings.json.corrupt")
 

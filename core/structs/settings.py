@@ -75,6 +75,14 @@ SPEC = Spec("s_settings", SIZE, [
     #     independently of this block. A misplaced block would have to
     #     put a 2 exactly there by accident.
     ("language", 210, "u8"),
+    # the next five were read at fixed bytes in `core/game_state.py` until
+    # work order 243 (0xD4, 0xD6, 0xD7); the live reading above names the
+    # first three, the header the order (orion2.h `s_settings`)
+    ("xenons_exist", 0xD3, "u8"),
+    ("game_difficulty", 0xD4, "i8"),
+    ("number_of_players", 0xD5, "i8"),
+    ("galaxy_size", 0xD6, "i8"),
+    ("galaxy_age", 0xD7, "i8"),
 ], verified=True)
 
 #: The Settings dialog's thirteen rows, in ROW order — not the struct's.
@@ -106,7 +114,3 @@ def option_flags(raw, game_type):
     if game_type != 0:
         flags[1] = 0
     return flags
-
-#: The one home for the number `screens/research_select` needs when it
-#: reads the block straight off the wire rather than through the spec.
-LANGUAGE_OFFSET = 210

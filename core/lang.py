@@ -258,7 +258,12 @@ def set_engine_language(number):
 def engine_settings(raw):
     """`set_engine_language` from a snapshot's settings bytes; returns
     them."""
-    set_engine_language(raw[210] if len(raw) > 210 else 0)
+    from core.structs import settings      # imports this module
+    try:
+        language = settings.parse(raw).language
+    except ValueError:                      # a block too short to hold it
+        language = 0
+    set_engine_language(language or 0)
     return raw
 
 

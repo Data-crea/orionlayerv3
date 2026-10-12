@@ -17,16 +17,13 @@ nothing and `gs.fleet_move` stays None — the map then draws no preview line
 """
 import struct as _st
 
-#: s_ship_move_info, field for field (orion2.h:2921-2936), 14 bytes.
-FIELDS = (("blackhole_blocks", "b"), ("insufficient_fuel", "b"),
-          ("immobile", "b"), ("pad", "b"), ("turns_left", "B"),
-          ("moving", "b"), ("out_of_range", "b"), ("has_navigator", "b"),
-          ("traveling_speed", "b"), ("parsecs", "B"), ("uses_wormhole", "b"),
-          ("has_jumpgate_route", "b"), ("has_stargate_route", "b"),
-          ("hyperspace_flux", "b"))
-FORMAT = "<" + "".join(f for _n, f in FIELDS)
-SIZE = _st.calcsize(FORMAT)
-assert SIZE == 14
+from core.structs import combat as combat_struct
+
+#: s_ship_move_info, whole: `core/structs/combat.py` (it follows the
+#: engine's layout; 14 bytes on the old engine).
+SPEC = combat_struct.MOVE_INFO_SPEC
+FIELDS = tuple(name for name, _o, _k in SPEC.fields)
+SIZE = SPEC.size
 
 
 def parse(gs, data, pos):
@@ -37,12 +34,12 @@ def parse(gs, data, pos):
         return pos
     version, n, size = _st.unpack_from("<BhB", data, pos + 4)
     body = pos + 8
-    if version != 1 or size != SIZE or n < 0 or body + n * size > len(data):
+    if version != 1 or size != SPEC.resolved()[0] or n < 0 or \
+            body + n * size > len(data):
         return pos
-    verdicts = []
-    for i in range(n):
-        vals = _st.unpack_from(FORMAT, data, body + i * size)
-        verdicts.append(dict(zip((name for name, _f in FIELDS), vals)))
+    verdicts = [combat_struct.record(SPEC, data[body + i * size:
+                                                body + (i + 1) * size])
+                for i in range(n)]
     gs.fleet_move = {"version": version, "verdicts": verdicts}
     return body + n * size
 
@@ -51,5 +48,5 @@ def build(verdicts):
     """The block as the engine writes it — for the checks' stand-ins."""
     out = b"FMOV" + _st.pack("<BhB", 1, len(verdicts), SIZE)
     for v in verdicts:
-        out += _st.pack(FORMAT, *(int(v.get(name, 0)) for name, _f in FIELDS))
+        out += SPEC.pack({name: int(v.get(name, 0)) for name in FIELDS})
     return out

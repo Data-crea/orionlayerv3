@@ -55,6 +55,10 @@ SPEC = Spec("s_star_data", SIZE, [
     # FOR ITS OWN PLAYER names it back, and no other slot names anyone
     # (dev:tools/leader_check.py).
     ("officer_index",  187, "i8[8]"),
+    # the two arrays below were read through helpers at fixed offsets
+    # until work order 243; as spec fields the engine's layout finds them
+    ("planet_index",   195, "i16[5]"),
+    ("relocate_ship_to", 205, "i16[8]"),
     ("in_nebula",      232, "u8"),
 ], verified=True)
 
@@ -71,8 +75,7 @@ PLANET_SLOTS = 5
 
 def planet_indices(view):
     """The five planet slots of a system; -1 means empty."""
-    import struct as _s
-    return list(_s.unpack_from("<5h", view.raw, PLANET_INDEX_OFFSET))
+    return list(view.planet_index)
 
 
 #: `relocate_ship_to[MAX_PLAYERS]`, orion2.h:3007 — one int16 per
@@ -104,11 +107,10 @@ def relocation_target(view, player_num):
     so the two are one lookup here and None carries "no relocation"
     rather than a magic -1 the caller has to remember.
     """
-    import struct as _s
-    if not 0 <= int(player_num) < RELOCATE_SLOTS:
+    slots = view.relocate_ship_to
+    if not 0 <= int(player_num) < len(slots):
         return None
-    target = _s.unpack_from("<h", view.raw,
-                            RELOCATE_OFFSET + 2 * int(player_num))[0]
+    target = slots[int(player_num)]
     return None if target < 0 else target
 
 

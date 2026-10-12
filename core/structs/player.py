@@ -88,11 +88,10 @@ Sidebar semantics, from mainscr_main.cpp's sidebar drawing:
 local player has met that empire. Star names in Get_Star_Name_ use
 it to decide whether an owned system shows its owner's colour.
 """
-import struct as _struct
 
-from core import lang
 
 from core.structs import Spec
+from core.structs import layout as _layout
 
 SIZE = 0xF0E   # 3854
 
@@ -213,6 +212,10 @@ SPEC = Spec("s_player", SIZE, [
     # popup lists, and the five costs — 27, 126, 115, 358, 824 — are the
     # ones the engine's own `Colony_Product_Cost_` sent for ids -50..-54.
     ("ship_designs",          906, "u8[594]"),
+    # `contact` and `traits` were read by the helpers below at fixed
+    # offsets (CONTACT_OFFSET, TRAITS_OFFSET) until work order 243; as
+    # fields the engine's layout finds them
+    ("contact",              1512, "i8[8]"),
     ("n_times_established_contact", 1521, "i8[8]"),
     ("current_trade_agreement_level", 1545, "i16[8]"),
     ("current_research_agreement_level", 1579, "i16[8]"),
@@ -224,6 +227,7 @@ SPEC = Spec("s_player", SIZE, [
     ("trade_treaty",         1684, "i8[8]"),
     ("research_treaty",      1692, "i8[8]"),
     ("tribute_treaty",       1700, "i16[8]"),
+    ("traits",               2308, "i8[31]"),
     ("fleet_history",        2372, "i8[350]"),
     ("tech_history",         2722, "i8[350]"),
     ("population_history",   3072, "i8[350]"),
@@ -307,14 +311,12 @@ SIDEBAR_ANCHORS = ("race", "traits", "tech_applications")
 def contacts(view):
     """Per-player contact flags; contacts(v)[n] is truthy when the
     local player has met player n."""
-    return list(_struct.unpack_from(
-        f"<{MAX_PLAYERS}b", view.raw, CONTACT_OFFSET))
+    return list(view.contact)
 
 
 def traits(view):
     """The 31 racial trait values (signed)."""
-    return list(_struct.unpack_from(
-        f"<{TRAIT_COUNT}b", view.raw, TRAITS_OFFSET))
+    return list(view.traits)
 
 
 def has_omniscience(view):
@@ -332,37 +334,46 @@ def has_omniscience(view):
 #: `cost` int16 at 94 — the compiler's numbers, see `ship_designs`.
 SHIP_DESIGNS_OFFSET, DESIGN_SIZE, DESIGN_SLOTS = 906, 99, 6
 DESIGN_NAME_LEN, DESIGN_COST_OFFSET = 16, 94
-
-
-def design_name(view, i):
-    """Design i's name, as `Selection_Name_` reads it for ids -50 - i."""
-    if not 0 <= int(i) < DESIGN_SLOTS:
-        return None
-    o = SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
-    # a stored name: never translated (work order 208 A6, `lang.Stored`)
-    return lang.stored(lang.wire_text(
-        view.raw[o:o + DESIGN_NAME_LEN].split(b"\0")[0]))
-
-
 #: `s_ship_design.size` at 16 — the same place as the ship record's own
 #: design copy (`ship.py` `size`, verified).
 DESIGN_SIZE_OFFSET = 16
 
 
-def design_size(view, i):
-    """Design i's hull size (0 frigate .. 5 doom star), or None."""
+#: The design record's members the build popup and the refit read: the
+#: compiler's numbers for the engine above; an engine with a LAYOUT says
+#: its own (decision 97).
+DESIGN_SPEC = Spec("s_ship_design", DESIGN_SIZE, [
+    ("name", 0, "str16"),
+    ("size", DESIGN_SIZE_OFFSET, "i8"),
+    ("cost", DESIGN_COST_OFFSET, "i16"),
+], verified=True)
+
+
+def design_raw(view, i):
+    """Design slot i's bytes (`s_ship_design`), or None for no such slot."""
     if not 0 <= int(i) < DESIGN_SLOTS:
         return None
-    return view.raw[SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i)
-                    + DESIGN_SIZE_OFFSET]
+    base = _layout.offset("s_player", "ship_designs", SHIP_DESIGNS_OFFSET)
+    size = _layout.size("s_ship_design", DESIGN_SIZE)
+    return bytes(view.raw[base + size * int(i):base + size * (int(i) + 1)])
+
+
+def design_name(view, i):
+    """Design i's name, as `Selection_Name_` reads it for ids -50 - i."""
+    raw = design_raw(view, i)
+    # a stored name: never translated (work order 208 A6, `lang.Stored`)
+    return None if raw is None else DESIGN_SPEC.parse(raw).name
+
+
+def design_size(view, i):
+    """Design i's hull size (0 frigate .. 5 doom star), or None."""
+    raw = design_raw(view, i)
+    return None if raw is None else DESIGN_SPEC.parse(raw).size
 
 
 def design_cost(view, i):
-    if not 0 <= int(i) < DESIGN_SLOTS:
-        return None
-    return _struct.unpack_from(
-        "<h", view.raw,
-        SHIP_DESIGNS_OFFSET + DESIGN_SIZE * int(i) + DESIGN_COST_OFFSET)[0]
+    raw = design_raw(view, i)
+    return None if raw is None else DESIGN_SPEC.parse(raw).cost
 
 
 def command_point_surplus(view):

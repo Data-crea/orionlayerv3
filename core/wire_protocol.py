@@ -116,6 +116,14 @@ EFFECT_PAIRS = 2
 #: STATE, decision 60). Open fix 14.
 MSG_SAVE_SLOTS    = 0x14
 
+#: Server -> client, once per connection right after HELLO_REPLY when the
+#: reply's capabilities carry CAP_LAYOUT: every member of the records the
+#: snapshot sends raw, by name (decision 97; `core/structs/layout.py`
+#: reads it; the engine side is the fork's `docs/extension-api.md`).
+MSG_LAYOUT        = 0x15
+#: HELLO_REPLY's second word, bit 0: the server sends MSG_LAYOUT.
+CAP_LAYOUT        = 0x0001
+
 #: One slot record in MSG_SAVE_SLOTS: int8 status, int8 game type,
 #: char[37] description, char[25] stardate, char[25] date.
 SAVE_SLOT_RECORD_SIZE = 1 + 1 + 37 + 25 + 25
@@ -124,6 +132,7 @@ MSG_NAMES = {
     0x01: "HELLO_REPLY", 0x10: "STATE_SNAPSHOT",
     0x11: "FIELD_LIST",  0x12: "VISUAL_FRAME",
     0x13: "EVENT",       0x14: "SAVE_SLOTS",
+    0x15: "LAYOUT",
 }
 
 

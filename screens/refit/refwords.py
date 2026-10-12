@@ -93,6 +93,4 @@ def ship_lines(view, ship_index, state, e, h, names):
 def design_view(player, k):
     """Design slot k of a player as a ship view (a design IS the record's
     first 99 bytes, `s_ship_design`)."""
-    o = player_struct.SHIP_DESIGNS_OFFSET + player_struct.DESIGN_SIZE * k
-    raw = bytes(player.raw[o:o + player_struct.DESIGN_SIZE])
-    return ship_struct.parse(raw + bytes(ship_struct.SIZE - len(raw)))
+    return ship_struct.from_design(player_struct.design_raw(player, k) or b"")

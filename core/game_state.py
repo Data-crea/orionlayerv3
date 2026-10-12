@@ -6,13 +6,18 @@ Struct-Größen kommen aus orion2re sizes.h.
 """
 import struct
 from core import lang, wire_protocol
+from core.structs import layout
+from core.structs import settings as settings_struct
 from core.structs import star as star_struct
 from core.structs import ship_icon as ship_icon_struct
 from dataclasses import dataclass, field
 from typing import Optional
 
 
-# Struct sizes (from sizes.h, 64-bit build with MAX_STARS=1024)
+# Struct sizes of the engine the specs were read against (sizes.h, 64-bit
+# build with MAX_STARS=1024: orion2re 1.60, `orionlayer-local`). An engine
+# that sends its LAYOUT (decision 97) says its own, and `parse_state` asks
+# `core.structs.layout` for every one of them.
 SETTINGS_SIZE = 0x229       # 553
 PLAYER_SIZE = 0xF0E         # 3854
 STAR_SIZE = 0x6A + (1024 + 7) // 8  # 234 (with BITMAP(MAX_STARS))
@@ -221,57 +226,66 @@ def parse_state(data: bytes) -> GameState:
 
     # Settings
     # the engine's language (open fix 70) noted before any of its texts below
-    gs.settings_raw = lang.engine_settings(read_bytes(SETTINGS_SIZE))
-    # Shortcuts: difficulty at offset 0xD4, galaxy_size at 0xD6
-    gs.difficulty = gs.settings_raw[0xD4]
-    gs.galaxy_size = gs.settings_raw[0xD6]
-    gs.galaxy_age = gs.settings_raw[0xD7]
+    gs.settings_raw = lang.engine_settings(
+        read_bytes(layout.size("s_settings", SETTINGS_SIZE)))
+    settings = settings_struct.parse(gs.settings_raw)
+    gs.difficulty = settings.game_difficulty
+    gs.galaxy_size = settings.galaxy_size
+    gs.galaxy_age = settings.galaxy_age
 
     # Players
+    player_size = layout.size("s_player", PLAYER_SIZE)
     gs.player_raw = []
-    for i in range(MAX_PLAYERS):
-        gs.player_raw.append(read_bytes(PLAYER_SIZE))
+    for i in range(layout.constant("MAX_PLAYERS", MAX_PLAYERS)):
+        gs.player_raw.append(read_bytes(player_size))
 
     # Stars (verified spec: core/structs/star.py)
     n_stars = read_i16()
-    star_raws = [read_bytes(STAR_SIZE) for _ in range(n_stars)]
+    star_size = layout.size("s_star_data", STAR_SIZE)
+    star_raws = [read_bytes(star_size) for _ in range(n_stars)]
     gs.stars = star_struct.parse_all(star_raws)
 
     # Ships
     n_ships = read_i16()
+    ship_size = layout.size("s_ship_data", SHIP_SIZE)
     gs.ships_raw = []
     for i in range(n_ships):
-        gs.ships_raw.append(read_bytes(SHIP_SIZE))
+        gs.ships_raw.append(read_bytes(ship_size))
 
     # Colonies
     n_colonies = read_i16()
+    colony_size = layout.size("s_colony", COLONY_SIZE)
     gs.colonies_raw = []
     for i in range(n_colonies):
-        gs.colonies_raw.append(read_bytes(COLONY_SIZE))
+        gs.colonies_raw.append(read_bytes(colony_size))
 
     # Planets
     n_planets = read_i16()
+    planet_size = layout.size("s_planet_data", PLANET_SIZE)
     gs.planets_raw = []
     for i in range(n_planets):
-        gs.planets_raw.append(read_bytes(PLANET_SIZE))
+        gs.planets_raw.append(read_bytes(planet_size))
 
     # Nebulas
     n_nebulas = read_u8()
+    nebula_size = layout.size("s_nebula", NEBULA_SIZE)
     gs.nebulas_raw = []
     for i in range(n_nebulas):
-        gs.nebulas_raw.append(read_bytes(NEBULA_SIZE))
+        gs.nebulas_raw.append(read_bytes(nebula_size))
 
     # Leaders
+    leader_size = layout.size("s_leader_data", LEADER_SIZE)
     gs.leaders_raw = []
-    for i in range(MAX_LEADERS):
-        gs.leaders_raw.append(read_bytes(LEADER_SIZE))
+    for i in range(layout.constant("MAX_LEADERS", MAX_LEADERS)):
+        gs.leaders_raw.append(read_bytes(leader_size))
 
     # Antarans
-    gs.antaran_raw = read_bytes(ANTARAN_SIZE)
+    gs.antaran_raw = read_bytes(layout.size("s_antaran", ANTARAN_SIZE))
 
     # Ship icons (verified spec: core/structs/ship_icon.py)
     n_icons = read_i16()
-    icon_raws = [read_bytes(SHIP_ICON_SIZE) for _ in range(n_icons)]
+    icon_size = layout.size("s_ship_icon", SHIP_ICON_SIZE)
+    icon_raws = [read_bytes(icon_size) for _ in range(n_icons)]
     gs.ship_icons = ship_icon_struct.parse_all(icon_raws)
 
     # Newgame screen local settings (8 × int16, appended by ext_api)
@@ -481,6 +495,13 @@ def parse_fields(data: bytes) -> list:
     `injection._signature` — legitimately wants to see the whole list.
     `dev:tools/ext_diag.py` builds its own list straight from the bytes,
     deliberately redundant, and still sees slot 0.
+
+    **A HOT KEY IS UPPER CASE HERE, ONCE** (work order 243). The original
+    stores a field's one-letter hot key upper case (fields.cpp:296-297 in
+    orion2re 1.60); v2.0.0 stores it lower case (fields.cpp:13-17) and
+    matches keys without case. Every reader in OrionLayer compares with
+    the upper-case letter, so the list is normalised where it is parsed,
+    the way slot 0 is dropped.
     """
     fields = []
     for idx, x, y, xe, ye, ft, hk in wire_protocol.parse_field_list_raw(data):
@@ -489,7 +510,8 @@ def parse_fields(data: bytes) -> list:
         f = FieldInfo()
         f.index, f.x, f.y = idx, x, y
         f.x_end, f.y_end = xe, ye
-        f.field_type, f.hotkey = ft, hk
+        f.field_type = ft
+        f.hotkey = hk - 32 if 0x61 <= hk <= 0x7A else hk
         fields.append(f)
     return fields
 

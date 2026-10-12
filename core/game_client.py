@@ -18,10 +18,11 @@ from core.wire_protocol import (
     MSG_ACTIVATE, MSG_INJECT_KEY, MSG_INJECT_CLICK, MSG_CANCEL_FIELD,
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
     MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND, MSG_SET_SPIES,
-    MSG_INJECT_RAW_KEY, MSG_SETTLE_POPS,
+    MSG_INJECT_RAW_KEY, MSG_SETTLE_POPS, MSG_LAYOUT, CAP_LAYOUT,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
+from core.structs import layout as engine_layout
 
 log = logging.getLogger("game_client")
 
@@ -493,10 +494,28 @@ class GameClient:
         """Process a received message."""
         self.stats["bytes"] += len(payload) + 16
         if msg_type == MSG_HELLO_REPLY:
-            log.info("HELLO_REPLY received")
+            caps = struct.unpack_from("<H", payload, 2)[0] \
+                if len(payload) >= 4 else 0
+            log.info("HELLO_REPLY received (capabilities 0x%04X)", caps)
+            # A LAYOUT follows the reply when the engine says so (decision
+            # 97); a snapshot read before it would be read at the specs'
+            # own offsets, which are another engine's. An engine without
+            # the bit is the one the specs were read against.
+            self._layout_pending = bool(caps & CAP_LAYOUT)
+            engine_layout.install(None)
+
+        elif msg_type == MSG_LAYOUT:
+            try:
+                engine_layout.install(engine_layout.parse(payload))
+            except ValueError as e:
+                log.error(f"Layout parse error: {e} — snapshots not read")
+                return
+            self._layout_pending = False
 
         elif msg_type == MSG_STATE:
             self.stats["state"] += 1
+            if getattr(self, "_layout_pending", False):
+                return
             try:
                 old_fb = self.state.framebuffer
                 old_pal = self.state.palette

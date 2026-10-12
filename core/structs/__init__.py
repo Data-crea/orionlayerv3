@@ -97,14 +97,55 @@ class Spec:
         self.fields = fields
         self.verified = verified
         self.note = note
+        self._resolved = (None, size, fields)
+
+    def resolved(self):
+        """(size, fields) for the connected engine (decision 97).
+
+        With the engine's LAYOUT (`core/structs/layout.py`) every field is
+        found by its NAME: its offset, its count and its width are the
+        engine's, so a record that grew or moved reads right with no edit
+        here. A field the engine does not have is (name, None, None) and
+        reads as None. Without a layout the spec's own offsets hold — the
+        engine they were read against. Worked out once per layout."""
+        from core.structs import layout as _layout
+        lay = _layout.current() if _layout.has(self.name) else None
+        if self._resolved[0] is not lay:
+            if lay is None:
+                self._resolved = (None, self.size, self.fields)
+            else:
+                fields = [(name, *self._engine_field(name, kind))
+                          for name, _offset, kind in self.fields]
+                self._resolved = (lay, _layout.size(self.name, self.size),
+                                  fields)
+        return self._resolved[1], self._resolved[2]
+
+    def _engine_field(self, name, kind):
+        from core.structs import layout as _layout
+        m = _layout.member(self.name, name)
+        if m is None:
+            return None, None
+        if kind.startswith("str") or m.kind == _layout.TEXT:
+            return m.offset, f"str{m.size}"
+        arr = self._ARRAY_RE.match(kind)
+        scalar = m.scalar()
+        if arr:
+            if scalar is None:            # a record array read as bytes
+                return m.offset, f"u8[{m.size}]"
+            return m.offset, f"{scalar}[{m.count}]"
+        return m.offset, scalar or kind
 
     def parse(self, raw):
         """Parse one record. Raises ValueError on size mismatch."""
-        if len(raw) < self.size:
+        size, fields = self.resolved()
+        if len(raw) < size:
             raise ValueError(
-                f"{self.name}: got {len(raw)} bytes, need {self.size}")
+                f"{self.name}: got {len(raw)} bytes, need {size}")
         values = {}
-        for name, offset, kind in self.fields:
+        for name, offset, kind in fields:
+            if offset is None:
+                values[name] = None
+                continue
             if kind.startswith("str"):
                 length = int(kind[3:])
                 chunk = raw[offset:offset + length]
@@ -124,6 +165,31 @@ class Spec:
                 values[name] = _struct.unpack_from(
                     self._FMT[kind], raw, offset)[0]
         return StructView(raw, values)
+
+    def pack(self, values):
+        """A record holding `values` (name -> value) at this spec's OWN
+        offsets — the engine the spec was read against — zeros elsewhere:
+        the suite's stand-ins and the fixture builders."""
+        raw = bytearray(self.size)
+        for name, offset, kind in self.fields:
+            if name not in values:
+                continue
+            value = values[name]
+            if kind.startswith("str"):
+                data = value.encode("latin-1") if isinstance(value, str) \
+                    else bytes(value)
+                raw[offset:offset + int(kind[3:])] = \
+                    data[:int(kind[3:])].ljust(int(kind[3:]), b"\0")
+                continue
+            m = self._ARRAY_RE.match(kind)
+            if m:
+                scalar = m.group(1)
+                for i, v in enumerate(value[:int(m.group(2))]):
+                    _struct.pack_into(self._FMT[scalar], raw,
+                                      offset + i * self._WIDTH[scalar], v)
+            else:
+                _struct.pack_into(self._FMT[kind], raw, offset, value)
+        return bytes(raw)
 
     def parse_all(self, raw_list):
         """Parse a list of raw records, attaching .index to each."""

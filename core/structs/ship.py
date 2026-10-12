@@ -51,6 +51,7 @@ HAROLD::Absolute_Location_ (harold.cpp:815):
 Use absolute_location() rather than the raw value.
 """
 from core.structs import Spec
+from core.structs import layout as _layout
 
 SIZE = 0x81                       # 129
 
@@ -203,13 +204,22 @@ def weapons(view):
     (work order 128 E, status document).
     """
     out = []
+    base = _layout.offset("s_ship_data", "ship_weapon", WEAPONS_OFFSET)
+    size = _layout.size("s_ship_weapons", WEAPON_SIZE)
     for slot in range(WEAPON_SLOTS):
-        start = WEAPONS_OFFSET + slot * WEAPON_SIZE
-        weapon = WEAPON_SPEC.parse(view.raw[start:start + WEAPON_SIZE])
+        start = base + slot * size
+        weapon = WEAPON_SPEC.parse(view.raw[start:start + size])
         if weapon.type < 0 or weapon.count < 1:
             break
         out.append(weapon)
     return out
+
+
+def from_design(raw):
+    """A ship view of a design record alone (`s_ship_design`, the ship
+    record's first member `d`): the ship's own fields after it read 0."""
+    size = _layout.size("s_ship_data", SIZE)
+    return parse(bytes(raw) + bytes(max(0, size - len(raw))))
 
 
 def special_bits(view):
