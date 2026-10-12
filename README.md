@@ -5,9 +5,11 @@
 # OrionLayer v3
 
 An HD frontend for **Master of Orion 2**, built on
-[orion2re](https://github.com/mrjoes/orion2re) — the C++
-reimplementation of the original engine by Joes (its repository is
-private at the moment).
+[orion2re](https://github.com/orion2re/orion2re) — the C++
+reimplementation of the original engine by Joes and the orion2re team
+(GPL-3.0-or-later). OrionLayer needs orion2re with its Extension API,
+which is the fork [Data-crea/orion2re](https://github.com/Data-crea/orion2re)
+(branch `orionlayer`).
 
 orion2re runs the game; OrionLayer replaces its 640x480 interface with
 high-resolution pygame screens. The two talk over a local TCP
@@ -18,12 +20,62 @@ shows the original's picture, so the game is always playable.
 
 **You need your own copy of Master of Orion 2.** OrionLayer is a
 modification, not a game: it replaces the interface and nothing else.
-Artwork in this repository is derived from the original's; copyright
-in the underlying work stays with its rightsholder, and no ownership
-of it is claimed. The game's own texts and pictures that OrionLayer
-shows are not included at all — they are read from your own
-installation (see Install). See [LICENSE](LICENSE) for what the MIT
-licence covers and what it does not, and [Credits](#credits).
+The game's own texts and pictures that OrionLayer shows are not included
+— they are read from your own installation. OrionLayer's own pictures
+come as a separate download, the base pack (Creative Commons Attribution
+4.0, its `LICENSE.txt`). See [LICENSE](LICENSE) for what the MIT licence
+of this code covers and what it does not, and [Credits](#credits).
+
+## Getting started
+
+These are the steps, on Linux, from nothing to a game on the galaxy map.
+They were run exactly like this in an empty folder (work order 243). On
+Windows the steps are the same; the engine's build command is in the
+fork's README, and OrionLayer itself has not been tried there yet.
+
+You need Master of Orion 2 (GOG or Steam), Python 3.10 or newer, git,
+CMake and Ninja, and a C++ compiler (Debian/Ubuntu: `sudo apt install
+build-essential cmake ninja-build git python3-venv`). Below, the game is in
+`~/Master of Orion 2`; use your own folder.
+
+**1. Build the engine.** This puts the engine and its own data into your
+game folder:
+
+```sh
+git clone --recurse-submodules --branch orionlayer https://github.com/Data-crea/orion2re.git
+cd orion2re
+cmake --preset linux-release -DORION2RE_EXT=ON -DORION2RE_GAME_DIR="$HOME/Master of Orion 2"
+cmake --build --preset linux-release
+cd ..
+```
+
+**2. Get OrionLayer and what it needs:**
+
+```sh
+git clone https://github.com/Data-crea/orionlayerv3.git
+cd orionlayerv3
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+**3. Set it up.** This tells OrionLayer where the engine and the game are,
+downloads OrionLayer's pictures (the base pack, checked file by file) and
+reads the texts and pictures it needs from your own game:
+
+```sh
+.venv/bin/python tools/setup.py --engine "$HOME/Master of Orion 2/orion2re" --game "$HOME/Master of Orion 2" --extract
+```
+
+**4. Play:**
+
+```sh
+.venv/bin/python play.py
+```
+
+Choose LOAD GAME or NEW GAME as in the original. Your saves are the game's
+own (`SAVE1.GAM` … in the game folder). This engine writes saves in its
+own format (version 7), which orion2re builds before 2.0 cannot read; it
+reads the older saves.
 
 ## Requirements
 
@@ -117,19 +169,20 @@ Extension API's protocol is the fork's `docs/extension-api.md`.
 git clone https://github.com/Data-crea/orionlayerv3.git
 cd orionlayerv3
 pip install -r requirements.txt
-python tools/basepack.py install orionlayer-base-pack.zip
-python tools/setup.py
+python tools/setup.py --extract
 ```
 
 **The pictures are not in this repository.** OrionLayer's own pictures
 (backgrounds, banners, stars, nebulae, the new-game and race pictures, …)
-come as one zip, the *base pack*, which `tools/basepack.py install` puts
-into its own folder (`~/.local/share/orionlayer/base` on Linux,
-`%LOCALAPPDATA%\OrionLayer\base` on Windows, `ORIONLAYER_BASE_DIR` for
-another place) and checks against `basepack.json`. The zip will be
-published with the first release; until then it is not available.
-Without it `setup.py`, `main.py` and `play.py` say where they looked and
-start nothing. Pictures made from your own Master of Orion 2 are never in
+come as one zip, the *base pack* (Creative Commons Attribution 4.0, its
+`LICENSE.txt`), a release of this repository named after `basepack.json`
+(`base-pack-<12 characters of its sha256>`). `setup.py` downloads the one
+this checkout names and installs it into its own folder
+(`~/.local/share/orionlayer/base` on Linux, `%LOCALAPPDATA%\OrionLayer\base`
+on Windows, `ORIONLAYER_BASE_DIR` for another place), checking every file
+against `basepack.json`; `python tools/basepack.py install <zip>` does the
+same with a zip you have. Without it `setup.py`, `main.py` and `play.py`
+say where they looked and start nothing. Pictures made from your own Master of Orion 2 are never in
 the pack: `setup.py` and the extractors below make them on your machine.
 
 On Arch and other PEP 668 distributions `pip install` into the system
@@ -143,7 +196,8 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 `setup.py` rebuilds the artwork the repository does not carry (ship and
 sidebar icons, the black hole, the HUD pieces, …) and reports what is
 still missing from your own Master of Orion 2 installation. Those files
-are read by the extractors below — none is required to start, but
+are read by the extractors below, and `python tools/setup.py --extract`
+runs every one that has not run — none is required to start, but
 without them the matching screen says so instead of showing the game's
 text or picture (a right click, for one, names the command instead of
 opening the game's help):
