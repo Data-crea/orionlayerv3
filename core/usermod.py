@@ -257,8 +257,12 @@ def _is_notice(name):
 
 def _in_base_pack(target):
     """A default picture lives in the base pack, not the tree, since work
-    order 241; `basepack.json` names it even where no pack is installed."""
+    order 241; `basepack.json` names it even where no pack is installed,
+    and a picture the maintainer added to the pack counts before the
+    manifest follows (work order 242: no manual step for a new picture)."""
     from core import basepack
+    if os.path.isfile(os.path.join(basepack.base_dir(), target)):
+        return True
     try:
         return target in basepack.manifest()["files"]
     except (OSError, ValueError):

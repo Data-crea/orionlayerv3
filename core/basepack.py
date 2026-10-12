@@ -15,11 +15,18 @@ clone, the smoke suite). It is NOT under `ORIONLAYER_USER_DIR` on purpose:
 the suite and the clone checks give the player's folder a throwaway path,
 and the pack must still be the installed one.
 
-**THE MANIFEST IS CODE.** `basepack.json` in the tree names every file of
-the pack with its size and sha256 — text, so the repository knows exactly
-which pictures it expects without holding one. `tools/basepack.py` installs
-a pack from its zip and checks it against the manifest; `problems()` is
-what `play.py` and `main.py` say instead of drawing a screen with holes.
+**THE MANIFEST DESCRIBES THE SHIPPED PACK.** `basepack.json` in the tree
+names every file of the pack with its size and sha256 — text, so the
+repository knows which pictures a pack holds without holding one. It is
+not a lock on the maintainer's working copy (Data, work order 242: he
+swaps pictures daily, with no manual step): the start asks only that every
+named file is THERE (`missing`, `problems` — what `play.py` and `main.py`
+say instead of drawing a screen with holes), a picture under a name the
+code asks for is drawn whether the manifest lists it or not, and
+`python tools/basepack.py refresh` rewrites the manifest from the
+installed pack (`dev:tools/close_run.py` runs it). Size and sha256 are checked
+where they mean something: installing a pack from its zip and making the
+release zip (`tools/basepack.py install`, `make`).
 
 **ONE RESOLVER.** Nothing reads this folder but `core.resources`, which
 tries it after the tree (`Resources.resolve`, `roots`, `resolve_dir`), so
@@ -68,16 +75,13 @@ def manifest(path=MANIFEST):
 
 
 def missing(folder=None, man=None):
-    """The manifest's paths that are not in the pack (by name and size —
-    cheap enough for every start; `tools/basepack.py check` hashes)."""
+    """The manifest's paths that are not in the pack at all. Presence only
+    (work order 242): a repainted picture of another size is the pack
+    working as meant, not a hole; `tools/basepack.py check` hashes."""
     folder = folder or base_dir()
     man = man or manifest()
-    out = []
-    for rel, (size, _sha) in sorted(man["files"].items()):
-        p = os.path.join(folder, rel)
-        if not os.path.isfile(p) or os.path.getsize(p) != size:
-            out.append(rel)
-    return out
+    return [rel for rel in sorted(man["files"])
+            if not os.path.isfile(os.path.join(folder, rel))]
 
 
 def problems(folder=None):
@@ -92,8 +96,9 @@ def problems(folder=None):
     gone = missing(folder)
     if gone:
         return [f"OrionLayer's base pack at {folder} lacks {len(gone)} of "
-                f"its {len(manifest()['files'])} files (first: {gone[0]}) "
-                f"— {how}."]
+                f"its {len(manifest()['files'])} files ("
+                + ", ".join(gone[:5]) + (", …" if len(gone) > 5 else "")
+                + f") — {how}."]
     return []
 
 
