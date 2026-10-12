@@ -1,0 +1,76 @@
+From e3ae40c8bf3ddf5aa674c39ea92e75976488b388 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:30:14 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2088:=20the=20text=20fi?=
+ =?UTF-8?q?elds=20on=20the=20wire=20(TXTF:=20while=20the=20field=20list=20?=
+ =?UTF-8?q?holds=20a=20continuous=20input=20field=20=E2=80=94=20the=20race?=
+ =?UTF-8?q?'s=20name=20on=20Custom=20Race,=20a=20ship's,=20a=20save's=20?=
+ =?UTF-8?q?=E2=80=94=20per=20such=20field=20its=20index,=20max=20length,?=
+ =?UTF-8?q?=20buffer,=20whether=20it=20is=20edited=20and=20the=20typed=20t?=
+ =?UTF-8?q?ext=20then;=20OrionLayer=20could=20neither=20show=20a=20typed?=
+ =?UTF-8?q?=20name=20nor=20read=20back=20what=20Enter=20stored)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 6c431570:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 42 ++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 42 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 35b30836..5cd8266e 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1938,6 +1938,48 @@ static void SerializeState(std::vector<uint8_t>& buf,
+                   sizeof(namestar::input_box.prompt_text));
+         Write8(buf, (uint8_t)(namestar::input_box.show_cancel_anim != 0));
+     }
++
++    // 31. The text fields: "TXTF", written ONLY while the field list holds a
++    //     continuous input field, after INBX's place. OrionLayer, open fix 88.
++    //
++    //     A name a player types — the race's on Custom Race (raceopt.cpp:
++    //     1157-1167), a ship's (design_main.cpp:688), a save's — is a
++    //     continuous input field: it opens only by a click (fields.cpp:
++    //     1076-1105), takes keys into fields::continuous_string and stores
++    //     them in its own buffer on Enter (:1057-1068). The field list has
++    //     its rectangle and type, never its text, so a client could neither
++    //     show the name nor read back what was stored. Per such field (at
++    //     most 16, in list order) as WriteInputField writes one: its index,
++    //     its max length, its buffer, whether it is being edited and the
++    //     typed text then. Read only; nothing here changes the game.
++    {
++        uint8_t txtf_count = 0;
++        for (int16_t i = 0; i < fields::fields_count && txtf_count < 16; ++i) {
++            if (fields::fields[i].field_type == FIELD_TYPE_CONTINUOUS_INPUT) {
++                ++txtf_count;
++            }
++        }
++        if (txtf_count > 0) {
++            buf.push_back((uint8_t)'T');
++            buf.push_back((uint8_t)'X');
++            buf.push_back((uint8_t)'T');
++            buf.push_back((uint8_t)'F');
++            Write8(buf, 1);                               // block version
++            Write8(buf, txtf_count);
++            uint8_t written = 0;
++            for (int16_t i = 0; i < fields::fields_count && written < txtf_count; ++i) {
++                s_field& f = fields::fields[i];
++                if (f.field_type != FIELD_TYPE_CONTINUOUS_INPUT) {
++                    continue;
++                }
++                const s_field_cont_input* in = fields::Field_Data_Continuous_Input(&f);
++                const int16_t limit = in->max_length;
++                WriteInputField(buf, i, limit, in->buffer,
++                                limit > 0 ? (size_t)limit : 0);
++                ++written;
++            }
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

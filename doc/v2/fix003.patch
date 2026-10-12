@@ -1,0 +1,62 @@
+From 74b06b9845f8cf2df2b5e8ea2f632ff29906a0f5 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:23:57 +0200
+Subject: [PATCH] Open fix 3: an injected click keeps its pointer
+ (platform.cpp)
+
+The pointer half of OrionLayer's open fix 3 (doc/ext_inject_click.patch):
+Sync_Mouse_State_From_SDL_ stands aside while an injected mouse event
+is pending, and the event service clears the flag once the queue has
+been pumped. The coordinate half lives in src/ext and is in the
+Extension API commit.
+
+Committed as found (OrionLayer work order 126, part A).
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 191aaa78:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/game/platform.cpp | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 52f7bd2a..ac46b9c5 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -984,6 +984,19 @@ namespace platform {
+                 return;
+             }
+ 
++#ifdef ORION2RE_EXT
++            // An injected click already carries its position in the
++            // queued event and Pointer_X() pumps before reading, so
++            // the design is sound. What breaks it is this function:
++            // it overwrites the position, and its enqueue coalesces
++            // over the injected release (same button state), pulling
++            // the pointer back to the physical mouse. Stand aside
++            // until the queue has been pumped.
++            if (ext::g_injected_mouse_pending) {
++                return;
++            }
++#endif
++
+             float mouse_x = 0.0f;
+             float mouse_y = 0.0f;
+             const SDL_MouseButtonFlags sdl_buttons = SDL_GetMouseState(&mouse_x, &mouse_y);
+@@ -1727,6 +1740,15 @@ namespace platform {
+                 Queue_Key_Code(event.key_code, event.scan_code);
+             }
+         }
++
++#ifdef ORION2RE_EXT
++        // The injected events have been handled, so the real mouse may
++        // speak again. Cleared here rather than after a frame count:
++        // this runs from Pointer_X(), Pointer_Y() and the main loop,
++        // so the suppression ends the moment anything asks about the
++        // mouse, and it cannot outlive the events it protects.
++        ext::g_injected_mouse_pending = false;
++#endif
+     }
+ 
+     void __cdecl Update_Cursor_Image() {

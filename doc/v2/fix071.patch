@@ -1,0 +1,135 @@
+From 670bd95c2f859eed885f13498f0ac6de652685ab Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:29:51 +0200
+Subject: [PATCH] OrionLayer Open Fix 71: a hidden battle's animation waits
+ skipped while a client draws it (Release_Time_ returns at once after no input
+ poll; the shield flare's own poll is a frame, not the input loop; a timed
+ wait for input keeps its waits)
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 89494e72:
+fields.cpp by hand (v2 renamed the loop's counter to uint32_t ticks in Timed_Wait_For_Input); timer.cpp by hand after the fix 79 hook (v2 Release_Time rewritten). beams/ext clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 16 ++++++++++++++++
+ src/ext/ext_api.h   | 17 +++++++++++++++++
+ src/game/beams.cpp  |  9 +++++++++
+ src/game/fields.cpp |  3 +++
+ src/game/timer.cpp  |  4 ++++
+ 5 files changed, 49 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index eaabcc9d..e7947ad5 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2443,6 +2443,21 @@ bool g_combat_live = false;
+ uint16_t g_combat_serial = 0;
+ static int32_t g_battle_ticks = 0;  // OrionLayer, open fix 79. Ticks waited since the last event that is not a sound.
+ 
++// OrionLayer, open fix 71. Set by every Tick (an input poll), cleared by every wait.
++static bool g_polled_since_wait = true;
++extern bool g_timed_wait;
++extern bool g_animation_poll;
++
++bool Skip_Animation_Wait_() {
++    const bool polled = g_polled_since_wait;
++    g_polled_since_wait = false;
++    return !polled && !g_timed_wait && g_combat_live && g_hide_window.load() && g_server.ClientCount() > 0;
++}
++
++// OrionLayer, open fix 71. A timed wait for input counts its waits (ext_api.h).
++bool g_timed_wait = false;
++bool g_animation_poll = false;
++
+ CombatGuard::CombatGuard() : screen(SCREEN_EXT_COMBAT), previous(g_combat_live) {
+     g_combat_live = true;
+     ++g_combat_serial;
+@@ -2750,6 +2765,7 @@ ListFieldGuard::~ListFieldGuard() {
+ }
+ 
+ void Tick(int16_t current_screen) {
++    if (!g_animation_poll) g_polled_since_wait = true;  // OrionLayer, open fix 71. An input poll: the next wait is the loop's own tick.
+     // What the client is told. The override is the only difference; the
+     // game's own MOX::current_screen is untouched, because the dialogs it
+     // distinguishes draw themselves from it (ext_api.h).
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 4fe8479f..b0d1b6c8 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -365,4 +365,21 @@ extern int16_t g_activated_input;
+ /// mouse::Pointer_X(). Cleared by Pump_Game_Input_Queue().
+ extern bool g_injected_mouse_pending;
+ 
++/// OrionLayer, open fix 71. True when timer::Release_Time may return at once:
++/// a battle is live, the engine's window is hidden (open fix 43), a client is
++/// connected to draw it, and no input poll (Tick) came since the last wait —
++/// an animation frame, not the input loop's own tick. Clears the poll mark.
++bool Skip_Animation_Wait_();
++
++/// OrionLayer, open fix 71. True while fields::Timed_Wait_For_Input waits a
++/// number of ticks: a box shown for a time counts it in waits (fields.cpp,
++/// from textbox.cpp), so those waits are never skipped.
++extern bool g_timed_wait;
++
++/// OrionLayer, open fix 71. True while a battle animation polls input inside
++/// its own frame (the shield flare, beams.cpp: Draw_Shield_ ends in
++/// fields::Get_Input): that poll is not the input loop's, so it does not
++/// keep the next wait.
++extern bool g_animation_poll;
++
+ } // namespace ext
+diff --git a/src/game/beams.cpp b/src/game/beams.cpp
+index 60afc962..a167dfcd 100755
+--- a/src/game/beams.cpp
++++ b/src/game/beams.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 71. The flare's poll.
++#endif
+ 
+ namespace BEAMS {
+     uint8_t g_pierced_shield_flag;
+@@ -657,7 +660,13 @@ namespace BEAMS {
+         animate::Draw(x, y, sprite1);
+ 
+         allocate::Pop_Block(MOX::screen_seg);
++#ifdef ORION2RE_EXT
++        ext::g_animation_poll = true;  // OrionLayer, open fix 71. The flare's own poll is a frame of the shot, not the input loop.
++#endif
+         fields::Get_Input();
++#ifdef ORION2RE_EXT
++        ext::g_animation_poll = false;
++#endif
+     }
+ 
+     /** Queue a damage popup next to a missile target. */
+diff --git a/src/game/fields.cpp b/src/game/fields.cpp
+index 3256c9c2..18e95a94 100755
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -815,6 +815,9 @@ namespace fields {
+                 Quick_Call_Auto_Function();
+             } while (!has_input);
+         } else {
++#ifdef ORION2RE_EXT
++            struct Timed_ { Timed_() { ext::g_timed_wait = true; } ~Timed_() { ext::g_timed_wait = false; } } timed;  // OrionLayer, open fix 71. A timed box keeps its waits.
++#endif
+             uint32_t ticks = 0;
+             do {
+                 platform::Check_Exit();
+diff --git a/src/game/timer.cpp b/src/game/timer.cpp
+index 356654d1..1ab102e7 100755
+--- a/src/game/timer.cpp
++++ b/src/game/timer.cpp
+@@ -53,6 +53,10 @@ namespace timer {
+     void __cdecl Release_Time(int32_t ticks) {
+ #ifdef ORION2RE_EXT
+         ext::Battle_Wait(ticks);  // OrionLayer, open fix 79. The original's time, counted for the battle's sounds (before v2's animation speed-up is taken off).
++        if (ext::Skip_Animation_Wait_()) {  // OrionLayer, open fix 71. A hidden battle's animation frame while a client draws it: no wait.
++            SDL_Delay(0);
++            return;
++        }
+ #endif
+         const int32_t adjusted_ticks = ticks - animation_speedup;
+         if (adjusted_ticks <= 0) {

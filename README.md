@@ -38,79 +38,78 @@ licence covers and what it does not, and [Credits](#credits).
 ## The orion2re build it needs
 
 <!-- orion2re-patches -->
-OrionLayer talks to an orion2re built from the branch **`orionlayer-local`**
-(`-DORION2RE_EXT=ON`): upstream orion2re plus the Extension API and the
-fixes below, in this order. Each fix that has a patch file carries it under
-`doc/`, and `python tools/version_check.py [path/to/orion2re]` checks a
-built tree against this list and prints the `patch -p1` command for any
-fix that is missing. The list's one home is `LOCAL_PATCHES` in
-`tools/version_check.py`.
+OrionLayer talks to orion2re built from the fork
+[`Data-crea/orion2re`](https://github.com/Data-crea/orion2re), branch
+**`orionlayer`**, with `-DORION2RE_EXT=ON`: orion2re v2.0.0 (public,
+GPL-3.0-or-later) plus the Extension API and the fixes below, one commit
+each (work order 243; how to build it is in the fork's README). `python
+tools/version_check.py [path/to/orion2re]` checks a built tree against this
+list. The list's one home is `LOCAL_PATCHES` in `tools/version_check.py`.
 
-**The engine cannot yet be built from this repository alone.** Two
-things are missing: the Extension API itself (row 1, `src/ext` and its
-hooks) has no patch file here, and orion2re's own repository,
-github.com/mrjoes/orion2re, is private, so the upstream commit the
-patches apply to (`cf4d9617`, "1.50 Backport: mixed race penalty") is
-not publicly reachable. Until both change, the patched branch comes
-from the maintainer.
+Each row names both commits: the fix as it was first made on
+`orionlayer-local` (orion2re 1.60, a private base, frozen) with its patch
+file under `doc/`, and its port on the v2 branch, whose own patch file is
+`doc/v2/` (written by `dev:tools/v2_patches.py`). The
+Extension API's protocol is the fork's `docs/extension-api.md`.
 
-| # | orion2re commit | fix | patch |
-|---|---|---|---|
-| 1 | `a111355d` | the Extension API itself (`src/ext` and its hooks), with the `src/ext` parts of open fixes 1, 2, 3, 12, 14, 20, 21 | `doc/ext_save_slots.patch`, `doc/ext_fleet_selection.patch`, `doc/ext_fleet_select_ship.patch` |
-| 2 | `191aaa78` | open fix 3: an injected click keeps its pointer | `doc/ext_inject_click.patch` |
-| 3 | `6598052c` | open fix 5: Select Race records `_old_race` (patch file since work order 192) | `doc/ext_select_race_old_race.patch` |
-| 4 | `e099d3fc`, `3305d78c` | screen ids for Select Race and Custom Race; open fix 22 | `doc/ext_screen_id.patch` |
-| 5 | `7067c366` | open fix 12: the pop-move command, its engine half | `doc/ext_move_pop.patch` |
-| 6 | `f838c754` | open fix 24: the research dialogs' own ids | `doc/ext_research_screens.patch` |
-| 7 | `e9d07528` | open fix 25: the activated research row is the one chosen | `doc/ext_tech_activate.patch` |
-| 8 | `cc5ec133`, `e6199966` | open fixes 27, 28: the fleet screen's state, one ship | `doc/ext_fleet_screen_state.patch`, `doc/ext_fleet_screen_select.patch` |
-| 9 | `f98b8547` | open fix 31: present without VSync on request | `doc/ext_present_no_vsync.patch` |
-| 10 | `cc542e02` | open fix 30: the Leaders screen's state | `doc/ext_officer_screen_state.patch` |
-| 11 | `2269749c` | open fix 32: the Info screen's history and turn messages | `doc/ext_info_screen_state.patch` |
-| 12 | `9ab84230` | open fix 34: the main menu's Load dialog sends its save slots | `doc/ext_main_menu_save_slots.patch` |
-| 13 | `c5d4dacd`, `01bafd9c`, `a10e20ba`, `8a6acc08`, `2be953d4`, `2097b0c6` | **open fixes 35-40, one commit each, in this order: which colony the colony screen and the build popup show (35), where its buildings stand (36), Plague and Pop Boom (37), the product's cost and turns (38), the build popup's queue under edit (39), its two lists and queue with their numbers (40)** (work order 181) | `doc/ext_colony_screen_colony.patch`, `doc/ext_colony_building_placement.patch`, `doc/ext_colony_status_word.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_build_popup_lists.patch` |
-| 14 | `4bf152e4` | open fix 41: the engine's own window hidden from the start, and a hidden window presents without VSync (work order 183) | `doc/ext_engine_window_hidden.patch` |
-| 15 | `70d31b10`, `4af9fefa`, `8aea1a25`, `ba9b6bc6`, `230a0638` | **open fixes 44, 45, 46, 47 and 43, one commit each, in this order: the Ship Designer's design as it is edited (44), its three pickers and what they offer (45), the diplomacy audience's own ids (46) and its state (47), and the engine's window hidden only when the starter asks and shown again on request (43, amends 41)** (work order 186) | `doc/ext_ship_designer_state.patch`, `doc/ext_ship_designer_boxes.patch`, `doc/ext_audience_screen.patch`, `doc/ext_audience_state.patch`, `doc/ext_engine_window_on_request.patch` |
-| 16 | `010870bc` | open fix 48: the move verdict for the fleet box's selection at every star, for the travel line on hover (work order 188) | `doc/ext_fleet_move_verdict.patch` |
-| 17 | `76f8c438` | open fix 29: the generic message box's kind, title, text and answers, for the HD message box (work order 188) | `doc/ext_message_box_text.patch` |
-| 18 | `6859e163` | open fix 49: the turn-time popups under their own ids (59-64; 40 kept for the Turn Summary) and what they show, for the HD turn popups (work order 188) | `doc/ext_turn_popups.patch` |
-| 19 | `65b41b66` | open fix 50: the Hall of Fame's entries, and 14 on both ways in (work order 188) | `doc/ext_hall_of_fame.patch` |
-| 20 | `8f7bd9e3` | open fix 51: which multiplayer step is up and what it shows (work order 188) | `doc/ext_multiplayer_state.patch` |
-| 21 | `96da4c4d` | open fix 42: the extension ticks during a screen's input delay, so the research panel's list arrives ~550 ms sooner (work order 191) | `doc/ext_input_delay_tick.patch` |
-| 22 | `ab3f6892` | open fix 61: a right click at a point (MSG_INJECT_RIGHT_CLICK), so the F12 view can turn a ship on the battle map (work order 194) | `doc/ext_inject_right_click.patch` |
-| 23 | `2495e1cf` | open fix 52: a tactical battle reports 65 (its scan view 66, its board popup 67), and the gate the combat blocks are written under (work order 194) | `doc/ext_combat_screen_id.patch` |
-| 24 | `9b7dcba0` | open fix 53: the tactical battle's state — units field by field, the turn order, the view origin, the legal moves ("CMBT") (work order 194) | `doc/ext_combat_state.patch` |
-| 25 | `f506bc6c` | open fix 55: the ordnance in flight — missiles, torpedoes, fighters with their targets ("CMSL") (work order 194) | `doc/ext_combat_ordnance.patch` |
-| 26 | `f1e6c581` | open fix 57: how the last battle ended — winner, sides, each unit's fate — kept until the next battle ("CRES") (work order 194) | `doc/ext_combat_result.patch` |
-| 27 | `750434ef` | open fix 54: what each weapon slot of the acting unit can hit now, the engine's own verdict ("CTGT") (work order 194) | `doc/ext_combat_targets.patch` |
-| 28 | `6f87c151` | open fix 59: the galaxy map fleet box's scroll row, so HD can show a stack past nine ships ("FBSC", work order 191's item 1) (work order 194) | `doc/ext_fleet_box_scroll.patch` |
-| 29 | `5bd4c404` | open fix 56: the battle's events, numbered, with their outcome — shots, moves, turns, launches, hits, deaths, retreats, boarding ("CMEV") (work order 194) | `doc/ext_combat_events.patch` |
-| 30 | `e4b2256a` | open fix 58: one command per battle action — move, fire, fire at a missile, face, select, release stasis, board — so HD plays a battle without clicks (MSG_COMBAT_COMMAND) (work order 194) | `doc/ext_combat_commands.patch` |
-| 31 | `6f69de27` | open fix 62: an activation is checked against the field the client saw, so a list that ended in between cannot hand its index to the next — SELECT NEW RESEARCH no longer commits a row by itself (open fix 26) (work order 197) | `doc/ext_activate_checked.patch` |
-| 32 | `ee844b0b` | open fix 63: the battle's event stream reports a missile merge and a missile gone only for a live missile — the original's merge loop goes on over empty slots (work order 197) | `doc/ext_combat_events_merge.patch` |
-| 33 | `76c7b880` | open fix 65: a battle command keeps the original's view round its action, as a click does — the view centred, a move longer than the view refused, a missile outside it given its field — so no command draws outside the frame buffer (work order 197) | `doc/ext_combat_command_view.patch` |
-| 34 | `9e19c9f3` | open fix 64: MSG_SET_SPIES — the Races screen's spies and missions set as one list through the game's own icon groups and setters, all or nothing (work order 197) | `doc/ext_set_spies.patch` |
-| 35 | `121950ed` | open fix 66: CPOP — the battle's scan view and board popup on the wire: the scanned unit, the popup's message, range and chosen marines, read only (work order 199) | `doc/ext_combat_popup.patch` |
-| 36 | `a8381e60` | open fix 67: MSGB version 2 — the values a message box's text prints through FMTPARA item codes (the boarding result), read only (work order 199) | `doc/ext_msgbox_items.patch` |
-| 37 | `095ebac4` | open fix 68: COPT — the battle's OPTIONS panel on the wire: whether it is up, and its five option flags as the battle holds them, read only (work order 200) | `doc/ext_combat_options.patch` |
-| 38 | `f031cbad` | open fix 69: HLPL — the help list a right click is checked against on the wire: its ids and rectangles in its own order, read only (work order 200) | `doc/ext_help_list.patch` |
-| 39 | `a8b5640b` | open fix 70: the player's language — `ORION2RE_LANGUAGE` where the build forced 0, and `ORION2RE_LANGUAGE_DIR`, another install read for the language's files (its own files first, `ORION2RE_LANGUAGE_FILES`; read only; work order 200) | `doc/ext_language.patch` |
-| 40 | `e75477c5` | open fix 74: the Energy Absorber's discharge as a battle event — the beam shot it is drawn as (weapon 0x2E, no slot, its damage), before the target's death ("CMEV"; work order 210) | `doc/ext_combat_absorber.patch` |
-| 41 | `2b773c31` | open fix 79: the battle's sounds as events — each sound, fade, loop and pitch bend recorded with the ticks since the event before ("CMEV"), and none played by the engine while a client draws the battle, so OrionLayer plays them with its own picture (work order 212) | `doc/ext_combat_sound.patch` |
-| 42 | `89494e72` | open fix 71: the hidden engine's animation waits — skipped while a client draws the battle (not a timed message box's, not the input loop's), so an animated action reaches OrionLayer at once (work order 212) | `doc/ext_combat_waits.patch` |
-| 43 | `003af991` | open fix 77: a fighter pass's beam and group as a battle event — the owner's fighter beam, the group's place, facing and quantity, the target point ("CMEV"; work order 212) | `doc/ext_combat_fighter_beam.patch` |
-| 44 | `3a076921` | open fix 71, amended: a battle command taken leaves no input poll behind, so the first wait of its action is skipped too (work order 212) | `doc/ext_combat_waits_command.patch` |
-| 45 | `65e48358` | open fix 82: a beam's aim as a battle event — each entry's last fire point and its target point with the miss offset, so a shot is drawn between the original's own points and runs its frames ("CMEV"; work order 213) | `doc/ext_combat_beam_aim.patch` |
-| 46 | `910e1401` | open fix 83: the gyro destabilizer's spin as a battle event — the turns the engine drew for the target's spin ("CMEV"; work order 213) | `doc/ext_combat_gyro_spin.patch` |
-| 47 | `8b1501f5` | open fix 84: the field list is sent when its content changes, not only its count — a view replaced by another of the same field count under one screen id (the race report's RETURN to Races) reaches OrionLayer (work order 223) | `doc/ext_field_list_content.patch` |
-| 48 | `bdc3009b` | open fix 85: RFIT — the refit ship list's first row on the wire, with the list's length, while the build popup's id is up, read only; OrionLayer re-establishes the list's page from it instead of counting (work order 226) | `doc/ext_refit_first_ship.patch` |
-| 49 | `4642eb1e` | open fix 86: FBTN — the fleet box's order buttons on the wire: ALL, Outpost, Colonize, Engage, Transport and Attack, each with whether the box offers it and its field, and the stack's star with its ignore-enemies bit, read only; OrionLayer's fleet box offers the orders from it (work order 229) | `doc/ext_fleet_box_buttons.patch` |
-| 50 | `34a1d873` | open fix 87: INBX — the game's name box on the wire: its prompt, the name it opened with, the typed text, its fields, read only; OrionLayer draws "Enter Star Name" after a star's first colony from it instead of the F12 notice (work order 230) | `doc/ext_name_box.patch` |
-| 51 | `6c431570` | open fix 88: TXTF — the text fields on the wire: per continuous input field its buffer and, while edited, the typed text, read only; OrionLayer shows and reads back a typed name (Custom Race's race name) from it (work order 230) | `doc/ext_text_fields.patch` |
-| 52 | `0ff8f875` | open fix 89: MSG_INJECT_RAW_KEY — a key code as the engine translates F1-F10, Alt+F1-F10 and Alt+letter, nothing else; OrionLayer passes the original's F and Alt keys with it (work order 230) | `doc/ext_raw_key.patch` |
-| 53 | `48718673` | open fix 90: SYSW — the star system window on the wire: its star, whether it shows the system, and the fleet bar's slots (field and ship node per owner), read only; OrionLayer draws the map window's fleet bar from it and names a window the engine opened (work order 231) | `doc/ext_system_window.patch` |
-| 54 | `bbbc546c` | open fix 91: the invasion on the wire — TPOP kinds 10 (the invasion choice and the bombing: its numbers, both sides' counts, its fields, the bombing's explosions) and 11 (the ground combat: both sides' troops and summary lines, and every unit, beam and explosion as its own drawing code drew them), read only; OrionLayer draws the choice, the bombing and the ground combat from it instead of the F12 notice (work order 232) | `doc/ext_invasion.patch` |
-| 55 | `90a930f9` | open fix 92: MSG_SETTLE_POPS — colonists of the colony screen's colony to another colony at the same star, the engine's own `Pop_Tries_To_Settle_` and `Settle_Pop_` for each, all or nothing; OrionLayer drops the colonists carried on the pointer onto a planet of the system display with it (work order 233) | `doc/ext_settle_pops.patch` |
+| # | 1.60 commit | v2 commit | fix | patch |
+|---|---|---|---|---|
+| 1 | `a111355d` | `8dce5c84` | the Extension API itself (`src/ext` and its hooks), with the `src/ext` parts of open fixes 1, 2, 3, 12, 14, 20, 21 | `doc/ext_save_slots.patch`, `doc/ext_fleet_selection.patch`, `doc/ext_fleet_select_ship.patch` |
+| 2 | `191aaa78` | `74b06b98` | open fix 3: an injected click keeps its pointer | `doc/ext_inject_click.patch` |
+| 3 | `6598052c` | `b2fa0c79` | open fix 5: Select Race records `_old_race` (patch file since work order 192) | `doc/ext_select_race_old_race.patch` |
+| 4 | `e099d3fc`, `3305d78c` | `3fea2fb1`, `77b1fb07` | screen ids for Select Race and Custom Race; open fix 22 | `doc/ext_screen_id.patch` |
+| 5 | `7067c366` | `1982b2a1` | open fix 12: the pop-move command, its engine half | `doc/ext_move_pop.patch` |
+| 6 | `f838c754` | `62cc8968` | open fix 24: the research dialogs' own ids | `doc/ext_research_screens.patch` |
+| 7 | `e9d07528` | `a7852545` | open fix 25: the activated research row is the one chosen | `doc/ext_tech_activate.patch` |
+| 8 | `cc5ec133`, `e6199966` | `0aae309f`, `39bfe4fb` | open fixes 27, 28: the fleet screen's state, one ship | `doc/ext_fleet_screen_state.patch`, `doc/ext_fleet_screen_select.patch` |
+| 9 | `f98b8547` | `007b4aa3` | open fix 31: present without VSync on request | `doc/ext_present_no_vsync.patch` |
+| 10 | `cc542e02` | `fa61b768` | open fix 30: the Leaders screen's state | `doc/ext_officer_screen_state.patch` |
+| 11 | `2269749c` | `aa59219a` | open fix 32: the Info screen's history and turn messages | `doc/ext_info_screen_state.patch` |
+| 12 | `9ab84230` | `59425f3c` | open fix 34: the main menu's Load dialog sends its save slots | `doc/ext_main_menu_save_slots.patch` |
+| 13 | `c5d4dacd`, `01bafd9c`, `a10e20ba`, `8a6acc08`, `2be953d4`, `2097b0c6` | `f8c859b4`, `45aba360`, `1a3a449a`, `9759f1e0`, `67d3c9fe`, `380daf98` | **open fixes 35-40, one commit each, in this order: which colony the colony screen and the build popup show (35), where its buildings stand (36), Plague and Pop Boom (37), the product's cost and turns (38), the build popup's queue under edit (39), its two lists and queue with their numbers (40)** (work order 181) | `doc/ext_colony_screen_colony.patch`, `doc/ext_colony_building_placement.patch`, `doc/ext_colony_status_word.patch`, `doc/ext_colony_product_cost.patch`, `doc/ext_build_popup_queue.patch`, `doc/ext_build_popup_lists.patch` |
+| 14 | `4bf152e4` | `385d678a` | open fix 41: the engine's own window hidden from the start, and a hidden window presents without VSync (work order 183) | `doc/ext_engine_window_hidden.patch` |
+| 15 | `70d31b10`, `4af9fefa`, `8aea1a25`, `ba9b6bc6`, `230a0638` | `1e608dfb`, `1b39a01f`, `6800ee70`, `2bbc0174`, `1780203a` | **open fixes 44, 45, 46, 47 and 43, one commit each, in this order: the Ship Designer's design as it is edited (44), its three pickers and what they offer (45), the diplomacy audience's own ids (46) and its state (47), and the engine's window hidden only when the starter asks and shown again on request (43, amends 41)** (work order 186) | `doc/ext_ship_designer_state.patch`, `doc/ext_ship_designer_boxes.patch`, `doc/ext_audience_screen.patch`, `doc/ext_audience_state.patch`, `doc/ext_engine_window_on_request.patch` |
+| 16 | `010870bc` | `adc21aed` | open fix 48: the move verdict for the fleet box's selection at every star, for the travel line on hover (work order 188) | `doc/ext_fleet_move_verdict.patch` |
+| 17 | `76f8c438` | `707bcd96` | open fix 29: the generic message box's kind, title, text and answers, for the HD message box (work order 188) | `doc/ext_message_box_text.patch` |
+| 18 | `6859e163` | `7fbe221f` | open fix 49: the turn-time popups under their own ids (59-64; 40 kept for the Turn Summary) and what they show, for the HD turn popups (work order 188) | `doc/ext_turn_popups.patch` |
+| 19 | `65b41b66` | `b1b25b88` | open fix 50: the Hall of Fame's entries, and 14 on both ways in (work order 188) | `doc/ext_hall_of_fame.patch` |
+| 20 | `8f7bd9e3` | `e2a10520` | open fix 51: which multiplayer step is up and what it shows (work order 188) | `doc/ext_multiplayer_state.patch` |
+| 21 | `96da4c4d` | `02fa6bff` | open fix 42: the extension ticks during a screen's input delay, so the research panel's list arrives ~550 ms sooner (work order 191) | `doc/ext_input_delay_tick.patch` |
+| 22 | `ab3f6892` | `0b15e0b6` | open fix 61: a right click at a point (MSG_INJECT_RIGHT_CLICK), so the F12 view can turn a ship on the battle map (work order 194) | `doc/ext_inject_right_click.patch` |
+| 23 | `2495e1cf` | `ca441bf9` | open fix 52: a tactical battle reports 65 (its scan view 66, its board popup 67), and the gate the combat blocks are written under (work order 194) | `doc/ext_combat_screen_id.patch` |
+| 24 | `9b7dcba0` | `80484481` | open fix 53: the tactical battle's state — units field by field, the turn order, the view origin, the legal moves ("CMBT") (work order 194) | `doc/ext_combat_state.patch` |
+| 25 | `f506bc6c` | `7190eb2d` | open fix 55: the ordnance in flight — missiles, torpedoes, fighters with their targets ("CMSL") (work order 194) | `doc/ext_combat_ordnance.patch` |
+| 26 | `f1e6c581` | `9dc9601c` | open fix 57: how the last battle ended — winner, sides, each unit's fate — kept until the next battle ("CRES") (work order 194) | `doc/ext_combat_result.patch` |
+| 27 | `750434ef` | `31f0aed4` | open fix 54: what each weapon slot of the acting unit can hit now, the engine's own verdict ("CTGT") (work order 194) | `doc/ext_combat_targets.patch` |
+| 28 | `6f87c151` | `9b7f61a4` | open fix 59: the galaxy map fleet box's scroll row, so HD can show a stack past nine ships ("FBSC", work order 191's item 1) (work order 194) | `doc/ext_fleet_box_scroll.patch` |
+| 29 | `5bd4c404` | `774f8267` | open fix 56: the battle's events, numbered, with their outcome — shots, moves, turns, launches, hits, deaths, retreats, boarding ("CMEV") (work order 194) | `doc/ext_combat_events.patch` |
+| 30 | `e4b2256a` | `feeec356` | open fix 58: one command per battle action — move, fire, fire at a missile, face, select, release stasis, board — so HD plays a battle without clicks (MSG_COMBAT_COMMAND) (work order 194) | `doc/ext_combat_commands.patch` |
+| 31 | `6f69de27` | `4417efd2` | open fix 62: an activation is checked against the field the client saw, so a list that ended in between cannot hand its index to the next — SELECT NEW RESEARCH no longer commits a row by itself (open fix 26) (work order 197) | `doc/ext_activate_checked.patch` |
+| 32 | `ee844b0b` | `adfd7bb0` | open fix 63: the battle's event stream reports a missile merge and a missile gone only for a live missile — the original's merge loop goes on over empty slots (work order 197) | `doc/ext_combat_events_merge.patch` |
+| 33 | `76c7b880` | `0d2edae6` | open fix 65: a battle command keeps the original's view round its action, as a click does — the view centred, a move longer than the view refused, a missile outside it given its field — so no command draws outside the frame buffer (work order 197) | `doc/ext_combat_command_view.patch` |
+| 34 | `9e19c9f3` | `7a561725` | open fix 64: MSG_SET_SPIES — the Races screen's spies and missions set as one list through the game's own icon groups and setters, all or nothing (work order 197) | `doc/ext_set_spies.patch` |
+| 35 | `121950ed` | `55362111` | open fix 66: CPOP — the battle's scan view and board popup on the wire: the scanned unit, the popup's message, range and chosen marines, read only (work order 199) | `doc/ext_combat_popup.patch` |
+| 36 | `a8381e60` | `998d17e3` | open fix 67: MSGB version 2 — the values a message box's text prints through FMTPARA item codes (the boarding result), read only (work order 199) | `doc/ext_msgbox_items.patch` |
+| 37 | `095ebac4` | `f0acb73d` | open fix 68: COPT — the battle's OPTIONS panel on the wire: whether it is up, and its five option flags as the battle holds them, read only (work order 200) | `doc/ext_combat_options.patch` |
+| 38 | `f031cbad` | `ebdf5e69` | open fix 69: HLPL — the help list a right click is checked against on the wire: its ids and rectangles in its own order, read only (work order 200) | `doc/ext_help_list.patch` |
+| 39 | `a8b5640b` | `624081b7` | open fix 70: the player's language — `ORION2RE_LANGUAGE` where the build forced 0, and `ORION2RE_LANGUAGE_DIR`, another install read for the language's files (its own files first, `ORION2RE_LANGUAGE_FILES`; read only; work order 200) | `doc/ext_language.patch` |
+| 40 | `e75477c5` | `3a015989` | open fix 74: the Energy Absorber's discharge as a battle event — the beam shot it is drawn as (weapon 0x2E, no slot, its damage), before the target's death ("CMEV"; work order 210) | `doc/ext_combat_absorber.patch` |
+| 41 | `2b773c31` | `6f76077b` | open fix 79: the battle's sounds as events — each sound, fade, loop and pitch bend recorded with the ticks since the event before ("CMEV"), and none played by the engine while a client draws the battle, so OrionLayer plays them with its own picture (work order 212) | `doc/ext_combat_sound.patch` |
+| 42 | `89494e72` | `670bd95c` | open fix 71: the hidden engine's animation waits — skipped while a client draws the battle (not a timed message box's, not the input loop's), so an animated action reaches OrionLayer at once (work order 212) | `doc/ext_combat_waits.patch` |
+| 43 | `003af991` | `91501ca3` | open fix 77: a fighter pass's beam and group as a battle event — the owner's fighter beam, the group's place, facing and quantity, the target point ("CMEV"; work order 212) | `doc/ext_combat_fighter_beam.patch` |
+| 44 | `3a076921` | `36f080e7` | open fix 71, amended: a battle command taken leaves no input poll behind, so the first wait of its action is skipped too (work order 212) | `doc/ext_combat_waits_command.patch` |
+| 45 | `65e48358` | `5a97facc` | open fix 82: a beam's aim as a battle event — each entry's last fire point and its target point with the miss offset, so a shot is drawn between the original's own points and runs its frames ("CMEV"; work order 213) | `doc/ext_combat_beam_aim.patch` |
+| 46 | `910e1401` | `3d3c74b6` | open fix 83: the gyro destabilizer's spin as a battle event — the turns the engine drew for the target's spin ("CMEV"; work order 213) | `doc/ext_combat_gyro_spin.patch` |
+| 47 | `8b1501f5` | `e9b3cf07` | open fix 84: the field list is sent when its content changes, not only its count — a view replaced by another of the same field count under one screen id (the race report's RETURN to Races) reaches OrionLayer (work order 223) | `doc/ext_field_list_content.patch` |
+| 48 | `bdc3009b` | `b73185d2` | open fix 85: RFIT — the refit ship list's first row on the wire, with the list's length, while the build popup's id is up, read only; OrionLayer re-establishes the list's page from it instead of counting (work order 226) | `doc/ext_refit_first_ship.patch` |
+| 49 | `4642eb1e` | `e7e823c8` | open fix 86: FBTN — the fleet box's order buttons on the wire: ALL, Outpost, Colonize, Engage, Transport and Attack, each with whether the box offers it and its field, and the stack's star with its ignore-enemies bit, read only; OrionLayer's fleet box offers the orders from it (work order 229) | `doc/ext_fleet_box_buttons.patch` |
+| 50 | `34a1d873` | `b5692057` | open fix 87: INBX — the game's name box on the wire: its prompt, the name it opened with, the typed text, its fields, read only; OrionLayer draws "Enter Star Name" after a star's first colony from it instead of the F12 notice (work order 230) | `doc/ext_name_box.patch` |
+| 51 | `6c431570` | `e3ae40c8` | open fix 88: TXTF — the text fields on the wire: per continuous input field its buffer and, while edited, the typed text, read only; OrionLayer shows and reads back a typed name (Custom Race's race name) from it (work order 230) | `doc/ext_text_fields.patch` |
+| 52 | `0ff8f875` | `dd384efa` | open fix 89: MSG_INJECT_RAW_KEY — a key code as the engine translates F1-F10, Alt+F1-F10 and Alt+letter, nothing else; OrionLayer passes the original's F and Alt keys with it (work order 230) | `doc/ext_raw_key.patch` |
+| 53 | `48718673` | `41c73182` | open fix 90: SYSW — the star system window on the wire: its star, whether it shows the system, and the fleet bar's slots (field and ship node per owner), read only; OrionLayer draws the map window's fleet bar from it and names a window the engine opened (work order 231) | `doc/ext_system_window.patch` |
+| 54 | `bbbc546c` | `adbb683c` | open fix 91: the invasion on the wire — TPOP kinds 10 (the invasion choice and the bombing: its numbers, both sides' counts, its fields, the bombing's explosions) and 11 (the ground combat: both sides' troops and summary lines, and every unit, beam and explosion as its own drawing code drew them), read only; OrionLayer draws the choice, the bombing and the ground combat from it instead of the F12 notice (work order 232) | `doc/ext_invasion.patch` |
+| 55 | `90a930f9` | `096c97fb` | open fix 92: MSG_SETTLE_POPS — colonists of the colony screen's colony to another colony at the same star, the engine's own `Pop_Tries_To_Settle_` and `Settle_Pop_` for each, all or nothing; OrionLayer drops the colonists carried on the pointer onto a planet of the system display with it (work order 233) | `doc/ext_settle_pops.patch` |
+| 56 | — | `e3d81221` | open fix 93: the LAYOUT message — every member of the records the snapshot sends raw, by name, offset and size (decision 97) | `doc/ext_layout_table.patch` |
 
 ## Install
 

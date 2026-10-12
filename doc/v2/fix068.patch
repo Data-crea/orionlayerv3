@@ -1,0 +1,58 @@
+From f0acb73d7fa9b7fc980e75aa2c1e0640ed272841 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:28:48 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2068:=20COPT=20?=
+ =?UTF-8?q?=E2=80=94=20the=20battle's=20OPTIONS=20panel=20on=20the=20wire?=
+ =?UTF-8?q?=20(whether=20it=20is=20up,=20and=20its=20five=20option=20flags?=
+ =?UTF-8?q?),=20read=20only?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 095ebac4:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 28 ++++++++++++++++++++++++++++
+ 1 file changed, 28 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 460b956c..579fd2af 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1770,6 +1770,34 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, (uint8_t)len);
+         buf.insert(buf.end(), msg, msg + len);
+     }
++
++    // 26. The battle's OPTIONS panel: "COPT", written ONLY while a battle is
++    //     live, after CPOP. OrionLayer, open fix 68.
++    //
++    //     OPTIONS (the info button, hotkey O) flips MOX::order_info_flag and
++    //     slides COMBAT.LBX 9 over the buttons (Move_Options_Background,
++    //     cmbtdrw1.cpp:1463); its five lights are MOX's flags for the missile
++    //     warning, fast animations, legal moves, shield arcs and the grid
++    //     (Draw_Option_Panel_Lights, :1307-1322), toggled by five hidden
++    //     fields (combat1.cpp:465-495). The flags are copied from settings
++    //     when the battle starts (combinit.cpp:529-534) and back only when
++    //     it ends (:1177-1178), so the settings record on the wire is stale
++    //     for the whole battle, and neither the panel nor the flags were on
++    //     the wire. Read only; nothing here changes the game.
++    if (g_combat_live && MOX::combat_data != nullptr) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'T');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, (int16_t)g_combat_serial);
++        Write16(buf, MOX::order_info_flag);              // 0: the panel is up
++        Write8(buf, (uint8_t)MOX::msl_impact_warning_flag);
++        Write8(buf, (uint8_t)MOX::speedx2_flag);
++        Write8(buf, (uint8_t)MOX::draw_legal_boxes_flag);
++        Write8(buf, (uint8_t)MOX::shields_flag);
++        Write8(buf, (uint8_t)MOX::grid_flag);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

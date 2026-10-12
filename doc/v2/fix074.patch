@@ -1,0 +1,30 @@
+From 3a015989147111100d60012ed594c1794edeb4e8 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:29:17 +0200
+Subject: [PATCH] OrionLayer Open Fix 74: the Energy Absorber's discharge as a
+ battle event (CEV_BEAM_SHOT, weapon 0x2E, no slot, its damage past shields
+ and absorbed, before the target's death)
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local e75477c5:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/game/cmbtfire.cpp | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/game/cmbtfire.cpp b/src/game/cmbtfire.cpp
+index 09636015..ce9f0d76 100755
+--- a/src/game/cmbtfire.cpp
++++ b/src/game/cmbtfire.cpp
+@@ -1965,6 +1965,10 @@ namespace CMBTFIRE {
+         }
+ 
+         int16_t is_dead = Is_Combat_Ship_Dead(target_ship_idx);
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 74. The discharge as the beam shot it is drawn as: weapon 0x2E, no slot (-1), its damage past shields and absorbed, before the target's death.
++        ext::Combat_Event(ext::CEV_BEAM_SHOT, source_ship_idx, target_ship_idx, 0, -1, 0x2e, (int16_t)damage_result_flags, damage, shield_hit_result);
++#endif
+ 
+         if (MOX::apply_damage_to_planet != 0 && MOX::super_fast_flag == 0) {
+             if (CMBTDRW1::Ship_Completely_On_Screen(target_ship_idx) == 0) {

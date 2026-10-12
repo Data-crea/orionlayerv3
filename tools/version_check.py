@@ -544,6 +544,15 @@ LOCAL_PATCHES = {
         "the engine takes no colonists to another colony (open fix 92): "
         "colonists carried on the colony screen cannot be dropped on "
         "another colony of the system display"),
+    # Work order 243: the v2 branch's own fix (decision 97), on the fork's
+    # branch `orionlayer` only.
+    "doc/ext_layout_table.patch": (
+        os.path.join("src", "ext", "ext_server.cpp"),
+        "OrionLayer, open fix 93.",
+        "the engine sends no LAYOUT (open fix 93): OrionLayer reads the "
+        "records at the offsets of orion2re 1.60, and on v2 every value from "
+        "s_player's total_pop on is read from the wrong bytes (no stars on "
+        "the map, wrong sidebar)"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
@@ -638,6 +647,7 @@ FIX_NUMBERS = {
     "doc/ext_system_window.patch": (90,),
     "doc/ext_invasion.patch": (91,),
     "doc/ext_settle_pops.patch": (92,),
+    "doc/ext_layout_table.patch": (93,),
 }
 
 

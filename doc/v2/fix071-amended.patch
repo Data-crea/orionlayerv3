@@ -1,0 +1,26 @@
+From 36f080e71557bf2b28e7c154d39bbd567b0e713e Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:29:51 +0200
+Subject: [PATCH] OrionLayer Open Fix 71, amended: a battle command taken
+ leaves no input poll behind, so its action's first wait is skipped too
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 3a076921:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index e7947ad5..09556fa1 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2472,6 +2472,7 @@ void Combat_Event(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
+     e = {g_combat_event_next, g_combat_serial, type, {a0, a1, a2, a3, a4, a5, a6, a7}};
+     ++g_combat_event_next;
+     if (type != CEV_SOUND && type != CEV_SOUND_CHANGE) g_battle_ticks = 0;  // OrionLayer, open fix 79. The ticks count from this event.
++    if (type == CEV_COMMAND && a1 == 0) g_polled_since_wait = false;  // OrionLayer, open fix 71, amended. A command taken: its action's first wait is a frame of it, not the input loop's.
+ }
+ 
+ // OrionLayer, open fix 79. The battle's sounds as events (ext_api.h).

@@ -1,0 +1,187 @@
+From 096c97fb9d40e756c85479ec28d00333bed960be Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:30:34 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2092:=20colonists=20of?=
+ =?UTF-8?q?=20the=20colony=20screen's=20colony=20to=20another=20colony=20a?=
+ =?UTF-8?q?t=20the=20same=20star=20(MSG=5FSETTLE=5FPOPS=200x8B:=20int16=20?=
+ =?UTF-8?q?source,=20int16=20destination,=20uint8=20n,=20n=20pop=20indices?=
+ =?UTF-8?q?;=20Pop=5FTries=5FTo=5FSettle=5F=20and=20Settle=5FPop=5F=20unch?=
+ =?UTF-8?q?anged=20for=20every=20pop,=20all=20or=20nothing=20=E2=80=94=20b?=
+ =?UTF-8?q?oth=20colonies=20saved=20and=20put=20back=20on=20a=20refusal;?=
+ =?UTF-8?q?=20only=20what=20needs=20no=20question:=20no=20ETA,=20room=20at?=
+ =?UTF-8?q?=20the=20destination;=20only=20on=20the=20colony=20screen=20for?=
+ =?UTF-8?q?=20its=20colony;=20the=20original's=20path,=20Send=5FCluster=5F?=
+ =?UTF-8?q?(colony,=20-1),=20answers=20with=20blocking=20boxes=20a=20comma?=
+ =?UTF-8?q?nd=20cannot=20reach)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 90a930f9:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp    | 104 +++++++++++++++++++++++++++++++++++++++++
+ src/ext/ext_server.cpp |  12 +++++
+ src/ext/ext_server.h   |   2 +
+ 3 files changed, 118 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 7d9588a9..9ffa74eb 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2347,6 +2347,106 @@ static int Set_Jobs_(int16_t colony_idx, const uint8_t* pairs,
+     return moved;
+ }
+ 
++// ── Colonists to another colony at the star (OrionLayer, open fix 92.) ──
++
++/// Settle a list of pops of the colony screen's colony in another colony
++/// of the player at the same star, or settle none.
++///
++/// **THE ORIGINAL'S PATH, WITHOUT ITS BOXES.** A cluster carried on the
++/// colony screen and clicked onto a planet of the system display goes to
++/// `COLMOVE::Send_Cluster(colony, -1)` (colony.cpp:1796-1800), which for
++/// every pop in hand asks `SETTLER::Pop_Tries_To_Settle` and, when it may,
++/// moves it with `SETTLER::Settle_Pop` (colmove.cpp:193-292). Both are
++/// called unchanged; what is not reached is what only a human can answer:
++/// the refusal's text box, the ETA and "no room" confirmations and the
++/// success notice (colmove.cpp:200-260, :330-470, :482-522), each a loop
++/// that would re-enter `ext::Tick` from inside this handler (fundament 52).
++///
++/// **SO ONLY WHAT NEEDS NO QUESTION IS DONE**, and a list with one pop
++/// that would need one is refused whole: every pop must settle at once
++/// (`can_settle`, no ETA — the same star — and room at the destination).
++/// A move to another star goes through the transport popup
++/// (`COLXPORT::Xport_Popup`, colony_main.cpp:1068-1076) and is not this
++/// command. All or nothing because a command has nobody to ask whether to
++/// go on (fundament 52's DEVIATION): both colonies are saved first and put
++/// back on a refusal.
++///
++/// Returns the number of pops settled, or -1 if the list was refused.
++static int Settle_Pops_(int16_t source_idx, int16_t dest_idx,
++                        const std::vector<uint8_t>& pops) {
++    if (source_idx < 0 || source_idx >= MOX::NUM_COLONIES ||
++            dest_idx < 0 || dest_idx >= MOX::NUM_COLONIES ||
++            source_idx == dest_idx || pops.empty()) {
++        return -1;
++    }
++    // Only from the colony screen, for the colony it shows — the one place
++    // the original offers this (colony.cpp:1796) — and only the local
++    // player's, as for MSG_SET_JOBS.
++    if (MOX::current_screen != SCREEN_COLONY ||
++            source_idx != COLONY::colony_handle) {
++        return -1;
++    }
++    s_colony& source = MOX::colony[source_idx];
++    s_colony& dest = MOX::colony[dest_idx];
++    if (source.owner != MOX::PLAYER_NUM || dest.owner != MOX::PLAYER_NUM) {
++        return -1;
++    }
++    // No cluster of the game's own in hand (see Set_Jobs_).
++    if (COLMOVE::cluster_colony_n != -1) {
++        return -1;
++    }
++    const int n_pops = (int)(uint8_t)source.n_pops;
++    bool listed[42] = {};
++    for (uint8_t idx : pops) {
++        if ((int)idx >= n_pops || listed[idx]) {
++            return -1;
++        }
++        listed[idx] = true;
++    }
++
++    const s_colony saved_source = source;
++    const s_colony saved_dest = dest;
++
++    // THE PICK-UP, as `Get_Cluster` does it (colmove.cpp:69-73): the
++    // listed pops lose their assigned bit, and the walk below takes the
++    // first such pop each time, as `Send_Cluster`'s loop does — because
++    // `Settle_Pop` moves the LAST pop into the slot it empties
++    // (settler.cpp:337-342), an index list would point at the wrong pops
++    // after the first one.
++    for (uint8_t idx : pops) {
++        source.pop[idx] &= ~POP::MASK_ASSIGNED;
++    }
++    COLMOVE::cluster_colony_n = source_idx;
++
++    int settled = 0;
++    bool refused = false;
++    int16_t pop_idx = COLMOVE::Get_First_Unemployed(source_idx);
++    while (pop_idx != -1) {
++        s_settler_settle_result result;
++        SETTLER::Pop_Tries_To_Settle(&source, pop_idx, &dest, &result);
++        if (result.can_settle == 0 || result.eta_turns != 0 ||
++                result.no_room_at_destination != 0) {
++            refused = true;
++            break;
++        }
++        SETTLER::Settle_Pop(&source, pop_idx, &dest);
++        settled++;
++        pop_idx = COLMOVE::Get_First_Unemployed(source_idx);
++    }
++    COLMOVE::cluster_colony_n = -1;
++
++    if (refused) {
++        source = saved_source;
++        dest = saved_dest;
++        return -1;
++    }
++    // ONCE, AFTER THE WHOLE LIST, both colonies — `Send_Cluster`'s own
++    // order (colmove.cpp:476-479).
++    COLONY::Col_Calc_Wrapper(source_idx);
++    COLONY::Col_Calc_Wrapper(dest_idx);
++    return settled;
++}
++
+ // ── Fleet box selection (OrionLayer, open fix 21) ────────
+ 
+ // Select or deselect ONE ship of the stack the fleet box shows, the
+@@ -2650,6 +2750,10 @@ static void ProcessInput() {
+             }
+             break;
+ 
++        case MSG_SETTLE_POPS:
++            Settle_Pops_(cmd.param1, cmd.param2, cmd.pairs);  // OrionLayer, open fix 92.
++            break;
++
+         case MSG_SET_SPIES:
+             Set_Spies_(cmd.pairs);  // OrionLayer, open fix 64.
+             break;
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index ac1e6414..79e9829e 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -267,6 +267,18 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_SETTLE_POPS: {
++        // OrionLayer, open fix 92. int16 source, int16 destination, uint8 n (1..42), n pop indices — the whole list or nothing.
++        if (payload_len >= 5 && payload[4] > 0 && payload[4] <= 42 && payload_len == (size_t)5 + payload[4]) {
++            InputCommand cmd{};
++            cmd.type = MSG_SETTLE_POPS;
++            memcpy(&cmd.param1, payload, 2);
++            memcpy(&cmd.param2, payload + 2, 2);
++            cmd.pairs.assign(payload + 5, payload + 5 + payload[4]);
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_SET_SPIES: {
+         // OrionLayer, open fix 64. The whole list (2 + 3n bytes, n <= 8), or nothing.
+         if (payload_len >= 2 && payload[0] <= 8 && payload_len == (size_t)2 + 3 * payload[0]) {
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index d76d16e8..3ce53b12 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -50,6 +50,8 @@ constexpr uint16_t MSG_COMBAT_COMMAND = 0x88;
+ constexpr uint16_t MSG_SET_SPIES      = 0x89;
+ // OrionLayer, open fix 89. uint16: a key code as platform.cpp translates F1-F10 (0x3B00-0x4400), Alt+F1-F10 (0x6800-0x7100) and Alt+letter (scan << 8, 0x1000-0x3200); anything else is dropped.
+ constexpr uint16_t MSG_INJECT_RAW_KEY = 0x8A;
++// OrionLayer, open fix 92. Colonists of the colony screen's colony to another colony at the same star: int16 source colony, int16 destination colony, uint8 n, n x uint8 pop index; all or nothing.
++constexpr uint16_t MSG_SETTLE_POPS = 0x8B;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;

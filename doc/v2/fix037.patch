@@ -1,0 +1,59 @@
+From 1a3a449ac816461f708446ae376c1b315b482375 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] OrionLayer Open Fix 37: send the colony screen's Plague and
+ Pop Boom answers ("CEVT")
+
+While SCREEN_COLONY is up, the snapshot ends (after CBLD) in a "CEVT"
+block: two uint8, EVENTS::Event_Check_Plague_ and
+Event_Check_Population_Boom_ for the shown colony (0 or 1), 0xFF each
+while COLONY::_colony_handle is not a colony.
+
+Why: Draw_Info_Name_And_Pop_ prints Blockaded, else Plague, else Pop Boom
+(colony_main.cpp:831-853). Blockaded is the star's bit and on the wire;
+the other two are computed over EVENTS::_event_data, which is not
+serialized.
+
+OrionLayer, open fix 37 (orionlayerv3 doc/orion2re_open_fixes.md,
+doc/ext_colony_status_word.patch). Approved by Data (brief 180, item 1);
+applied by work order 181. Local only, never pushed.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local a10e20ba:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index fda4af0f..b41b0780 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -493,6 +493,26 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, COLONY::colony_satellites[i]);
+         }
+     }
++
++    // 8. The colony screen's status word: "CEVT", written ONLY while
++    //    SCREEN_COLONY is up, and LAST. OrionLayer, open fix 37.
++    //
++    //    Draw_Info_Name_And_Pop prints Blockaded, Plague or Pop Boom at
++    //    (0,0) (colony_main.cpp:831-853). Blockaded is the star's bit, on
++    //    the wire; the other two are EVENTS::Event_Check_Plague and
++    //    Event_Check_Population_Boom over EVENTS::event_data, which is
++    //    not. Their two answers for the shown colony, one byte each, 0xFF
++    //    while the handle is not a colony (the first tick, COLS).
++    if (current_screen == SCREEN_COLONY) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'V');
++        buf.push_back((uint8_t)'T');
++        const int16_t h = COLONY::colony_handle;
++        const bool ok = h >= 0 && h < MOX::NUM_COLONIES;
++        Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Plague(h) != 0) : (uint8_t)0xFF);
++        Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Population_Boom(h) != 0) : (uint8_t)0xFF);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

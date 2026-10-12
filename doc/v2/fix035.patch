@@ -1,0 +1,79 @@
+From f8c859b471ec014eae91722bb629aed8d28b3beb Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] OrionLayer Open Fix 35: send which colony the colony screen
+ and the build popup show ("COLS")
+
+While SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, the snapshot ends in a
+"COLS" block: int16 MOX::_screen_data, int16 COLONY::_orbit_temp, int16
+COLONY::_colony_handle, uint8 COLONY::_drawing_display, uint8
+COLONY::_field_mode, uint8 BUILD_QUEUE::autobuild_settings.enabled.
+
+Why: both screens take their colony from _screen_data and _orbit_temp
+into _colony_handle (colony_main.cpp:249-255, colbldg.cpp:462-469), none
+of which was serialized, and the game enters screen 1 from eight places,
+several of its own. The pair is set before the switch and the handle
+only by the screen, so both are sent and OrionLayer uses the colony only
+when they agree. Adds game/build_queue.h for autobuild_settings.
+
+OrionLayer, open fix 35 (orionlayerv3 doc/orion2re_open_fixes.md,
+doc/ext_colony_screen_colony.patch). Approved by Data (brief 180, item 1);
+applied by work order 181. Local only, never pushed.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local c5d4dacd:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 31 +++++++++++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 147a2861..760630e6 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -6,6 +6,7 @@
+ #include "ext/ext_server.h"
+ #include "game/newgame.h"
+ #include "game/platform.h"
++#include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
+ 
+ #include <vector>
+ #include <cstring>
+@@ -437,6 +438,36 @@ static void SerializeState(std::vector<uint8_t>& buf,
+                        (const uint8_t*)text + len);
+         }
+     }
++
++    // 6. Which colony the colony screen and its build popup show: "COLS",
++    //    written ONLY while SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, and
++    //    LAST. OrionLayer, open fix 35.
++    //
++    //    Both screens derive their colony on entry from MOX::screen_data
++    //    (the star) and COLONY::orbit_temp into COLONY::colony_handle
++    //    (colony_main.cpp:249-255, colbldg.cpp:462-469); none of the three
++    //    was serialized, and the game enters screen 1 from eight places,
++    //    some of them its own (reports, info, turn summary, landing), so a
++    //    client cannot know it. The pair is set by every caller BEFORE the
++    //    switch; the handle only once the screen has run, so the first tick
++    //    at the new id carries the previous handle — the pair and the handle
++    //    are both sent and a client uses the colony when they agree.
++    //    Also the screen's own modes, which no field shows:
++    //    COLONY::drawing_display (0 the screen, 2 a planet description),
++    //    COLONY::field_mode, and the autobuild setting that decides the
++    //    label and what [18] does (colony_main.cpp:961-974).
++    if (current_screen == SCREEN_COLONY || current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'S');
++        Write16(buf, MOX::screen_data);
++        Write16(buf, COLONY::orbit_temp);
++        Write16(buf, COLONY::colony_handle);
++        Write8(buf, COLONY::drawing_display);
++        Write8(buf, COLONY::field_mode);
++        Write8(buf, BUILD_QUEUE::autobuild_settings.enabled);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

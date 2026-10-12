@@ -1,0 +1,165 @@
+From 1780203a44e7a14bf5e2b1e5360365dbe36a25f7 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:26:15 +0200
+Subject: [PATCH] OrionLayer Open Fix 43: hide the engine's window only when
+ the starter asks, and show it again on request (amends fix 41)
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 230a0638:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp    | 15 +++++++++++++--
+ src/ext/ext_api.h      |  4 +++-
+ src/ext/ext_server.cpp | 10 ++++++++++
+ src/ext/ext_server.h   |  2 ++
+ src/game/platform.cpp  | 19 +++++++++++++++++++
+ 5 files changed, 47 insertions(+), 3 deletions(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 8f845ad8..4d051040 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -4,6 +4,7 @@
+ #include "pch.h"
+ #include "ext/ext_api.h"
+ #include "ext/ext_server.h"
++#include <cstdlib>  // OrionLayer, open fix 43. std::getenv
+ #include "game/newgame.h"
+ #include "game/platform.h"
+ #include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
+@@ -13,7 +14,12 @@
+ 
+ namespace ext {
+ 
+-bool g_hide_window = true;  // OrionLayer, open fix 41. Hidden before the window is first shown, not after (platform.cpp).
++// OrionLayer, open fix 43. Hidden from the start only when the starter asks (ORION2RE_HIDE_WINDOW, set by OrionLayer's tools and play.py); started on its own, the window shows as before fix 41.
++static bool Hide_Window_At_Start_() {
++    const char* value = std::getenv("ORION2RE_HIDE_WINDOW");
++    return value != nullptr && value[0] != '\0' && value[0] != '0';
++}
++std::atomic<bool> g_hide_window{Hide_Window_At_Start_()};
+ int16_t g_pending_field = 0;
+ int16_t g_activated_input = 0;
+ bool g_injected_mouse_pending = false;
+@@ -1279,6 +1285,11 @@ static void ProcessInput() {
+             }
+             break;
+ 
++        case MSG_SHOW_WINDOW:
++            // OrionLayer, open fix 43. Only the flag: the main thread shows or hides the window (platform.cpp).
++            g_hide_window = (cmd.param1 == 0);
++            break;
++
+         case MSG_CANCEL_FIELD:
+             // Right-click on field (DOWN + UP)
+             if (cmd.param1 >= 0 && cmd.param1 < fields::fields_count) {
+@@ -1316,7 +1327,7 @@ static void ProcessInput() {
+ // ── Public API ───────────────────────────────────────────
+ 
+ bool Init(uint16_t port) {
+-    g_hide_window = true;
++    // OrionLayer, open fix 43. The window's visibility is the starter's and the client's, no longer forced here.
+     g_last_screen = -99;
+     g_last_stardate = -1;
+     g_last_fields_count = -1;
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index f5563044..963081a9 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -2,6 +2,7 @@
+ // orion2re Extension API
+ // Public interface. Only ext_api.cpp includes game headers.
+ 
++#include <atomic>  // OrionLayer, open fix 43. The window flag is shared by two threads.
+ #include <cstdint>
+ 
+ namespace ext {
+@@ -18,7 +19,8 @@ void Tick(int16_t current_screen);
+ void Shutdown();
+ 
+ /// If true, suppress SDL_ShowWindow (headless mode).
+-extern bool g_hide_window;
++/// OrionLayer, open fix 43. Set at start from ORION2RE_HIDE_WINDOW, and by a client (MSG_SHOW_WINDOW) from the game thread; read by the main thread, which owns the window.
++extern std::atomic<bool> g_hide_window;
+ 
+ /// Pending field activation from external client.
+ /// Set by ProcessInput(), consumed by Get_Input() early return.
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index 45dad4dc..23ed4df5 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -243,6 +243,16 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_SHOW_WINDOW: {
++        // OrionLayer, open fix 43. uint8 show; shorter is dropped, never guessed.
++        if (payload_len >= 1) {
++            InputCommand cmd{};
++            cmd.type = MSG_SHOW_WINDOW;
++            cmd.param1 = payload[0] != 0 ? 1 : 0;
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_SET_JOBS: {
+         // int16 colony_idx, uint8 count, count x (pop_idx, job).
+         // A malformed list is DROPPED here rather than half-queued:
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index 36d11892..4d9d4c4b 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -40,6 +40,8 @@ constexpr uint16_t MSG_SET_JOBS      = 0x84;
+ // fleet box. int16 ship_idx, uint8 selected (0 or 1). Applied only if
+ // every precondition holds; a refused command writes nothing.
+ constexpr uint16_t MSG_SELECT_SHIP   = 0x85;
++// OrionLayer, open fix 43. Show (1) or hide (0) the engine's own window: uint8 show.
++constexpr uint16_t MSG_SHOW_WINDOW   = 0x86;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 88ff4868..5be15d27 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -14,6 +14,10 @@ uint32_t g_last_scan_code;
+ namespace platform {
+     namespace {
+         bool g_has_lost_focus;
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 43. Whether the window is on screen now, so a client's request is applied once.
++        bool g_window_shown = false;
++#endif
+         SDL_Window* g_sdl_window;
+         SDL_Renderer* g_sdl_renderer;
+         SDL_Texture* g_sdl_present_texture;
+@@ -1632,6 +1636,9 @@ namespace platform {
+         if (!ext::g_hide_window)
+ #endif
+         SDL_ShowWindow(g_sdl_window);
++#ifdef ORION2RE_EXT
++        g_window_shown = !ext::g_hide_window;  // OrionLayer, open fix 43.
++#endif
+         const char* renderer_name = SDL_GetRendererName(g_sdl_renderer);
+         SDL_LogInfo(
+             SDL_LOG_CATEGORY_APPLICATION,
+@@ -1696,6 +1703,18 @@ namespace platform {
+ 
+         while (!Game_Thread_Exited()) {
+             Service_Pending_Window_Events();
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 43. A client's MSG_SHOW_WINDOW, applied on this thread, which owns the window.
++            if (g_window_shown == ext::g_hide_window) {
++                g_window_shown = !ext::g_hide_window;
++                if (g_window_shown) {
++                    SDL_ShowWindow(g_sdl_window);
++                } else {
++                    SDL_HideWindow(g_sdl_window);
++                }
++                Publish_Present_Scaler_Config();  // v2: the VSync request is re-published (ORION2RE_NO_VSYNC / hidden window) and applied at the next present
++            }
++#endif
+ 
+             Present_Published_Off_Page();
+             SDL_Delay(1);

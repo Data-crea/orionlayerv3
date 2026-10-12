@@ -1,0 +1,67 @@
+From 9759f1e0fe56aa0b81dbe79676e579aabd8156d8 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] OrionLayer Open Fix 38: send the shown colony's product cost
+ and turns ("CPRD")
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+While SCREEN_COLONY or SCREEN_QUEUE_POPUP is up, the snapshot ends (after
+CEVT's place) in a "CPRD" block: int16 producing[0], int32
+COLCALC::Colony_Producing_Product_Cost_, int16
+COLONY::Calculate_Current_Production_Turn_Count_ — -1 each while the
+handle is not a colony.
+
+Why: the colony screen's production bar and "%d turn(s)" and the build
+popup's "Turn(s) Left" are drawn from these two (colony.cpp:967-994);
+production_spent is on the wire but the cost is a function of source
+tables, the player's designs and config values (colcalc.cpp:2576).
+
+OrionLayer, open fix 38 (orionlayerv3 doc/orion2re_open_fixes.md,
+doc/ext_colony_product_cost.patch). Approved by Data (brief 180, item 1);
+applied by work order 181. Local only, never pushed.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 8a6acc08:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index b41b0780..c07c6bef 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -513,6 +513,30 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Plague(h) != 0) : (uint8_t)0xFF);
+         Write8(buf, ok ? (uint8_t)(EVENTS::Event_Check_Population_Boom(h) != 0) : (uint8_t)0xFF);
+     }
++
++    // 9. What the shown colony's current product costs, and how long it
++    //    takes: "CPRD", written ONLY while SCREEN_COLONY or
++    //    SCREEN_QUEUE_POPUP is up, and LAST. OrionLayer, open fix 38.
++    //
++    //    The colony screen draws the production bar over
++    //    COLCALC::Colony_Producing_Product_Cost (colony.cpp:967-978) and
++    //    "%d turn(s)" from Calculate_Current_Production_Turn_Count
++    //    (:980-994). production_spent and bought_outright are in s_colony
++    //    and on the wire; the cost is a function of source tables, the
++    //    player's ship designs and config values (colcalc.cpp:2576,
++    //    lander_ship_cost), and the turns follow from it. The two numbers
++    //    the screen draws are sent; -1 while the handle is not a colony.
++    if (current_screen == SCREEN_COLONY || current_screen == SCREEN_QUEUE_POPUP) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'P');
++        buf.push_back((uint8_t)'R');
++        buf.push_back((uint8_t)'D');
++        const int16_t h = COLONY::colony_handle;
++        const bool ok = h >= 0 && h < MOX::NUM_COLONIES;
++        Write16(buf, ok ? MOX::colony[h].producing[0] : (int16_t)-1);
++        Write32(buf, ok ? COLCALC::Colony_Producing_Product_Cost(&MOX::colony[h]) : -1);
++        Write16(buf, ok ? COLONY::Calculate_Current_Production_Turn_Count(h) : (int16_t)-1);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

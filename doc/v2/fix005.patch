@@ -1,0 +1,31 @@
+From b2fa0c79c81ef5d3b5ee8a8bceff5b65179ffb54 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:24:25 +0200
+Subject: [PATCH] Open fix 5: Race_Selection_Screen_ records _old_race
+ (racesel.cpp)
+
+OrionLayer's open fix 5, the racesel.lbx [entry 138] crash on Custom
+Race Accept: one line, _old_race = static_cast<int16_t>(i).
+
+Committed as found (OrionLayer work order 126, part A).
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 6598052c:
+by hand: merge-file placed the line in v2's restructured lastrace.rac path; put after strlcpy in the stock-race custom_flag branch before Racial_Option_Screen (v2 still lacks it there; Draw_Flag_Screen still reads old_race at racesel.cpp:837).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/game/racesel.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/game/racesel.cpp b/src/game/racesel.cpp
+index b7640c97..5b232475 100755
+--- a/src/game/racesel.cpp
++++ b/src/game/racesel.cpp
+@@ -318,6 +318,7 @@ namespace RACESEL {
+                             struct_::Copy_Structure(plr->traits, race_specials[i], sizeof(plr->traits));
+                             plr->race = (uint8_t)i;
+                             strlcpy(plr->race_name, MOX::race_names[i], sizeof(plr->race_name));
++                            old_race = static_cast<int16_t>(i);
+                             fields::Deactivate_Auto_Function();
+                             fields::Clear_Fields();
+                             if (Racial_Option_Screen(plr) == 1) {

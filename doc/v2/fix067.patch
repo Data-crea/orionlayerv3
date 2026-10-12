@@ -1,0 +1,73 @@
+From 998d17e35b0d84592f4b41297053f9775678e7c7 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:28:48 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2067:=20MSGB=20version?=
+ =?UTF-8?q?=202=20=E2=80=94=20the=20values=20of=20the=20message=20box=20te?=
+ =?UTF-8?q?xt's=20FMTPARA=20item=20codes,=20read=20through=20Get=5FItem=5F?=
+ =?UTF-8?q?Value=5F=20while=20the=20box=20is=20up?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local a8381e60:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 29 ++++++++++++++++++++++++++++-
+ 1 file changed, 28 insertions(+), 1 deletion(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 590db34a..460b956c 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -8,6 +8,7 @@
+ #include "game/newgame.h"
+ #include "game/platform.h"
+ #include "game/build_queue.h"  // OrionLayer, open fix 35. autobuild_settings, sent in "COLS".
++#include "game/fmtpara.h"  // OrionLayer, open fix 67. The message box text's item values.
+ 
+ #include <vector>
+ #include <cstring>
+@@ -968,7 +969,7 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         buf.push_back((uint8_t)'S');
+         buf.push_back((uint8_t)'G');
+         buf.push_back((uint8_t)'B');
+-        Write8(buf, 1);                                   // block version
++        Write8(buf, 2);              // block version; 2: the item values, open fix 67
+         Write8(buf, g_message_box.kind);
+         Write16(buf, g_message_box.field_a);
+         Write16(buf, g_message_box.field_b);
+@@ -978,6 +979,32 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, (int16_t)len);
+             WriteBytes(buf, str, len);
+         }
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 67. The values the text's FMTPARA item codes
++        // (0x18, a letter, one hex digit: Insert_Item, fmtpara.cpp:854)
++        // print, read through the game's own Get_Item_Value while the box
++        // is up, which is while its caller's variables are (the boarding
++        // result, cmbtfir2.cpp:1640-1647): a count, then index and value.
++        // Only an index the text names and whose pointer is set is read.
++        std::vector<std::pair<uint8_t, int32_t>> items;
++        const char* t = g_message_box.text;
++        for (size_t i = 0; t != nullptr && t[i] != '\0' && i < 4000; ++i) {
++            if (t[i] != 0x18 || t[i + 1] == '\0') continue;
++            size_t k = i + 2;
++            while (t[k] == ' ') ++k;
++            const int c = toupper((unsigned char)t[k]);
++            const int d = c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : -1;
++            if (d < 0 || FMTPARA::para_global.item_ptr[d] == nullptr) continue;
++            bool seen = false;
++            for (const auto& it : items) seen = seen || it.first == d;
++            if (!seen) items.emplace_back((uint8_t)d, (int32_t)FMTPARA::Get_Item_Value((uint16_t)d));
++        }
++        Write8(buf, (uint8_t)items.size());
++        for (const auto& it : items) {
++            Write8(buf, it.first);
++            WriteBytes(buf, &it.second, sizeof(it.second));
++        }
++#endif
+     }
+ 
+     // 16. The turn-time popup that is up: "TPOP", written on ANY screen

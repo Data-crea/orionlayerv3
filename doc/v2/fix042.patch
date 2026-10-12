@@ -1,0 +1,31 @@
+From 02fa6bffeae284c99ce329a72544c693a9a0b15a Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:27:01 +0200
+Subject: [PATCH] OrionLayer Open Fix 42: tick the extension during the input
+ delay, so the client hears the screen at once
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 96da4c4d:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/game/fields.cpp | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/game/fields.cpp b/src/game/fields.cpp
+index 03f8f28d..3256c9c2 100755
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -170,6 +170,12 @@ namespace fields {
+     int16_t __cdecl Get_Input() {
+         platform::Check_Exit();
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 42. The client hears the screen during its input delay too; the delay still returns 0 below.
++        if (input_delay > 0) {
++            ext::Tick(MOX::current_screen);
++        }
++#endif
+         if (input_delay > 0) {
+             input_delay--;
+             return 0;

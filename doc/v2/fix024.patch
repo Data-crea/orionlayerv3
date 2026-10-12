@@ -1,0 +1,152 @@
+From 62cc8968b84c668ba0ec640fb3931536c84ac70a Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:30 +0200
+Subject: [PATCH] Open fix 24: the two turn-start research dialogs report their
+ own ids, on the wire only
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The science room that presents a completed project (SCIENCE::Science_Room_)
+and the SELECT NEW RESEARCH list that follows it (TECH::_Tech_Select_(0))
+both run under SCREEN_MAIN, so a client cannot tell either from the galaxy
+map: OrionLayer kept drawing the map with an active TURN button over them,
+and a field sent into the select list killed the game (open fix 23).
+
+They cannot report through MOX::_current_screen, the path open fix 22 takes
+for race selection: the game DRAWS from that value here — textbox.cpp:44
+picks the description box's x from it and textbox.cpp:284 its colour group.
+So ext::g_screen_override changes only what ext::Tick SENDS, and
+ext::ScreenOverride sets and restores it around a scope: 52 in the science
+room (which also shows stolen and artifact technology, the same dialog), 53
+in the select list, and -1 — no override — in CHANGE mode, which is
+Screen_Control_'s SCREEN_TECH_CHANGE and keeps reporting 36. Nothing the
+game reads changes.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local f838c754:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp  | 18 ++++++++++++++++++
+ src/ext/ext_api.h    | 20 ++++++++++++++++++++
+ src/game/science.cpp | 13 +++++++++++++
+ src/game/tech.cpp    | 10 ++++++++++
+ 4 files changed, 61 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 89386028..aa1af787 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -636,7 +636,25 @@ bool Init(uint16_t port) {
+     return ok;
+ }
+ 
++int16_t g_screen_override = -1;
++
++ScreenOverride::ScreenOverride(int16_t id) : previous(g_screen_override) {
++    if (id >= 0) {
++        g_screen_override = id;
++    }
++}
++
++ScreenOverride::~ScreenOverride() {
++    g_screen_override = previous;
++}
++
+ void Tick(int16_t current_screen) {
++    // What the client is told. The override is the only difference; the
++    // game's own MOX::current_screen is untouched, because the dialogs it
++    // distinguishes draw themselves from it (ext_api.h).
++    if (g_screen_override >= 0) {
++        current_screen = g_screen_override;
++    }
+     // Accept new connections
+     g_server.AcceptClients();
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 0662cfd6..046ad418 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -24,6 +24,26 @@ extern bool g_hide_window;
+ /// Set by ProcessInput(), consumed by Get_Input() early return.
+ extern int16_t g_pending_field;
+ 
++/// The screen id REPORTED to clients, or -1 for the game's own.
++///
++/// OrionLayer needs the two turn-start research dialogs — the science
++/// room and SELECT NEW RESEARCH — to be distinguishable on the wire; both
++/// run under SCREEN_MAIN and the game draws them from that value, so
++/// writing MOX::current_screen (the path the screen-id patch takes for
++/// race selection) would MOVE them: textbox.cpp:44 picks the description
++/// box's x from it and textbox.cpp:284 its colour group. This changes what
++/// is SENT and nothing the game reads.
++extern int16_t g_screen_override;
++
++/// Sets `g_screen_override` while it lives and restores the previous value
++/// when it goes out of scope — so a function with several returns needs one
++/// line. An id below 0 means "no override" and the guard does nothing.
++struct ScreenOverride {
++    int16_t previous;
++    explicit ScreenOverride(int16_t id);
++    ~ScreenOverride();
++};
++
+ /// True while an injected mouse event is queued and not yet
+ /// pumped. Sync_Mouse_State_From_SDL stands aside while this is
+ /// set, so the injected position survives to whoever reads
+diff --git a/src/game/science.cpp b/src/game/science.cpp
+index 417ee21b..f6cdf35f 100755
+--- a/src/game/science.cpp
++++ b/src/game/science.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"
++#endif
+ 
+ namespace SCIENCE {
+     uint8_t finds_presented_by_scientist;
+@@ -110,6 +113,16 @@ namespace SCIENCE {
+     }
+ 
+     void __cdecl Science_Room(char* intro_animation_name, uint16_t discovery_count, int16_t* discovery_data, char* footer_text) {
++#ifdef ORION2RE_EXT
++        // OrionLayer: this room runs under SCREEN_MAIN (Reports_Screen sets
++        // it, mainscr2.cpp) and nothing here writes current_screen, so a
++        // client cannot tell it from the galaxy map. Report a synthetic 52 —
++        // ON THE WIRE ONLY, because the room and the select list after it
++        // draw from the game's own value (ext_api.h). The same room shows
++        // stolen and artifact technology (report.cpp), which is the same
++        // dialog and reports the same id.
++        const ext::ScreenOverride ext_screen_guard(52);
++#endif
+         MOX2::action_func_t saved_auto_function = nullptr;
+         int16_t science_hot_key;
+         uint16_t remaining_discoveries;
+diff --git a/src/game/tech.cpp b/src/game/tech.cpp
+index 1d4f10a9..bb248d08 100755
+--- a/src/game/tech.cpp
++++ b/src/game/tech.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"
++#endif
+ 
+ namespace {
+     /** Draws one application name inside the grouped technology list popup. */
+@@ -156,6 +159,13 @@ namespace TECH {
+ 
+         MOX::cur_plyr_ptr = &MOX::player[MOX::PLAYER_NUM];
+         g_changing_tech = changing_tech;
++#ifdef ORION2RE_EXT
++        // OrionLayer: SELECT NEW RESEARCH at turn start runs under
++        // SCREEN_MAIN, so it reports a synthetic 53 on the wire (ext_api.h).
++        // CHANGE mode is Screen_Control's SCREEN_TECH_CHANGE (36) and keeps
++        // reporting that: -1 leaves the report alone.
++        const ext::ScreenOverride ext_screen_guard(changing_tech ? -1 : 53);
++#endif
+ 
+         saved_current_field = MOX::cur_plyr_ptr->current_research_field;
+ 

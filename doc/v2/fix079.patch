@@ -1,0 +1,194 @@
+From 6f76077b1d6c403c1c13d0c43702d786b7b78199 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:29:29 +0200
+Subject: [PATCH] OrionLayer Open Fix 79: the battle's sounds as events
+ (CEV_SOUND, CEV_SOUND_CHANGE with the ticks waited since the event before),
+ the engine silent while a client draws the battle
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 2b773c31:
+timer.cpp by hand: v2's Release_Time first subtracts an animation speed-up (PgUp/PgDn, new in v2); the battle tick count is taken from the unadjusted ticks, as the local one counted the original's time. Other files clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp  | 33 +++++++++++++++++++++++++++++++++
+ src/ext/ext_api.h    | 18 ++++++++++++++++++
+ src/game/ericnet.cpp |  7 +++++++
+ src/game/sound.cpp   | 12 ++++++++++++
+ src/game/timer.cpp   |  6 ++++++
+ 5 files changed, 76 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 6a2561b4..eaabcc9d 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2441,6 +2441,7 @@ bool g_hof_live = false;
+ // OrionLayer, open fix 52. A tactical battle is up (ext_api.h).
+ bool g_combat_live = false;
+ uint16_t g_combat_serial = 0;
++static int32_t g_battle_ticks = 0;  // OrionLayer, open fix 79. Ticks waited since the last event that is not a sound.
+ 
+ CombatGuard::CombatGuard() : screen(SCREEN_EXT_COMBAT), previous(g_combat_live) {
+     g_combat_live = true;
+@@ -2455,6 +2456,38 @@ void Combat_Event(uint8_t type, int16_t a0, int16_t a1, int16_t a2, int16_t a3,
+     CombatEventRecord& e = g_combat_events[g_combat_event_next % 1024];
+     e = {g_combat_event_next, g_combat_serial, type, {a0, a1, a2, a3, a4, a5, a6, a7}};
+     ++g_combat_event_next;
++    if (type != CEV_SOUND && type != CEV_SOUND_CHANGE) g_battle_ticks = 0;  // OrionLayer, open fix 79. The ticks count from this event.
++}
++
++// OrionLayer, open fix 79. The battle's sounds as events (ext_api.h).
++static bool Battle_Sound_Recorded_() {
++    return g_combat_live && g_hide_window.load() && g_server.ClientCount() > 0;
++}
++
++static int16_t Battle_Ticks_() {
++    return (int16_t)(g_battle_ticks > 32767 ? 32767 : g_battle_ticks);
++}
++
++bool Battle_Sound(int16_t sound_id, int32_t* handle) {
++    if (!Battle_Sound_Recorded_()) return false;
++    static int32_t next = 16;
++    *handle = next;
++    next = next >= 127 ? 16 : next + 1;
++    if (sound_id != 0) Combat_Event(CEV_SOUND, sound_id, (int16_t)*handle, Battle_Ticks_());
++    return true;
++}
++
++bool Battle_Sound_Change(int32_t handle, uint8_t change, int32_t value) {
++    if (handle != -1 && (handle < 16 || handle > 127)) return false;
++    if (!Battle_Sound_Recorded_()) return handle != -1;
++    if (value < -32768) value = -32768;
++    if (value > 32767) value = 32767;
++    Combat_Event(CEV_SOUND_CHANGE, (int16_t)handle, change, (int16_t)value, Battle_Ticks_());
++    return handle != -1;
++}
++
++void Battle_Wait(int32_t ticks) {
++    if (g_combat_live && ticks > 0) g_battle_ticks += ticks;
+ }
+ 
+ // OrionLayer, open fix 65. The original's view kept round a commanded action, as a player's click keeps it.
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 12ae383f..4fe8479f 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -176,6 +176,8 @@ enum CombatEventType : uint8_t {
+     CEV_CAPTURE = 16,       // attacker, defender, result (0x32 taken, 0x31 destroyed, 0x33 failed), marines, defenders left, owner after
+     CEV_RAID = 17,          // attacker, target, raiders sent, raiders back, defenders left, damage
+     CEV_COMMAND = 18,       // op, result (0 taken, else why refused), a, b — OrionLayer, open fix 58.
++    CEV_SOUND = 19,         // sound id, handle, ticks since the last other event — OrionLayer, open fix 79.
++    CEV_SOUND_CHANGE = 20,  // handle (-1 every sound), change (1 fade, 2 loop, 3 pitch), value, ticks — OrionLayer, open fix 79.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+@@ -209,6 +211,22 @@ void Combat_Event(uint8_t type, int16_t a0 = 0, int16_t a1 = 0, int16_t a2 = 0,
+                   int16_t a3 = 0, int16_t a4 = 0, int16_t a5 = 0,
+                   int16_t a6 = 0, int16_t a7 = 0);
+ 
++/// OrionLayer, open fix 79. The battle's sounds as events, the engine silent while a client draws.
++///
++/// The hidden engine played every battle sound at its own time, before the
++/// client's picture of it (work order 210). While a battle is live, the
++/// window hidden and a client connected, ERICNET::Mox_Play_Sound records
++/// the sound (CEV_SOUND) instead of playing it and hands back a handle of
++/// its own (16-127, never a channel); a fade, loop or pitch bend of such a
++/// handle is recorded too (CEV_SOUND_CHANGE) and touches no channel. Each
++/// carries the 55 ms ticks the engine waited (timer::Release_Time) since the
++/// event before it, so the client starts it at that point of its own
++/// animation. Only what the original would play is recorded (sound effects
++/// on, not super fast); music streams are not touched.
++bool Battle_Sound(int16_t sound_id, int32_t* handle);
++bool Battle_Sound_Change(int32_t handle, uint8_t change, int32_t value);
++void Battle_Wait(int32_t ticks);
++
+ struct CombatGuard {
+     ScreenOverride screen;
+     bool previous;
+diff --git a/src/game/ericnet.cpp b/src/game/ericnet.cpp
+index 972f59ac..15066e63 100755
+--- a/src/game/ericnet.cpp
++++ b/src/game/ericnet.cpp
+@@ -1,5 +1,8 @@
+ #include "pch.h"
+ #include <cstring>
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 79. The battle's sounds as events.
++#endif
+ 
+ namespace {
+     bool Building_Forces_Combat_Reengagement(int16_t building_id) {
+@@ -226,6 +229,10 @@ namespace ERICNET {
+ 
+     int __cdecl Mox_Play_Sound(int16_t sound_id) {
+         if (MOX::settings.sound_fx_on != 0 && MOX::super_fast_flag == 0) {
++#ifdef ORION2RE_EXT
++            int32_t handle = 0;
++            if (ext::Battle_Sound(sound_id, &handle)) return handle;  // OrionLayer, open fix 79. The client plays it.
++#endif
+             return sound::Play_Sound(sound_id);
+         }
+ 
+diff --git a/src/game/sound.cpp b/src/game/sound.cpp
+index 50c7eaea..4c8ff348 100755
+--- a/src/game/sound.cpp
++++ b/src/game/sound.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 79. A recorded battle sound's changes.
++#endif
+ 
+ namespace sound {
+     void __cdecl Merge_Free_Blocks();
+@@ -784,6 +787,9 @@ namespace sound {
+ 
+     void __cdecl Pitch_Bend_Sound(int32_t handle, int32_t pitch) {
+         Sound_State_Guard_ guard;
++#ifdef ORION2RE_EXT
++        if (ext::Battle_Sound_Change(handle, 3, pitch)) return;  // OrionLayer, open fix 79. A recorded battle sound: no channel.
++#endif
+ 
+         if (handle >= 1 && handle < SOUND_CHANNEL_COUNT) {
+             s_sound_channel& channel = soundChannels[handle];
+@@ -1016,6 +1022,9 @@ namespace sound {
+      */
+     void __cdecl Fadeout_Sound(int16_t channel_idx, int8_t volume_idx) {
+         Sound_State_Guard_ guard;
++#ifdef ORION2RE_EXT
++        if (ext::Battle_Sound_Change(channel_idx, 1, volume_idx)) return;  // OrionLayer, open fix 79. A recorded battle sound: no channel.
++#endif
+ 
+         if (channel_idx >= 0 && channel_idx < SOUND_CHANNEL_COUNT) {
+             if (soundChannels[channel_idx].volume_index == 0) {
+@@ -1027,6 +1036,9 @@ namespace sound {
+ 
+     void __cdecl Loop_Sound(int32_t channel_idx, int8_t loop_count) {
+         Sound_State_Guard_ guard;
++#ifdef ORION2RE_EXT
++        if (ext::Battle_Sound_Change(channel_idx, 2, loop_count)) return;  // OrionLayer, open fix 79. A recorded battle sound: no channel.
++#endif
+ 
+         if (channel_idx >= 1) {
+             soundChannels[channel_idx].flags |= 0x08;
+diff --git a/src/game/timer.cpp b/src/game/timer.cpp
+index 00e36c61..356654d1 100755
+--- a/src/game/timer.cpp
++++ b/src/game/timer.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 79. The battle's ticks for its sounds.
++#endif
+ 
+ namespace timer {
+     namespace {
+@@ -48,6 +51,9 @@ namespace timer {
+     }
+ 
+     void __cdecl Release_Time(int32_t ticks) {
++#ifdef ORION2RE_EXT
++        ext::Battle_Wait(ticks);  // OrionLayer, open fix 79. The original's time, counted for the battle's sounds (before v2's animation speed-up is taken off).
++#endif
+         const int32_t adjusted_ticks = ticks - animation_speedup;
+         if (adjusted_ticks <= 0) {
+             SDL_Delay(0);

@@ -1,0 +1,138 @@
+From 7a5617256f8461084bfc18e9a6329aedaf476d6c Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:28:48 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2064:=20MSG=5FSET=5FSPI?=
+ =?UTF-8?q?ES=20=E2=80=94=20the=20Races=20screen's=20spies=20and=20mission?=
+ =?UTF-8?q?s=20set=20as=20one=20list=20through=20the=20game's=20own=20icon?=
+ =?UTF-8?q?=20groups=20and=20setters,=20all=20or=20nothing?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 9e19c9f3:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp    | 65 ++++++++++++++++++++++++++++++++++++++++++
+ src/ext/ext_server.cpp | 10 +++++++
+ src/ext/ext_server.h   |  2 ++
+ 3 files changed, 77 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 703321f8..b1352d96 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2033,6 +2033,67 @@ static int Select_Fltscrn_Ship_(int16_t ship_idx, int16_t selected) {
+ 
+ // ── Input injection ──────────────────────────────────────
+ 
++// OrionLayer, open fix 64. The Races screen's spies and missions set as one list, all or nothing.
++// The original moves spies by picking icons with the POINTER (a pick takes
++// as many as the pointer's x says, racescrn.cpp Draw_Icon_Group_Cursor)
++// and dropping them on another group; a mission is a multi-button written
++// on a mouse click; both reach the player record only when the screen is
++// left (Update_Spy_Stuff). A client cannot aim the pointer, and could not
++// see the result. Applied only while the screen is up and nothing is in
++// hand; every race the screen shows must be listed, no group above 63
++// (Move_Spy_Group_From_Mouse), the total kept, a mission 1-3 (or 0: kept).
++// Written into the screen's groups AND the record (the setters the
++// screen's own commit uses), so the snapshot shows it and the later commit
++// writes the same numbers.
++static void Set_Spies_(const std::vector<uint8_t>& p) {
++    using namespace RACESCRN;
++    if (MOX::current_screen != SCREEN_RACE || g_display_p == nullptr ||
++        g_agent_group_p == nullptr || g_mouse_group_p == nullptr ||
++        g_mouse_group_p->count != 0 || p.size() < 2) return;
++    const int n = p[0];
++    if ((int)p.size() != 2 + 3 * n) return;
++    int want[8], mission[8];
++    int eligible = 0, listed = 0, total_now = g_agent_group_p->count;
++    for (int i = 0; i < 8; ++i) want[i] = mission[i] = -1;
++    for (int i = 0; i < MOX::active_count && i < 8; ++i) {
++        const s_racescrn_race_display& d = g_display_p[i];
++        if (d.is_empty_slot || d.is_eliminated) continue;
++        ++eligible;
++        total_now += d.spy_icons_group.count;
++    }
++    const int agents = p[1 + 3 * n];
++    int total_req = agents;
++    if (agents > 63) return;
++    for (int k = 0; k < n; ++k) {
++        const int player = p[1 + 3 * k], spies = p[2 + 3 * k], m = p[3 + 3 * k];
++        int at = -1;
++        for (int i = 0; i < MOX::active_count && i < 8; ++i) {
++            const s_racescrn_race_display& d = g_display_p[i];
++            if (!d.is_empty_slot && !d.is_eliminated && d.player_idx == player) at = i;
++        }
++        if (at < 0 || want[at] >= 0 || spies > 63 || m > 3) return;
++        want[at] = spies;
++        mission[at] = m;
++        total_req += spies;
++        ++listed;
++    }
++    if (listed != eligible || total_req != total_now) return;
++    for (int i = 0; i < MOX::active_count && i < 8; ++i) {
++        if (want[i] < 0) continue;
++        s_racescrn_race_display& d = g_display_p[i];
++        d.spy_icons_group.count = (uint16_t)want[i];
++        Calculate_Icon_Group_Data(&d.spy_icons_group);
++        BILL::Set_My_Spy_Number(d.player_idx, (uint8_t)want[i]);
++        if (mission[i] > 0) {
++            d.agent_mission_idx = (int16_t)mission[i];
++            BILL::Set_My_Spy_Mission(d.player_idx, (int8_t)(mission[i] - 1));
++        }
++    }
++    g_agent_group_p->count = (uint16_t)agents;
++    Calculate_Icon_Group_Data(g_agent_group_p);
++    BILL::Set_My_Agent_Number((uint8_t)agents);
++}
++
+ static void ProcessInput() {
+     InputCommand cmd;
+     while (g_server.PopInput(cmd)) {
+@@ -2168,6 +2229,10 @@ static void ProcessInput() {
+             }
+             break;
+ 
++        case MSG_SET_SPIES:
++            Set_Spies_(cmd.pairs);  // OrionLayer, open fix 64.
++            break;
++
+         case MSG_COMBAT_COMMAND:
+             // OrionLayer, open fix 58. Kept for the battle's next human input; a later one replaces it.
+             if (cmd.pairs.size() >= 11) {
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index 2a0ddde0..2cd53e13 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -247,6 +247,16 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_SET_SPIES: {
++        // OrionLayer, open fix 64. The whole list (2 + 3n bytes, n <= 8), or nothing.
++        if (payload_len >= 2 && payload[0] <= 8 && payload_len == (size_t)2 + 3 * payload[0]) {
++            InputCommand cmd{};
++            cmd.type = MSG_SET_SPIES;
++            cmd.pairs.assign(payload, payload + payload_len);
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_CANCEL_FIELD: {
+         if (payload_len >= 2) {
+             InputCommand cmd{};
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index cec607dc..cd1b356e 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -46,6 +46,8 @@ constexpr uint16_t MSG_SHOW_WINDOW   = 0x86;
+ constexpr uint16_t MSG_INJECT_RIGHT_CLICK = 0x87;
+ // OrionLayer, open fix 58. One battle action: uint16 serial, int16 unit, uint8 op, int16 a, int16 b, int16 c.
+ constexpr uint16_t MSG_COMBAT_COMMAND = 0x88;
++// OrionLayer, open fix 64. The Races screen's spies: uint8 n, n x (uint8 player, uint8 spies, uint8 mission 1-3 or 0 kept), uint8 agent pool.
++constexpr uint16_t MSG_SET_SPIES      = 0x89;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;

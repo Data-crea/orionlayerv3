@@ -1,0 +1,63 @@
+From 007b4aa323d0052350107da5f4a1fc04ad139de7 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] Open fix 31: present without VSync on request (platform.cpp)
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+ORION2RE_NO_VSYNC=1 passes 0 to both SDL_SetRenderVSync calls
+(platform.cpp:644, :1390); without the variable nothing changes.
+ORION2RE_EXT-gated.
+
+WHY. A session-launched engine hung in its first logo frames whenever
+its window was not being drawn - the screen locked or blanked, or the
+window covered by a full-screen game. Backtraces (OrionLayer work order
+174 A) show the game thread in JIM::Draw_Logos_ waiting with no timeout
+for a present (video::Submit_Palette_ / Publish_Off_Page_,
+SDL_WaitCondition timeoutNS=-1) and the main thread inside that present,
+SDL_RenderPresent with VSync on, in the NVIDIA GLX swap's
+drmSyncobjTimelineWait. Disabling explicit sync, the Vulkan and the
+software renderer each only moved the wait; not waiting for VSync
+removed it: 0 hangs in 50 starts against 8 in 60. The same cause
+throttled a running engine behind a full-screen game to about one frame
+a second.
+
+Applied by OrionLayer work order 175 on Data's authorisation;
+doc/ext_present_no_vsync.patch in orionlayerv3 is the patch and its
+evidence. A timeout on the game thread's wait would be the deeper fix;
+not attempted.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local f98b8547:
+class (a) in behaviour: v2 has interface.vsync_enabled (config) feeding g_requested_vsync_enabled, applied at present time. Ported by hand as an env override inside v2's Publish_Present_Scaler_Config so OrionLayer's ORION2RE_NO_VSYNC keeps working; the local hunks at the two SDL_SetRenderVSync(…,1) calls do not exist in v2.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/game/platform.cpp | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index ac46b9c5..1ceac5e7 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -94,7 +94,19 @@ namespace platform {
+ 
+         void Publish_Present_Scaler_Config() {
+             SDL_SetAtomicInt(&g_requested_present_scaler, (int)platform::g_present_scaler);
+-            SDL_SetAtomicInt(&g_requested_vsync_enabled, platform::g_vsync_enabled != 0 ? 1 : 0);
++            int vsync_enabled = platform::g_vsync_enabled != 0 ? 1 : 0;
++#ifdef ORION2RE_EXT
++            // ORION2RE_NO_VSYNC=1 (OrionLayer open fix 31): present without
++            // waiting for the display, whatever interface.vsync_enabled says.
++            // A VSync present to a window the compositor is not drawing never
++            // completes; unattended runs set this. v2's own switch is the
++            // config key interface.vsync_enabled = false.
++            const char* no_vsync = SDL_getenv("ORION2RE_NO_VSYNC");
++            if (no_vsync != nullptr && no_vsync[0] != '\0' && no_vsync[0] != '0') {
++                vsync_enabled = 0;
++            }
++#endif
++            SDL_SetAtomicInt(&g_requested_vsync_enabled, vsync_enabled);
+             Request_Present_Refresh();
+         }
+ 

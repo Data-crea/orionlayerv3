@@ -1,0 +1,70 @@
+From aa59219a42b0021af903cffb5cb1a7d22ba4b26f Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] Open fix 32: the Info screen's history divisors and turn
+ messages on the wire (ext_api.cpp)
+
+OrionLayer work order 176, Data's authorisation: an INFS block while
+SCREEN_INFO is up - MOX::_bill_savegame[6] and the player's messages as
+MSG_::sprintf_msg_ renders them. doc/ext_info_screen_state.patch.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 2269749c:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 41 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index e2749f1c..b455fa6f 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -396,6 +396,47 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write8(buf, (uint8_t)(MOX::fltscrn_big_icon[i].selected != 0));
+         }
+     }
++
++    // 5. The Info screen's two inputs SerializeState never sent: "INFS",
++    //    written ONLY while SCREEN_INFO is up, and LAST, so nothing above
++    //    it moves and a client that stops earlier is unaffected. It can
++    //    never meet OFFS or FLTS (other screens). OrionLayer, open fix 32.
++    //
++    //    - MOX::bill_savegame[6] (mox.cpp:778): [1] is where the history
++    //      rings start once a game is past 350 turns (Get_History_Params,
++    //      bill.cpp:547-556) and [2..5] are the divisors the four rings
++    //      were scaled by (bill.cpp:445-535). The rings themselves are in
++    //      s_player, on the wire already; without these six numbers the
++    //      History Graph cannot be drawn or labelled (info.cpp:1222-1329).
++    //    - the Turn Summary's messages, RENDERED exactly as the screen
++    //      renders them (MSG_::sprintf_msg, info.cpp:1971), in the
++    //      player's slice of MSG_::msgs (msg.cpp:86-114). The formats
++    //      live in RSTRING<lang>.LBX and the names in half a dozen tables,
++    //      so sending the finished strings is the one form a client can
++    //      use without re-implementing sprintf_msg. Raw bytes, the game's
++    //      8-bit text with its FMTPARA codes; int16 length first.
++    if (current_screen == SCREEN_INFO) {
++        buf.push_back((uint8_t)'I');
++        buf.push_back((uint8_t)'N');
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'S');
++        for (int i = 0; i < 6; i++) {
++            Write16(buf, MOX::bill_savegame[i]);
++        }
++        int16_t first = MSG_::First_Msg_For_Player(MOX::PLAYER_NUM);
++        int16_t n = MSG_::N_Msgs_For_Player(MOX::PLAYER_NUM);
++        if (first < 0 || first >= MAX_MESSAGES || n < 0) n = 0;
++        if (first + n > MAX_MESSAGES) n = (int16_t)(MAX_MESSAGES - first);
++        Write16(buf, n);
++        char text[256];
++        for (int16_t i = 0; i < n; i++) {
++            MSG_::sprintf_msg(text, sizeof(text), &MSG_::msgs[first + i]);
++            size_t len = strnlen(text, sizeof(text));
++            Write16(buf, (int16_t)len);
++            buf.insert(buf.end(), (const uint8_t*)text,
++                       (const uint8_t*)text + len);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

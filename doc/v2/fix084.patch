@@ -1,0 +1,37 @@
+From e9b3cf077224e91e7967facf97779fe6d6267515 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:30:14 +0200
+Subject: [PATCH] OrionLayer Open Fix 84: the field list is sent when its
+ content changes, not only its count (the race report for one race and Races'
+ list for two races are both 17 fields under screen 6; RETURN left the client
+ on the report's list)
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 8b1501f5:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 8 ++++++--
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index f8c163ac..7eb19ee7 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2830,10 +2830,14 @@ void Tick(int16_t current_screen) {
+ 
+     // Send field list (only if changed)
+     int16_t fc = fields::fields_count;
++    // OrionLayer, open fix 84. A list that changes with its count unchanged is sent too (the race report's RETURN to Races).
++    static std::vector<uint8_t> fields_buf;
++    static std::vector<uint8_t> fields_sent;
++    SerializeFields(fields_buf);
+     if (fc != g_last_fields_count || (events & EVT_SCREEN_CHANGED)
++        || fields_buf != fields_sent
+         || g_server.TakeFieldsDirty()) {
+-        static std::vector<uint8_t> fields_buf;
+-        SerializeFields(fields_buf);
++        fields_sent = fields_buf;
+         g_server.SendToSubscribers(SUB_FIELDS, MSG_FIELDS,
+                                     fields_buf.data(), fields_buf.size());
+         // Right after the list it belongs to: a client that gets a

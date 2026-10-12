@@ -1,0 +1,66 @@
+From 45aba360c0e1c43e32160efe832a1d63ab1bcb41 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] OrionLayer Open Fix 36: send where the colony screen puts its
+ buildings ("CBLD")
+
+While SCREEN_COLONY is up, the snapshot ends (after COLS) in a "CBLD"
+block: the 36 int16 building ids of COLONY::_colony_bldgs, row by row,
+then the ten int16 COLONY::_colony_satellites.
+
+Why: Make_Bldg_Array_For_Colony_ (colony_main.cpp:536-631) places the
+buildings with game_random seeded by the colony index plus Random_ draws,
+and the scene and the roads follow those arrays. Which buildings a colony
+has is on the wire, where they stand is not, and a client copy would have
+to transcribe the RNG. OrionLayer does not place buildings from it yet
+(UNVERIFIED building_placement: the grid also holds housing and jittered
+satellites).
+
+OrionLayer, open fix 36 (orionlayerv3 doc/orion2re_open_fixes.md,
+doc/ext_colony_building_placement.patch). Approved by Data (brief 180,
+item 1); applied by work order 181. Local only, never pushed.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 01bafd9c:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 760630e6..fda4af0f 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -468,6 +468,31 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, COLONY::field_mode);
+         Write8(buf, BUILD_QUEUE::autobuild_settings.enabled);
+     }
++
++    // 7. Where the colony screen puts its buildings: "CBLD", written ONLY
++    //    while SCREEN_COLONY is up, and LAST. OrionLayer, open fix 36.
++    //
++    //    Make_Bldg_Array_For_Colony (colony_main.cpp:536-631) places the
++    //    colony's buildings on a 6x6 grid and its satellites in ten slots
++    //    with game_random seeded by the colony index plus Random_ draws;
++    //    Draw_Colony_Bldgs and Draw_Colony_Satellites draw from those two
++    //    arrays. A client would have to transcribe the RNG exactly, so the
++    //    arrays are sent as they are: 36 building ids, row by row, then the
++    //    ten satellite ids. Valid while COLS's handle agrees with its pair.
++    if (current_screen == SCREEN_COLONY) {
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'D');
++        for (int r = 0; r < 6; r++) {
++            for (int c = 0; c < 6; c++) {
++                Write16(buf, (int16_t)COLONY::colony_bldgs[r].buildings[c]);
++            }
++        }
++        for (int i = 0; i < 10; i++) {
++            Write16(buf, COLONY::colony_satellites[i]);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

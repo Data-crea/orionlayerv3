@@ -386,21 +386,20 @@ def engine_report(tree=None):
     README's table and the fundament's line to it."""
     import version_check
     out = ["\n  The orion2re build it needs (README, tools/version_check.py):",
-           "    branch orionlayer-local, -DORION2RE_EXT=ON, every row of "
+           "    the fork Data-crea/orion2re, branch orionlayer (v2.0.0), "
+           "-DORION2RE_EXT=ON, every row of "
            "README's table; checked by their patch: open fixes "
            + ", ".join(str(n) for n in version_check.required_fixes())]
     tree, missing = version_check.tree_report(tree)
     if tree is None:
-        # Work order 230 F: what a STRANGER can do — the bundles are the
-        # maintainer's own folder, and orion2re's repository is private
-        # (README, "The engine cannot yet be built from this repository
-        # alone").
+        # Work order 230 F: what a STRANGER can do. Since work order 243
+        # the engine is public: the fork's README says how to build it.
         out.append("    no orion2re found here. Without it OrionLayer still "
                    "starts: python main.py shows the screens, with no game.")
-        out.append("    To play you need an orion2re built as above. It "
-                   "cannot be built from this repository alone (README, "
-                   "\"The orion2re build it needs\"): the patched branch "
-                   "comes from the maintainer.")
+        out.append("    To play you need an orion2re built as above: README, "
+                   "\"The orion2re build it needs\", and the fork's own "
+                   "README (github.com/Data-crea/orion2re, branch "
+                   "orionlayer).")
         out.append("    Once you have the program: python play.py --engine "
                    "PATH --game DIR (README, \"Where your game and engine "
                    "are\").")

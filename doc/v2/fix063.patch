@@ -1,0 +1,32 @@
+From adfd7bb088123f1d361b4e92a5efc39f5de56c83 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:28:48 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2063:=20CMEV=20reports?=
+ =?UTF-8?q?=20a=20missile=20merge=20and=20a=20missile=20gone=20only=20for?=
+ =?UTF-8?q?=20a=20live=20missile=20=E2=80=94=20the=20original's=20merge=20?=
+ =?UTF-8?q?loop=20goes=20on=20matching=20empty=20slots=20after=20the=20kil?=
+ =?UTF-8?q?l=20(open=20fix=2056's=20hooks)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local ee844b0b:
+Kill_Missile half by hand (guard on the event). The merge half is not needed on v2: Merge_Missile returns after the first merge and returns early for an empty slot (type <= WEAPON_NO_WEAPONS), so the loop cannot match empty slots after the kill.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/game/cmbtmis.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/game/cmbtmis.cpp b/src/game/cmbtmis.cpp
+index 78afb02d..b2a55ab7 100755
+--- a/src/game/cmbtmis.cpp
++++ b/src/game/cmbtmis.cpp
+@@ -1417,6 +1417,7 @@ namespace CMBTMIS {
+ 
+     void __cdecl Kill_Missile(int16_t missile_idx) {
+ #ifdef ORION2RE_EXT
++        if (MOX::missile[missile_idx].type > WEAPON_NO_WEAPONS)  // OrionLayer, open fix 63. An empty slot killed again is no missile gone.
+         ext::Combat_Event(ext::CEV_MISSILE_GONE, missile_idx, MOX::missile[missile_idx].type, MOX::missile[missile_idx].quantity, MOX::missile[missile_idx].x, MOX::missile[missile_idx].y);  // OrionLayer, open fix 56.
+ #endif
+         incoming_valid[missile_idx] = false;

@@ -1,0 +1,70 @@
+From b569205709aee8c5e4f28604a1cad1cb05c061f6 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:30:14 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2087:=20the=20name=20bo?=
+ =?UTF-8?q?x=20on=20the=20wire=20(INBX:=20while=20namestar's=20input=20box?=
+ =?UTF-8?q?=20runs=20=E2=80=94=20Enter=20Star=20Name=20after=20the=20first?=
+ =?UTF-8?q?=20colony=20at=20a=20star,=20the=20home=20star's,=20the=20netwo?=
+ =?UTF-8?q?rk=20game's=20=E2=80=94=20its=20corner,=20its=20input=20field?=
+ =?UTF-8?q?=20with=20the=20name=20it=20opened=20with=20and=20the=20typed?=
+ =?UTF-8?q?=20text,=20its=20button,=20its=20prompt=20and=20whether=20it=20?=
+ =?UTF-8?q?is=20the=20animated=20one;=20OrionLayer=20could=20not=20draw=20?=
+ =?UTF-8?q?it=20and=20showed=20the=20F12=20notice)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 34a1d873:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 35 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 35 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index adecb14c..35b30836 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1903,6 +1903,41 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, (uint8_t)(MOX::fleet_box.attack_btn_active != 0));
+         Write16(buf, MOX::fleet_box_attack_button);
+     }
++
++    // 30. The name box: "INBX", written ONLY while namestar's input box is
++    //     up, after FBTN's place. OrionLayer, open fix 87.
++    //
++    //     namestar::Input_Box_Popup (namestar.cpp:300-405) asks for a star's
++    //     name after the first colony at a star (Change_Star_Name_Popup:
++    //     colland.cpp:250, mainpups.cpp:809, report.cpp:185, :207), for the
++    //     home star's and the network game's. For its whole loop the auto
++    //     function is Draw_Input_Box_Popup (Setup_Input_Box_Popup, :143);
++    //     Restore_Auto_Function ends it (:403). Its two fields — an accept
++    //     button the source names cancel, and the continuous string field —
++    //     stand under no screen id of their own (the landing's 33, the map's
++    //     0), and neither the prompt nor the name it was opened with is in
++    //     the field list. The box's corner, its input field (the name it was
++    //     opened with, the typed text, as WriteInputField writes it), the
++    //     button, the prompt and whether the box is the animated one.
++    //     Read only; nothing here changes the game.
++    if (fields::auto_active_flag != 0 &&
++        fields::function == namestar::Draw_Input_Box_Popup) {
++        buf.push_back((uint8_t)'I');
++        buf.push_back((uint8_t)'N');
++        buf.push_back((uint8_t)'B');
++        buf.push_back((uint8_t)'X');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, namestar::input_box.x);
++        Write16(buf, namestar::input_box.y);
++        WriteInputField(buf, namestar::input_box.accept_field_id,
++                        namestar::input_box.max_input_chars,
++                        namestar::input_box.input_text,
++                        sizeof(namestar::input_box.input_text));
++        Write16(buf, namestar::input_box.cancel_field_id);
++        WriteStr8(buf, namestar::input_box.prompt_text,
++                  sizeof(namestar::input_box.prompt_text));
++        Write8(buf, (uint8_t)(namestar::input_box.show_cancel_anim != 0));
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

@@ -1,0 +1,43 @@
+From 59425f3cd0f8d7df3dd9faff268a1f039649c581 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 12 Oct 2026 16:25:52 +0200
+Subject: [PATCH] OrionLayer Open Fix 34: send the save slots for the main
+ menu's Load dialog too (ext_api.cpp)
+
+What changed: SerializeSaveSlots also sends MSG_SAVE_SLOTS when the
+current screen is SCREEN_MAIN_MENU and MOX::_screen_data is 2, not only
+on SCREEN_GAME. One condition, marked with an OrionLayer comment.
+
+Why: the main menu's LOAD GAME runs the GAME popup's Load builder
+(MAINMENU::Mainmenu_Load_Game_Popup_, mainmenu.cpp:187-189, which sets
+_screen_data 2 while the screen stays SCREEN_MAIN_MENU), so a client saw
+the dialog's ten rows but nothing in them and could not draw it. With
+the slots on the wire OrionLayer draws it in HD as it draws the in-game
+Load dialog (open fix 14). Recorded in orionlayerv3
+doc/orion2re_open_fixes.md, entry 34.
+
+Ported onto orion2re v2.0.0 in scratch (work order 242 e) from local 9ab84230:
+renamed 3-way merge (identifier map cf4d9617->v2.0.0), clean.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index b455fa6f..147a2861 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -478,7 +478,11 @@ static void SerializeFields(std::vector<uint8_t>& buf) {
+ static bool SerializeSaveSlots(std::vector<uint8_t>& buf,
+                                int16_t current_screen) {
+     buf.clear();
+-    if (current_screen != SCREEN_GAME) {
++    // OrionLayer change, Open Fix 34 (orionlayerv3 doc/orion2re_open_fixes.md):
++    // the main menu's Load dialog (screen_data 2) sends its save slots too.
++    const bool main_menu_load = current_screen == SCREEN_MAIN_MENU
++                                && MOX::screen_data == 2;
++    if (current_screen != SCREEN_GAME && !main_menu_load) {
+         return false;
+     }
+     const int16_t screen_data = MOX::screen_data;

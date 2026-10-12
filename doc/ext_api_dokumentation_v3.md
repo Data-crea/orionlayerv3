@@ -1,5 +1,13 @@
 # orion2re Extension API — Patch Documentation
 
+> **Since work order 243 (12 October 2026) the engine is orion2re v2.0.0
+> with OrionLayer's changes — the fork `Data-crea/orion2re`, branch
+> `orionlayer` — and the protocol's home is that fork's
+> `docs/extension-api.md`** (including the `LAYOUT` message, open fix 93,
+> that names every member of the raw records). This document describes the
+> patch as it was made on orion2re 1.60 and keeps its field dumps and
+> reasoning; its line numbers are 1.60's.
+
 This document describes all changes to the orion2re source code
 required for the Extension API. Target audience: Joes and anyone
 reviewing or integrating the patch.
