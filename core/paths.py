@@ -89,6 +89,16 @@ def problems(environ=None, settings=None):
     elif not _has_marker(game):
         out.append(f"{game} does not look like Master of Orion 2 (no "
                    f"{GAME_MARKER} in it or its DATA folder) — {how}.")
+    elif os.path.isfile(eng) and os.path.isfile(os.path.join(
+            os.path.dirname(eng), "data", "base.zip")) and not os.path.isfile(
+            os.path.join(game, "data", "base.zip")):
+        # orion2re v2 reads its own data (data/base.zip: pictures the
+        # original lacks) from the game folder, its working directory; its
+        # build puts them there with -DORION2RE_GAME_DIR (work order 243).
+        out.append(f"The engine's own data (data/base.zip) is not in {game} — "
+                   f"build orion2re with -DORION2RE_GAME_DIR=\"{game}\", or "
+                   f"copy the folder {os.path.join(os.path.dirname(eng), 'data')}"
+                   f" there.")
     return out
 
 

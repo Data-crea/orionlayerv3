@@ -40,6 +40,14 @@ import sys
 
 ENV = "ORIONLAYER_BASE_DIR"
 FOLDER = "base"
+#: WHERE A PLAYER GETS THE PACK (Data's decision, work order 243): a GitHub
+#: release of the public repository, one per manifest. The tag is named by
+#: the manifest's own sha256, so a checkout fetches exactly the pack its
+#: `basepack.json` names, and `tools/basepack.py install` checks it file by
+#: file. `ORIONLAYER_BASE_PACK_URL` replaces the URL (a mirror, the suite).
+RELEASE_REPO = "Data-crea/orionlayerv3"
+ASSET = "orionlayer-base-pack.zip"
+URL_ENV = "ORIONLAYER_BASE_PACK_URL"
 TREE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MANIFEST = os.path.join(TREE, "basepack.json")
 
@@ -74,6 +82,20 @@ def manifest(path=MANIFEST):
     return _read[key]
 
 
+def release_tag(path=MANIFEST):
+    """`base-pack-<12 hex>`: the release that carries this manifest's pack."""
+    import hashlib
+    with open(path, "rb") as f:
+        return "base-pack-" + hashlib.sha256(f.read()).hexdigest()[:12]
+
+
+def release_url(path=MANIFEST):
+    """Where `python tools/setup.py` fetches the pack this tree names."""
+    return os.environ.get(URL_ENV) or (
+        f"https://github.com/{RELEASE_REPO}/releases/download/"
+        f"{release_tag(path)}/{ASSET}")
+
+
 def missing(folder=None, man=None):
     """The manifest's paths that are not in the pack at all. Presence only
     (work order 242): a repainted picture of another size is the pack
@@ -87,9 +109,10 @@ def missing(folder=None, man=None):
 def problems(folder=None):
     """Plain sentences; [] when the pack is complete."""
     folder = folder or base_dir()
-    how = ("install it once with  python tools/basepack.py install "
-           "orionlayer-base-pack.zip  (or set the environment variable "
-           f"{ENV} to the folder that holds it)")
+    how = ("python tools/setup.py fetches it, or install it once with  "
+           "python tools/basepack.py install orionlayer-base-pack.zip  (from "
+           f"{release_url()}; or set the environment variable {ENV} to the "
+           "folder that holds it)")
     if not os.path.isdir(folder):
         return [f"OrionLayer's base pack (its pictures) is not at {folder} "
                 f"— {how}."]

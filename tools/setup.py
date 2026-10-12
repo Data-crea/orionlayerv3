@@ -411,21 +411,60 @@ def engine_report(tree=None):
     return out
 
 
+def extract(cmd):
+    """Run one extractor of `from_game()` (work order 243, `--extract`).
+    The nebula extractor is told the game's own STARBG.LBX."""
+    from core import paths
+    args = cmd.split()[1:]
+    if "/path/to/starbg.lbx" in args:
+        lbx = next((os.path.join(d, f) for d in paths.game_dirs()
+                    if os.path.isdir(d) for f in os.listdir(d)
+                    if f.upper() == "STARBG.LBX"), None)
+        if lbx is None:
+            return False
+        args[args.index("/path/to/starbg.lbx")] = lbx
+    env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy")
+    return subprocess.run([sys.executable, *args], cwd=ROOT, env=env,
+                          capture_output=True).returncode == 0
+
+
 def main():
     ap = argparse.ArgumentParser(
         description="Rebuild generated assets after a clone.")
     ap.add_argument("--check", action="store_true",
                     help="report what is missing, change nothing")
+    ap.add_argument("--engine", metavar="PATH",
+                    help="the orion2re program; saved in your OrionLayer "
+                    "settings, as play.py --engine does")
+    ap.add_argument("--game", metavar="DIR",
+                    help="your Master of Orion 2 folder; saved in your "
+                    "OrionLayer settings, as play.py --game does")
+    ap.add_argument("--extract", action="store_true",
+                    help="also run every extractor below that has not run: "
+                    "the texts and pictures that come from your own Master "
+                    "of Orion 2 (work order 243)")
     ap.add_argument("--skip-smoke", action="store_true",
                     help="do not run the smoke test at the end")
     args = ap.parse_args()
 
     print("OrionLayer v3 setup\n")
+    if (args.engine or args.game) and not args.check:
+        from core import paths
+        paths.remember(args.engine, args.game)
+        print(f"  Saved: engine {paths.engine()}, game {paths.game_dir()}\n")
 
     # THE PICTURES ARE NOT IN THE REPOSITORY (work order 241): without the
     # base pack nothing below can be cut and no screen can be drawn, so
     # setup says where it looked and how to install it, and stops.
     pack = basepack.problems()
+    if pack and not args.check:
+        # Work order 243: a player gets the pack from this tree's release
+        # (basepack.release_url), checked file by file as it is installed.
+        sys.path.insert(0, os.path.join(ROOT, "tools"))
+        import basepack as basepack_tool
+        if basepack_tool.fetch(basepack.base_dir(),
+                               log=lambda m: print("  " + m)) == 0:
+            pack = basepack.problems()
     if pack:
         for line in pack:
             print("  " + line)
@@ -483,7 +522,13 @@ def main():
             failed.append(tool)
 
     print("\n  Derived from your Master of Orion 2 installation:")
+    ran = {}
     for path, what, cmd in from_game():
+        if not os.path.exists(path) and args.extract and not args.check:
+            if cmd not in ran:
+                print(f"    extracting: {cmd} ...", end=" ", flush=True)
+                ran[cmd] = extract(cmd)
+                print("ok" if ran[cmd] else "FAILED")
         if os.path.exists(path):
             print(f"    ok       {what}")
         else:

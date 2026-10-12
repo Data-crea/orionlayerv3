@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Install, check or make OrionLayer's base pack — work order 241.
 
+    python tools/basepack.py fetch            # download this tree's release
+                                              # and install it (setup does)
     python tools/basepack.py install orionlayer-base-pack.zip
     python tools/basepack.py check            # every file, by sha256
     python tools/basepack.py make OUT.zip     # the pack as a zip (maintainer)
+    python tools/basepack.py release OUT.zip  # the zip and the release's
+                                              # tag and upload command
     python tools/basepack.py refresh          # rewrite basepack.json from
                                               # the installed pack (maintainer;
                                               # `manifest` is the old name)
@@ -89,6 +93,57 @@ def install(zip_path, folder, man=None):
                 f.write(z.read(rel))
     print(f"Installed {len(files)} files into {folder}.")
     return 0
+
+
+#: The most a download may be (the pack is about 130 MB; work order 243).
+FETCH_LIMIT = 1024 ** 3
+
+
+def fetch(folder, url=None, log=print, timeout=600):
+    """Download this tree's base pack and install it (exact check); 0 or 1.
+    Nothing is installed unless every file matches the manifest."""
+    import tempfile
+    import urllib.request
+    url = url or basepack.release_url()
+    log(f"Fetching the base pack: {url}")
+    tmp = tempfile.mkdtemp(prefix="orionlayer_pack_")
+    path = os.path.join(tmp, basepack.ASSET)
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp, \
+                open(path, "wb") as out:
+            got = 0
+            while True:
+                block = resp.read(1 << 20)
+                if not block:
+                    break
+                got += len(block)
+                if got > FETCH_LIMIT:
+                    raise OSError(f"larger than {FETCH_LIMIT} bytes")
+                out.write(block)
+    except (OSError, ValueError) as err:
+        log(f"The base pack could not be downloaded ({err}).")
+        return 1
+    try:
+        return install(path, folder)
+    finally:
+        try:
+            os.remove(path)
+            os.rmdir(tmp)
+        except OSError:
+            pass
+
+
+def release(out, folder, log=print):
+    """`make` the zip, then say which release it is and how to upload it."""
+    rc = make(out, folder)
+    if rc == 0:
+        tag = basepack.release_tag()
+        log(f"release tag: {tag}  (basepack.json's sha256)")
+        log(f"upload: gh release create {tag} {out}#{basepack.ASSET} "
+            f"--repo {basepack.RELEASE_REPO} --title \"Base pack {tag[10:]}\" "
+            f"--notes \"OrionLayer's pictures, CC BY 4.0 (LICENSE.txt "
+            f"inside).\"")
+    return rc
 
 
 def make(out, folder):
@@ -185,16 +240,20 @@ def refresh(folder, path=basepack.MANIFEST, log=print):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("what", choices=("install", "check", "make", "refresh",
-                                     "manifest"))
+                                     "manifest", "fetch", "release"))
     ap.add_argument("zip", nargs="?")
     ap.add_argument("--to", help="the pack folder (default: "
                     + basepack.base_dir() + ")")
     a = ap.parse_args(argv)
     folder = os.path.abspath(a.to) if a.to else basepack.base_dir()
-    if a.what in ("install", "make") and not a.zip:
+    if a.what in ("install", "make", "release") and not a.zip:
         ap.error(a.what + " needs a zip path")
     if a.what == "install":
         return install(a.zip, folder)
+    if a.what == "fetch":
+        return fetch(folder, a.zip)
+    if a.what == "release":
+        return release(a.zip, folder)
     if a.what == "make":
         return make(a.zip, folder)
     if a.what in ("refresh", "manifest"):
