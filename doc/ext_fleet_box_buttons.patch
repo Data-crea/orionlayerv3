@@ -3,7 +3,8 @@ OrionLayer open fix 86 — the fleet box's order buttons on the wire ("FBTN")
 
 Work order 229 Part C (the standing decision of 4 October 2026: an engine
 change a part needs is made in that run — applied on `orionlayer-local`,
-bundle in ~/claude/bundles/, nothing online, decision 85). orion2re on
+bundle in ~/claude/bundles/, decision 85; the bundles go to no public host,
+decision 96). orion2re on
 `orionlayer-local`, on top of open fix 85. Every line under ORION2RE_EXT
 (ext_api.cpp).
 

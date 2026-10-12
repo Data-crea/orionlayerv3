@@ -3,7 +3,7 @@ OrionLayer open fix 85 — the refit ship list's first row on the wire ("RFIT")
 
 Work order 226 Part A (D6 of the GUI audit; Data's decision 1 of 9 October
 2026, as work order 224's parked file proposed: applied on `orionlayer-local`,
-bundle in ~/claude/bundles/, nothing online). orion2re on `orionlayer-local`,
+bundle in ~/claude/bundles/; the bundles go to no public host, decision 96). orion2re on `orionlayer-local`,
 on top of open fix 84. Every line under ORION2RE_EXT (ext_api.cpp).
 
 The refit popup's ship list shows fifteen ships from COLREFIT::_first_ship,

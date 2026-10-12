@@ -2,7 +2,7 @@ OrionLayer open fix 84 — the field list is sent when its content changes
 ========================================================================
 
 Work order 223 (Data's decision of 8 October 2026: applied on
-`orionlayer-local`, bundle in ~/claude/bundles/, nothing online). orion2re on
+`orionlayer-local`, bundle in ~/claude/bundles/; the bundles go to no public host, decision 96). orion2re on
 `orionlayer-local`, on top of open fix 83. Every line under ORION2RE_EXT.
 
 The Extension API sent FIELD_LIST only when the field count, the screen id or
