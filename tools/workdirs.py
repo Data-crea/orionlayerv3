@@ -16,6 +16,9 @@ repositories is a path below it; nothing is created loose in `~/`.
     scratch/     temporary, may be emptied at any time
     testsaves/   the test saves and their index (work order 199;
                  dev:tools/testsave.py imports one into the test slot)
+    references/  Data's mockups and the reference pictures the measuring
+                 tools read, at the store paths they had (work order 242:
+                 no picture in either repository); in the picture backup
     _to_delete/  quarantine before anything is deleted
 
 `ORIONLAYER_FIXTURES` still names another fixtures folder, as before.
@@ -50,6 +53,7 @@ VDISPLAY = path("live", "vdisplay")
 LOGS = path("logs")
 SCRATCH = path("scratch")
 TESTSAVES = path("testsaves")
+REFERENCES = path("references")
 TO_DELETE = path("_to_delete")
 CREATED_LOG = path("logs", "home_created.txt")
 
