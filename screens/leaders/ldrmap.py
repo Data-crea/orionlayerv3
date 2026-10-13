@@ -43,7 +43,7 @@ THE STRIPS:
                       Stuff_`, movebox.cpp:229-291) or the stack,
                       `Print_Galmap_Scanned_Ship_` (officer.cpp:2094-2204)
 """
-from core import hestrings, zoomtables
+from core import hestrings, shipstacks, zoomtables
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
@@ -65,18 +65,11 @@ STAR_BOX = (-5, -5, 0x0B, 0x0C)
 BOX_DISPLAYED, BOX_CHOSEN, BOX_SCANNED = 0x1E, 0x6E, 0x71
 
 #: HESTRNGS: "%s (%s) %d turn(s)" and the unknown star (movebox.cpp:
-#: 276-285, officer.cpp:819-821); "%s Fleet: " and the counts
-#: (officer.cpp:2155-2184).
+#: 276-285, officer.cpp:819-821). A stack's paragraph is
+#: `core/shipstacks.fleet_words` (work order 248, shared with Fleets).
 H_ETA_ONE, H_ETA_MANY, H_UNKNOWN = 0x92, 0x93, 0x94
-H_FLEET = 0x131
-H_OUTPOSTS, H_TRANSPORTS, H_COLONY_SHIPS = (0x102, 0x103), (0x104, 0x105), \
-    (0x106, 0x107)
 #: `mox.cpp:940`.
 STAR_WITH_LEADER = "%s (%s)"
-#: `SHIP_NODE_UI_TAG_BASE` (consts.h:28) and the owners past the players.
-NODE_TAG_BASE = 10000
-MAX_PLAYERS = 8
-HULLS = 6                     # SHIP_SIZE_DOOM_STAR + 1 (sys.cpp:864)
 
 
 def _scale(game_state):
@@ -148,23 +141,6 @@ def star_field(game_state, fields, index):
     return _field(fields, r) if r is not None else None
 
 
-def icon_field(fields, icon):
-    """A stack icon's live field: hidden, at the icon's own origin."""
-    return next((f for f in fields if f.field_type == geom.TYPE_HIDDEN
-                 and (f.x, f.y) == (int(icon.x), int(icon.y))), None)
-
-
-def icon_at(game_state, fields, point):
-    """`(icon index, live field)` of the stack icon under the point."""
-    for i, icon in enumerate(getattr(game_state, "ship_icons", None) or []):
-        if int(icon.x) < 0 or int(icon.y) < 0:
-            continue
-        f = icon_field(fields, icon)
-        if f is not None and _inside(point, (f.x, f.y, f.x_end, f.y_end)):
-            return i, f
-    return None
-
-
 def big_icon_at(block, point):
     """`(index into the block's list, grid slot)` under the point."""
     if block is None:
@@ -187,7 +163,7 @@ def scan(screen, point):
         screen._big = None
         return
     state = screen._state
-    hit = icon_at(state, view.fields, point)
+    hit = shipstacks.icon_at(state, view.fields, point)
     if hit is not None:
         screen._scan = ("icon", hit[0])
     big = big_icon_at(block, point) if view.view == geom.VIEW_SHIP else None
@@ -276,69 +252,3 @@ def scanned_star_words(game_state, view, words, index):
     if officer < 0 or me not in owners:
         return star.name
     return with_leader(star.name, _leader(view.leaders, officer), words)
-
-
-def stack_ships(game_state, icon):
-    """The ship indices of the stack behind a small icon, or None.
-
-    The head ship is the FSEL node table's entry for the icon's node; the
-    rest is `SHIPSTAK::Find_Ship_Stacks_`'s own rule — status below 3,
-    same location, x, y and owner (shipstak.cpp:45-100) — because the
-    nodes' `next_node` is not on the wire. `Remove_Non_Detected_Ships_`
-    drops whole stacks (shipstak.cpp:130-135), so a stack that has an
-    icon has all its ships."""
-    sel = getattr(game_state, "fleet_selection", None)
-    node = int(icon.node_idx)
-    if not sel or not 0 <= node < len(sel["ships"]):
-        return None
-    raws = getattr(game_state, "ships_raw", None) or []
-    ships = [ship_struct.parse(r) for r in raws]
-    head = sel["ships"][node]
-    if not 0 <= head < len(ships):
-        return None
-    h = ships[head]
-    key = (h.location, h.x, h.y, h.owner)
-    return [i for i, s in enumerate(ships)
-            if s.status < ship_struct.STATUS_STACK_SKIP
-            and (s.location, s.x, s.y, s.owner) == key]
-
-
-def fleet_words(game_state, icon, words, parts):
-    """`Print_Galmap_Scanned_Ship_`'s paragraph for a player's stack, or
-    "" where it prints a race name HD does not have (a tagged node or an
-    owner past the players — OMISSION `map_strip_monsters`)."""
-    if int(icon.node_idx) >= NODE_TAG_BASE:
-        return ""
-    stack = stack_ships(game_state, icon)
-    raws = getattr(game_state, "ships_raw", None) or []
-    if not stack:
-        return ""
-    ships = [ship_struct.parse(raws[i]) for i in stack]
-    owner = int(ships[0].owner)
-    players = getattr(game_state, "player_raw", None) or []
-    if not 0 <= owner < min(MAX_PLAYERS, len(players)):
-        return ""
-    fleet = words.hstring(H_FLEET)
-    if not fleet:
-        return ""
-    race = player_struct.parse(players[owner]).race_name
-    text = hestrings.printf(fleet, race).upper()
-    count = {t: sum(1 for s in ships if s.ship_type == t)
-             for t in (ship_struct.SHIP_TYPE_OUTPOST,
-                       ship_struct.SHIP_TYPE_TRANSPORT,
-                       ship_struct.SHIP_TYPE_COLONY)}
-    for t, ids in ((ship_struct.SHIP_TYPE_OUTPOST, H_OUTPOSTS),
-                   (ship_struct.SHIP_TYPE_TRANSPORT, H_TRANSPORTS),
-                   (ship_struct.SHIP_TYPE_COLONY, H_COLONY_SHIPS)):
-        if count[t] > 0:
-            part = words.hstring(ids[0] if count[t] == 1 else ids[1])
-            text += hestrings.printf(part, count[t]) if part else ""
-    hulls = [0] * HULLS
-    for s in ships:
-        if s.ship_type == ship_struct.SHIP_TYPE_COMBAT:
-            hulls[min(max(0, int(s.size)), HULLS - 1)] += 1
-    for size, n in enumerate(hulls):
-        if n > 0:
-            name = parts.name("hulls" if n == 1 else "hull_plurals", size)
-            text += f"{n} {name or ''}, "
-    return text[:-2] if len(text) > 2 else text

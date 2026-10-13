@@ -589,13 +589,19 @@ def fill_inset(surface, screen):
         surface.fill(INSET_BACKGROUND, rect)
 
 
-def draw_inset(surface, screen, stars, markers, art=None):
-    """The galaxy inset: the stars on black, one marker per stack.
+def draw_inset(surface, screen, stars, game_state, art=None):
+    """The galaxy inset: the stars on black, the ship stacks over them.
 
     `stars` is `colonyrows.galaxy_inset_stars` for THIS screen's native
-    box, `markers` is `(native_x, native_y, owner)` per live ship icon.
-    Both are in the original's native pixels inside the box, so the only
-    thing done here is the scale into the `inset_map` rect.
+    box, in the original's native pixels inside the box, so the only
+    thing done here is the scale into the `inset_map` rect. The stacks
+    are `core/shipstacks.draw_stacks` — the Leaders box's own drawing
+    (work order 248, F1 of 245) — at `s_ship_icon.x/y`, which are ALREADY
+    in this box's space while screen 4 is up: `FLT::Set_Fltscrn_Small_
+    Ship_Icon_XYs_(15, 52, 305, 182)` overwrites them on entry (flt.cpp:
+    24-55, flt1.cpp:531), so the box origin is all that is subtracted.
+    TRANSCRIPTION `Draw_Fltscrn_Small_Ship_Icons_` (flt1.cpp:216-235):
+    each stack its picture, FLEET.LBX 19 + colour or the monster's.
 
     **THE BACKGROUND IS BLACK BECAUSE THE ORIGINAL FILLS IT BLACK**, not
     because black suits it — `INSET_BACKGROUND` cites the fill.
@@ -635,11 +641,25 @@ def draw_inset(surface, screen, stars, markers, art=None):
         # LOOK EXCEPTION picture: the inset map's stars and stack markers
         pygame.draw.rect(surface, _star_colour(colour_index),
                          (int(x), int(y), dot, dot))
-    for mx, my, owner in markers:
-        x = rect.x + mx * fx
-        y = rect.y + my * fy
-        pygame.draw.rect(surface, owner_colour(owner),
-                         (int(x), int(y), dot * 2, dot * 2))
+    if game_state is not None:
+        from core import shipstacks
+        from . import fltgeom as _g
+        bx, by, _bw, _bh = _g.REGIONS["inset_map"]
+
+        def picture(n):
+            sprite = art.small_ship(n) if have_art else None
+            return fltart.magnified(sprite, step) if sprite is not None \
+                else None
+
+        def fallback(at, icon):
+            # LOOK EXCEPTION picture: the inset map's stars and stack markers
+            pygame.draw.rect(surface, owner_colour(getattr(icon, "owner",
+                                                           None)),
+                             (at[0], at[1], dot * 2, dot * 2))
+        shipstacks.draw_stacks(
+            surface, game_state, picture,
+            lambda x, y: (int(rect.x + (x - bx) * fx),
+                          int(rect.y + (y - by) * fy)), fallback)
     surface.set_clip(previous)
 
 

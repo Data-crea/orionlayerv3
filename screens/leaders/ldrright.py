@@ -44,10 +44,10 @@ without it sends none, and the box stays empty — nothing HD chose.
 """
 import pygame
 
+from core import shipstacks
 from core.hud import blocks as hud
 
 from core.structs import planet as planet_struct
-from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
 from screens.colony_summary import colonyrows
@@ -61,9 +61,8 @@ BLACK_HOLE_INDEX = 10
 #: The star sprite's offset from its point (movebox.cpp:85).
 STAR_OFFSET = (-2, -2)
 #: OFFICER.LBX small ship icons: eight player colours from 0x73, then
-#: the seven monster owners from 0x7B (officer.cpp:2765-2793).
-MONSTER_FIRST = 8
-MAX_PLAYERS = 8
+#: the seven monster owners from 0x7B (officer.cpp:2765-2793) — picture n
+#: is `small_ship_n`, n from `core/shipstacks.picture_index`.
 
 #: The star boxes' colours where the palette is not extracted — the
 #: grey, the gold and the cyan those indices hold in the colony palette.
@@ -75,13 +74,6 @@ BOX_FALLBACK = {ldrmap.BOX_DISPLAYED: (150, 150, 150),
 def _box_colour(art, index):
     rgb = art.palette_rgb(index) if art is not None else None
     return tuple(rgb) if rgb else BOX_FALLBACK.get(index, (200, 200, 200))
-
-
-def _colour_of(game_state, owner):
-    raws = getattr(game_state, "player_raw", None) or []
-    if 0 <= owner < len(raws):
-        return int(player_struct.SPEC.parse(raws[owner]).color)
-    return None
 
 
 def draw_galaxy_box(surface, screen, game_state, art):
@@ -110,35 +102,32 @@ def draw_galaxy_box(surface, screen, game_state, art):
             # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, draw.TEXT_FALLBACK["normal"],
                              (int(x), int(y), dot, dot))
-    icons = list(getattr(game_state, "ship_icons", None) or [])
     view = screen._view
     block = view.block if view is not None else None
     stack_head = (int(block.get("head_node", -1)) if block is not None
                   and view.view == geom.VIEW_SHIP
                   and int(block.get("stack", -1)) >= 0 else None)
-    for icon in reversed(icons):
-        x, y = int(icon.x), int(icon.y)
-        if x < 0 or y < 0:
-            continue
-        owner = getattr(icon, "owner", None)
-        sprite = None
-        if have_art and owner is not None:
-            if owner < MAX_PLAYERS:
-                colour = _colour_of(game_state, owner)
-                if colour is not None:
-                    sprite = art.sprite(f"small_ship_{colour}")
-            elif owner - MONSTER_FIRST < 7:
-                sprite = art.sprite(f"small_ship_{8 + owner - MONSTER_FIRST}")
-        at = draw.point(layout, x, y)
-        if sprite is not None:
-            surface.blit(draw.magnified(sprite, layout), at)
-        else:
-            # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
-            pygame.draw.rect(surface, draw.TEXT_FALLBACK["selected"],
-                             (at[0], at[1], dot * 2, dot * 2))
+
+    def picture(n):
+        sprite = art.sprite(f"small_ship_{n}") if have_art else None
+        return draw.magnified(sprite, layout) if sprite is not None else None
+
+    def fallback(at, _icon):
+        # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
+        pygame.draw.rect(surface, draw.TEXT_FALLBACK["selected"],
+                         (at[0], at[1], dot * 2, dot * 2))
+    # the stacks: `core/shipstacks` (work order 248, shared with Fleets)
+    for _i, icon, _at, big in shipstacks.draw_stacks(
+            surface, game_state, picture,
+            lambda x, y: draw.point(layout, x, y), fallback):
         if stack_head is not None and int(icon.node_idx) == stack_head:
-            size = sprite.get_size() if sprite is not None else (2, 2)
+            x, y = int(icon.x), int(icon.y)
+            n = shipstacks.picture_index(game_state, icon)
+            native = art.sprite(f"small_ship_{n}") if have_art and \
+                n is not None else None
+            size = native.get_size() if native is not None else (2, 2)
             r = draw.rect(layout, (x - 1, y - 1, x + size[0], y + size[1]))
+            # LOOK EXCEPTION picture: the shown stack's flashing box in the original's colour (officer.cpp:765-767)
             pygame.draw.rect(surface, _box_colour(art, ldrmap.BOX_CHOSEN + 2),
                              r, max(1, int(draw.native_scale(layout))))
     _draw_star_boxes(surface, screen, game_state, art)

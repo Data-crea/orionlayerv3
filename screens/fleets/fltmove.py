@@ -222,3 +222,42 @@ def click(screen, screen_x, screen_y):
                  best, field.index, len(screen._view.selected_ships()))
     screen.app.client.activate_field(field.index)
     return True
+
+def stack_at(screen, screen_x, screen_y):
+    """The index of the ship stack icon under the point in the inset, or
+    None — `Scan_Small_Ship_Icons_`' hover (flt1.cpp:668-682) through the
+    live list's hidden icon fields (`core/shipstacks.icon_at`, the Leaders
+    box's own test; work order 248). The icons stand in absolute native
+    pixels, so the point goes back through the inset's own rect."""
+    box = next((b.screen_rect for b in screen.boxes
+                if b.name == "inset_map" and b.screen_rect), None)
+    state = screen._state
+    if box is None or state is None or \
+            not box.collidepoint(screen_x, screen_y):
+        return None
+    from core import shipstacks
+    nx, ny, nw, nh = fltgeom.REGIONS["inset_map"]
+    point = (nx + (screen_x - box.x) * nw / float(box.width),
+             ny + (screen_y - box.y) * nh / float(box.height))
+    hit = shipstacks.icon_at(state, getattr(state, "fields", None) or [],
+                             point)
+    return hit[0] if hit is not None else None
+
+
+# The strip's "current fleet": not an icon index, so it never meets one.
+CURRENT_FLEET = -2
+
+
+def current_stack_icon(game_state, block):
+    """The icon of the stack the grid shows, or -1 —
+    `Restore_Current_Fleet_Summary_` (flt1.cpp:342-353): the first icon
+    whose node is `ship_stack_start[small_ship_stack_ptr]`
+    (`F_Ship_Icon_From_Node_Ptr_`, :1137-1148), which FLTS sends as
+    `head_node` (work order 248)."""
+    head = int((block or {}).get("head_node", -1))
+    if head < 0:
+        return -1
+    for i, icon in enumerate(getattr(game_state, "ship_icons", None) or []):
+        if int(icon.node_idx) == head:
+            return i
+    return -1

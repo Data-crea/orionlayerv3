@@ -290,6 +290,14 @@ class FleetArt:
             return None
         return self._sprite(("fleet", f"star_{colour}.bin"), frame=frame)
 
+    def small_ship(self, n):
+        """An inset stack, FLEET.LBX 19 + n — player colours 0..7, then the
+        monsters (flt1.cpp:1265-1290; n from `core/shipstacks`). None
+        where an extraction older than work order 248 lacks it."""
+        if not self.available or not 0 <= int(n) < 15:
+            return None
+        return self._sprite(("fleet", f"small_ship_{int(n)}.bin"))
+
     def radio(self, which, on):
         """A filter radio's face, FLEET.LBX 9 or 10, or None.
 

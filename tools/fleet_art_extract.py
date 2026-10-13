@@ -63,6 +63,12 @@ draws it:
                      the frame IS the state — frame 1 is the lit one
              17      the box round a SELECTED cell (flt1.cpp:103)
              18      the box round the SCANNED cell (flt1.cpp:1100-1104)
+             19..33  the inset's ship stacks: eight player colours, then
+                     the seven monster owners (`Reload_Small_Ship_Icons_`,
+                     flt1.cpp:1265-1290), drawn by
+                     `Draw_Fltscrn_Small_Ship_Icons_` (flt1.cpp:216-235)
+                     — `small_ship_<n>`, n from `core/shipstacks`
+                     (work order 248)
              34..44  the inset's stars, one per colour index 0..10,
                      five frames each (`Load_Galaxy_Stars_`,
                      flt1.cpp:1439-1447), drawn by
@@ -112,6 +118,8 @@ FLEET_ENTRIES = {"background": 0, "selected_box": 17, "scanned_box": 18,
                  "radio_support": 9, "radio_combat": 10}
 #: The inset's eleven star sprites, colour index 0..10.
 STAR_FIRST, STAR_COUNT = 34, 11
+#: The inset's fifteen stack pictures: player colours 0..7, monsters 8..14.
+SMALL_SHIP_FIRST, SMALL_SHIP_COUNT = 19, 15
 #: `Do_Get_Ship_Picture_Seg`'s stride and the number of colour sets:
 #: eight players plus the monster set at MAX_PLAYERS.
 SHIP_STRIDE, SHIP_SETS = 50, 9
@@ -149,6 +157,8 @@ def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
 
     wanted = dict(FLEET_ENTRIES)
     wanted.update({f"star_{i}": STAR_FIRST + i for i in range(STAR_COUNT)})
+    wanted.update({f"small_ship_{i}": SMALL_SHIP_FIRST + i
+                   for i in range(SMALL_SHIP_COUNT)})
     # THE FILE WINS AND THE DIFFERENCE IS NAMED. The index space is
     # 450 and the file holds 449 — see the module docstring for what
     # was counted. Demanding 450 would reject a correct SHIPS.LBX, so

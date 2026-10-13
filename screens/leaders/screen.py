@@ -48,7 +48,7 @@ import logging
 
 import pygame
 
-from core import estrings, hestrings, lang, skildesc
+from core import estrings, hestrings, lang, shipstacks, skildesc
 from core.hud import blocks as hud
 from core.hud import shell
 from core.shipparts import ShipPartNames
@@ -358,8 +358,9 @@ class LeadersScreen(ScreenBase):
         elif self._scan is not None:
             icons = getattr(state, "ship_icons", None) or []
             if 0 <= self._scan[1] < len(icons):
-                text = ldrmap.fleet_words(state, icons[self._scan[1]],
-                                          self._words, self._parts)
+                text = shipstacks.fleet_words(
+                    state, icons[self._scan[1]], self._words.hstring,
+                    self._parts)
         ldrdraw.draw_strip(surface, self, ldrgeom.MAP_STRIP, text, self._art)
 
     def _popup_words(self):

@@ -37,6 +37,7 @@ import pygame
 from core.screen_base import ScreenBase
 
 from core import hestrings
+from core import shipstacks
 from core import kentext
 from core import mouse as mouse_input
 from core.shipparts import ShipPartNames
@@ -86,6 +87,12 @@ class FleetsScreen(ScreenBase):
         # names (work order 155). -1 is "nothing scanned", and the
         # original prints the strip not at all in that state.
         self._scan_star = -1
+        # HD's own `MOX::_scanned_small_ship`: the stack under the pointer
+        # in the inset (flt1.cpp:668-682), named in the strip by
+        # `Print_Galmap_Scanned_Ship_` (:439-441) — work order 248.
+        # CURRENT_FLEET is `Restore_Current_Fleet_Summary_`'s value
+        # (:342-353): the icon of the stack the grid shows.
+        self._scan_small = -1
         # The game's own artwork, when the player has extracted it.
         # Never committed and never shipped, so `available` is False in
         # a fresh clone and the cells fall back — `fltart` says why.
@@ -98,8 +105,10 @@ class FleetsScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/fleets/layout.json", {}) or {}
         self._words = self._data.get("words", {})
-        # MOX::_scanned_big_ship = -1 and _scanned_small_ship = -1 on
-        # entry (flt1.cpp:527-528); nothing is scanned, so no status line.
+        # MOX::_scanned_big_ship = -1 on entry (flt1.cpp:547-548); the
+        # small ship is cleared there too, but `Set_Initial_Stack_Pointer_`
+        # then scans the shown stack (flt2.cpp:53, flt1.cpp:379), so the
+        # strip names the current fleet from the first frame (WO 248).
         self._first_row, self._status = 0, ""
         language = (getattr(self.app, "settings", {}) or {}).get(
             "language", "en")
@@ -115,7 +124,7 @@ class FleetsScreen(ScreenBase):
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None
         self._scan.clear()
-        self._scan_star = -1
+        self._scan_star, self._scan_small = -1, fltmove.CURRENT_FLEET
         # No frame image since decision 71 (work order 189 removed the loader).
         self.update(game_state)
 
@@ -175,8 +184,11 @@ class FleetsScreen(ScreenBase):
     def _status_line(self, game_state, block):
         """The strip under the inset map.
 
-        **IT NAMES THE STAR HD'S OWN POINTER IS OVER** — work order
-        155 — and nothing else. `Print_Fltscrn_Scanned_Star_Name_` is
+        **A SCANNED STACK FIRST, ELSE THE STAR HD'S OWN POINTER IS
+        OVER.** The stack is HD's own `_scanned_small_ship`: the one under
+        the pointer, or the fleet the grid shows (`CURRENT_FLEET`), named
+        by `Print_Galmap_Scanned_Ship_` (flt1.cpp:459-460; work order
+        248). The star (work order 155): `Print_Fltscrn_Scanned_Star_Name_` is
         called only under `if (_galaxy_map_scanned_star > -1)`
         (flt1.cpp:397), so with nothing scanned the original writes
         the strip not at all and it is empty; `self._scan_star` is
@@ -190,12 +202,23 @@ class FleetsScreen(ScreenBase):
         the one the original is answering, so HD says nothing instead.
         `fltrows.scanned_star_line` holds that rule.
 
-        The previous version read `scanned_small` — the small ship
-        icon the GAME's pointer is over — and printed that ship's
-        star. It was marked an unmarked invention by work order 152
-        and it could never move for a client anyway, because the API
-        has no mouse motion.
+        Work order 152 removed a version that read the wire's
+        `scanned_small` — the icon the GAME's pointer is over, which
+        never moves for a client (the API has no mouse motion) — and
+        printed that ship's star, an unmarked invention.
         """
+        # THE STACK FIRST: `Print_Galmap_Scanned_Ship_` for the stack under
+        # the pointer (flt1.cpp:439-441), the Leaders box's paragraph —
+        # `core/shipstacks.fleet_words`, one implementation (work order 248).
+        icons = getattr(game_state, "ship_icons", None) or []
+        small = self._scan_small
+        if small == fltmove.CURRENT_FLEET:
+            small = fltmove.current_stack_icon(game_state, block)
+        if 0 <= small < len(icons):
+            if self._strings is None:
+                return ""
+            return shipstacks.fleet_words(game_state, icons[small],
+                                          self._strings.message, self._parts)
         if self._scan_star < 0:
             return ""
         if int(block.get("selected_count", 0) or 0) > 0:
@@ -335,8 +358,7 @@ class FleetsScreen(ScreenBase):
                             self._filter_state())
         fltpanel.draw_panel(surface, self, self._panel, self._words)
         _stars = self._inset_stars()
-        fltdraw.draw_inset(surface, self, _stars,
-                           self._inset_markers(), self._art)
+        fltdraw.draw_inset(surface, self, _stars, self._state, self._art)
         fltdraw.draw_relocation_lines(surface, self, self._state, _stars,
                                       pygame.time.get_ticks())
         fltdraw.draw_status(surface, self, self._status)
@@ -401,30 +423,6 @@ class FleetsScreen(ScreenBase):
         # (flt1.cpp:1441-1444, mox.h:110).
         return colonyrows.galaxy_inset_stars(
             self._state, fltgeom.REGIONS["inset_map"], black_hole=10)
-
-    def _inset_markers(self):
-        """Every ship stack marker as (native_x, native_y, owner).
-
-        `s_ship_icon.x/y` are ALREADY in this box's space while screen 4
-        is up: `FLT::Set_Fltscrn_Small_Ship_Icon_XYs_(15, 52, 305, 182)`
-        overwrites them on entry (flt.cpp:24-55, flt1.cpp:531). So this
-        reads them and converts nothing — and it is also decision 59's
-        hazard from the other side, which is why the galaxy map must
-        ignore `s_ship_icon` while the screen id is not 0.
-
-        The box origin is subtracted because those coordinates are
-        absolute native, and `fltdraw.draw_inset` works inside the box.
-        """
-        if self._state is None:
-            return []
-        bx, by, _bw, _bh = fltgeom.REGIONS["inset_map"]
-        out = []
-        for icon in (getattr(self._state, "ship_icons", None) or []):
-            x, y = int(icon.x), int(icon.y)
-            if x < 0 or y < 0:
-                continue        # the -1 sentinel: not placed this frame
-            out.append((x - bx, y - by, getattr(icon, "owner", None)))
-        return out
 
     # ── Input ─────────────────────────────────────────────
     #
@@ -587,10 +585,10 @@ class FleetsScreen(ScreenBase):
             # ORIGINAL**, and this is the half that clears the star:
             # taking a big icon sets `_scanned_big_ship` and then
             # `_galaxy_map_scanned_star = -1` in the same branch
-            # (flt1.cpp:616-620). The strip goes quiet when the
-            # pointer moves onto the grid, which is what the original
-            # does.
-            self._scan_star = -1
+            # (flt1.cpp:616-620) — `Restore_Current_Fleet_Summary_`
+            # (:629), which also scans the shown stack again: over the
+            # grid the strip names the current fleet (:342-353).
+            self._scan_star, self._scan_small = -1, fltmove.CURRENT_FLEET
         elif self._view is not None and self._view.ok:
             # A STAR UNDER THE POINTER. The other half of the same
             # exclusion: `if (scanned_star_id >= 0) {
@@ -604,7 +602,17 @@ class FleetsScreen(ScreenBase):
             # resolves the hovered ship from the block it already has.
             _in_map, _star = fltmove.star_at(self, screen_x, screen_y)
             if _in_map:
-                self._scan_star = -1 if _star is None else _star
+                # A STACK UNDER THE POINTER is scanned last and wins:
+                # `ret_small == 4` sets `_scanned_small_ship` and clears
+                # the star (flt1.cpp:668-682); a star found clears the
+                # stack (:649-652). AND IT SENDS NOTHING either.
+                _small = fltmove.stack_at(self, screen_x, screen_y)
+                if _small is not None:
+                    self._scan_small, self._scan_star = _small, -1
+                else:
+                    self._scan_star = -1 if _star is None else _star
+                    if _star is not None:
+                        self._scan_small = -1
                 self._status = self._status_line(self._state,
                                                  self._view.block)
         return super().handle_mouse_motion(screen_x, screen_y)

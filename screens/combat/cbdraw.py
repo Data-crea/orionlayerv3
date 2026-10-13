@@ -27,7 +27,10 @@ import pygame
 from . import cbart, cbview
 
 CELL = cbview.CELL
+#: The legal cells' colour: 0x81, black (0) in a nebula
+#: (`Draw_Legal_Boxes_`, cmbtdrw1.cpp:287).
 LEGAL_INDEX = 0x81
+LEGAL_INDEX_NEBULA = 0
 CENTRE = {0: 10, 1: 20, 2: 20, 3: 30, 4: 30, 5: 30}
 BASE_OFF = {0: -16, 1: -6, 2: 4}          # by (size + 1) // 2
 PLANET_CENTRE = {0: 30, 1: 40, 2: 60, 3: 70, 4: 80}
@@ -185,14 +188,22 @@ def scaled(surf, scale, cache):
     return cache[key]
 
 
-def draw_background(surface, cam, art, nebula, cache):
+def draw_background(surface, cam, art, nebula, cache, under_stars=None):
+    """The battle field's space. `under_stars()` draws between the far
+    layer and the two star layers, where the original fills the legal cells
+    (`Full_Draw_Combat_Screen_`, cmbtdrw1.cpp:466-485: far star, legal boxes,
+    then 47 and 48), so the stars stand over them (work order 248, F5)."""
     # LOOK EXCEPTION picture: the battle field's space (006f's named area)
     surface.fill((0, 0, 0), cam.area)
     if not art.available:
+        if under_stars is not None:
+            under_stars()
         return
     clip = surface.get_clip()
     surface.set_clip(pygame.Rect(cam.area))
-    for entry, factor in STAR_LAYERS:
+    for layer, (entry, factor) in enumerate(STAR_LAYERS):
+        if layer == 1 and under_stars is not None:
+            under_stars()
         if nebula and entry == 46:
             entry = 35
         layer = art.surface("combat", entry)
@@ -213,14 +224,19 @@ def draw_background(surface, cam, art, nebula, cache):
 
 
 def draw_legal(surface, cam, art, combat, unit):
+    """TRANSCRIPTION `Draw_Legal_Boxes_` (cmbtdrw1.cpp:249-300): each legal
+    cell filled solid with a box of the unit's size class, in 0x81 or, in a
+    nebula, black (:287); drawn under the star layers (`draw_background`'s
+    `under_stars`). Until work order 248 HD laid a 150-alpha shade over all
+    three layers, which hid the stars wherever a unit could move (245's F5)."""
     size = max(0, min(5, int(unit["size_class"])))
     box = {0: 20, 1: 40, 2: 40}.get(size, 60)
-    rgb = (art.palette_with().get(LEGAL_INDEX, (40, 40, 90))
+    index = LEGAL_INDEX_NEBULA if combat.get("in_nebula") else LEGAL_INDEX
+    rgb = (art.palette_with().get(index, (40, 40, 90))
            if art.available else (40, 40, 90))
     from core import combatblocks as cb
-    shade = pygame.Surface((max(1, round(box * cam.scale)),) * 2,
-                           pygame.SRCALPHA)
-    shade.fill((*rgb, 150))
+    shade = pygame.Surface((max(1, round(box * cam.scale)),) * 2)
+    shade.fill(rgb)
     for x in range(cb.GRID_W):
         for y in range(cb.GRID_H):
             if cb.legal(combat["legal"], x, y):

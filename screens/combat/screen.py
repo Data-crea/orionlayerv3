@@ -246,16 +246,21 @@ class CombatScreen(CombatInput, ScreenBase):
         if c is not None:
             self._follow(c)
         clock = ship_frame(time.monotonic() - self._clock0)
+        unit = c["units"][c["cur_ship"]] if c is not None else None
+        legal = None
+        if c is not None and self._own_turn() and \
+                unit["movement_left"] > 0 and \
+                cbopts.flag(self._state, "legal_moves"):
+            # under the star layers, as the original fills them (F5, WO 248)
+            def legal():
+                cbdraw.draw_legal(surface, cam, art, c, unit)
         cbdraw.draw_background(surface, cam, art,
-                               bool(c and c.get("in_nebula")), self._cache)
+                               bool(c and c.get("in_nebula")), self._cache,
+                               under_stars=legal)
         if c is None:
             return
         clip = surface.get_clip()
         surface.set_clip(pygame.Rect(area))
-        unit = c["units"][c["cur_ship"]]
-        if self._own_turn() and unit["movement_left"] > 0 and \
-                cbopts.flag(self._state, "legal_moves"):
-            cbdraw.draw_legal(surface, cam, art, c, unit)
         if cbopts.flag(self._state, "grid"):
             cbopts.draw_grid(surface, cam, art)
         if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"]:

@@ -33,6 +33,7 @@ assigns the selected officer, :1004-1034).
 import logging
 
 from core import researchnative as nat
+from core import shipstacks
 from core import skildesc
 
 from . import ldrdialog, ldrdraw, ldrgeom, ldrmap, ldrrows, ldrwire
@@ -166,7 +167,7 @@ def _map_click(screen, view, point):
             send(screen, _field_at(view, ldrgeom.grid_cell(big[1])),
                  f"big icon {big[0]}")
             return
-        hit = ldrmap.icon_at(state, view.fields, point)
+        hit = shipstacks.icon_at(state, view.fields, point)
         if hit is not None:
             send(screen, hit[1], f"stack icon {hit[0]}")
         return
@@ -217,7 +218,12 @@ def right_button(screen, down, screen_x, screen_y):
                                  _idx, field.index)
                         screen.app.client.cancel_field(field.index)
                     return True
-    return open_help(screen, screen_x, screen_y)
+    # the screen's own entry: a shell button's help is its native field's
+    # (`LeadersScreen.open_help_at`). Until work order 248 this called
+    # `open_help` here, which knows the tabs but not the shell's row, so a
+    # right click on HIRE, POOL, DISMISS or RETURN opened nothing (found by
+    # 245's right-click walk)
+    return screen.open_help_at(screen_x, screen_y)
 
 
 def open_skill_help(screen, row, skill_id):
