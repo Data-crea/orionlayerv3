@@ -18,8 +18,21 @@ RESET to the defaults.
 
 THE PREVIEW IS THE BATTLE'S OWN CODE (part B): two `CombatArt`s draw it
 through `CombatArt.ship` — the battle's recolour, masks and all — with the
-window's livery set on them (`set_livery`), the large one holding painted
-pictures at 8 x, the small row at 2 x. Nothing here colours a pixel.
+window's livery set on them (`set_livery`), both holding painted pictures
+at 8 x, the finest a mod gives. Nothing here colours a pixel.
+
+WHOLE PIXELS (HD EXTENSION, Data, 13 October 2026): a frigate's painted
+body is 120 px at 8 x, and the large preview enlarged it 3 x at 1080p and
+6 x at 4K — smoothed, it looked out of focus at every size. Enlarging, a
+picture is now blown up in whole pixels to the next whole factor and the
+area average (`cbart.smooth`) takes it down to its size, so an edge
+softens by one pixel at most; shrinking is that area average alone. The row
+held 2 x pictures and enlarged those; it holds 8 x and shrinks them.
+
+ONE SCALE FOR EVERY HULL (HD EXTENSION, Data, 13 October 2026): a frigate
+filled the preview as a Doom Star did. The largest ship the folder offers
+(`reference`) sets the factor for its box, and every hull takes that
+factor, so the sizes stand to each other as in the battle.
 
 THE COLOUR CONTROL is the frame colour's (`gmorion`): three bars, a hue, a
 saturation and a brightness bar, drawn and hit by the same mapping
@@ -32,6 +45,7 @@ are computed — for drawing, clicking and the right-click help.
 """
 import colorsys
 import logging
+import math
 
 import pygame
 
@@ -49,9 +63,9 @@ NODE = "livery"
 #: picture 43 is the Doom Star (one look).
 HULLS = ("frigate", "destroyer", "cruiser", "battleship", "titan")
 DOOM_STAR = 43
-#: The factor the preview holds painted pictures at: the large ship at the
-#: finest a mod gives (8 x), the row of eight small.
-PREVIEW_DETAIL, ROW_DETAIL = 8, 2
+#: The factor the preview holds painted pictures at: the finest a mod gives
+#: (8 x) for both, so neither is ever enlarged from a coarser step.
+PREVIEW_DETAIL, ROW_DETAIL = 8, 8
 #: The window's size in the game window: a share of its width, capped by its
 #: height (wide screens), and of its height.
 WIDTH, WIDTH_BY_HEIGHT, HEIGHT = 0.70, 1.30, 0.80
@@ -99,6 +113,7 @@ class Window:
         self.drag = None
         self.big = self.small = None
         self._shown = {}
+        self.ref = None
 
     def arts(self):
         """The two `CombatArt`s, made when first drawn."""
@@ -261,12 +276,28 @@ def _ship(art, liv, colour, picture):
     return pic.subsurface(pic.get_bounding_rect(min_alpha=8))
 
 
-def _fit(pic, rect):
-    k = min(rect.w / max(1, pic.get_width()), rect.h / max(1,
-                                                            pic.get_height()))
-    size = (max(1, int(pic.get_width() * k)), max(1, int(pic.get_height() * k)))
-    from screens.combat import cbart
-    img = cbart.smooth(pic.copy(), size)
+def _fit(pic, rect, ref=None):
+    """`pic` fitted into `rect` at the factor that fits `ref` (w, h),
+    never larger than fits `pic` itself: enlarged by a whole factor,
+    shrunk by the area average (the module's WHOLE PIXELS and ONE
+    SCALE)."""
+    w, h = pic.get_width(), pic.get_height()
+    k = min(rect.w / max(1, w), rect.h / max(1, h))
+    if ref is not None:
+        k = min(k, rect.w / max(1, ref[0]), rect.h / max(1, ref[1]))
+    if k >= 1:
+        # whole pixels up to the next whole factor, then the area average
+        # down to the size: an edge softens by one pixel at most
+        n = math.ceil(k)
+        size = (max(1, int(w * k)), max(1, int(h * k)))
+        img = pygame.transform.scale(pic.copy(), (w * n, h * n))
+        if size != img.get_size():
+            from screens.combat import cbart
+            img = cbart.smooth(img, size)
+    else:
+        size = (max(1, int(w * k)), max(1, int(h * k)))
+        from screens.combat import cbart
+        img = cbart.smooth(pic.copy(), size)
     return img, (rect.x + (rect.w - size[0]) // 2,
                  rect.y + (rect.h - size[1]) // 2)
 
@@ -316,7 +347,8 @@ def render(screen, surface):
     area = geo["preview"].inflate(-geo["preview"].w // 10,
                                   -geo["preview"].h // 10)
     shown = _shown(w, ("big", liv.key(), w.picture, area.size),
-                   lambda: _scaled(big, liv, w.own, w.picture, area))
+                   lambda: _scaled(big, liv, w.own, w.picture, area,
+                                   reference(w)))
     if shown is not None:
         surface.blit(*shown)
     _stepper(screen, surface, geo, "hull", hull_label(screen, w.picture),
@@ -328,8 +360,8 @@ def render(screen, surface):
     cells = _owner_cells(geo["owners"])
     for colour, cell in enumerate(cells):
         shown = _shown(w, ("row", liv.key(), w.picture, colour, cell.size),
-                       lambda c=colour, r=cell: _scaled(row, liv, c,
-                                                        w.picture, r))
+                       lambda c=colour, r=cell: _scaled(
+                           row, liv, c, w.picture, r, reference(w)))
         if shown is not None:
             surface.blit(*shown)
         if colour == w.own:
@@ -365,9 +397,24 @@ def _owner_cells(area):
                         inner.h) for i in range(8)]
 
 
-def _scaled(art, liv, colour, picture, rect):
+def _scaled(art, liv, colour, picture, rect, ref=None):
     pic = _ship(art, liv, colour, picture)
-    return _fit(pic, rect) if pic is not None else None
+    return _fit(pic, rect, ref) if pic is not None else None
+
+
+def reference(w):
+    """(w, h) of the largest offered ship as the preview draws it — the
+    box ONE SCALE fits: the Doom Star when offered, else the largest of
+    the titans (hull order is size order, `HULLS`), else of every ship."""
+    if w.ref is None:
+        pics = ([DOOM_STAR] if DOOM_STAR in w.pictures else
+                [p for p in w.pictures if p // 8 == len(HULLS) - 1]
+                or w.pictures)
+        big, _ = w.arts()
+        sizes = [d.get_size() for d in (_ship(big, w.liv, w.own, p)
+                                        for p in pics) if d is not None]
+        w.ref = max(sizes, key=lambda s: s[0] * s[1], default=(0, 0))
+    return w.ref if w.ref != (0, 0) else None
 
 
 def _render_second(screen, surface, geo, size, small):
