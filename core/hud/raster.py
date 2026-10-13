@@ -176,12 +176,16 @@ def _geometry(poly, size, ss, pad, edge_w, inner_w, glow_w):
 
 
 def shape(poly_fn, w, h, *, fill, edge, edge_w, glow=None, glow_w=0.0,
-          inner=None, inner_w=0.0, fill_alpha=1.0, ss=3, glass=None):
+          inner=None, inner_w=0.0, fill_alpha=1.0, ss=3, glass=None,
+          glass_alpha=None):
     """One HUD shape as an RGBA surface, and the pad it was drawn with.
 
     `poly_fn(w, h)` gives the outline in device px. `fill`, `edge`,
     `glow`, `inner` are RGB; `edge_w`, `glow_w`, `inner_w` device px.
-    `glass`, when given, is a float (h, w, 3) fill in place of `fill`.
+    `glass`, when given, is a float (h, w, 3) fill in place of `fill`;
+    with `glass_alpha` ((h,), its opacity per row) the fill is a
+    translucent layer over whatever the shape is blitted onto (work order
+    253) and the inner band, the edge and the glow are laid over it.
     The surface is the shape's box plus `pad` on every side, so a glow
     has room; blit it at (x - pad, y - pad)."""
     pad = int(np.ceil(glow_w * 2.2)) + 2 if glow else 1
@@ -192,6 +196,10 @@ def shape(poly_fn, w, h, *, fill, edge, edge_w, glow=None, glow_w=0.0,
     outer, line, g_in, g_out = _geometry(
         poly, size, ss, pad, edge_w, inner_w if has_inner else None,
         glow_w if has_glow else None)
+    if glass is not None and glass_alpha is not None:
+        return _layered(size, pad, w, h, outer, line, g_in, g_out, glass,
+                        glass_alpha, edge, inner if has_inner else None,
+                        glow if has_glow else None), pad
     rgb = np.empty(size[::-1] + (3,), np.float32)
     rgb[...] = fill
     if glass is not None:
@@ -218,3 +226,48 @@ def shape(poly_fn, w, h, *, fill, edge, edge_w, glow=None, glow_w=0.0,
     pa[...] = np.clip(alpha * 255.0, 0, 255).astype(np.uint8).T
     del pa
     return surf, pad
+
+
+def _layered(size, pad, w, h, outer, line, g_in, g_out, glass, glass_alpha,
+             edge, inner, glow):
+    """The translucent shape (work order 253): premultiplied layers, each
+    laid OVER the one before — the glass inside the outline at its row's
+    opacity, then the inner band, the edge, the glow. Over a ground G it
+    gives what the opaque shape gave over the glass composited onto G."""
+    a = np.zeros(size[::-1], np.float32)
+    a[pad:pad + h, pad:pad + w] = np.asarray(glass_alpha,
+                                             np.float32)[:h, None]
+    a = a * outer
+    p = np.zeros(size[::-1] + (3,), np.float32)
+    p[pad:pad + h, pad:pad + w] = glass
+    p *= a[..., None]
+
+    # only where the layers lie: the band, the edge and the glow are thin
+    # rings, the box inside them is untouched — gathered once
+    layers = []
+    if inner is not None:
+        layers.append((inner, g_in * outer))
+    layers.append((edge, line))
+    if glow is not None:
+        layers.append((glow, g_out * 0.85 * (1.0 - outer)))
+    ring = np.zeros(a.shape, bool)
+    for _c, cov in layers:
+        ring |= cov > 0.0
+    idx = np.flatnonzero(ring)
+    pf, af = p.reshape(-1, 3), a.reshape(-1)
+    pr, ar = pf[idx], af[idx]
+    for colour, cov in layers:
+        c = cov.reshape(-1)[idx]
+        pr = np.array(colour, np.float32) * c[:, None] + pr * (1.0 - c)[:, None]
+        ar = c + ar * (1.0 - c)
+    pf[idx], af[idx] = pr, ar
+    rgb = p / np.maximum(a, 1e-6)[..., None]
+    surf = pygame.Surface(size, pygame.SRCALPHA)
+    px = pygame.surfarray.pixels3d(surf)
+    px[...] = np.clip(np.round(rgb), 0, 255).astype(np.uint8).transpose(
+        1, 0, 2)
+    del px
+    pa = pygame.surfarray.pixels_alpha(surf)
+    pa[...] = np.clip(np.round(a * 255.0), 0, 255).astype(np.uint8).T
+    del pa
+    return surf

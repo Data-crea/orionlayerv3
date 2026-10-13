@@ -8,10 +8,16 @@ it, for every panel and popup — `blocks.panel` asks `fill()` here — so no
 screen draws its own.
 
 **THE PARTS.**
-- The background is the picture `core.backgrounds` drew for this window
-  (`backgrounds.current`), cropped to the panel. The glass never shows
-  what a screen drew over the background (a map, a star, another
-  panel): a popup stays opaque over its screen, as every dialog was.
+- WHAT SHOWS THROUGH IS WHAT IS DRAWN UNDER THE BOX (work order 253,
+  Data's way (b) of 252 P1): the map's stars and ships through the GAME
+  menu, the battle field through the battle's panels, an earlier panel
+  through a later one. Until then the glass showed only the screen's
+  background picture (`backgrounds.current`, work order 174: "a popup
+  stays opaque over its screen") — near black on every screen, so the
+  glass read as none. A box is a translucent layer (`profile`: per row
+  the gradient's colour and its opacity) laid over the surface; the
+  layer depends only on the box's size and the transparency used, so
+  it is built once and blitted each frame.
 - The gradient's two colours are style values, so they follow the frame
   colour through the tint rule (navy under blue, dark violet under
   violet, anthracite under grey and silver, near-black under black);
@@ -28,8 +34,9 @@ screen draws its own.
   Every such clamp is recorded (`clamps`), so it can be said where and
   at which value.
 
-Built once per panel, window size, tint, background and slider value
-(the blocks' cache); nothing is blurred or blended per frame.
+Built once per box size, tint and transparency used (the blocks'
+cache); per frame only the floor is decided, on a third-size copy of
+what lies under the box (`ground`, `t_for`), and the layer blitted.
 """
 import numpy as np
 
@@ -59,8 +66,11 @@ def value():
 
 
 def set_value(v):
-    """The slider (None = the default). Applies at once: every cached
-    panel is rebuilt for it. True if anything changed."""
+    """The slider (None = the default). Applies at once. True if anything
+    changed. Nothing cached is dropped (work order 253): every glass box
+    is cached under the transparency it uses (`t_for`), so the next frame
+    simply asks for other keys — dropping every shape and piece made each
+    step of the slider cost a tenth of a second."""
     global _value
     v = None if v is None else min(1.0, max(0.0, float(v)))
     if v is not None and abs(v - default()) < 0.005:
@@ -68,8 +78,6 @@ def set_value(v):
     if v == _value:
         return False
     _value = v
-    for fn in hudstyle._listeners:
-        fn()
     return True
 
 
@@ -96,10 +104,26 @@ def lum(rgb):
     return 0.2126 * x[..., 0] + 0.7152 * x[..., 1] + 0.0722 * x[..., 2]
 
 
+#: The WCAG luminance weights.
+_LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
+#: (style object, tint, floor) of the last `word_floor_lum`.
+_FLOOR = [None, None, None]
+
+
 def word_floor_lum():
     """The brightest a glass pixel may be: the dimmest HUD word at the
-    current tint, at the floor contrast."""
+    current tint, at the floor contrast. Kept per style and tint (asked
+    for every box of every frame since work order 253)."""
+    from core.hud import tint
     st = hudstyle.get()
+    key = (tint._hue, tint._sat, tint._bright)
+    if _FLOOR[0] is st and _FLOOR[1] == key:
+        return _FLOOR[2]
+    _FLOOR[:] = [st, key, _word_floor(st)]
+    return _FLOOR[2]
+
+
+def _word_floor(st):
     tmin = min(float(lum(np.array(st.colour(w), float))) for w in WORDS)
     return (tmin + 0.05) / float(st.get("glass.floor_contrast")) - 0.05
 
@@ -131,14 +155,18 @@ def _box3(a):
                for dx in range(3)) / 9.0
 
 
-def peak_pixels(img):
+def peak_pixels(img, soft=False):
     """Per row, the colour at the row's 99th percentile of luminance,
     both taken on the 3x3 average — the ONE statistic the floor is
-    decided and checked by."""
-    soft = _box3(np.asarray(img, np.float32))
-    ls = lum(soft)
+    decided and checked by. `soft`: `img` is averaged already (`ground`'s
+    third-size copy, each pixel the mean of a 3x3 block)."""
+    soft = (np.asarray(img, np.float32) if soft
+            else _box3(np.asarray(img, np.float32)))
+    # ranked by the luminance's own order: linearising is monotone per
+    # channel, and the ranking weights are the luminance's
+    ls = _lin(soft) @ _LUMA
     k = int(np.ceil(0.99 * (ls.shape[1] - 1)))
-    idx = np.argsort(ls, axis=1)[:, k]
+    idx = np.argpartition(ls, k, axis=1)[:, k]
     return soft[np.arange(ls.shape[0]), idx].astype(np.float32)
 
 
@@ -187,6 +215,69 @@ def fill(bg, w, h, dense=False, rect=None):
     return bg * (1 - a) + col[:, None, :] * a
 
 
+#: The floor is decided on a copy of the ground this many REFERENCE px
+#: smaller (a 3x3 block's mean per pixel at 1920x1080, 6x6 at 3840x2160:
+#: `peak_pixels`' own average, `soft`, the same statistic at every size).
+GROUND_STEP = 3
+#: The transparency used is rounded DOWN to a multiple of 1/QUANT, so the
+#: layer is rebuilt only when the floor moves by a step, never denser
+#: than the floor allows less.
+QUANT = 128
+
+
+def ground(surface, rect):
+    """What is drawn under `rect` on `surface`, at a third of its size,
+    float (h, w, 3) — the floor's input; None where nothing is."""
+    import pygame
+    rect = pygame.Rect(rect)
+    clip = rect.clip(surface.get_rect())
+    if clip.w < 1 or clip.h < 1:
+        return None
+    sub = surface.subsurface(clip)
+    step = max(GROUND_STEP, round(GROUND_STEP * surface.get_height() / 1080))
+    size = (max(1, clip.w // step), max(1, clip.h // step))
+    try:
+        small = pygame.transform.smoothscale(sub, size)
+    except ValueError:          # an 8-bit surface: no smoothscale
+        small = pygame.transform.scale(sub.convert(24), size)
+    view = pygame.surfarray.pixels3d(small)
+    out = np.asarray(view, np.float32).transpose(1, 0, 2)
+    del view
+    return out
+
+
+def t_for(surface, rect, dense=False):
+    """The transparency share a box over `rect` may use over what is
+    drawn there: the slider's, made smaller where the floor needs it (the
+    module docstring), rounded down to a step. Recorded in `clamps`."""
+    t = transparency(dense)
+    under = ground(surface, rect)
+    if under is None or t <= 0.0:
+        return round(np.floor(t * QUANT) / QUANT, 6)
+    limit = word_floor_lum()
+    h = under.shape[0]
+    # THE QUICK WAY OUT: a grey as bright as the ground's brightest
+    # channel is at least as bright as any of its pixels; if that passes
+    # on every row, every row's peak does (most grounds are dark)
+    top = np.full(3, float(under.max()), np.float32)
+    if _ok(np.broadcast_to(top, (h, 3)), t, h, limit):
+        return round(np.floor(t * QUANT) / QUANT, 6)
+    bright = peak_pixels(under, soft=True)
+    used = t
+    if not _ok(bright, t, h, limit):
+        lo, hi = 0.0, t
+        for _ in range(10):
+            mid = (lo + hi) / 2
+            if _ok(bright, mid, h, limit):
+                lo = mid
+            else:
+                hi = mid
+        used = lo
+        clamps.append((tuple(rect), dense, round(t, 3), round(used, 3)))
+        del clamps[:-500]
+    return round(np.floor(used * QUANT) / QUANT, 6)
+
+
 def clear_clamps():
     del clamps[:]
 
@@ -197,47 +288,93 @@ _DRAWN = {}
 _DRAWN_MAX = 600
 
 
+#: The ground under each glass panel drawn so far, by surface: (rect,
+#: copy). A glass fill INSIDE a panel (a table row, a field) blends with
+#: what lay under the panel, not with the panel's own glass — two glass
+#: layers over each other were nearly opaque (work order 253). Each panel
+#: replaces its entry when it is drawn, so the fills of a frame see the
+#: ground of the same frame.
+_GROUNDS = {}
+
+
+def keep_ground(surface, rect):
+    """Called by `blocks.panel` before it draws a glass panel."""
+    import pygame
+    rect = pygame.Rect(rect).clip(surface.get_rect())
+    if rect.w < 1 or rect.h < 1:
+        return
+    lst = _GROUNDS.setdefault(id(surface), [])
+    lst[:] = [g for g in lst if g[0] != rect and not rect.contains(g[0])]
+    lst.append((rect, surface.subsurface(rect).copy()))
+    del lst[:-64]
+
+
+def _panel_ground(surface, rect):
+    """The kept ground of the innermost panel containing `rect`, cut to
+    it, or None."""
+    for r, pic in reversed(_GROUNDS.get(id(surface), ())):
+        if r.contains(rect) and pic.get_size() == r.size:
+            return pic.subsurface(rect.move(-r.x, -r.y))
+    return None
+
+
 def draw(surface, rect, dense=False, shade=None, shade_alpha=0.0):
     """Glass over `rect` without a panel's edge — the ONE fill for what a
     screen used to fill flat and near-black itself: table rows and their
     headers, a grid's cells, a text field, a colony popup's body (work
     order 174 B2). `shade`, at `shade_alpha`, lays a colour over the
     glass: a table's A/B stripe or its selected row stays told apart,
-    and the background still shows through."""
+    and what is drawn under it still shows through (work order 253: a
+    translucent layer over the surface, the same arithmetic as before)."""
     import pygame
-    from core import backgrounds
     rect = pygame.Rect(rect)
     if rect.w < 1 or rect.h < 1:
         return
     from core.hud import fill as boxfill
-    bg = (backgrounds.current(*surface.get_size()) if boxfill.glass_on()
-          else None)
-    key = (tuple(rect), dense, bg[0] if bg is not None else None,
-           round(value(), 4), tuple(shade[:3]) if shade else None,
+    on = boxfill.glass_on()
+    ground = _panel_ground(surface, rect) if on else None
+    t = (t_for(ground, ground.get_rect(), dense) if ground is not None
+         else t_for(surface, rect, dense)) if on else None
+    key = (rect.size, dense, t, tuple(shade[:3]) if shade else None,
            round(shade_alpha, 3), _tint_key())
     surf = _DRAWN.get(key)
     if surf is None:
-        under = None
-        if bg is not None:
-            under = np.zeros((rect.h, rect.w, 3), np.float32)
-            clip = rect.clip(bg[1].get_rect())
-            if clip.w and clip.h:
-                a = pygame.surfarray.pixels3d(bg[1])
-                under[clip.y - rect.y:clip.bottom - rect.y,
-                      clip.x - rect.x:clip.right - rect.x] = \
-                    a[clip.x:clip.right, clip.y:clip.bottom].transpose(1, 0, 2)
-                del a
-        px = fill(under, rect.w, rect.h, dense, rect=rect)
-        if shade:
-            px = px * (1 - shade_alpha) + np.array(
-                shade[:3], np.float32) * shade_alpha
-        surf = pygame.Surface(rect.size)
-        view = pygame.surfarray.pixels3d(surf)
-        view[...] = np.clip(px, 0, 255).astype(np.uint8).transpose(1, 0, 2)
-        del view
+        if on:
+            alpha, col = profile(rect.h, t)
+            sa = shade_alpha if shade else 0.0
+            sc = np.array(shade[:3] if shade else (0, 0, 0), np.float32)
+            a = 1.0 - (1.0 - alpha) * (1.0 - sa)
+            c = (col * (alpha * (1.0 - sa))[:, None] + sc * sa) / \
+                np.maximum(a, 1e-6)[:, None]
+            surf = pygame.Surface(rect.size, pygame.SRCALPHA)
+            view = pygame.surfarray.pixels3d(surf)
+            view[...] = np.clip(np.round(c), 0, 255).astype(
+                np.uint8)[None, :, :]
+            del view
+            pa = pygame.surfarray.pixels_alpha(surf)
+            pa[...] = np.clip(np.round(a * 255.0), 0, 255).astype(
+                np.uint8)[None, :]
+            del pa
+        else:
+            px = fill(None, rect.w, rect.h, dense, rect=rect)
+            if shade:
+                px = px * (1 - shade_alpha) + np.array(
+                    shade[:3], np.float32) * shade_alpha
+            surf = pygame.Surface(rect.size)
+            view = pygame.surfarray.pixels3d(surf)
+            view[...] = np.clip(px, 0, 255).astype(np.uint8).transpose(
+                1, 0, 2)
+            del view
         if len(_DRAWN) >= _DRAWN_MAX:
             _DRAWN.pop(next(iter(_DRAWN)))
         _DRAWN[key] = surf
+    under = _panel_ground(surface, rect) if on else None
+    if under is not None:
+        # inside a glass panel: over what lay under the panel
+        base = under.copy()
+        base.blit(surf, (0, 0))
+        surface.blit(base, rect.topleft)
+        return
     surface.blit(surf, rect.topleft)
 
 
@@ -257,6 +394,7 @@ def _tint_key():
 def forget():
     """Drop the drawn glass (a resize, the colour or the slider)."""
     _DRAWN.clear()
+    _GROUNDS.clear()
 
 
 hudstyle.on_change(forget)

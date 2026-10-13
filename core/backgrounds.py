@@ -123,28 +123,6 @@ def current(w, h):
     return cur
 
 
-class showing:
-    """`with showing(key, picture):` — the glass shows `picture` (a whole-
-    window surface) instead of the screen's background while the block
-    runs, then the screen's again. For a picture drawn INSIDE a screen
-    that its own boxes must see through: the settings window's preview
-    (work order 252: its sample panel showed the screen's dark background,
-    not the planet and nebula under it). `key` names the picture for the
-    blocks' caches."""
-
-    def __init__(self, key, picture):
-        self.entry = (key, picture)
-
-    def __enter__(self):
-        self.saved = _current[0]
-        _current[0] = self.entry
-        return self
-
-    def __exit__(self, *exc):
-        _current[0] = self.saved
-        return False
-
-
 def draw(surface, screen_name, first=None):
     """The screen's background over the whole surface, or the
     placeholder where there is no picture at all (`first`: see

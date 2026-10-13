@@ -123,20 +123,37 @@ def _show(h, s):
     return fill.at_luminance(rgb, SHOW_Y)
 
 
-def _bar(screen, surface, bar, colour_at, value, lo, hi, dim=False):
+def _bar(screen, surface, bar, colour_at, value, lo, hi, dim=False,
+         key=None):
+    """`key` names every input `colour_at` depends on: the strip is then
+    built once (`gmorion.strip`); without it, every frame."""
     from . import gmorion
-    for i in range(bar.w):
+
+    def at(i):
         c = colour_at(gmorion.bar_value(bar, bar.x + i, lo, hi))
-        if dim:
-            c = tuple(int(v * 0.45) for v in c)
-        pygame.draw.line(surface, c, (bar.x + i, bar.y),
-                         (bar.x + i, bar.bottom - 1))
+        return tuple(int(v * 0.45) for v in c) if dim else c
+    if key is None:
+        for i in range(bar.w):
+            pygame.draw.line(surface, at(i), (bar.x + i, bar.y),
+                             (bar.x + i, bar.bottom - 1))
+    else:
+        surface.blit(gmorion.strip(("fill",) + tuple(key) + (dim, lo, hi),
+                                   bar.w, bar.h, at), bar.topleft)
     screen.style.draw_plate(surface, bar, screen.layout.scale)
     w = max(2, int(3 * screen.layout.scale))
     tx = gmorion.bar_x(bar, value, lo, hi)
     # LOOK EXCEPTION marking: the slider's position tick
     surface.fill((128, 128, 128) if dim else (255, 255, 255),
                  (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
+
+
+def _look(tinted=False):
+    """What the bars' colours depend on beyond their own values: the
+    style, and for the glass bar its tint (`glass._tint_key`) — the fill
+    colours do not follow the frame colour (decision 94), so a change of
+    the frame colour does not rebuild their strips."""
+    from core.hud import style as hudstyle
+    return (id(hudstyle.get()),) + (glass._tint_key() if tinted else ())
 
 
 def glass_dim():
@@ -152,7 +169,7 @@ def render(screen, surface, geo, words, size, lx):
     gmorion._text(screen, surface, words.get("fill", "Box fill"), size,
                   gmorion.COL_OPTION, lx, geo["fill"])
     _bar(screen, surface, geo["fill_bar"], lambda v: _show(v, 1.0), h,
-         0.0, 1.0)
+         0.0, 1.0, key=("hue", _look()))
     reset = geo["fill_reset"]
     gmorion._text(screen, surface, words.get("reset", "Reset"), size,
                   gmorion.COL_OPTION if fill.is_default()
@@ -161,9 +178,11 @@ def render(screen, surface, geo, words, size, lx):
     gmorion._text(screen, surface, words.get("fill_tone", "Box fill tone"),
                   size, gmorion.COL_OPTION, lx, geo["fill_tone"])
     _bar(screen, surface, geo["fill_sat_bar"], lambda v: _show(h, v), s,
-         0.0, 1.0)
+         0.0, 1.0, key=("sat", round(h, 4), _look()))
     _bar(screen, surface, geo["fill_lum_bar"],
-         lambda v: fill.from_controls(h, s, v), lum, 0.0, fill.y_max())
+         lambda v: fill.from_controls(h, s, v), lum, 0.0, fill.y_max(),
+         key=("lum", round(h, 4), round(s, 4), round(fill.y_max(), 5),
+              _look()))
 
 
 def render_glass_bar(screen, surface, bar):
@@ -177,4 +196,5 @@ def render_glass_bar(screen, surface, bar):
         a = float(alpha[0])
         return tuple(int(sample[k] * (1 - a) + col[0][k] * a)
                      for k in range(3))
-    _bar(screen, surface, bar, at, glass.value(), 0.0, 1.0, dim=dim)
+    _bar(screen, surface, bar, at, glass.value(), 0.0, 1.0, dim=dim,
+         key=("glass", _look(tinted=True)))

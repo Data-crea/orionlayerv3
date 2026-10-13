@@ -177,9 +177,16 @@ class GameMenuScreen(ScreenBase):
         gmsliders.advance(self, game_state)
 
     def render(self, surface):
-        gmdraw.render(self, surface)
-        olwin.render(self, surface)
-        gmlivery.render(self, surface)
+        # A window over the Settings dialog covers it, and since work order
+        # 253 the glass shows what is drawn under a box: the dialog under
+        # it would show through as a second layer of words, so only the
+        # topmost window is drawn over the map.
+        if gmlivery.is_open(self):
+            gmlivery.render(self, surface)
+        elif olwin.is_open(self):
+            olwin.render(self, surface)
+        else:
+            gmdraw.render(self, surface)
         self.render_help(surface)
 
     # ── Sending ───────────────────────────────────────────

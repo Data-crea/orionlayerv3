@@ -30,7 +30,6 @@ from collections import OrderedDict
 import numpy as np
 import pygame
 
-from core import backgrounds
 from core.hud import art
 from core.hud.icons import _drawn, icon_beside  # noqa: F401 (179)
 from core.hud import glass
@@ -110,20 +109,24 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False):
     st = hudstyle.get()
     from core.hud import fill as boxfill
     # Glass off (work order 227): the fill is flat, so the panel does not
-    # depend on where it stands or what is behind it.
+    # depend on where it stands or what is behind it. Glass on (work order
+    # 253): a translucent layer over what is drawn under the panel, which
+    # depends on that only through the transparency the floor allows.
     see = filled and boxfill.glass_on()
-    bg = (backgrounds.current(*surface.get_size()) if see else None)
-    key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense,
-           rect.topleft if see else None,
-           bg[0] if bg is not None else None,
-           round(glass.value(), 4) if see else None)
+    t = glass.t_for(surface, rect, dense) if see else None
+    if see:
+        glass.keep_ground(surface, rect)
+    key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense, t)
 
     def build():
         edge = st.colour("popup.edge") if lit else st.colour("panel.edge")
-        fill_px = None
-        if filled:
-            fill_px = glass.fill(_under(bg, rect), rect.w, rect.h, dense,
-                                 rect=rect)
+        fill_px, fill_a = None, None
+        if see:
+            fill_a, col = glass.profile(rect.h, t)
+            fill_px = np.broadcast_to(col[:, None, :],
+                                      (rect.h, rect.w, 3))
+        elif filled:
+            fill_px = glass.fill(None, rect.w, rect.h, dense, rect=rect)
         return raster.shape(
             lambda w, h: panel_polygon(w, h, scale), rect.w, rect.h,
             fill=st.colour("panel.fill"), edge=edge,
@@ -133,7 +136,8 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False):
             inner=st.colour("panel.fill_edge"),
             inner_w=_px(st.get("panel.inner_glow"), scale),
             fill_alpha=1.0 if filled else 0.0,
-            ss=int(st.get("supersample")), glass=fill_px)
+            ss=int(st.get("supersample")), glass=fill_px,
+            glass_alpha=fill_a)
     _blit_shape(surface, rect, _cached(key, build))
     if filled and st.get("glass.corner_lines", False):
         glass.corner_lines(surface, rect, scale)
@@ -146,23 +150,6 @@ def panel_polygon(w, h, scale):
     reach past the corners the edge draws."""
     ch = min(_px(hudstyle.get().get("panel.chamfer"), scale), min(w, h) / 4)
     return raster.chamfered(w, h, ch)
-
-
-def _under(bg, rect):
-    """The background picture under `rect`, float (h, w, 3), black where
-    the rect leaves the window; None without a picture."""
-    if bg is None:
-        return None
-    pic = bg[1]
-    out = np.zeros((rect.h, rect.w, 3), np.float32)
-    clip = rect.clip(pic.get_rect())
-    if clip.w and clip.h:
-        a = pygame.surfarray.pixels3d(pic)
-        out[clip.y - rect.y:clip.bottom - rect.y,
-            clip.x - rect.x:clip.right - rect.x] = \
-            a[clip.x:clip.right, clip.y:clip.bottom].transpose(1, 0, 2)
-        del a
-    return out
 
 
 def outline(surface, rect, scale, lit=False):

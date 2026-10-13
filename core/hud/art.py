@@ -43,6 +43,8 @@ PIECES = (tuple("icon_" + k for k in ICONS) + (TITLE_PLATE,)
 
 _raw = {}
 _scaled = {}
+#: The scaled pieces before tinting — they do not change with the colour.
+_plain = {}
 _warned = set()
 
 
@@ -111,8 +113,15 @@ def fit(name, height, width=None):
         width = max(1, round(iw * height / ih))
     key = (name, int(width), int(height))
     if key not in _scaled:
-        _scaled[key] = pygame.transform.smoothscale(
-            _tinted(name, img), (int(width), int(height)))
+        # SCALED FIRST, THEN TINTED (work order 253): tinting the piece at
+        # the HUD's own size cost 0.6 s after every change of the frame
+        # colour (the title plate is 4780 px wide); the scaled copy is kept
+        # untinted, so a new colour only tints the few pixels on screen.
+        plain = ("plain",) + key
+        if plain not in _plain:
+            _plain[plain] = pygame.transform.smoothscale(
+                img, (int(width), int(height)))
+        _scaled[key] = _tinted(name, _plain[plain])
     return _scaled[key]
 
 
@@ -135,6 +144,7 @@ def _tinted(name, img):
 def clear():
     """Drop the scaled copies (a resize makes every size stale)."""
     _scaled.clear()
+    _plain.clear()
 
 
 hudstyle.on_change(lambda: _scaled.clear())
@@ -144,4 +154,5 @@ def reset():
     """Forget everything, loaded pieces included (the smoke test)."""
     _raw.clear()
     _scaled.clear()
+    _plain.clear()
     _warned.clear()

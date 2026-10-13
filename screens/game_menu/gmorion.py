@@ -380,6 +380,27 @@ def _render_mod_files(screen, surface, geo, words, size):
           fit=True)
 
 
+#: The colour bars' strips, built once per size and per everything their
+#: colours depend on (work order 253: drawn column by column every frame
+#: they cost the window 40 ms a frame at 1080p).
+_STRIPS = {}
+
+
+def strip(key, w, h, colour_at):
+    """A w x h strip whose column i has `colour_at(i)`; `key` names every
+    input its colours depend on."""
+    k = (key, w, h)
+    if k not in _STRIPS:
+        if len(_STRIPS) > 48:
+            _STRIPS.clear()
+        surf = pygame.Surface((max(1, w), max(1, h)))
+        for i in range(w):
+            # LOOK EXCEPTION data: a colour bar: the colours the setting can take
+            surf.fill(colour_at(i), (i, 0, 1, h))
+        _STRIPS[k] = surf
+    return _STRIPS[k]
+
+
 def _render_frame_row(screen, surface, geo, words, size, lx):
     """The frame colour row: label, the hue bar, its thumb, RESET."""
     row = geo["frame"]
@@ -390,10 +411,9 @@ def _render_frame_row(screen, surface, geo, words, size, lx):
     # accent's lightness and saturation — the colour a panel edge would
     # have at that point.
     base = hudstyle.get().get("panel.edge")
-    for i in range(bar.w):
-        h = i * 360.0 / bar.w
-        c = tint.rotate(base, h - tint.REFERENCE)
-        pygame.draw.line(surface, c, (bar.x + i, bar.y), (bar.x + i, bar.bottom - 1))
+    surface.blit(strip(("hue", tuple(base)), bar.w, bar.h,
+                       lambda i: tint.rotate(base, i * 360.0 / bar.w
+                                             - tint.REFERENCE)), bar.topleft)
     screen.style.draw_plate(surface, bar, screen.layout.scale)
     now = tint.hue()
     tx = thumb_x(geo, tint.REFERENCE if now is None else now)
@@ -418,14 +438,15 @@ def _render_tone_row(screen, surface, geo, words, size, lx, base):
                                ("bright_bar", tint.BRIGHT_RANGE,
                                 tint.bright())):
         bar = geo[key]
-        for i in range(bar.w):
+
+        def at(i, bar=bar, key=key, lo=lo, hi=hi):
             v = bar_value(bar, bar.x + i, lo, hi)
-            c = (tint.transform(base, d=d, s_factor=v, b_factor=1.0)
-                 if key == "sat_bar" else
-                 tint.transform(base, d=d, s_factor=tint.sat(), b_factor=v,
-                                floors=False))
-            pygame.draw.line(surface, c, (bar.x + i, bar.y),
-                             (bar.x + i, bar.bottom - 1))
+            return (tint.transform(base, d=d, s_factor=v, b_factor=1.0)
+                    if key == "sat_bar" else
+                    tint.transform(base, d=d, s_factor=tint.sat(),
+                                   b_factor=v, floors=False))
+        surface.blit(strip((key, tuple(base), repr(d), round(tint.sat(), 4)),
+                           bar.w, bar.h, at), bar.topleft)
         screen.style.draw_plate(surface, bar, screen.layout.scale)
         tx = bar_x(bar, now, lo, hi)
         # LOOK EXCEPTION marking: the slider's position tick

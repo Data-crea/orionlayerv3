@@ -53,38 +53,21 @@ def _picture(size):
         img = big.subsurface(pygame.Rect((big.get_width() - w) // 2,
                                          (big.get_height() - h) // 2, w,
                                          h)).copy()
-    for k in [k for k in _cache if not (isinstance(k, tuple) and k
-                                        and k[0] == "preview_ground")]:
-        del _cache[k]
+    _cache.clear()
     _cache[size] = img
     return img
 
 
-def _ground(surface, rect, img):
-    """The window-sized picture the sample's glass sees: the preview's own
-    picture at its place (work order 252), black elsewhere — once per
-    window size and place."""
-    key = ("preview_ground", surface.get_size(), tuple(rect))
-    if key not in _cache:
-        full = pygame.Surface(surface.get_size())
-        if img is not None:
-            full.blit(img, rect.topleft)
-        _cache[key] = full
-    return key, _cache[key]
-
-
 def render(screen, surface, rect):
-    from core import backgrounds
     scale = screen.layout.scale
     img = _picture(rect.size)
     if img is not None:
         surface.blit(img, rect.topleft)
     hud.outline(surface, rect, scale)
-    # THE SAMPLE SEES THE PREVIEW'S PICTURE (work order 252): the glass
-    # shows the background a screen drew, so without this the sample
-    # showed the screen's dark background where the nebula is.
-    with backgrounds.showing(*_ground(surface, rect, img)):
-        _sample(screen, surface, rect, scale)
+    # THE SAMPLE SEES THE PREVIEW'S PICTURE: drawn over it, and the glass
+    # shows what is drawn under a box (work order 253; 252 had to hand it
+    # the picture while the glass saw only the screen's background).
+    _sample(screen, surface, rect, scale)
 
 
 def _sample(screen, surface, rect, scale):
