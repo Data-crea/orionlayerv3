@@ -142,18 +142,37 @@ def snapshot(dest, game_dir=None, root=None, config_dir=None):
     return man
 
 
-def verify(dest, restore=False, allow=(), log=print):
+#: The engine's settings files, rewritten by EVERY live run that loads a
+#: save: a load stores the active slot (`Save_Session_Related_Settings_`,
+#: loadsave.cpp:357-359 in 1.60; v2 writes ORION2RE.SET, loadsave.cpp:996)
+#: — work order 252 found it on every run of 251 and 252.
+ENGINE_SETTINGS = ("MOX.SET", "ORION2RE.SET")
+
+
+def restore_engine_settings(dest, log=print):
+    """Put the engine's settings files back from the snapshot `dest` —
+    which must be one taken BEFORE its engine started (a later one holds
+    the loaded game's) — and prove them equal. Returns the keys restored."""
+    _, restored = verify(dest, restore=True, only=ENGINE_SETTINGS,
+                         log=lambda _m: None)
+    for key in restored:
+        log(f"RESTORED  {key}  (the engine rewrites it on every load)")
+    return restored
+
+
+def verify(dest, restore=False, allow=(), log=print, only=None):
     """Compare every file with the snapshot. Returns (changes, restored)
     — `changes` [(key, "changed"/"appeared"/"vanished")], allowed ones
     excluded; with `restore`, each is put back (an appeared file is
-    removed) and the list of restored keys returned."""
+    removed) and the list of restored keys returned. `only`: those file
+    names alone."""
     with open(os.path.join(dest, "manifest.json")) as fh:
         man = json.load(fh)
     now = files(man["game_dir"], man["root"], man.get("config_dir"))
     changes, restored = [], []
     for key, before in man["files"].items():
         name = key.split("/", 1)[1]
-        if name in allow:
+        if name in allow or (only is not None and name not in only):
             continue
         path = now.get(key)
         if before is None and path is None:
@@ -179,7 +198,8 @@ def verify(dest, restore=False, allow=(), log=print):
                                        f"match its hash")
             restored.append(key)
     status = _tree_status(man["root"])
-    if man.get("tree_status") is not None and status != man["tree_status"]:
+    if only is None and man.get("tree_status") is not None and \
+            status != man["tree_status"]:
         changes.append(("tree/git status", "changed"))
     for key, kind in changes:
         log(f"{kind.upper():9s} {key}" + ("  -> restored" if key in restored
