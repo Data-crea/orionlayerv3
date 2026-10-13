@@ -91,6 +91,27 @@ BRIGHT = 110
 #: The title plate and its wings: the whole first row of opaque artwork.
 TITLE = (960, 0, 5740, 240)
 
+#: THE SETTINGS ICONS (work order 251): Data's picture of a settings menu,
+#: 1024 x 1536, in the base pack beside the HUD. Four of its six tab icons
+#: serve the OrionLayer window's tabs, the gear also its button in Game
+#: Settings. They are cut as MASKS, white with alpha: the window draws each
+#: in its word's colour, so they follow the frame colour as the words do
+#: (Data: "vielleicht musst die Farben anpassen"). Regions in picture px,
+#: each round one icon with its ground around it (the monitor's is the
+#: orange of the chosen tab).
+SETTINGS = basepack.source(os.path.join("assets", "shared", "hud",
+                                        "settings_icons.png"), ROOT)
+SETTINGS_ICONS = {
+    "appearance": (150, 155, 320, 315),     # the monitor
+    "gameplay": (150, 390, 320, 560),       # the gear
+    "graphics": (150, 865, 310, 1030),      # the bars
+    "system": (155, 625, 310, 800),         # the database
+}
+#: Luminance above the ground's at which a mask pixel starts (below it
+#: the chosen tab's hex texture and the icons' painted halo) and the span
+#: over which it becomes fully opaque.
+MASK_FLOOR, MASK_KEY = 40, 100
+
 
 def load(path=HUD):
     return np.asarray(Image.open(path).convert("RGBA")).astype(np.float64)
@@ -145,6 +166,25 @@ def lift(a, box, how):
     return np.round(out).astype(np.uint8)
 
 
+def mask(a, region):
+    """A white mask of the icon in `region`: alpha from how much brighter
+    than its ground (the ring's median) a pixel is, feathered at the
+    crop's border like `lift`. Brighter only: the icons are light on a
+    dark or orange ground, and their painted shadows are ground."""
+    x0, y0, x1, y1 = region
+    bg = _ring_median(a, x0 + RING, y0 + RING, x1 - RING, y1 - RING)
+    p = a[y0:y1, x0:x1, :3]
+    luma = np.array([0.299, 0.587, 0.114])
+    alpha = np.clip((p @ luma - bg @ luma - MASK_FLOOR) / MASK_KEY,
+                    0.0, 1.0)
+    h, w = alpha.shape
+    ry = np.minimum(np.arange(h), np.arange(h)[::-1])[:, None]
+    rx = np.minimum(np.arange(w), np.arange(w)[::-1])[None, :]
+    alpha = alpha * np.clip(np.minimum(rx, ry) / RING, 0.0, 1.0)
+    out = np.dstack([np.full((h, w, 3), 255.0), alpha * 255.0])
+    return np.round(out).astype(np.uint8)
+
+
 def cut(hud=HUD):
     """name -> (RGBA uint8 array, box in HUD px)."""
     a = load(hud)
@@ -155,6 +195,9 @@ def cut(hud=HUD):
     x0, y0, x1, y1 = TITLE
     pieces["title_plate"] = (np.round(a[y0:y1, x0:x1]).astype(np.uint8),
                              TITLE)
+    s = load(SETTINGS)
+    for name, region in SETTINGS_ICONS.items():
+        pieces[f"icon_{name}"] = (mask(s, region), region)
     return pieces
 
 

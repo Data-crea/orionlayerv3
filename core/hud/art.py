@@ -27,6 +27,9 @@ log = logging.getLogger("hud")
 ICONS = ("treasury", "command", "food", "freighters", "research",
          "colonies", "planets", "fleets", "leaders", "races", "info", "turn")
 TITLE_PLATE = "title_plate"
+#: The settings window's masks (work order 251, `tools/hud_cut.py`
+#: SETTINGS_ICONS): white with alpha, drawn in a word's colour by `mask`.
+MASKS = ("appearance", "gameplay", "graphics", "system")
 
 # THE BUTTON GLYPHS (work order 179, part 6): the icons 169 listed as
 # missing, drawn from `assets/shared/hud/glyphs.json` by
@@ -35,7 +38,8 @@ TITLE_PLATE = "title_plate"
 GLYPHS = glyphs.GLYPHS
 #: Every piece by file name — what a mod folder's `hud/` may replace.
 PIECES = (tuple("icon_" + k for k in ICONS) + (TITLE_PLATE,)
-          + tuple("icon_" + k for k in GLYPHS))
+          + tuple("icon_" + k for k in GLYPHS)
+          + tuple("icon_" + k for k in MASKS))
 
 _raw = {}
 _scaled = {}
@@ -76,6 +80,22 @@ def icon(key, height):
 
 
 for_button = glyphs.for_button
+
+
+def mask(key, height, colour):
+    """Mask `key` (`MASKS`) at `height` device px in `colour`: the white
+    piece's alpha kept, its white turned to the colour. None when the
+    piece is not built (absent is a state, decision 38)."""
+    assert key in MASKS, f"no settings mask named {key!r}"
+    img = fit("icon_" + key, height)
+    if img is None:
+        return None
+    ck = ("mask", key, img.get_size(), tuple(colour[:3]))
+    if ck not in _scaled:
+        out = img.copy()
+        out.fill(tuple(colour[:3]) + (255,), special_flags=pygame.BLEND_RGBA_MULT)
+        _scaled[ck] = out
+    return _scaled[ck]
 
 
 def fit(name, height, width=None):

@@ -1,39 +1,30 @@
-"""The OrionLayer rows of the Game Settings dialog — an HD EXTENSION (fundament 63, 64).
+"""The OrionLayer rows — an HD EXTENSION (fundament 63, 64).
 
-Below the thirteen engine rows, five row heights: a divider, the
-"OrionLayer" heading, the map floor lift, the player-colour preset and
-the switch for the monster values in the Planets panel — and since work
-order 170 a sixth, the HUD FRAME COLOUR: a hue bar and RESET (HD
-EXTENSION, `core/hud/tint.py`), applied at once and saved with the
-rest; the divider became a thin band so the box did not grow. Since
-work order 173 an eighth band, the MOD FOLDER switch (HD EXTENSION,
-decision 72, `core/usermod.py`): on or off, applied at the next start
-like the preset; and since work order 174 the PANEL GLASS slider (HD
-EXTENSION, `core/hud/glass.py`), applied at once like the colour; and
-since work order 200 C the LANGUAGE switch (HD EXTENSION
-`language_switch`, `core/lang.py`): English or German, applied at the next
-start like the preset; and since work order 212 the FRAME RATE (HD EXTENSION
-`frame_rate`, decision 79, `core/framerate.py`): 30, 60, 120, the monitor's
-rate (the default) or unlimited, applied at once; and since work order 219
-the PAINTED DETAIL (HD EXTENSION `painted_detail`, `core/paintdetail.py`):
-Auto (the default), Normal (4 x) or High (8 x), from the next battle on; and
-since work order 220 the LIVERY button on that row (HD EXTENSION `livery`,
-`gmlivery`), shown only while the mod folder is on and holds painted ships
-with masks (decision 2), which opens the livery window; and since work
-order 227 the BOX FILL (HD EXTENSION, decision 94, `gmfill`): a glass
-switch on the Panel glass row and the fill colour in two rows of the
-frame colour's kind. MOO2 has none of them; the game knows nothing about
-these rows.
+OrionLayer's own settings: the map floor lift and the player-colour
+preset (63), the monster values (64), the HUD frame colour and tone (work
+orders 170, 171, `core/hud/tint.py`), the panel glass (174), the mod
+folder (decision 72), the language (HD EXTENSION `language_switch`, 200
+C), the frame rate (HD EXTENSION `frame_rate`, decision 79), the painted
+detail (HD EXTENSION `painted_detail`, `core/paintdetail.py`, 219), the
+livery window (HD EXTENSION `livery`, 220), the box fill (HD EXTENSION,
+decision 94, `gmfill`). MOO2 has none of them; the game knows nothing
+about them.
+
+**WHERE THEY ARE (work order 251, Data).** Until then rows below the
+thirteen engine rows of Game Settings; since then the rows of the OrionLayer
+settings window (`olwin`), grouped into Data's four tabs. This module keeps
+what they DO — their values, their controls, their drawing — and the
+window gives them their places (`olwin.geometry`, which calls
+`swatch_geometry` and `colour_geometry` here). A row with a set of values
+is a drop-down list (`oldrop`); the colour rows keep their bars.
 
 **TWO STATE SOURCES, NEVER MERGED.** The thirteen engine checkboxes
 keep their local copy seeded from `s_settings` (`screen.flags`). These
 rows read and write `app.user_settings` (`core.usersettings`) and
-nothing else. They have no field, and a click on them — divider and
-heading included — is handled here BEFORE the engine rows' `row_at` /
-`send`, and sends nothing on the wire.
+nothing else. They have no field, and a click on them sends nothing.
 
 **ONE GEOMETRY FOR DRAWING AND CLICKING** (decision 5): `bands` is the
-only place the five rects and the swatch rects are computed.
+window's geometry, the only place the rows' rects are computed.
 
 **VALUES APPLY AT ONCE, THE FILE IS WRITTEN LATER.** The floor step
 shows on the map behind the popup on the next frame (`floorlift` reads
@@ -41,13 +32,13 @@ it at draw time), and the monster switch on the next Planets frame. The
 preset needs a restart — `palette.init` applies it before any screen
 binds a colour — and the note that says so is shown only while the
 saved preset differs from the active one. The file is written by
-`save`, which ACCEPT and the overlay's exit both call and which writes
-nothing when nothing changed.
+`save`, which closing the window, ACCEPT and the overlay's exit call and
+which writes nothing when nothing changed.
 """
 import pygame
 
-from core import (framerate, lang, livery, modsetup, paintdetail, palette,
-                  playercolors, usermod, usersettings)
+from core import (lang, modsetup, palette, playercolors, usermod,
+                  usersettings)
 from core import mouse as mouse_input
 from core.hud import blocks as hud
 from core.hud import glass
@@ -56,21 +47,14 @@ from core.hud import tint
 
 from . import gmfill, gmlang
 
-BANDS = ("divider", "heading", "floor", "colours", "monsters", "frame",
-         "tone", "glass", "fill", "fill_tone", "frame_rate", "painted",
-         "mods", "language")
+#: Every row, in Data's order of the tabs (`olwin.TABS`): what the right-
+#: click help regions name (help.json `orionlayer_band`).
+BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone", "floor",
+         "monsters", "frame_rate", "painted", "livery", "mods", "mod_files",
+         "language")
 
-#: Buttons a row carries besides its value, and the row each sits on: the
-#: livery window's (work order 220), in the RESET column of Painted detail.
-#: A help region each, named as the bands are (`orionlayer.<name>`).
-ROW_BUTTONS = {"livery": "painted"}
-
-#: Each band's share of the box. The divider is a line, so since work
-#: order 170 it takes a third of a row and the frame-colour row fits in
-#: the same box: nothing below it (ACCEPT, the body's edge) moves.
-WEIGHTS = (1 / 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
-
-COL_DIVIDER = palette.require("game_menu", "orionlayer_divider")
+#: the heading colour of the rows until work order 251, the livery
+#: window's labels since 220
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
 COL_OPTION = palette.require("game_menu", "option_text")
 COL_STATE = palette.require("game_menu", "hd_state")
@@ -92,30 +76,27 @@ def _settings(screen):
 
 
 def bands(screen):
-    """{band name: Rect} for the five rows, plus "swatches": [Rect x 8].
+    """{name: Rect} of the window's rows and controls (`olwin.geometry`);
+    None while the window is closed. Drawing and hit-testing both use it."""
+    from . import olwin
+    return olwin.geometry(screen)
 
-    None when the box is missing. Drawing and hit-testing both use this.
-    """
-    box = next((b for b in screen.boxes if b.name == "orionlayer_rows"), None)
-    if box is None or box.screen_rect is None:
-        return None
-    area = box.screen_rect
-    total, acc, edges = sum(WEIGHTS), 0.0, [area.y]
-    for w in WEIGHTS:
-        acc += w
-        edges.append(area.y + int(area.h * acc / total))
-    out = {name: pygame.Rect(area.x, edges[i], area.w, edges[i + 1] - edges[i])
-           for i, name in enumerate(BANDS)}
-    rule = screen.words.get("orionlayer_rows", {})
+
+def swatch_geometry(out, rule):
+    """The eight swatches right of the player-colour field."""
     row = out["colours"]
     x0 = row.x + int(row.w * rule.get("swatch_x", 0.70))
     gap = rule.get("swatch_gap", 0.2)
     side = max(2, int(min(row.h * 0.6, (row.right - x0) / (8 + 7 * gap))))
     y = row.y + (row.h - side) // 2
-    out["swatches"] = [pygame.Rect(x0 + int(i * side * (1 + gap)), y, side, side)
-                       for i in range(8)]
-    # THE FRAME COLOUR ROW (work order 170): a hue bar from the value
-    # column to `hue_end`, and RESET right of it.
+    out["swatches"] = [pygame.Rect(x0 + int(i * side * (1 + gap)), y, side,
+                                   side) for i in range(8)]
+
+
+def colour_geometry(out, rule):
+    """The colour rows' bars and RESETs (work orders 170, 171, 174, 227),
+    in the columns `rule` gives: a hue bar from the value column to
+    `hue_end`, RESET right of it; the tone row's two bars in its span."""
     fr = out["frame"]
     bx = fr.x + int(fr.w * rule.get("value_x", 0.5))
     bw = int(fr.w * rule.get("hue_end", 0.84)) - (bx - fr.x)
@@ -123,8 +104,6 @@ def bands(screen):
     out["hue_bar"] = pygame.Rect(bx, fr.y + (fr.h - bh) // 2, max(8, bw), bh)
     rx = out["hue_bar"].right + int(fr.w * 0.02)
     out["hue_reset"] = pygame.Rect(rx, fr.y, fr.right - rx, fr.h)
-    # THE TONE ROW (work order 171): saturation and brightness, two
-    # bars in the hue bar's span, side by side with a gap.
     to = out["tone"]
     hb = out["hue_bar"]
     gap = max(4, int(hb.w * 0.06))
@@ -132,22 +111,20 @@ def bands(screen):
     ty = to.y + (to.h - hb.h) // 2
     out["sat_bar"] = pygame.Rect(hb.x, ty, half, hb.h)
     out["bright_bar"] = pygame.Rect(hb.x + half + gap, ty, half, hb.h)
-    # THE PANEL GLASS ROW (work order 174): one bar in the hue bar's span,
-    # see-through at the left, solid at the right, and its own RESET.
     gl = out["glass"]
     out["glass_bar"] = pygame.Rect(hb.x, gl.y + (gl.h - hb.h) // 2, hb.w,
                                    hb.h)
     rr = out["hue_reset"]
     out["glass_reset"] = pygame.Rect(rr.x, gl.y, rr.w, gl.h)
-    # THE GLASS SWITCH AND THE FILL COLOUR (work order 227, `gmfill`).
+    # the glass switch is the row's drop-down field (`oldrop`), the bar
+    # right of it; the fill colour in the frame colour's columns (`gmfill`)
     gmfill.geometry(out, rule)
-    # THE LIVERY BUTTON (work order 220) in the RESET column of the Painted
-    # detail row — only when it can do something (decision 2)
-    if livery.window_available():
-        pa = out["painted"]
-        out["livery"] = pygame.Rect(rr.x, pa.y + pa.h // 10, rr.w,
-                                           pa.h - pa.h // 5)
-    return out
+
+
+def row_font(screen):
+    """The rows' font size."""
+    k = getattr(screen, "content_scale", 1.0)
+    return screen.layout.font_size(24 * k)
 
 
 def bar_value(bar, x, lo, hi):
@@ -233,45 +210,26 @@ def restart_pending(screen):
             or (chosen is not None and chosen != lang.current()))
 
 
-def _cycle(settings, key, steps):
-    now = settings.get(key)
-    i = steps.index(now) if now in steps else 0
-    settings.set(key, steps[(i + 1) % len(steps)])
-
-
 def handle_click(screen, x, y):
-    """True if the point is on these rows. Sends nothing, ever."""
+    """True if the point is on a row (which then acted). Sends nothing,
+    ever. A drop-down field opens its list (`oldrop`)."""
     geo = bands(screen)
     if geo is None:
         return False
-    area = geo["divider"].union(geo[BANDS[-1]])
-    if not area.collidepoint(x, y):
+    names = [n for n in BANDS if n in geo]
+    if not any(geo[n].collidepoint(x, y) for n in names):
         return False
-    settings = _settings(screen)
-    if settings is None:
-        return True
-    if geo["floor"].collidepoint(x, y):
-        _cycle(settings, "floor_lift", FLOOR_STEPS)
-    elif geo["colours"].collidepoint(x, y):
-        _cycle(settings, "player_colors",
-               tuple(playercolors.names(screen.app.colors)))
-    elif geo["monsters"].collidepoint(x, y):
-        _cycle(settings, "monster_values", MONSTER_STEPS)
-    elif geo["frame_rate"].collidepoint(x, y):
-        _cycle(settings, "frame_rate", framerate.STEPS)
-    elif "livery" in geo and geo["livery"].collidepoint(x, y):
+    from . import oldrop
+    for name in oldrop.CHOICES:
+        field = geo.get(name + "_field")
+        if field is not None and field.collidepoint(x, y):
+            screen.orionlayer.drop = name
+            return True
+    if "livery_button" in geo and geo["livery_button"].collidepoint(x, y):
         from . import gmlivery
         gmlivery.open_window(screen)
-    elif geo["painted"].collidepoint(x, y):
-        _cycle(settings, "painted_detail", paintdetail.STEPS)
-    elif geo["mods"].collidepoint(x, y):
-        _cycle(settings, "user_mod", MOD_STEPS)
-        if settings.get("user_mod") == "on":
-            # Data, 30 September 2026: switching it on says it can take a
-            # while and starts the extraction (the row shows the progress).
-            modsetup.start()
-    elif geo["language"].collidepoint(x, y):
-        gmlang.cycle(settings)
+    elif "frame" not in geo:
+        pass                     # the colour rows are on APPEARANCE only
     elif gmfill.handle_click(screen, geo, x, y):
         pass
     elif geo["glass_reset"].collidepoint(x, y):
@@ -315,77 +273,55 @@ def _text(screen, surface, text, size, color, x, rect, width=None,
 
 
 def _reset_room(screen, reset):
-    """The width a word from `reset.x` on has: to the dialog's inner edge."""
-    body = next((b for b in screen.boxes if b.name == "body"), None)
-    if body is None or body.screen_rect is None:
+    """The width a word from `reset.x` on has: to the rows' right edge."""
+    geo = bands(screen)
+    if geo is None:
         return None
-    return body.screen_rect.right - reset.x - (reset.x - body.screen_rect.x) \
-        // 20
+    return geo["content"].right - reset.x
 
 
 def render(screen, surface):
+    """The current tab's rows (`olwin.geometry` holds only those)."""
     geo = bands(screen)
     if geo is None:
         return
-    box = next(b for b in screen.boxes if b.name == "orionlayer_rows")
-    k = getattr(screen, "content_scale", 1.0)
-    size = screen.layout.font_size(box.style.get("font_size", 24) * k)
-    small = screen.layout.font_size(box.style.get("heading_font_size", 20) * k)
+    from . import oldrop
+    size = row_font(screen)
     words = screen.words.get("words", {}).get("orionlayer", {})
-    rule = screen.words.get("orionlayer_rows", {})
-
-    div = geo["divider"]
-    ly = div.y + int(div.h * rule.get("divider_y", 0.5))
-    pygame.draw.line(surface, tuple(COL_DIVIDER[:3]), (div.x, ly), (div.right, ly))
-
-    head = geo["heading"]
-    lx = head.x + int(head.w * rule.get("label_x", 0.114))
-    _text(screen, surface, words.get("heading", "OrionLayer"), small, COL_HEADING, lx, head)
-    if restart_pending(screen):
-        note = screen.style.render_text(words.get("restart", ""), small, tuple(COL_STATE[:3]))
-        surface.blit(note, (head.right - note.get_width(),
-                            head.y + (head.h - note.get_height()) // 2))
-
-    vx = int(head.w * rule.get("value_x", 0.46))
-    floor = geo["floor"]
-    _text(screen, surface, words.get("floor", "Map floor"), size, COL_OPTION, lx, floor)
-    step = selected(screen, "floor_lift")
-    _text(screen, surface, words.get("floor_steps", {}).get(step, step), size,
-          COL_OPTION, floor.x + vx, floor)
-
-    row = geo["colours"]
-    _text(screen, surface, words.get("colours", "Player colours"), size, COL_OPTION, lx, row)
-    preset = selected(screen, "player_colors")
-    names = playercolors.names(screen.app.colors)
-    shown = preset if preset in names else playercolors.ORIGINAL
-    _text(screen, surface, words.get("presets", {}).get(shown, shown), size,
-          COL_OPTION, row.x + vx, row)
-    for rect, rgb in zip(geo["swatches"], playercolors.base(screen.app.colors, shown)):
-        # LOOK EXCEPTION data: a colour swatch: the colour the setting stands for
-        surface.fill(tuple(rgb[:3]), rect)
-        screen.style.draw_plate(surface, rect, screen.layout.scale)
-
-    mon = geo["monsters"]
-    _text(screen, surface, words.get("monsters", "Monster values"), size,
-          COL_OPTION, lx, mon)
-    value = selected(screen, "monster_values")
-    shown = value if value in MONSTER_STEPS else MONSTER_STEPS[0]
-    _text(screen, surface, words.get("monster_steps", {}).get(shown, shown),
-          size, COL_OPTION, mon.x + vx, mon)
-
-    _render_frame_row(screen, surface, geo, words, size, lx)
-    _render_glass_row(screen, surface, geo, words, size, lx)
-    gmfill.render(screen, surface, geo, words, size, lx)
-    _render_frame_rate_row(screen, surface, geo["frame_rate"], words, size,
-                           lx, vx)
-    _render_painted_row(screen, surface, geo["painted"], words, size, lx, vx)
-    _render_livery_button(screen, surface, geo, words, size)
-    _render_mod_row(screen, surface, geo["mods"], words, size, lx, vx)
-    gmlang.render(screen, surface, geo["language"], words, size, lx, vx,
-                  lambda *a, fit=False: _text(
-                      screen, surface, *a, fit=fit, width=_reset_room(
-                          screen, pygame.Rect(a[3], 0, 0, 0)) if fit else None),
-                  selected(screen, "language"))
+    lx = geo["content"].x
+    labels = {"colours": ("colours", "Player colours"),
+              "floor": ("floor", "Map floor"),
+              "monsters": ("monsters", "Monster values"),
+              "frame_rate": ("frame_rate", "Frame rate"),
+              "painted": ("painted", "Painted detail"),
+              "livery": ("livery", "Livery"),
+              "mods": ("mods", "Mod folder"),
+              "mod_files": ("mod_files_label", "Mod files"),
+              "language": ("language", "Language")}
+    for name, (key, default) in labels.items():
+        if name in geo:
+            _text(screen, surface, words.get(key, default), size, COL_OPTION,
+                  lx, geo[name], geo[name].w * 0.34, fit=True)
+    for name in oldrop.CHOICES:
+        if name + "_field" in geo:
+            oldrop.render_field(screen, surface, geo, name, size, COL_OPTION)
+    if "colours" in geo:
+        shown = oldrop.current(screen, "colours")
+        for rect, rgb in zip(geo["swatches"],
+                             playercolors.base(screen.app.colors, shown)):
+            # LOOK EXCEPTION data: a colour swatch: the colour the setting stands for
+            surface.fill(tuple(rgb[:3]), rect)
+            screen.style.draw_plate(surface, rect, screen.layout.scale)
+    if "frame" in geo:
+        _render_frame_row(screen, surface, geo, words, size, lx)
+        _render_glass_row(screen, surface, geo, words, size, lx)
+        gmfill.render(screen, surface, geo, words, size, lx)
+    if "livery_button" in geo:
+        _render_livery_button(screen, surface, geo, words, size)
+    if "mod_files" in geo:
+        _render_mod_files(screen, surface, geo, words, size)
+    if "language" in geo:
+        gmlang.render_note(screen, surface, geo, words, size)
 
 
 def _render_glass_row(screen, surface, geo, words, size, lx):
@@ -397,7 +333,6 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
     row, bar = geo["glass"], geo["glass_bar"]
     _text(screen, surface, words.get("glass", "Panel glass"), size,
           COL_OPTION, lx, row)
-    gmfill.render_switch(screen, surface, geo, words, size)
     gmfill.render_glass_bar(screen, surface, bar)
     reset = geo["glass_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
@@ -405,63 +340,30 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
           else COL_STATE, reset.x, reset, _reset_room(screen, reset))
 
 
-def _render_frame_rate_row(screen, surface, row, words, size, lx, vx):
-    """The frame rate (decision 79): the choice, the monitor's with its rate."""
-    _text(screen, surface, words.get("frame_rate", "Frame rate"), size,
-          COL_OPTION, lx, row)
-    value = selected(screen, "frame_rate")
-    shown = value if value in framerate.STEPS else framerate.DEFAULT
-    word = words.get("frame_rate_steps", {}).get(shown, shown)
-    if shown == "monitor":
-        hz = getattr(screen.app, "_hz", None) or framerate.monitor_hz()
-        word = word.format(hz=hz)
-    _text(screen, surface, word, size, COL_OPTION, row.x + vx, row)
-
-
-def _render_painted_row(screen, surface, row, words, size, lx, vx):
-    """The painted pictures' detail (`core/paintdetail`); Auto says what it
-    picks for this window: a battle's field is the window's width, and its
-    opening view 32 cells of 20 px across it (`cbview.Camera.framing`)."""
-    _text(screen, surface, words.get("painted", "Painted detail"), size,
-          COL_OPTION, lx, row)
-    value = selected(screen, "painted_detail")
-    shown = value if value in paintdetail.STEPS else paintdetail.DEFAULT
-    word = words.get("painted_steps", {}).get(shown, shown)
-    if shown == "auto":
-        word = word.format(k=paintdetail.cap(shown, surface.get_width()
-                                             / paintdetail.OPENING_PX))
-    _text(screen, surface, word, size, COL_OPTION, row.x + vx, row)
-
-
 def _render_livery_button(screen, surface, geo, words, size):
     """The button that opens the livery window, where it is offered."""
-    rect = geo.get("livery")
+    rect = geo.get("livery_button")
     if rect is None:
         return
     hud.small_button(surface, rect, screen.layout.scale,
                      "hover" if rect.collidepoint(mouse_input.pos())
                      else "normal")
-    img = screen.style.render_text(words.get("livery", "Livery"), size,
-                                   tuple(COL_OPTION[:3]))
+    word = words.get("livery_open", "Open")
+    img = screen.style.render_text(word, size, tuple(COL_OPTION[:3]))
     while img.get_width() > rect.w * 0.9 and size > 8:
         size -= 1
-        img = screen.style.render_text(words.get("livery", "Livery"), size,
-                                       tuple(COL_OPTION[:3]))
+        img = screen.style.render_text(word, size, tuple(COL_OPTION[:3]))
     surface.blit(img, (rect.x + (rect.w - img.get_width()) // 2,
                        rect.y + (rect.h - img.get_height()) // 2))
 
 
-def _render_mod_row(screen, surface, row, words, size, lx, vx):
-    """The mod folder switch; with it on, how many of the folder's
-    files are in use, so a player can see the folder was found."""
-    _text(screen, surface, words.get("mods", "Mod folder"), size,
-          COL_OPTION, lx, row)
-    value = selected(screen, "user_mod")
-    shown = value if value in MOD_STEPS else MOD_STEPS[0]
-    img = _text(screen, surface, words.get("mod_steps", {}).get(shown, shown),
-                size, COL_OPTION, row.x + vx, row)
+def _render_mod_files(screen, surface, geo, words, size):
+    """How many of the folder's files are in use, so a player can see the
+    folder was found — or the extraction's progress after switching it on
+    (until work order 251 a note beside the switch)."""
+    row = geo["mod_files"]
+    x = row.x + int(row.w * 0.36)
     job = modsetup.state()
-    note = None
     if job["phase"] == "running":
         note = words.get("mod_wait", "Extracting — this can take a while "
                          "({i}/{n})").format(i=job["i"], n=job["n"])
@@ -469,14 +371,13 @@ def _render_mod_row(screen, surface, row, words, size, lx, vx):
         note = (words.get("mod_failed", "{n} step(s) failed — see the log")
                 .format(n=len(job["failed"])) if job["failed"]
                 else words.get("mod_done", "Ready — restart to use it"))
-    elif shown == "on" and usermod.started_enabled():
-        n = usermod.in_use()
-        note = (words.get("mod_files", "{n} files").format(n=n)
+    elif selected(screen, "user_mod") == "on" and usermod.started_enabled():
+        note = (words.get("mod_files", "{n} files").format(n=usermod.in_use())
                 if usermod.active() else words.get("mod_none", "no folder"))
-    if note is not None:
-        nx = row.x + vx + img.get_width() + int(row.h * 0.6)
-        _text(screen, surface, note, size, COL_STATE, nx, row,
-              _reset_room(screen, pygame.Rect(nx, row.y, 0, 0)))
+    else:
+        note = words.get("mod_off", "—")
+    _text(screen, surface, note, size, COL_STATE, x, row, row.right - x,
+          fit=True)
 
 
 def _render_frame_row(screen, surface, geo, words, size, lx):

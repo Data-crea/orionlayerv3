@@ -24,7 +24,7 @@ from core import palette
 from core.hestrings import printf
 from core.structs import settings as settings_spec
 from core.textfit import wrap_text
-from screens.game_menu import gmframe, gmorion, nodes
+from screens.game_menu import gmframe, nodes
 
 COL_BUTTON = palette.require("game_menu", "button_text")
 COL_TITLE = palette.require("game_menu", "title")
@@ -232,9 +232,46 @@ def _settings(screen, surface):
             if i < len(alts) and alts[i]:
                 _blit(screen, surface, alts[i], size, COL_OPTION,
                       band.x + int(band.w * rule.get("alt_x", 0.77)), ty)
-    gmorion.render(screen, surface)
+    _orionlayer_button(screen, surface)
     button(screen, surface, "settings_accept",
            word(screen, "settings", "accept"))
+
+
+def _orionlayer_button(screen, surface):
+    """ORIONLAYER SETTINGS … (HD EXTENSION `orionlayer_window`, work order
+    251, `olwin`): below the engine rows, a line, then the button that
+    opens OrionLayer's own window — the gear, the word, the arrow, as in
+    Data's mockup. It has no field and sends nothing."""
+    b = box(screen, "orionlayer_open")
+    if b is None or b.screen_rect is None:
+        return
+    r = b.screen_rect
+    rows = box(screen, "settings_rows")
+    if rows is not None and rows.screen_rect is not None:
+        y = (rows.screen_rect.bottom + r.y) // 2
+        hud.separator(surface, r.x, r.right, y, screen.layout.scale)
+    state = ("pressed" if screen.pressed.is_down("orionlayer_open") else
+             "hover" if r.collidepoint(mouse_input.pos()) else "normal")
+    hud.small_button(surface, r, screen.layout.scale, state)
+    col = tuple(screen.pressed.colour("orionlayer_open", COL_BUTTON)[:3])
+    from core.hud import art
+    ic = art.mask("gameplay", int(r.h * 0.55), col)
+    x = r.x + int(r.h * 0.4)
+    if ic is not None:
+        surface.blit(ic, (x, r.y + (r.h - ic.get_height()) // 2))
+        x += ic.get_width() + int(r.h * 0.35)
+    arrow = int(r.h * 0.6)
+    _blit_fit(screen, surface, word(screen, "settings", "orionlayer"),
+              _size(screen, b, default=30), col, x,
+              r.y + (r.h - _size(screen, b, default=30)) // 2,
+              r.right - arrow - x)
+    s = max(3, r.h // 6)
+    cx, cy = r.right - arrow // 2 - s // 2, r.centery
+    # LOOK EXCEPTION marking: the button's arrow (Data's mockup), its word's colour
+    pygame.draw.lines(surface, col, False, [(cx - s // 2, cy - s),
+                                            (cx + s // 2, cy),
+                                            (cx - s // 2, cy + s)],
+                      max(2, r.h // 14))
 
 
 def _slots(screen, surface, node):
@@ -331,6 +368,10 @@ def help_rect(screen, spec):
         # geometry its drawing and its clicks use (decision 5)
         from . import gmlivery
         return gmlivery.help_rect(screen, spec)
+    if spec.get("ol_part"):
+        # the OrionLayer window's own parts (work order 251): `olwin.geometry`
+        from . import olwin
+        return olwin.help_rect(screen, spec)
     band = spec.get("orionlayer_band")
     if band:
         # an OrionLayer row (work order 212): `gmorion.bands`, the one

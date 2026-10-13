@@ -50,6 +50,12 @@ NOT_LISTED = {
         "a whole directory, replaced through mods/ only (decision 17)",
     "assets/shared/hud/galaxy_hud.png":
         "the sheet the HUD pieces are cut from (tools/hud_cut.py)",
+    "assets/shared/hud/settings_icons.png":
+        "the sheet the settings window's tab icons are cut from "
+        "(tools/hud_cut.py, work order 251)",
+    "assets/shared/hud/settings_preview.png":
+        "Data's own picture, the OrionLayer settings window's preview "
+        "ground (work order 251) — OrionLayer's, not the game's",
     "screens/galaxy_map/assets/_black_hole_src.png":
         "the source of black_hole.png (tools/make_black_hole_master.py)",
     # Work order 205 moved the pictures nothing loaded — the galaxy map's

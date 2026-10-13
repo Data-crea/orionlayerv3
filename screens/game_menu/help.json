@@ -456,18 +456,23 @@
       ]
     },
     {
-      "help_id": "orionlayer.frame_rate",
+      "help_id": "orionlayer.open",
       "node": "settings",
+      "box": "orionlayer_open"
+    },
+    {
+      "help_id": "orionlayer.frame_rate",
+      "node": "orionlayer",
       "orionlayer_band": "frame_rate"
     },
     {
       "help_id": "orionlayer.livery",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "livery"
     },
     {
       "help_id": "orionlayer.painted",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "painted"
     },
     {
@@ -553,52 +558,52 @@
     },
     {
       "help_id": "orionlayer.floor",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "floor"
     },
     {
       "help_id": "orionlayer.colours",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "colours"
     },
     {
       "help_id": "orionlayer.monsters",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "monsters"
     },
     {
       "help_id": "orionlayer.frame",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "frame"
     },
     {
       "help_id": "orionlayer.tone",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "tone"
     },
     {
       "help_id": "orionlayer.glass",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "glass"
     },
     {
       "help_id": "orionlayer.fill",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "fill"
     },
     {
       "help_id": "orionlayer.fill_tone",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "fill_tone"
     },
     {
       "help_id": "orionlayer.mods",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "mods"
     },
     {
       "help_id": "orionlayer.language",
-      "node": "settings",
+      "node": "orionlayer",
       "orionlayer_band": "language"
     },
     {
@@ -660,6 +665,46 @@
       "help_id": "livery.preview",
       "node": "livery",
       "livery_part": "preview"
+    },
+    {
+      "help_id": "orionlayer.mod_files",
+      "node": "orionlayer",
+      "orionlayer_band": "mod_files"
+    },
+    {
+      "help_id": "orionlayer.tab_appearance",
+      "node": "orionlayer",
+      "ol_part": "tab_appearance"
+    },
+    {
+      "help_id": "orionlayer.tab_gameplay",
+      "node": "orionlayer",
+      "ol_part": "tab_gameplay"
+    },
+    {
+      "help_id": "orionlayer.tab_graphics",
+      "node": "orionlayer",
+      "ol_part": "tab_graphics"
+    },
+    {
+      "help_id": "orionlayer.tab_system",
+      "node": "orionlayer",
+      "ol_part": "tab_system"
+    },
+    {
+      "help_id": "orionlayer.close",
+      "node": "orionlayer",
+      "ol_part": "close"
+    },
+    {
+      "help_id": "orionlayer.apply",
+      "node": "orionlayer",
+      "ol_part": "apply"
+    },
+    {
+      "help_id": "orionlayer.preview",
+      "node": "orionlayer",
+      "ol_part": "preview"
     }
   ],
   "hd_own_help": "HD EXTENSION (work order 212): a region whose help_id is a name, not a number, shows OrionLayer's own text from layout.json `own_help` (in the session's language) \u2014 the OrionLayer rows have no entry in the game's HELP.LBX."

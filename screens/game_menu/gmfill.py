@@ -3,8 +3,8 @@
 Two of Data's decisions of 9 October 2026 in the dialog where the frame
 colour and the glass already live (`gmorion`):
 
-- **The glass switch**, on the Panel glass row: a small button at the
-  value column, "On" / "Off". Off fills every box opaque with the fill
+- **The glass switch**, on the Panel glass row: "On" / "Off" at the
+  value column (since work order 251 the row's drop-down list, `oldrop`). Off fills every box opaque with the fill
   colour; on is the glass of work order 174 with its strength bar — and
   the bar takes a click only while the switch is on (drawn dimmed, its
   value kept, while it is off).
@@ -34,8 +34,6 @@ from core.hud import glass
 #: hue); the brightness bar shows the fills themselves.
 SHOW_Y = 0.18
 
-#: The switch's share of the row, from the value column.
-SWITCH_W = 0.12
 
 
 def _settings(screen):
@@ -46,13 +44,11 @@ def geometry(out, rule):
     """Add the switch and the fill bars to `gmorion.bands`' dict, in the
     frame colour's columns (decision 5: one place for draw and click)."""
     hb, rr = out["hue_bar"], out["hue_reset"]
-    gl = out["glass"]
-    sw = max(8, int(gl.w * SWITCH_W))
+    # the switch is the row's drop-down field (`oldrop`, work order 251)
+    sw = out["glass_field"]
     gap = max(4, int(hb.w * 0.04))
-    out["glass_switch"] = pygame.Rect(hb.x, gl.y + gl.h // 8, sw,
-                                      gl.h - gl.h // 4)
-    out["glass_bar"] = pygame.Rect(hb.x + sw + gap, out["glass_bar"].y,
-                                   hb.w - sw - gap, hb.h)
+    out["glass_bar"] = pygame.Rect(sw.right + gap, out["glass_bar"].y,
+                                   hb.right - sw.right - gap, hb.h)
     fr = out["fill"]
     out["fill_bar"] = pygame.Rect(hb.x, fr.y + (fr.h - hb.h) // 2, hb.w,
                                   hb.h)
@@ -99,9 +95,6 @@ def set_glass(screen, on):
 def handle_click(screen, geo, x, y):
     """True if (x, y) hit one of these controls (which then acted)."""
     from . import gmorion
-    if geo["glass_switch"].collidepoint(x, y):
-        set_glass(screen, not fill.glass_on())
-        return True
     if geo["glass"].collidepoint(x, y) and not fill.glass_on():
         return True          # the strength bar and its RESET wait for the switch
     if geo["fill_reset"].collidepoint(x, y):
@@ -144,24 +137,6 @@ def _bar(screen, surface, bar, colour_at, value, lo, hi, dim=False):
     # LOOK EXCEPTION marking: the slider's position tick
     surface.fill((128, 128, 128) if dim else (255, 255, 255),
                  (tx - w // 2, bar.y - w, w, bar.h + 2 * w))
-
-
-def render_switch(screen, surface, geo, words, size):
-    """The glass switch, a small button that is 'on' while the glass is."""
-    from . import gmorion
-    rect = geo["glass_switch"]
-    on = fill.glass_on()
-    hud.small_button(surface, rect, screen.layout.scale,
-                     "active" if on else "normal")
-    word = words.get("glass_steps", {}).get("on" if on else "off",
-                                            "On" if on else "Off")
-    img = screen.style.render_text(word, size, tuple(gmorion.COL_OPTION[:3]))
-    while img.get_width() > rect.w * 0.9 and size > 8:
-        size -= 1
-        img = screen.style.render_text(word, size,
-                                       tuple(gmorion.COL_OPTION[:3]))
-    surface.blit(img, (rect.x + (rect.w - img.get_width()) // 2,
-                       rect.y + (rect.h - img.get_height()) // 2))
 
 
 def glass_dim():

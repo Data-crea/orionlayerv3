@@ -37,7 +37,7 @@ from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
 from screens.game_menu import (gmdraw, gmframe, gmlivery, gmorion,
-                               gmsliders, nodes)
+                               gmsliders, nodes, olwin)
 from screens.game_menu.gmsave import SaveEditor
 
 log = logging.getLogger("game_menu")
@@ -97,6 +97,7 @@ class GameMenuScreen(ScreenBase):
         self.slider_drag = None  # gmsliders: a press on a bar, not sent yet
         self.slider_sent = {}
         self.livery = None      # gmlivery: the livery window, while it is up
+        self.orionlayer = None  # olwin: the OrionLayer settings, while up
 
     # ── Lifecycle ─────────────────────────────────────────
 
@@ -118,12 +119,14 @@ class GameMenuScreen(ScreenBase):
         self.menu_keys = set()
         self._sent = None
         self.livery = None
+        self.orionlayer = None
         self.flags = self._initial_flags(game_state)
         self.save.reset()
 
     def exit(self):
         # Every way out of the popup, ESC from Settings included, keeps
         # the OrionLayer rows' values; the save writes nothing twice.
+        olwin.close(self)
         gmlivery.close(self)
         gmorion.save(self)
         self.save.reset()
@@ -166,14 +169,16 @@ class GameMenuScreen(ScreenBase):
             log.info("game menu: %s -> %s", self.node, node)
             self.node = node
             if node != nodes.SETTINGS:
-                # the livery window belongs to the Settings dialog: it
-                # closes with it, its choices kept (`gmlivery.close`)
+                # the OrionLayer and livery windows belong to the Settings
+                # dialog: they close with it, their choices kept
+                olwin.close(self)
                 gmlivery.close(self)
         self.save.update(game_state)
         gmsliders.advance(self, game_state)
 
     def render(self, surface):
         gmdraw.render(self, surface)
+        olwin.render(self, surface)
         gmlivery.render(self, surface)
         self.render_help(surface)
 
@@ -261,6 +266,11 @@ class GameMenuScreen(ScreenBase):
             # takes a click, and nothing is sent (HD EXTENSION `livery`)
             gmlivery.handle_click(self, screen_x, screen_y)
             return None
+        if olwin.is_open(self):
+            # OrionLayer's own window (HD EXTENSION `orionlayer_window`,
+            # work order 251): the same rule, nothing under it, nothing sent
+            olwin.handle_click(self, screen_x, screen_y)
+            return None
         # THE PRESSED STATE FIRST, before anything decides whether to send:
         # it shows the click landed, not that the game took it (decision 33).
         for name, _ in self.BUTTONS.get(self.node, []):
@@ -281,9 +291,12 @@ class GameMenuScreen(ScreenBase):
                 self.press(key)
                 return None
         if self.node == nodes.SETTINGS:
-            # THE ORIONLAYER ROWS FIRST, and they never reach `send`:
-            # they have no field (HD EXTENSION, fundament 63).
-            if gmorion.handle_click(self, screen_x, screen_y):
+            # THE ORIONLAYER BUTTON FIRST, and it never reaches `send`: it
+            # has no field (HD EXTENSION `orionlayer_window`, work order 251)
+            if gmdraw.hit(self, "orionlayer_open", screen_x, screen_y):
+                self.pressed.press("orionlayer_open", gmdraw.box(
+                    self, "orionlayer_open").screen_rect)
+                olwin.open_window(self)
                 return None
             i = gmdraw.row_at(self, "settings_rows", nodes.OPTIONS,
                               screen_x, screen_y)
@@ -331,6 +344,9 @@ class GameMenuScreen(ScreenBase):
             if event.key == pygame.K_ESCAPE:
                 gmlivery.close(self)
             return
+        if olwin.is_open(self):
+            olwin.handle_key(self, event.key)
+            return
         if event.key == pygame.K_ESCAPE:
             if self.node == nodes.CONFIRM:
                 return          # the loop wants YES or NO (gendraw.cpp:212)
@@ -352,8 +368,10 @@ class GameMenuScreen(ScreenBase):
 
     def help_region_rect(self, spec):
         """Only the current dialog's table (help.json `node`); while the
-        livery window is up, only its own (`gmlivery.NODE`)."""
+        livery window is up, only its own (`gmlivery.NODE`), and while the
+        OrionLayer window is, only its (`olwin.NODE`)."""
         if spec.get("node") != (gmlivery.NODE if gmlivery.is_open(self)
+                                else olwin.NODE if olwin.is_open(self)
                                 else self.node):
             return None
         return super().help_region_rect(spec)

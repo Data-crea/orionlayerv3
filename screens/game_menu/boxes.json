@@ -174,7 +174,7 @@
         569,
         154,
         513,
-        338
+        497
       ],
       "style": {
         "skin": "area",
@@ -182,17 +182,16 @@
       }
     },
     {
-      "name": "orionlayer_rows",
+      "name": "orionlayer_open",
       "rect": [
         569,
-        492,
+        705,
         513,
-        403
+        62
       ],
       "style": {
-        "skin": "area",
-        "font_size": 24,
-        "heading_font_size": 20
+        "skin": "thin_border",
+        "font_size": 26
       }
     },
     {

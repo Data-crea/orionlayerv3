@@ -234,7 +234,8 @@
     },
     "settings": {
       "title": "GAME SETTINGS",
-      "accept": "ACCEPT"
+      "accept": "ACCEPT",
+      "orionlayer": "ORIONLAYER SETTINGS \u2026"
     },
     "load": {
       "load": "LOAD",
@@ -314,7 +315,10 @@
         "off": "Off"
       },
       "fill": "Box fill",
-      "fill_tone": "Box fill tone"
+      "fill_tone": "Box fill tone",
+      "mod_files_label": "Mod files",
+      "mod_off": "\u2014",
+      "livery_open": "Open"
     },
     "livery": {
       "_hd_extension": "HD EXTENSION `livery` (work order 220, decisions 1-6, 8, 9): the livery window's words; screens/game_menu/gmlivery.py, core/livery.py. MOO2 has no such window.",
@@ -348,6 +352,23 @@
       "doom_star": "Doom Star",
       "station": "Station",
       "look": "Look {n}"
+    },
+    "orionlayer_window": {
+      "_note": "Data's grouping and his subtitles (work order 251), in English; German in assets/shared/lang/de.json (his own words).",
+      "title": "ORIONLAYER SETTINGS",
+      "tab_appearance": "Appearance",
+      "sub_appearance": "Display, colours and transparency",
+      "tab_gameplay": "Gameplay",
+      "sub_gameplay": "Game-related extensions",
+      "tab_graphics": "Graphics",
+      "sub_graphics": "Graphics quality and performance",
+      "tab_system": "System",
+      "sub_system": "Files, language and technical information",
+      "apply": "Apply & Close",
+      "sample_title": "Panel",
+      "sample_field": "Field",
+      "sample_selected": "Selected",
+      "sample_button": "Button"
     }
   },
   "settings_rows": {
@@ -509,38 +530,45 @@
     "orionlayer.fill_tone": {
       "title": "BOX FILL TONE",
       "body": "How strong and how bright the box fill colour is: the left bar runs from grey to the full colour, the right one from black to the brightest fill at which every word stays readable. RESET on the box fill row returns both. Applied at once."
+    },
+    "orionlayer.open": {
+      "title": "ORIONLAYER SETTINGS",
+      "body": "Opens OrionLayer's own settings: the colours and the glass of every window, the map floor and the monster values, the frame rate and the painted pictures, the mod folder and the language. The game knows nothing about them; nothing here changes the game."
+    },
+    "orionlayer.tab_appearance": {
+      "title": "APPEARANCE",
+      "body": "Display, colours and transparency: the player colours, the frame colour and tone of every window, the panel glass and the box fill, with a live preview."
+    },
+    "orionlayer.tab_gameplay": {
+      "title": "GAMEPLAY",
+      "body": "Game-related extensions: the map floor and the monster values in the Planets panel."
+    },
+    "orionlayer.tab_graphics": {
+      "title": "GRAPHICS",
+      "body": "Graphics quality and performance: the frame rate, the detail of painted pictures and the livery of painted ships."
+    },
+    "orionlayer.tab_system": {
+      "title": "SYSTEM",
+      "body": "Files, language and technical information: the mod folder, how many of its files are in use, and the language."
+    },
+    "orionlayer.close": {
+      "title": "CLOSE",
+      "body": "Keeps every setting as it stands and goes back to Game Settings, as APPLY & CLOSE does."
+    },
+    "orionlayer.apply": {
+      "title": "APPLY & CLOSE",
+      "body": "Keeps every setting as it stands and goes back to Game Settings. Most settings already apply as you change them; the player colours, the mod folder and the language need a restart, and the window says so."
+    },
+    "orionlayer.preview": {
+      "title": "PREVIEW",
+      "body": "A window onto space with a panel, a field, a chosen field and a button over it, drawn as every screen draws them: the frame colour, the glass and the box fill show here as you set them."
+    },
+    "orionlayer.mod_files": {
+      "title": "MOD FILES",
+      "body": "How many files of the mod folder OrionLayer uses \u2014 so you can see the folder was found. After switching the folder on, the progress of reading the game's pictures shows here."
     }
   },
-  "orionlayer_rows": {
-    "_hd_extension": "HD EXTENSION (fundament 63, 64): five row heights below the thirteen engine rows - a divider, the OrionLayer heading, the map floor lift, the player-colour preset and the monster values switch for the Planets panel (default on). The game knows nothing about them: they have no field, their clicks send nothing, and their values live in core/usersettings.py. The hotkey column stays empty for all three rows.",
-    "_grow_note": "The box grew by one band (153 -> 191 reference px, 14 September 2026) and settings_accept moved down by the same 38 so the rows still end above ACCEPT; 38 is one band of the engine rows (497 / 13), so the new row is as tall as every other. Work order 173 added the mod folder row (decision 72) inside the same body: the thirteen engine rows went from 38 to 36 (497 -> 468) and this box grew by the 29 they gave up (191 -> 221 at 622), so every OrionLayer row keeps its 30 px and nothing below moves. Work order 174 added the Panel glass row the same way: the engine rows 36 -> 34 (468 -> 442) and this box took those 26 px and the gap above ACCEPT (221 -> 264 at 596, ending 4 px above it); a row is 28 px now. Work order 200 C added the LANGUAGE row the same way: the engine rows 34 -> 32 (442 -> 416) and this box took those 26 px (264 -> 290 at 570), a row still 28 px. Work order 212 added the FRAME RATE row the same way: the engine rows 32 -> 30 (416 -> 390) and this box took those 26 px (290 -> 316 at 544); with the divider a third of a row, a row is 30.6 px (31.1 before). Work order 219 added the PAINTED DETAIL row the same way: the engine rows 30 -> 28 (390 -> 364) and this box took those 26 px (316 -> 342 at 518); a row is 30.2 px. Work order 227 added the BOX FILL rows (fill colour, fill tone; the glass switch sits on the Panel glass row): the engine rows 28 -> 26 (364 -> 338) gave 26 px and the dialog grew by 35 (body 850 -> 885, ACCEPT 865 -> 900), this box 342 -> 403 at 492; a row is 30.2 px as before.",
-    "bands": [
-      "divider",
-      "heading",
-      "floor",
-      "colours",
-      "monsters",
-      "frame",
-      "tone",
-      "glass",
-      "fill",
-      "fill_tone",
-      "frame_rate",
-      "painted",
-      "mods",
-      "language"
-    ],
-    "label_x": 0.114,
-    "_label_x_note": "the engine rows' own label column (settings_rows.label_x), so the two lists align",
-    "value_x": 0.5,
-    "swatch_x": 0.74,
-    "swatch_gap": 0.2,
-    "_swatch_note": "eight swatches from swatch_x to the right edge of the row, drawn from the SELECTED preset's base colours (core/playercolors.base), so they cannot disagree with what a restart will produce; swatch_gap is the gap between two as a share of one swatch",
-    "divider_y": 0.5,
-    "_restart_note": "The restart note is drawn right-aligned in the HEADING band, directly above the preset row's swatches: four row heights leave no fifth for it. Shown only while the saved preset differs from the one palette.init applied (palette.active_preset), so it goes away by itself after the restart.",
-    "_value_x_note": "0.46 let 'Player colours' run into the preset name in the first offline render (14 September 2026); 0.50 leaves a gap at 1080p, and the swatches follow at 0.74",
-    "hue_end": 0.84,
-    "_hue_note": "Work order 170, HD EXTENSION: the frame colour row. The hue bar runs from value_x to hue_end of the row, RESET after it; a click on the bar sets the hue under the pointer, RESET returns to the measured blue. The divider band became a third of a row so the six rows fit the box it had.",
-    "_tone_note": "Work order 171, HD EXTENSION: the frame tone row under the hue row - a saturation bar (grey to the chosen colour) and a brightness bar (black to silver), splitting the hue bar's span. RESET on the hue row resets all three. The seven rows share the box it had; the divider stays a third of a row."
+  "orionlayer_window": {
+    "_hd_extension": "HD EXTENSION orionlayer_window (work order 251, Data's decision of 13 October 2026): OrionLayer's own settings in a window of their own, opened from Game Settings' ORIONLAYER SETTINGS button (box orionlayer_open). Until then they were rows below the thirteen engine rows (the box orionlayer_rows, 403 reference px, which took 26 px from each engine row as rows were added: work orders 170-227). The engine rows have their 497 px back (38.2 each, the original's 13 equal bands) and the button sits under them. The window's geometry is screens/game_menu/olwin.py (one place for drawing, clicking and help, decision 5); its words are under words.orionlayer_window, the rows' under words.orionlayer as before."
   }
 }
