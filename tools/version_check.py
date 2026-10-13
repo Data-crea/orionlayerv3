@@ -46,7 +46,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(
 from core.config import ORION2RE_VERSION  # noqa: E402
 from workdirs import BUNDLES  # noqa: E402,F401 (198: a tree is cloned from one)
 
-DEFAULT_TREES = ["~/orion2re", "~/src/orion2re", "/tmp/orion2re-main"]
+#: README builds the fork beside OrionLayer: look there first (WO 244).
+README_TREE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "orion2re")
+DEFAULT_TREES = [README_TREE, "~/orion2re", "~/src/orion2re",
+                 "/tmp/orion2re-main"]
 #: THE SOURCE OrionLayer's transcriptions cite (work order 243). Every
 #: `file.cpp:line` in the tree, and every name a check holds a table to,
 #: is orion2re 1.60's (`orionlayer-local`): the engine moved to v2.0.0,
