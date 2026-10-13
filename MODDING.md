@@ -2,7 +2,7 @@
 
 ## The easy way: your mod folder (no programming)
 
-**HD EXTENSION, work order 173, decision 72.** To change how OrionLayer
+To change how OrionLayer
 looks you do not need this repository at all. There is one folder for
 you, outside it:
 
@@ -30,27 +30,28 @@ frames/<screen>.png        a frame painted over one screen (see Frames)
 style.json                 HUD colours and sizes — only the keys you write
 colour.json                the frame colour OrionLayer starts with
 files/<path in the tree>   any other picture listed in NAMES.txt
-texts/<screen>/<key>.txt   a text, by its key (work order 175)
+texts/<screen>/<key>.txt   a text, by its key
 ```
 
 OrionLayer's own pictures are not in this repository either: they come
-as the **base pack** (`basepack.json` names every file), installed once
-with `python tools/basepack.py install <zip>` into its own folder
-(`~/.local/share/orionlayer/base` on Linux, see `core/basepack.py`).
+as the **base pack** (`basepack.json` names every file), which
+`tools/setup.py` downloads and installs into its own folder
+(`~/.local/share/orionlayer/base` on Linux; `python tools/basepack.py
+install <zip>` installs a zip you have).
 `files/<path in the tree>` replaces a base-pack picture by that same
 path. Never edit the base pack itself; your mod folder is the place.
 
 A file OrionLayer cannot read, or a name it does not know, is skipped
 with one line in the log; a picture of another size is scaled to fit.
 The GAME menu's SETTINGS has **Mod folder: Off / On** (takes effect at
-the next start). **It is Off until you switch it on** (work order 197;
-a folder you switched on before stays on). Switching it on extracts the
+the next start). **It is Off until you switch it on** (a folder you
+switched on before stays on). Switching it on extracts the
 game's pictures you have not extracted yet — the row says this can take
 a while and shows how far it is — then writes the template and the frame
 templates into the folder (`core/modsetup.py`). Switching it off leaves
 your files where they are.
 
-### Frames (work order 197, HD EXTENSION)
+### Frames
 
 `frames/<screen>.png` is a picture laid over one whole screen: 3840 x 2160
 with transparency, so the screen shows through where you leave it clear.
@@ -70,10 +71,10 @@ can be answered with a `mod.json` in the folder:
 `{"frames": {"galaxy_map": "<stamp>"}}` — the tool prints every stamp.
 Screens whose geometry is code (the battle) have no frame slot.
 
-### Leader portraits in HD (work order 234)
+### Leader portraits in HD
 
 Painted portraits of all 67 leaders exist as a mod of their own, outside
-this repository (since work order 241 the repository holds no picture):
+this repository (the repository holds no picture):
 its folder goes into your mod folder as
 `files/mods/leader_portraits/` (`colony_leaders/`, `ship_officers/`,
 named `<nn>_<name>.png` by the leader's number in the game). They are
@@ -82,7 +83,7 @@ small portrait has; Off, or without a picture, the game's own portrait
 is drawn. To replace one, put a PNG of the same name there; the mod's
 `README.md` gives the names, the size (431 x 528) and the steps.
 
-### The Leaders screen's pictures (work order 237)
+### The Leaders screen's pictures
 
 The Leaders screen has seven picture places, filled only from your mod
 folder (OrionLayer ships none of them), each under
@@ -106,7 +107,7 @@ without it. A picture that is missing or cannot be read leaves its box as
 it is without one; with the Mod folder Off the screen is as before.
 `NAMES.txt` lists the names.
 
-### The battle's pictures (work order 197)
+### The battle's pictures
 
 The battle draws the game's own pictures from the files
 `tools/combat_art_extract.py` extracts. One PNG replaces one stored
@@ -115,8 +116,7 @@ drawing, used as painted (no palette), at
 facings the game draws as flips stay flips, so a ship needs its five
 stored facings, not sixteen. `NAMES.txt` gives the numbering.
 
-Paint at the stored drawing's size or at a whole multiple of it (work
-order 214): a Doom Star is 59 x 60, so 118 x 120, 236 x 240 and so on.
+Paint at the stored drawing's size or at a whole multiple of it: a Doom Star is 59 x 60, so 118 x 120, 236 x 240 and so on.
 OrionLayer draws the picture at the drawing's size and place and keeps
 its detail as the camera zooms in; any other size is refused (the log
 says so) and the game's drawing is used. A ship's frames are
@@ -127,7 +127,7 @@ picture replaces one player colour's ship, drawn as painted. The game
 itself draws each colour's ships as their own pictures (the red Doom Star
 is a different drawing from the yellow one).
 
-**Paint once, at the largest size you want to offer (work order 219).**
+**Paint once, at the largest size you want to offer.**
 The player chooses in Game Settings how finely the battle holds painted
 pictures: Normal keeps them at 4 times the drawing at most, High at 8
 times, Auto picks by the window (Normal up to 2560 pixels wide, High
@@ -137,15 +137,15 @@ the folder, the largest you have (8 times for a sharp High: a Doom Star at
 472 x 480), and both settings use it. There are no separate sets for 4x
 and 8x.
 
-**One picture for every player (work order 217).** Save a ship as
+**One picture for every player.** Save a ship as
 `files/screens/combat/assets/gamedata/cmbtshp/all_<picture>_<frame>.png`
 — `all_43_0.png` is the Doom Star — and it is drawn for every owner who
 has no file of their own, in that owner's colour:
 
 - **Paint the hull in neutral grey.** Grey is what takes the player's
   colour: any shade, dark to light, its light and shade kept. The colour
-  is laid on at 70 % and fades out on the brightest and the darkest grey
-  (work order 219), so lit edges stay metal and panel lines stay dark: the
+  is laid on at 70 % and fades out on the brightest and the darkest grey,
+  so lit edges stay metal and panel lines stay dark: the
   ship reads as its owner's at battle size and as metal up close. "Neutral"
   means the red, green and blue of a pixel lie within about 13 of each
   other (on 0-255); a grey that leans a little blue still counts.
@@ -170,7 +170,7 @@ has no file of their own, in that owner's colour:
 - A file under one colour's own name (`178_0.png`, silver's Doom Star)
   still wins for that colour, drawn exactly as painted.
 
-**A livery: masks beside the ship (work order 220).** A ship may say which
+**A livery: masks beside the ship.** A ship may say which
 of its plates take the owner's colour; the player then chooses a pattern,
 a tone of their colour, a second colour of their own and the strength in
 GAME -> Settings -> Livery (the button shows once your folder holds a ship
@@ -204,7 +204,7 @@ cmbtshp/all_<picture>_<frame>_<pattern>_mask2.png    second zone
   setting shrinks them with the picture, and turned, mirrored and flipped
   facings, shield flares and the cloak take them along.
 
-**Pulsing engines: an engine mask beside the ship (work orders 221, 222).**
+**Pulsing engines: an engine mask beside the ship.**
 In the original a ship's engines pulse in battle: low, middle, high,
 middle, one step every 55 ms, and they go dark when the ship is done for
 the turn, captured, hit on its shield, cloaking, teleporting or blowing
@@ -243,7 +243,7 @@ cmbtshp/<colour * 45 + picture>_<frame>_engine.png   for a colour's own file
   mirrored and flipped facings and the cloak (a cloaked ship's glow fades
   with it).
 
-### The other extracted pictures (work order 199)
+### The other extracted pictures
 
 Fleets, Leaders, Races, the Ship Designer and the diplomacy audience draw
 the game's pictures the same way, from the files their extractors write
@@ -259,7 +259,7 @@ Pictures from Master of Orion 2 itself are never copied into the
 template — they are not ours to hand out — but their names are listed,
 so you can draw your own.
 
-### The colony screen's surface (work order 232, HD EXTENSION)
+### The colony screen's surface
 
 The colony screen's landscape fills a panel much flatter than the game's
 own 640 x 328 picture, which is therefore cut to cover it. A picture made
@@ -280,7 +280,7 @@ window taller than 16:9 shows the panel taller and cuts the picture's
 sides). The picture is never stretched: at another shape it is cut to
 cover the panel. A climate without a picture shows the game's.
 
-### Texts (work order 175, decision 73)
+### Texts
 
 Every text of the **Info** screen is looked up by a stable key, and a text
 file in your folder replaces it. The file name IS the key: the part before
@@ -301,10 +301,8 @@ The template writes OrionLayer's OWN texts into `originals/texts/` as
 starting points. The game's texts (the reference articles, the page
 titles, the trait names …) are the game owners' words: `NAMES.txt` lists
 their keys only, and OrionLayer reads them from your own game files.
-Screens that could use the same resolver next: the menus, Custom Race's
-messages, the HUD headings, the Leaders button words.
 
-### Texts per language (work order 200 C)
+### Texts per language
 
 OrionLayer speaks English or German (Game Settings, LANGUAGE; read at the
 next start). For a key, a German file goes one folder deeper, under the
@@ -443,15 +441,12 @@ two controls where a right click finds nothing — invisible, because
 help regions are not drawn. Resize the region, never the box: the
 box is what appears on screen.
 
-**Every `help.json` needs a top-level `hd_extension` string, and the
-smoke test refuses one without it.** The help panel grows to fit its
+**Every shipped `help.json` carries a top-level `hd_extension`
+string; keep it when you copy one.** The help panel grows to fit its
 text and scrolls when it cannot, where the original draws a fixed box
-and wraps into it at a fixed 339 px — a deliberate deviation, and the
-project's rule is that a deviation is marked where it is read, not
-only in the module that implements it. The string has to name the
-339 px wrap, so that the note records the reason rather than merely
-carrying the label. Copy the one from any shipped `help.json`. The
-same key on a single region marks a deviation belonging to that
+and wraps into it at a fixed 339 px — a deliberate difference, and the
+string records it where the file is read, naming the 339 px wrap. The
+same key on a single region marks a difference belonging to that
 region alone; `screens/galaxy_map/help.json` has an example.
 
 `assets/shared/help/help_<lang>.json` is the text, stored **raw**:
@@ -663,11 +658,11 @@ larger than that, it is a deviation, not a measurement.
 
 The spread from step 0 to step 3 is only 23 %, so unlike the stars
 these four steps do not need four separate drawings — the shipped set
-is one master rendered four times. The masters are Data's own HD
+is one master rendered four times. The masters are hand-drawn HD
 pictures and come with the base pack
 (`screens/galaxy_map/assets/ships/_src/<kind>.png`, 1536 x 1024).
 
-**Your mod folder replaces them two ways** (work order 243):
+**Your mod folder replaces them two ways:**
 
 ```
 files/screens/galaxy_map/assets/ships/<kind>/2.png      ONE icon
@@ -696,7 +691,7 @@ decides whether an icon reads as the right size. `layout.json`
   the slots sit only `11 - zoom` px apart.
 - `"width"` matches the width instead. If your drawing is taller than
   the original's 13 x 10, it overflows top and bottom and looks a size
-  too big. That was the first default here, and it was wrong.
+  too big.
 - `"box"` fits entirely inside, never overflows, always smallest.
 - `"area"` matches the box's *area* rather than either edge. For
   artwork whose aspect is nowhere near the original's — the shipped
@@ -804,10 +799,8 @@ in `layout.json`.
 
 The galaxy map's `map_area`, info panel rows, nav buttons and TURN
 boxes are **derived from the HUD's measured layout**, not positioned
-by hand (decision 71; until then they were cut from the holes of a
-frame image, which is gone). Moving one of them by hand slides it off
-its place in the HUD artwork, and the smoke test asserts the two
-agree.
+by hand. Moving one of them by hand slides it off its place in the HUD
+artwork.
 
 Boxes the HUD does not own — the help popup, the system window, the
 fleet box, the `sb_*` sidebar text boxes — are placed by hand and kept
@@ -824,7 +817,7 @@ Start from `screens/_template/`. Key class attributes:
 | `SCREEN_NAME` | Must match the folder name |
 | `GAME_SCREEN_ID` | orion2re screen ID for auto-switching; `None` for sub-screens |
 | `IS_OVERLAY` / `OVERLAY_DIM` | Render above the active screen (popups) |
-| `USE_FRAME` / `FRAME_TITLE` | The HUD title plate and the two frame buttons (decision 71) |
+| `USE_FRAME` / `FRAME_TITLE` | The HUD title plate and the two frame buttons |
 | `FRAME_BTN_LEFT` / `FRAME_BTN_RIGHT` | `("Label", field_id)` button bars |
 
 Rules that keep a screen consistent with the rest:
@@ -839,9 +832,7 @@ Rules that keep a screen consistent with the rest:
   texts belong in `layout.json`; the renderer only lays them out.
   This is also what makes translation possible.
 - **Use `ACTIVATE_FIELD` where a field ID exists.** `INJECT_CLICK`
-  is for radio buttons (type 1) and free map clicks, and it is
-  currently only reliable at a 640x480 window (a known orion2re
-  bug maps injected coordinates as window coordinates).
+  is for radio buttons (type 1) and free map clicks.
 - **Take sizes from `core/zoomtables.py`** rather than tuning them.
 
 ## Gotchas
@@ -856,14 +847,12 @@ Rules that keep a screen consistent with the rest:
   for exactly those, aligned on the baseline. The shipped font
   (Aldrich, OFL) substitutes nothing, so detection finds nothing and
   the call costs what a plain render costs — but a mod may ship a
-  demo font, and this is what keeps it readable. Until 31 August the
-  project shipped a DEMO Bank Gothic that substituted 28 characters,
-  **including the digit 4**, which hid inside every number.
-- **A font you ship in a mod needs its licence next to it.** The
-  smoke test enforces that for the base project.
+  demo font that maps several characters onto one glyph (one such
+  font hid the digit 4 inside every number), and this is what keeps
+  it readable.
+- **A font you ship in a mod needs its licence next to it.**
 - After any change, start OrionLayer (`python main.py` runs without the
-  game) and look at what you changed. The project's own smoke test is the
-  developers' and is not part of this repository.
+  game) and look at what you changed.
 - Some assets are **not in the repository** — the ship steps, the cut
   sidebar icons, the colony output panel's six icons
   (`screens/colony_summary/assets/output/`, 31x31, the size in

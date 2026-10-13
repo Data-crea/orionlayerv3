@@ -383,12 +383,14 @@ def engine_report(tree=None):
     fresh clone on another machine is told WHICH open fixes, not only
     that `version_check` exists. The list's one home is
     `version_check.LOCAL_PATCHES`; smoke check 090r holds these lines,
-    README's table and the fundament's line to it."""
+    the patch table (dev:doc/engine_patches.md) and the fundament's line
+    to it. Every README section a line names is a heading there (090zzzf,
+    work order 249)."""
     import version_check
     out = ["\n  The orion2re build it needs (README, tools/version_check.py):",
            "    the fork Data-crea/orion2re, branch orionlayer (v2.0.0), "
-           "-DORION2RE_EXT=ON, every row of "
-           "README's table; checked by their patch: open fixes "
+           "-DORION2RE_EXT=ON, with every engine change OrionLayer needs; "
+           "checked by their markers: open fixes "
            + ", ".join(str(n) for n in version_check.required_fixes())]
     tree, missing = version_check.tree_report(tree)
     if tree is None:
@@ -397,7 +399,7 @@ def engine_report(tree=None):
         out.append("    no orion2re found here. Without it OrionLayer still "
                    "starts: python main.py shows the screens, with no game.")
         out.append("    To play you need an orion2re built as above: README, "
-                   "\"The orion2re build it needs\", and the fork's own "
+                   "\"Getting started\", step 1, and the fork's own "
                    "README (github.com/Data-crea/orion2re, branch "
                    "orionlayer).")
         out.append("    Once you have the program: python play.py --engine "

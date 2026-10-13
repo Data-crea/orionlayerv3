@@ -4,7 +4,7 @@
     python play.py
 
 THE PLAYER'S START. Until work order 183 a player started orion2re by hand
-in one terminal and `main.py` in another (README's quick start), and the
+in one terminal and `main.py` in another, and the
 original's logos and intro played for 113 s, with their sound, before the
 Extension API came up. Data decided (183): a player skips the intro exactly
 as the tools do and lands in the HD main menu without a key of their own;

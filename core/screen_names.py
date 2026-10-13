@@ -78,7 +78,7 @@ SCREENS = {
     #: 50 has no entry in the SCREEN enum — synthetic value used
     #: only by the ext-API patch in Racial_Option_Screen_ (racesel.cpp)
     #: while Custom Race's own input loop runs. See
-    #: ext_api_dokumentation_v3.md, "racesel.cpp — 3 insertions".
+    #: dev:doc/ext_api_dokumentation_v3.md, "racesel.cpp — 3 insertions".
     50: ("(synthetic)",     "custom_race"),
     #: 51, synthetic too: race SELECTION, reported by the same patch
     #: (`Race_Selection_Screen_`) since work order 128 / open fix 22.

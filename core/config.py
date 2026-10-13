@@ -28,7 +28,7 @@ TARGET_FPS = 60
 # HELLO_REPLY carries only PROTO_VERSION (the wire protocol), and the
 # state snapshot has no version field. Sending it would mean patching
 # orion2re, which we deliberately do not do — see
-# doc/ext_api_dokumentation_v3.md, "What the snapshot deliberately
+# dev:doc/ext_api_dokumentation_v3.md, "What the snapshot deliberately
 # omits".
 #
 # Source of truth, in orion2re:

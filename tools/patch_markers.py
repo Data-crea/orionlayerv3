@@ -33,7 +33,7 @@ LOCAL_PATCHES = {
         "lands somewhere else (open fix 3, the coordinate half)"),
     # Applied 17 September 2026 as found (work order 126 A, open fix 5,
     # orion2re 6598052c); required from work order 192, which gave it its
-    # patch file — until then README's table named it and this list could
+    # patch file — until then the patch table named it and this list could
     # not. The one line carries no comment, so the line is the marker:
     # nothing else in orion2re writes `_old_race` from the loop index.
     "doc/ext_select_race_old_race.patch": (

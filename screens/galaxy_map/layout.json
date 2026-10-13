@@ -1,5 +1,5 @@
 {
-  "_comment": "All galaxy map data. Field IDs verified against the orion2re Galaxy Map field dump (24 fields) in ext_api_dokumentation_v3.md — with one correction from a live screenshot: field 14 (hotkey R) is the RACES button, not Research; the dump's label was a guess. Research is opened via the sidebar in the original. Layout mirrors the original: stardate tops the sidebar column, TURN sits bottom-right (the former status_bar cutout).",
+  "_comment": "All galaxy map data. Field IDs verified against the orion2re Galaxy Map field dump (24 fields) in dev:doc/ext_api_dokumentation_v3.md — with one correction from a live screenshot: field 14 (hotkey R) is the RACES button, not Research; the dump's label was a guess. Research is opened via the sidebar in the original. Layout mirrors the original: stardate tops the sidebar column, TURN sits bottom-right (the former status_bar cutout).",
   "frame": {
     "title_rect": [
       658,
@@ -63,7 +63,7 @@
     }
   ],
   "game_menu_field": {
-    "_source": "MAINSCR: _game_button = Add_Button_Field_(249, 5, ..., \"G\", 0x29) (mainscr.cpp:1389); type 0 and the end corner (307, 21) off the live list (doc/ext_api_dokumentation_v3.md's map dump). Looked up in the LIVE list by type and rect (decision 20), as the bottom bar's buttons are since work order 243: orion2re v2 puts five more hot keys before them, so the old index 6 is another field there.",
+    "_source": "MAINSCR: _game_button = Add_Button_Field_(249, 5, ..., \"G\", 0x29) (mainscr.cpp:1389); type 0 and the end corner (307, 21) off the live list (the map dump in dev:doc/ext_api_dokumentation_v3.md). Looked up in the LIVE list by type and rect (decision 20), as the bottom bar's buttons are since work order 243: orion2re v2 puts five more hot keys before them, so the old index 6 is another field there.",
     "field_type": 0,
     "rect": [249, 5, 307, 21]
   },

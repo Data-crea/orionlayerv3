@@ -11,10 +11,11 @@ subscription constants, and the FIELD_LIST (13 bytes/field) parser
 were each reimplemented independently in core/game_state.py,
 dev:tools/ext_diag.py, and dev:tools/ext_diag_race.py — three copies of the
 same byte offsets, silently able to drift out of sync with each
-other and with ext_api_dokumentation_v3.md.
+other and with dev:doc/ext_api_dokumentation_v3.md.
 
-See ext_api_dokumentation_v3.md for the authoritative protocol
-description (frame format, message types, field-list layout).
+The protocol's home is the engine fork's `docs/extension-api.md`
+(Data-crea/orion2re, branch orionlayer): frame format, message types,
+field-list layout.
 """
 import struct
 
@@ -202,7 +203,7 @@ def parse_field_list_raw(data):
     """Parse a FIELD_LIST payload into raw tuples.
 
     Returns a list of (index, x, y, x_end, y_end, field_type,
-    hotkey) — the byte layout ext_api_dokumentation_v3.md documents
+    hotkey) — the byte layout dev:doc/ext_api_dokumentation_v3.md documents
     under "Field list" (13 bytes/field). Callers that want objects
     (core.game_state.FieldInfo) or dicts wrap this; the byte offsets
     themselves live only here.

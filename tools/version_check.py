@@ -109,8 +109,9 @@ except ImportError:
 #: setup.py` prints them so a fresh clone on another machine learns it
 #: (work order 181). Keyed exactly like LOCAL_PATCHES plus
 #: REPORTED_PATCHES, and a smoke check holds the keys to both and each
-#: number to the README row that names the patch; the numbers are the
-#: README table's, never parsed out of the prose above.
+#: number to the patch table's row that names the patch
+#: (dev:doc/engine_patches.md, out of README since work order 249); the
+#: numbers are the table's, never parsed out of the prose above.
 FIX_NUMBERS = {
     "doc/ext_inject_click.patch": (3,),
     "doc/ext_select_race_old_race.patch": (5,),

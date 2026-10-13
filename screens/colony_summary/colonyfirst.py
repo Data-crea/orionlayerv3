@@ -32,7 +32,7 @@ green run in a state where nothing was measured.
 `ACTIVATE_FIELD` has a single slot: `ext::g_pending_field` is one
 `int16_t` and `ProcessInput` drains the whole queue before the game
 consumes it, so a batch of activations leaves only the last (see
-`doc/ext_api_dokumentation_v3.md` and the fundament). The steps
+dev:doc/ext_api_dokumentation_v3.md and the fundament). The steps
 therefore have to be sent one at a time and CONFIRMED, and this is
 what confirms them.
 """
