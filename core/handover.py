@@ -322,7 +322,8 @@ def overlay_for(app):
             not getattr(app, "connected", False):
         return None
     state = app.client.state
-    name = name_box_for(state)
+    name = name_box_for(state, getattr(getattr(app, "dispatcher", None),
+                                       "top", None))
     if name is not None:
         return ("name", name)
     box = getattr(state, "message_box", None)
@@ -339,11 +340,16 @@ def overlay_for(app):
 HOME_STAR_CORNER = (0x83, 0x92)
 
 
-def name_box_for(state):
+def name_box_for(state, top=None):
     """The game's name box HD draws over the held frame (open fix 87,
-    work order 230 D), or None — not the home star's, the map's own."""
+    work order 230 D), or None — not the home star's, the map's own, and
+    not one the screen on top answers itself (`answers_name_box`: Empire
+    Identity's ruler name, work order 244)."""
     box = getattr(state, "name_box", None)
     if box is None or (box["x"], box["y"]) == HOME_STAR_CORNER:
+        return None
+    answers = getattr(top, "answers_name_box", None)
+    if callable(answers) and answers(box):
         return None
     return box
 

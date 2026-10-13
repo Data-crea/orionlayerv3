@@ -29,7 +29,9 @@ wire, so HD showed the F12 notice (work order 229's "Enter Star Name").
                  ACCEPT (decision 71)
 
 The galaxy map's own home star modal (`screens/galaxy_map/mapmodal.py`,
-work order 177) keeps the home star's box; this overlay takes every other.
+work order 177) keeps the home star's box, and a screen that answers the
+box itself keeps it too (`answers_name_box`: Empire Identity's ruler name,
+work order 244); this overlay takes every other.
 """
 import logging
 import struct as _st

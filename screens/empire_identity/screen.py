@@ -176,6 +176,19 @@ class EmpireIdentityScreen(ScreenBase):
             return False
         return None
 
+    def answers_name_box(self, box):
+        """`core.handover.name_box_for` asks: True while this screen
+        stands for the game's name box itself. The ruler's dialog
+        (`Naming_Popup_`, racesel.cpp:787-823) IS a name box
+        (`namestar::Input_Box_Popup_Animated_`, open fix 87's INBX), at
+        the screen-centre corner it shares with "Enter Star Name"
+        (namestar.cpp:7-12), so only the screen can tell them apart.
+        Work order 244 (N4): without this the generic box covered the
+        screen and took every click — banner, inputs, CANCEL, ACCEPT.
+        After a failed chain the game waits in that dialog, and the
+        generic box answers it in HD."""
+        return self._failed is None
+
     @property
     def busy(self):
         return self._chain is not None
