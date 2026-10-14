@@ -24,9 +24,15 @@ it.
 
 `KEN::Ken_Get_Text_Message_` (ken.cpp) splits the table in two: index
 >= 0x50 goes to KENTEXT1.LBX at index - 0x50, below it to KENTEXT.LBX.
-Only the low table is needed here.
+The arc words are in the low table; the panel's officer mark (86) is in
+KENTEXT1.LBX at 86 - 0x50 = 6.
 
-The four words this takes are `DESIGN::Weapon_Arc_String_`'s
+Since work order 258 it takes the battle panel's two words too
+(`PANEL_MESSAGES`): message 86, the officer's mark
+(`Draw_Crew_Level_Stars_`, cmbtdrw1.cpp:1222-1245), and 0x47, "Immobile"
+(`Draw_Ship_Status_`, :2355).
+
+The four arc words are `DESIGN::Weapon_Arc_String_`'s
 (design.cpp), which tests the arc bits in order and answers with
 message 3, 4, 6 or 5 — and, for 0x10, with the **literal "360"**, which
 is in the engine and not in any table, so it is transcribed in
@@ -40,7 +46,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import lbx                                      # noqa: E402
 from core import paths  # noqa: E402 — work order 229 D: the game folder
-from core.kentext import ARC_MESSAGES, FORMAT_VERSION, string_file  # noqa: E402
+from core.kentext import (ARC_MESSAGES, FORMAT_VERSION, PANEL_MESSAGES,  # noqa: E402
+                          string_file)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LANGUAGES = {"en": 0, "de": 1, "fr": 2, "es": 3, "it": 4}
@@ -71,6 +78,18 @@ def main():
     code = LANGUAGES[args.lang]
     arcs = {str(bit): message(entries, idx, code)
             for bit, idx in sorted(ARC_MESSAGES.items())}
+    # work order 258: the battle panel's words over the status box
+    # `Ken_Get_Text_Message_` (ken.cpp): from 0x50 the second file
+    high = None
+    panel = {}
+    for idx in sorted(PANEL_MESSAGES.values()):
+        if idx >= 0x50:
+            if high is None:
+                high = lbx.read_entries(os.path.join(
+                    os.path.dirname(args.lbx), "KENTEXT1.LBX"))
+            panel[str(idx)] = message(high, idx - 0x50, code)
+        else:
+            panel[str(idx)] = message(entries, idx, code)
     out = args.out or os.path.join(BASE_DIR, *string_file(args.lang).split("/"))
     os.makedirs(os.path.dirname(out), exist_ok=True)
     doc = {
@@ -83,11 +102,14 @@ def main():
         "format": FORMAT_VERSION,
         "entries": len(entries),
         "arcs": arcs,
+        "panel": panel,
     }
     with open(out, "w", encoding="utf-8") as handle:
         json.dump(doc, handle, indent=2, ensure_ascii=False)
         handle.write("\n")
-    print(f"{len(arcs)} arc words -> {out}")
+    print(f"{len(arcs)} arc words, {len(panel)} panel words -> {out}")
+    for idx, word in sorted(panel.items(), key=lambda kv: int(kv[0])):
+        print(f"   message {idx}  {word!r}")
     for bit, word in sorted(arcs.items(), key=lambda kv: int(kv[0])):
         print(f"   0x{int(bit):02X}  {word!r}")
     return 0

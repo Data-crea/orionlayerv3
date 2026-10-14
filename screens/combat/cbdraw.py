@@ -287,8 +287,8 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
             continue
         if u.get("reflected_damage_pool", 0) > 0 and \
                 not u.get("plasma_web_damage") and \
-                u.get("stasis_source_idx", 255) == 255 and \
-                u.get("black_hole_source_idx", 255) == 255:
+                unit_ref(u, "stasis_source_idx") is None and \
+                unit_ref(u, "black_hole_source_idx") is None:
             draw_absorber(surface, cam, art, u, i, glow_clock, cache,
                           (dx, dy))
         if flag in cbcloak.CLOAKED:
@@ -324,7 +324,7 @@ def lasting_overlay(surface, cam, art, u, clock, cache, off=(0, 0)):
     from . import cbsfx
     wx, wy = centre(u)
     wx, wy = wx + off[0], wy + off[1]
-    if u.get("stasis_source_idx", 255) != 255:
+    if unit_ref(u, "stasis_source_idx") is not None:
         e, mirror, flip = cbsfx.stasis_ball(art, u)
         pic = art.surface("cmbtsfx", e, 0, None, mirror, flip,
                           glass="shield")
@@ -333,7 +333,7 @@ def lasting_overlay(surface, cam, art, u, clock, cache, off=(0, 0)):
         n = max(1, art.frame_count("cmbtsfx", e))
         pic = art.surface("cmbtsfx", e, int(clock) % n, None, mirror, flip,
                           glass="plasma_web")
-    elif u.get("black_hole_source_idx", 255) != 255:
+    elif unit_ref(u, "black_hole_source_idx") is not None:
         e = cbsfx.BHG.get(int(u["size_class"]), 44)
         frame = (int(clock) // 2) % 8 + (0 if u.get("black_hole_flag") == 1
                                          else 8)
@@ -356,8 +356,8 @@ def draw_tractors(surface, cam, art, combat, cache):
     from . import cbsfx
     units = combat["units"]
     for i, u in enumerate(units):
-        t = int(u.get("special_cooldown", 255))
-        if u["unit_status"] != 0 or t == 255 or t == i or t >= len(units) \
+        t = unit_ref(u, "special_cooldown")
+        if u["unit_status"] != 0 or t is None or t == i or t >= len(units) \
                 or units[t]["unit_status"] != 0:
             continue
         a = tuple(int(v) for v in centre(u))
@@ -423,6 +423,21 @@ def draw_absorber(surface, cam, art, u, i, clock, cache, off=(0, 0)):
 #: MONSTER.LBX, `previous_owner < MAX_PLAYERS` picks CMBTSHP
 #: (cmbtdrw1.cpp:2535-2545); `previous_owner > 9` is only the glow's test.
 MAX_PLAYERS = 8
+
+
+def unit_ref(u, field):
+    """The unit a unit-index field names, or None for "none" (work order
+    258). The field's "none" is the all-ones value of its width: 0xFF in the
+    old engine's u8, 0xFFFF since orion2re v2 widened `stasis_source_idx`,
+    `black_hole_source_idx` and `special_cooldown` to uint16 (orion2.h,
+    s_combat_data) — compared with 255 alone, every unit read as held in
+    stasis and wore the stasis ball on the map. A battle has far fewer than
+    255 units, so anything from 255 up is "none" in either engine."""
+    v = u.get(field)
+    if v is None:
+        return None
+    v = int(v)
+    return None if v < 0 or v >= 255 else v
 
 
 def from_monster_file(u):

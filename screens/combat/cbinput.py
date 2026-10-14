@@ -150,7 +150,8 @@ class CombatInput:
             if self._board:
                 self._board = False
                 self._send("board", target)
-            elif c["units"][target].get("stasis_source_idx", 255) != 255:
+            elif cbdraw.unit_ref(c["units"][target],
+                                   "stasis_source_idx") is not None:
                 # TRANSCRIPTION `release_stasis` (work order 214): a click
                 # on an enemy held in a stasis field asks to release it
                 # (KENTEXT 61) and releases it on YES, as the original's

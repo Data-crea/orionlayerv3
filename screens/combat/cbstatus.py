@@ -41,16 +41,18 @@ of the engine sets it, :16).
 HD EXTENSION `status_painted`: a painted unit (`cbart.hd_factor` > 1) is
 drawn at the box's scale over the rings, which keep the stored drawing's
 outline; the box is drawn as large as the panel's room allows.
-DEVIATION `status_words`: the officer's mark (KENTEXT 86, "(L)" in the
-English game) and "Immobile" (KENTEXT 0x47) are OrionLayer's words, as the
-rest of the panel (`hud_panel`).
+TRANSCRIPTION `status_words` (work order 258): the officer's mark and
+"Immobile" are the game's own words in its language — KENTEXT 86 ("(L)",
+German "(A)") and 0x47 ("Immobile", "Unbeweglich"), `core.kentext`; in
+HD's font, as the rest of the panel (`hud_panel`). Without the extracted
+file, OrionLayer's words.
 OMISSION `status_planet`: the planet's box (its picture and its defences'
 names, :2068-2129, and its bars, :958-994) is not this — the panel keeps
 HD's rings for the planet.
-UNVERIFIED `status_monster`: a monster's bars (builder 10 and up,
-:1087-1138) are transcribed from the source; no battle with a monster was
-held against the engine's frame in work order 256, nor a unit whose
-internal systems were hit (the internals bar's damage).
+UNVERIFIED `status_internals`: a ship's internals bar with its internal
+systems hit was not seen live (work order 258's runs never reached them);
+a monster's bars (builder 10 and up, :1087-1138), undamaged and damaged,
+were held against the engine's hover box in work order 258, 0 differing.
 """
 import numpy as np
 import pygame
@@ -98,23 +100,74 @@ MAX_PLAYERS = 8
 #: `Draw_Crew_Level_Stars_`: a star per crew level above green, 11 apart.
 STAR_STEP = 11
 
-#: HD EXTENSION `shield_from_painted` (work order 257, variant B, OFF by
-#: default): with ORIONLAYER_SHIELD_OUTLINE=painted the rings round a
-#: painted unit are grown from the painted picture's own outline, as it
-#: is turned and mirrored for the facing, by the same steps at the
-#: picture's k (`shield_canvas(k)`, `outline_thick`, the masks k x k per
-#: pixel). A unit without a painted picture keeps the original's rings
-#: either way. Whether B replaces A is Data's decision (work order 257).
+#: HD EXTENSION `shield_from_painted` (work order 257, variant B; the
+#: default since work order 258, Data's decision): the rings round a
+#: painted unit are grown from the painted picture's own outline, as it is
+#: turned and mirrored for the facing, by the same steps at the picture's
+#: k (`shield_canvas(k)`, `outline_thick`, the masks k x k per pixel, their
+#: steps kept). DEVIATION `painted_rings`: original = the rings follow the
+#: stored drawing's outline; HD = round a painted unit they follow the
+#: painting. A unit without a painted picture keeps the original's rings,
+#: pixel for pixel. ORIONLAYER_SHIELD_OUTLINE=original switches back to
+#: variant A for comparisons.
 OUTLINE_ENV = "ORIONLAYER_SHIELD_OUTLINE"
 #: How many variant-B ring pictures are kept (one is 98 k square: 2.4 MB
 #: at k = 8).
 PAINTED_KEPT = 16
 
 
+#: The shield's colours a mod may give (work order 258, Data: "the green
+#: stays generated, only its colours become replaceable"): HD EXTENSION
+#: `shield_colours`. The project's file is empty — the game's own colours,
+#: the 256 pixel match; the player's mod folder replaces it.
+SHIELD_COLOURS = "screens/combat/assets/shield_colours.json"
+RING_FIRST, RING_LAST = 0x50, 0x57
+_ring_colours = {}
+
+
+def ring_colours():
+    """{index: (r, g, b)} for the ring colours a mod gives, read once."""
+    if "v" in _ring_colours:
+        return _ring_colours["v"]
+    import json
+    import logging
+    from core import resources
+    got = {}
+    path = resources.res.resolve(SHIELD_COLOURS)
+    try:
+        doc = json.load(open(path, encoding="utf-8")) if path else {}
+        for k, v in (doc.get("colours") or {}).items():
+            i = int(k, 0)
+            if isinstance(v, str):
+                v = v.lstrip("#")
+                rgb = tuple(int(v[j:j + 2], 16) for j in (0, 2, 4))
+            else:
+                rgb = tuple(int(c) for c in v)
+            if not RING_FIRST <= i <= RING_LAST or len(rgb) != 3 or \
+                    not all(0 <= c <= 255 for c in rgb):
+                raise ValueError(f"{k}: {v}")
+            got[i] = rgb
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        logging.getLogger("combat").warning(
+            "mod: %s cannot be read (%s) — the game's shield colours are "
+            "used", SHIELD_COLOURS, exc)
+        got = {}
+    _ring_colours["v"] = got
+    return got
+
+
+def palette(art):
+    """The battle palette with a mod's ring colours (`ring_colours`)."""
+    pal = art.palette_with()
+    pal.update(ring_colours())
+    return pal
+
+
 def painted_outline():
-    """Whether variant B is switched on."""
+    """Whether variant B draws (the default); "original" in the
+    environment switches to variant A."""
     import os
-    return os.environ.get(OUTLINE_ENV, "").strip().lower() == "painted"
+    return os.environ.get(OUTLINE_ENV, "").strip().lower() != "original"
 
 
 def _cdiv(a, b):
@@ -235,12 +288,19 @@ def satellite(unit):
 
 
 class _View:
-    """What `monsterhull.armour` reads, from a wire unit."""
+    """What `monsterhull.armour` reads, from a wire unit. The bars ask
+    `Does_Combat_Ship_Have_Special_` (combinit.cpp:483-493): a system that
+    is DAMAGED counts as absent, so a damaged Heavy Armor no longer triples
+    the whole — and with the remaining armour then above it, the original
+    greys nothing (work order 258, seen live on a hovered Def Doom Star)."""
 
     def __init__(self, unit, size):
         self.size = size
         self.armor_type = int(unit["armor_type"])
-        self.special_device_flags = unit["special_device_flags"]
+        damaged = unit.get("special_device_damage_flags") or [0] * 5
+        self.special_device_flags = [int(f) & ~int(d) & 0xFF for f, d in
+                                     zip(unit["special_device_flags"],
+                                         damaged)]
 
 
 def armour_whole(unit):
@@ -445,7 +505,7 @@ class StatusPicture:
             with_stars[0][y:y + h, x:x + w][on] = part[on]
             with_stars[1][y:y + h, x:x + w][on] = True
         self.indices = with_stars + (hull_box,)
-        pal = art.palette_with()
+        pal = palette(art)
         box, bare = (_surface(i, d, pal) for i, d in ((idx, drawn),
                                                        (bare_idx, bare_drawn)))
         star = art.surface("combat", CREW_STAR)
@@ -472,7 +532,7 @@ class StatusPicture:
             sil = silhouette(picture)
             canvas, hull = shield_canvas(sil, unit, *self._masks_now, k)
             rings = np.where(hull, 0, canvas).astype(np.uint8)
-            got = _surface(rings, rings != 0, art.palette_with())
+            got = _surface(rings, rings != 0, palette(art))
             if len(self._painted) >= PAINTED_KEPT:
                 self._painted.clear()
             self._painted[key] = got
@@ -497,6 +557,50 @@ def _surface(idx, drawn, pal):
                                    "RGBA").copy()
 
 
+_STARS = {}
+
+
+def stars_tile(art, k):
+    """The status box's star picture (COMBAT.LBX 0x2D, 88 x 89) at the
+    box's scale `k`, opaque, for the panel's other windows (work order 258,
+    Data: "the same blue background as the box on the left"); None without
+    the game's pictures."""
+    if art is None:
+        return None
+    key = (id(art), round(k, 3))
+    if key in _STARS and _STARS[key][0] is art:
+        return _STARS[key][1]
+    px = StatusPicture._decode(art.blob("combat", STARS_BG), 0)
+    if px is None:
+        return None
+    img = _surface(px, np.ones_like(px, bool), palette(art))
+    img = cbart.display_format(pygame.transform.scale(
+        img, (max(1, round(img.get_width() * k)),
+              max(1, round(img.get_height() * k)))))
+    _STARS.clear()
+    _STARS[key] = (art, img)
+    return img
+
+
+def tile(surface, rect, img):
+    """`img` repeated over `rect`, clipped to it."""
+    clip = surface.get_clip()
+    surface.set_clip(rect.clip(clip) if clip else rect)
+    w, h = img.get_size()
+    for y in range(rect.y, rect.bottom, h):
+        for x in range(rect.x, rect.right, w):
+            surface.blit(img, (x, y))
+    surface.set_clip(clip)
+
+
+def word(ken, what, fallback):
+    """The game's own word over the box in the game's language (KENTEXT,
+    `core.kentext.PANEL_MESSAGES`, work order 258), else OrionLayer's."""
+    got = ken.panel_word(what) if ken is not None and \
+        hasattr(ken, "panel_word") else None
+    return got or lang.tr(fallback)
+
+
 def fit(rect):
     """The box's scale in `rect`: as large as fits (a whole multiple
     would leave a quarter of the room empty at 3840 x 2160)."""
@@ -504,7 +608,7 @@ def fit(rect):
 
 
 def draw(surface, rect, status, art, colour, unit, monster, picture, style,
-         scale):
+         scale, ken=None):
     """The box centred in `rect`, as large as fits. False when it could
     not be built (the caller then draws HD's rings)."""
     built = status.build(art, colour, unit, monster)
@@ -564,12 +668,13 @@ def draw(surface, rect, status, art, colour, unit, monster, picture, style,
     from core.hud import text as hudtext
     small = max(9, int(16 * scale))
     if int(unit["officer_idx"]) > -1:
-        img = style.render_text(lang.tr("Officer"), small,
+        img = style.render_text(word(ken, "officer", "Officer"), small,
                                 hudtext.colour("value")[:3])
         surface.blit(img, img.get_rect(topright=at(AT[0] + 87 - BOX.x,
                                                    AT[1] + 2 - BOX.y)))
     if int(unit["current_speed"]) <= 0:
-        img = style.render_text(lang.tr("Immobile"), small, (230, 60, 50))
+        img = style.render_text(word(ken, "immobile", "Immobile"), small,
+                                (230, 60, 50))
         surface.blit(img, img.get_rect(center=at(AT[0] + 45 - BOX.x,
                                                  AT[1] + 70 - BOX.y)))
     return True

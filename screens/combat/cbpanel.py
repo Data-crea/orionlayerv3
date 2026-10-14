@@ -247,15 +247,65 @@ class Panel:
                           time.monotonic())
         return True
 
+    #: The original's boxes left to right (COMBAT.LBX 0 at (0, 351)): the
+    #: unit's name and picture (13-104), the weapons list (112-264), the
+    #: buttons (272-398), the systems or the hovered unit (400-490), the
+    #: reduced map (500-621) — their widths share what the picture box,
+    #: the systems box and the map leave (work order 258).
+    SHARES = {"weapons": 152, "buttons": 126}
+
+    @staticmethod
+    def _spacing(scale):
+        """(gap between two windows, inset inside one): the shell's tokens
+        (`core.hud.shell`, decision 89), at the window's scale."""
+        st = hudstyle.get()
+        return (int(round(st.get("shell.panel_gap") * scale)),
+                int(round(st.get("shell.panel_inset") * scale)))
+
+    @classmethod
+    def windows(cls, size, scale):
+        """Each group of the panel in its own window, in the original's
+        order and grouping (work order 258, Data): {"status", "weapons",
+        "buttons", "systems", "map"} -> rect, inside the band, which keeps
+        its height (the field above it is unchanged)."""
+        gap, ins = cls._spacing(scale)
+        band = cls.area(*size)
+        area = band.inflate(-2 * ins, -2 * ins)
+        text = max(10, int(22 * scale))
+        small = max(9, int(18 * scale))
+        title = text + ins
+        inner_h = area.h - 2 * ins
+        map_w = int(round(inner_h * cbmap.NATIVE_W / cbmap.NATIVE_H)) + 2 * ins
+        box_h = inner_h - title
+        status_w = int(round(box_h * cbstatus.BOX.w / cbstatus.BOX.h)) + \
+            2 * ins
+        systems_w = max(status_w, int(small * 12.5) + 2 * ins)
+        rest = area.w - map_w - status_w - systems_w - 4 * gap
+        weights = sum(cls.SHARES.values())
+        weapons_w = int(rest * cls.SHARES["weapons"] / weights)
+        # on a wide window the buttons keep the size they have at 16:9
+        # (their window's share at 1920 x 1080, 540 reference px); the
+        # weapons list takes the rest
+        buttons_w = min(rest - weapons_w, int(540 * scale))
+        weapons_w = rest - buttons_w
+        out, x = {}, area.x
+        for key, w in (("status", status_w), ("weapons", weapons_w),
+                       ("buttons", buttons_w), ("systems", systems_w),
+                       ("map", map_w)):
+            out[key] = pygame.Rect(x, area.y, w, area.h)
+            x += w + gap
+        out["map"].width = area.right - out["map"].x
+        return out
+
     @classmethod
     def status_room(cls, size, scale):
-        """The room of the unit's status box (`cbstatus`): the right half
-        of the panel's left column — one home for the panel's geometry
-        and for the tools that measure the box (work order 257)."""
-        pad = int(16 * scale)
-        inner = cls.area(*size).inflate(-2 * pad, -2 * pad)
-        left = pygame.Rect(inner.x, inner.y, int(inner.w * 0.30), inner.h)
-        return pygame.Rect(left.centerx, left.y, left.w // 2, left.h)
+        """The room of the unit's status box (`cbstatus`): the status
+        window under its title — one home for the panel's geometry and for
+        the tools that measure the box (work orders 257, 258)."""
+        _gap, ins = cls._spacing(scale)
+        r = cls.windows(size, scale)["status"].inflate(-2 * ins, -2 * ins)
+        title = max(10, int(22 * scale)) + ins
+        return pygame.Rect(r.x, r.y + title, r.w, r.h - title)
 
     @staticmethod
     def area(win_w, win_h):
@@ -272,61 +322,98 @@ class Panel:
         (art, colour, unit, monster) for the status picture, None for the
         planet."""
         band = self.area(*surface.get_size())
-        hud.panel(surface, band.inflate(-8, -8), scale, dense=True)
-        pad = int(16 * scale)
-        inner = band.inflate(-2 * pad, -2 * pad)
+        gap, ins = self._spacing(scale)
+        pad = ins
         size = max(10, int(22 * scale))
         small = max(9, int(18 * scale))
         self.rects, self.rows, self.tabs = {}, [], {}
         self.all_buttons, self.help_rows = {}, []     # `cbhelp`'s
         self.left = self.mid = self.facts = self.map = None
+        wins = self.windows(surface.get_size(), scale)
+        # one window per group (work order 258): the shell's panel, its
+        # fill and glass (decisions 93, 94), the shell's gap and inset
+        for key in ("status", "weapons", "buttons", "systems", "map"):
+            hud.panel(surface, wins[key], scale, dense=True)
+        # Data (work order 258): the weapons, buttons and systems windows
+        # on the status box's own star picture (COMBAT.LBX 0x2D), tiled at
+        # the box's scale inside the window's inset
+        if status is not None:
+            self._art = status[0]
+        stars = cbstatus.stars_tile(getattr(self, "_art", None),
+                                    cbstatus.fit(self.status_room(
+                                        surface.get_size(), scale)))
+        if stars is not None:
+            for key in ("weapons", "buttons", "systems"):
+                cbstatus.tile(surface, wins[key].inflate(-2 * ins, -2 * ins),
+                              stars)
         if unit is None:
             return
-        # the name, the systems and the picture with its shields (left)
-        left = pygame.Rect(inner.x, inner.y, int(inner.w * 0.30), inner.h)
+        # the unit's name over its picture and bars, as the original's
+        # title box (cmbtdrw1.cpp:517-521: centred over the picture)
+        left = wins["status"]
+        head = pygame.Rect(left.x + ins, left.y + ins, left.w - 2 * ins,
+                           size + ins // 2)
         hudtext.blit(surface, style.render_text(unit["name"], size,
                                                 hudtext.colour("value")[:3]),
-                     pygame.Rect(left.x, left.y, left.w, size + 4),
-                     align="left")
-        facts = (("Structure", unit["structure_max"] - unit["structure_damage"],
-                  unit["structure_max"]),
-                 ("Armor", unit["armor_remaining"], None),
-                 # TRANSCRIPTION (work order 208 A3): the SHIELD SYSTEM's
-                 # hits, as `Draw_Internals_Display_` prints them
-                 # (cmbtdrw1.cpp:387-395) — "No Shields" for shield_type 0
-                 # — not the arcs' strength, which the rings show.
-                 (("Shields", unit["shield_current_hits"],
-                   unit["shield_max_hits"]) if unit["shield_type"] else
-                  ("No Shields", "", None)),
-                 ("Drive", unit["drive_current_hits"], unit["drive_max_hits"]),
-                 ("Computer", unit["computer_current_hits"],
-                  unit["computer_max_hits"]),
-                 ("Remaining", unit["movement_left"], unit["current_speed"]))
-        y = left.y + size + 8
-        for label, value, top in facts:
-            text = (f"{lang.tr(label)}  {value}" + (f" / {top}" if top else
-                                                     "")).rstrip()
+                     head, align="center")
+        # TRANSCRIPTION `systems_box` (work order 258): the systems in their
+        # own window as `Draw_Internals_Display_` prints them (cmbtdrw1.cpp
+        # :360-425) — the title (KENTEXT 36), then Drive (14) or "No Drive"
+        # (37) for a unit without one, Shields (39) or "No Shields" (38),
+        # Computer (21), Structure (16), Armor (18), each its current
+        # value right-aligned, ten rows apart from y + 4; Max Speed (40)
+        # at y + 64 and Remaining (90) at y + 75 — the game's words in its
+        # language (`core.kentext`, OrionLayer's without the file). The
+        # Shields line is the shield SYSTEM's hits (work order 208 A3).
+        def word(key, fallback):
+            got = ken.panel_word(key) if ken is not None and \
+                hasattr(ken, "panel_word") else None
+            return got or lang.tr(fallback)
+        drive = (word("no_drive", "No Drive"), "") \
+            if int(unit.get("ftl_type", 1)) == 0 else \
+            (word("drive", "Drive"), unit["drive_current_hits"])
+        shields = (word("shields", "Shields"), unit["shield_current_hits"]) \
+            if unit["shield_type"] else (word("no_shields", "No Shields"), "")
+        facts = ((4, *drive), (14, *shields),
+                 (24, word("computer", "Computer"),
+                  unit["computer_current_hits"]),
+                 (34, word("structure", "Structure"),
+                  unit["structure_max"] - unit["structure_damage"]),
+                 (44, word("armor", "Armor"), unit["armor_remaining"]),
+                 (64, word("max_speed", "Max Speed"), unit["current_speed"]),
+                 (75, word("remaining", "Remaining"), unit["movement_left"]))
+        sysw = wins["systems"].inflate(-2 * ins, -2 * ins)
+        hudtext.blit(surface, style.render_text(
+            word("systems", "Systems"), size, hudtext.colour("value")[:3]),
+            pygame.Rect(sysw.x, sysw.y, sysw.w, size + ins // 2),
+            align="center")
+        top = sysw.y + size + ins
+        # the rows' pitch is the original's ten of its 85: the words keep
+        # inside it (`text` at most the panel's small size)
+        pitch = (sysw.bottom - top) * 10 / 85
+        text = max(8, min(small, int(pitch * 0.92)))
+        for at, label, value in facts:
+            y = top + int((sysw.bottom - top - text) * (at - 4) / 71)
+            row = pygame.Rect(sysw.x, y, sysw.w, text + 2)
             hudtext.blit(surface, style.render_text(
-                text, small, hudtext.colour("label")[:3]),
-                pygame.Rect(left.x, y, left.w // 2, small + 2), align="left")
-            y += small + 3
+                label, text, hudtext.colour("label")[:3]), row, align="left")
+            if value != "":
+                hudtext.blit(surface, style.render_text(
+                    str(value), text, hudtext.colour("value")[:3]), row,
+                    align="right")
         # the original's status picture (work order 256, `cbstatus`); the
         # planet, or a unit whose pictures are missing, keeps HD's rings
         box = self.status_room(surface.get_size(), scale)
         if status is None or not cbstatus.draw(
-                surface, box, self.status, *status, picture, style, scale):
+                surface, box, self.status, *status, picture, style, scale,
+                ken=ken):
             draw_shields(surface, box, unit, picture)
-        # the reduced map at the right end, as the original's (work order
-        # 209 B1, `cbmap`); the room is taken from the weapons column, so the
-        # buttons keep their size and move left by the map's width
-        self.map = cbmap.rect_for(inner)
-        # the weapons — or the special systems — (middle): the toggle above
-        mid = pygame.Rect(left.right + pad, inner.y,
-                          int(inner.w * 0.40) - self.map.w - pad, inner.h)
-        self.left, self.mid = left, mid
-        self.facts = pygame.Rect(left.x, left.y, left.w // 2, left.h)
-        right = pygame.Rect(mid.right + pad, inner.y,
-                            self.map.x - mid.right - 2 * pad, inner.h)
+        # the reduced map in its window at the right end (work order 209
+        # B1, `cbmap`), the original's 121:102
+        self.map = cbmap.rect_for(wins["map"].inflate(-2 * ins, -2 * ins))
+        mid = wins["weapons"].inflate(-2 * ins, -2 * ins)
+        self.left, self.mid, self.facts = left, mid, wins["systems"]
+        right = wins["buttons"].inflate(-2 * ins, -2 * ins)
         rows = (len(BUTTONS) + 1) // 2
         bw = (right.w - pad) // 2
         bh = max(small + 8, (right.h - (rows - 1) * (pad // 2)) // rows)

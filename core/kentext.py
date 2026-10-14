@@ -29,6 +29,17 @@ ARC_MESSAGES = {
     0x08: 5,    # REAR
 }
 
+#: The battle panel's words over the unit's status box (work order 258):
+#: what -> KENTEXT message (`KEN::Ken_Get_Text_Message_`, below 0x50 so
+#: KENTEXT.LBX): the officer's mark (cmbtdrw1.cpp:1222-1245, "(L)" in the
+#: English game) and "Immobile" (cmbtdrw1.cpp:2355).
+PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
+                  # the systems box (`Draw_Internals_Display_`,
+                  # cmbtdrw1.cpp:360-425), work order 258
+                  "systems": 36, "drive": 14, "no_drive": 37, "shields": 39,
+                  "no_shields": 38, "computer": 21, "structure": 16,
+                  "armor": 18, "max_speed": 40, "remaining": 90}
+
 #: The bits in the order the original tests them, 0x10 last.
 ARC_ORDER = (0x01, 0x02, 0x04, 0x08, 0x10)
 
@@ -50,6 +61,7 @@ class ArcWords:
     def __init__(self, language="en", root=None):
         self.language = language
         self.arcs = {}
+        self.panel = {}
         self.absent = ""
         self._load(root or os.path.dirname(
             os.path.dirname(os.path.abspath(__file__))))
@@ -75,10 +87,19 @@ class ArcWords:
             return
         self.arcs = {int(k): v for k, v in
                      lang.decode(doc.get("arcs") or {}, language).items()}
+        # absent from a file extracted before work order 258: the panel
+        # then says so with OrionLayer's word (`panel_word`)
+        self.panel = {int(k): v for k, v in
+                      lang.decode(doc.get("panel") or {}, language).items()}
 
     @property
     def available(self):
         return bool(self.arcs)
+
+    def panel_word(self, what):
+        """The game's word for `what` in `PANEL_MESSAGES`, or None (the
+        file predates work order 258: run the extractor again)."""
+        return self.panel.get(PANEL_MESSAGES[what])
 
     def arc(self, flags):
         """The word for a firing arc, or None.

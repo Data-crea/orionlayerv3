@@ -77,7 +77,7 @@ def in_reach(units, source, centre, radius_sq):
     out = []
     for i, u in enumerate(units):
         if i == 0 or i == source or u["unit_status"] != 0 or \
-                u.get("stasis_source_idx", 255) != 255 or \
+                cbdraw.unit_ref(u, "stasis_source_idx") is not None or \
                 int(u.get("special_status_flag", 0)) == 4:
             continue
         cx, cy = cbdraw.centre(u)

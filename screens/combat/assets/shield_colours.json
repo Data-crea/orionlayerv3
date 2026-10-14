@@ -1,0 +1,4 @@
+{
+  "_comment": "The battle panel's shield rings, palette indices 0x50 (innermost of the ramp) to 0x57 (outermost): work order 258. Empty means the game's own colours, so the panel matches the original pixel for pixel. A mod replaces this file in the player's mod folder (files/screens/combat/assets/shield_colours.json) and names any of the eight as \"0x50\": \"#rrggbb\" or [r, g, b]; the green is still grown from the outline, only its colours change.",
+  "colours": {}
+}
