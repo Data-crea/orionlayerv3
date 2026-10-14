@@ -619,6 +619,11 @@
     "Keeps every setting as it stands and goes back to Game Settings. Most settings already apply as you change them; the player colours, the mod folder and the language need a restart, and the window says so.": "Behält jede Einstellung, wie sie ist, und kehrt zu den Spieleinstellungen zurück. Die meisten Einstellungen wirken schon beim Ändern; Spielerfarben, Mod-Ordner und Sprache brauchen einen Neustart, und das Fenster sagt es.",
     "A window onto space with a panel, a field, a chosen field and a button over it, drawn as every screen draws them: the frame colour, the glass and the box fill show here as you set them.": "Ein Fenster ins All mit einem Panel, einem Feld, einem gewählten Feld und einer Schaltfläche darüber, gezeichnet wie auf jedem Bildschirm: Rahmenfarbe, Glas und Boxfüllung zeigen sich hier, während du sie einstellst.",
     "MOD FILES": "MOD-DATEIEN",
-    "How many files of the mod folder OrionLayer uses — so you can see the folder was found. After switching the folder on, the progress of reading the game's pictures shows here.": "Wie viele Dateien des Mod-Ordners OrionLayer verwendet — so siehst du, dass der Ordner gefunden wurde. Nach dem Einschalten zeigt sich hier der Fortschritt beim Lesen der Spielbilder."
+    "How many files of the mod folder OrionLayer uses — so you can see the folder was found. After switching the folder on, the progress of reading the game's pictures shows here.": "Wie viele Dateien des Mod-Ordners OrionLayer verwendet — so siehst du, dass der Ordner gefunden wurde. Nach dem Einschalten zeigt sich hier der Fortschritt beim Lesen der Spielbilder.",
+    "Location": "Speicherort",
+    "Open mod folder": "Mod-Ordner öffnen",
+    "Mod folder:": "Mod-Ordner:",
+    "OPEN MOD FOLDER": "MOD-ORDNER ÖFFNEN",
+    "Opens the mod folder in your file manager — where OrionLayer looks for your pictures and texts while the mod folder is on. It is created if it is not there yet, so you can find it before switching mods on. Where no file manager answers, the folder's path is shown at the bottom of the window.": "Öffnet den Mod-Ordner in deinem Dateimanager — dort sucht OrionLayer deine Bilder und Texte, solange der Mod-Ordner an ist. Gibt es ihn noch nicht, wird er angelegt, so findest du ihn schon vor dem Einschalten. Antwortet kein Dateimanager, steht der Pfad des Ordners unten im Fenster."
   }
 }

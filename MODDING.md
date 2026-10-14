@@ -49,7 +49,10 @@ switched on before stays on). Switching it on extracts the
 game's pictures you have not extracted yet — the row says this can take
 a while and shows how far it is — then writes the template and the frame
 templates into the folder (`core/modsetup.py`). Switching it off leaves
-your files where they are.
+your files where they are. The same SYSTEM tab of the OrionLayer settings
+window has **Open mod folder**: it opens the folder in your file manager,
+creating it if it is not there yet, whether the switch is on or off; where
+no file manager answers, the window shows the folder's path instead.
 
 ### Frames
 

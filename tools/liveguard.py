@@ -147,16 +147,26 @@ def snapshot(dest, game_dir=None, root=None, config_dir=None):
 #: loadsave.cpp:357-359 in 1.60; v2 writes ORION2RE.SET, loadsave.cpp:996)
 #: — work order 252 found it on every run of 251 and 252.
 ENGINE_SETTINGS = ("MOX.SET", "ORION2RE.SET")
+#: The autosave: TURN writes it (Save_Game_, filedef.cpp:64), so a run that
+#: ends a turn changes it; until work order 254 it was put back by hand.
+AUTOSAVE = ("SAVE10.GAM",)
+#: Everything a live run rewrites as a matter of course, put back by
+#: the store's `dev:tools/liverun.py` after every run (work orders 252, 254).
+RUN_REWRITES = ENGINE_SETTINGS + AUTOSAVE
 
 
-def restore_engine_settings(dest, log=print):
-    """Put the engine's settings files back from the snapshot `dest` —
-    which must be one taken BEFORE its engine started (a later one holds
-    the loaded game's) — and prove them equal. Returns the keys restored."""
-    _, restored = verify(dest, restore=True, only=ENGINE_SETTINGS,
+def restore_engine_settings(dest, log=print, names=ENGINE_SETTINGS):
+    """Put the engine's settings files — with `names=RUN_REWRITES` the
+    autosave too — back from the snapshot `dest`, which must be one taken
+    BEFORE its engine started (a later one holds the loaded game's), and
+    prove each equal (`verify` compares the hash of what it copied).
+    Returns the keys restored."""
+    _, restored = verify(dest, restore=True, only=names,
                          log=lambda _m: None)
     for key in restored:
-        log(f"RESTORED  {key}  (the engine rewrites it on every load)")
+        why = ("TURN writes it" if key.endswith(AUTOSAVE)
+               else "the engine rewrites it on every load")
+        log(f"RESTORED  {key}  ({why})")
     return restored
 
 

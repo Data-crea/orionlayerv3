@@ -19,7 +19,10 @@ window does: no click under it reaches the game, it closes with the
 dialog, and APPLY & CLOSE, the X and ESC all write the player's settings
 (`gmorion.save`) and go back to Game Settings — what ACCEPT and the
 overlay's exit did for the rows before. Data's answer kept the functions;
-RESET ALL and OPEN FOLDER of the mockup are not built (251 P1).
+RESET ALL of the mockup is not built (251 P1, 252); OPEN FOLDER is the
+SYSTEM tab's "Open mod folder" (254, `core.openfolder`). The X keeps the
+values as APPLY & CLOSE does — no cancel, as in the original's dialogs
+(Data, 252 P3).
 
 ONE GEOMETRY (decision 5): `geometry` is the only place the window's
 rects are computed — for drawing, clicking and the right-click help.
@@ -46,7 +49,7 @@ TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
                         "fill_tone")),
         ("gameplay", ("floor", "monsters")),
         ("graphics", ("frame_rate", "painted", "livery")),
-        ("system", ("mods", "mod_files", "language")))
+        ("system", ("mods", "mod_files", "mod_open", "language")))
 TAB_NAMES = tuple(name for name, _ in TABS)
 #: The window in the game window: its height's share, its width capped by
 #: the screen's width and by its own height.
@@ -77,6 +80,8 @@ def is_open(screen):
 
 
 def open_window(screen):
+    from core import openfolder
+    openfolder.forget()
     screen.orionlayer = Window()
     log.info("game menu: OrionLayer settings opened")
 
@@ -186,6 +191,12 @@ def _row_parts(out, names):
         out["livery_button"] = pygame.Rect(
             r.x + int(r.w * ROW_RULE["value_x"]), r.y + (r.h - fh) // 2,
             int(r.w * 0.22), fh)
+    if "mod_open" in out:
+        r = out["mod_open"]
+        fh = max(8, int(r.h * 0.78))
+        out["mod_open_button"] = pygame.Rect(
+            r.x + int(r.w * ROW_RULE["value_x"]), r.y + (r.h - fh) // 2,
+            int(r.w * ROW_RULE["field_w"]), fh)
     if "colours" in out:
         gmorion.swatch_geometry(out, ROW_RULE)
     if "frame" in out:
@@ -324,11 +335,36 @@ def _render_footer(screen, surface, geo, scale):
     hud.action_button(surface, r, scale, _state(r),
                       say(screen, "apply", "Apply & Close"), None,
                       screen.style)
+    for rect, line in zip(_note_lines(geo["note"], len(notes(screen))),
+                          notes(screen)):
+        size = screen.layout.font_size(20 * getattr(screen, "content_scale",
+                                                    1.0))
+        img = screen.style.render_text(line, size,
+                                       tuple(gmorion.COL_STATE[:3]))
+        while img.get_width() > rect.w and size > 8:
+            size -= 1
+            img = screen.style.render_text(line, size,
+                                           tuple(gmorion.COL_STATE[:3]))
+        hudtext.blit(surface, img, rect, align="left", ink=False)
+
+
+def notes(screen):
+    """The footer's lines beside APPLY & CLOSE: "Restart to apply" while a
+    value waits for the next start, and the mod folder's path when no file
+    manager could show it (254, Data: "show the folder path instead")."""
+    from core import lang, openfolder
+    words = screen.words.get("words", {}).get("orionlayer", {})
+    out = []
     if gmorion.restart_pending(screen):
-        words = screen.words.get("words", {}).get("orionlayer", {})
-        note = screen.style.render_text(
-            words.get("restart", "Restart to apply"),
-            screen.layout.font_size(20 * getattr(screen, "content_scale",
-                                                 1.0)),
-            tuple(gmorion.COL_STATE[:3]))
-        hudtext.blit(surface, note, geo["note"], align="left", ink=False)
+        out.append(words.get("restart", "Restart to apply"))
+    path = openfolder.failed()
+    if path:
+        # the path is the player's, never translated: only the label is
+        out.append(lang.tr(words.get("mod_path", "Mod folder:")) + " " + path)
+    return out
+
+
+def _note_lines(rect, n):
+    """`n` equal lines in the footer's note rect."""
+    h = rect.h // max(1, n)
+    return [pygame.Rect(rect.x, rect.y + i * h, rect.w, h) for i in range(n)]

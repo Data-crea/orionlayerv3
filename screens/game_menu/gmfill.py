@@ -131,7 +131,7 @@ def _bar(screen, surface, bar, colour_at, value, lo, hi, dim=False,
 
     def at(i):
         c = colour_at(gmorion.bar_value(bar, bar.x + i, lo, hi))
-        return tuple(int(v * 0.45) for v in c) if dim else c
+        return dimmed(c) if dim else c
     if key is None:
         for i in range(bar.w):
             pygame.draw.line(surface, at(i), (bar.x + i, bar.y),
@@ -154,6 +154,14 @@ def _look(tinted=False):
     the frame colour does not rebuild their strips."""
     from core.hud import style as hudstyle
     return (id(hudstyle.get()),) + (glass._tint_key() if tinted else ())
+
+
+#: What a control keeps of its colour while it waits for the glass switch.
+DIM = 0.45
+
+
+def dimmed(colour):
+    return tuple(int(v * DIM) for v in colour[:3])
 
 
 def glass_dim():

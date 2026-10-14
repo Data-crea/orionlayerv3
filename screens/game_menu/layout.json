@@ -318,7 +318,10 @@
       "fill_tone": "Box fill tone",
       "mod_files_label": "Mod files",
       "mod_off": "\u2014",
-      "livery_open": "Open"
+      "livery_open": "Open",
+      "mod_open": "Location",
+      "mod_open_button": "Open mod folder",
+      "mod_path": "Mod folder:"
     },
     "livery": {
       "_hd_extension": "HD EXTENSION `livery` (work order 220, decisions 1-6, 8, 9): the livery window's words; screens/game_menu/gmlivery.py, core/livery.py. MOO2 has no such window.",
@@ -566,6 +569,10 @@
     "orionlayer.mod_files": {
       "title": "MOD FILES",
       "body": "How many files of the mod folder OrionLayer uses \u2014 so you can see the folder was found. After switching the folder on, the progress of reading the game's pictures shows here."
+    },
+    "orionlayer.mod_open": {
+      "title": "OPEN MOD FOLDER",
+      "body": "Opens the mod folder in your file manager \u2014 where OrionLayer looks for your pictures and texts while the mod folder is on. It is created if it is not there yet, so you can find it before switching mods on. Where no file manager answers, the folder's path is shown at the bottom of the window."
     }
   },
   "orionlayer_window": {

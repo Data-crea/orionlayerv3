@@ -51,7 +51,7 @@ from . import gmfill, gmlang
 #: click help regions name (help.json `orionlayer_band`).
 BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone", "floor",
          "monsters", "frame_rate", "painted", "livery", "mods", "mod_files",
-         "language")
+         "mod_open", "language")
 
 #: the heading colour of the rows until work order 251, the livery
 #: window's labels since 220
@@ -228,6 +228,9 @@ def handle_click(screen, x, y):
     if "livery_button" in geo and geo["livery_button"].collidepoint(x, y):
         from . import gmlivery
         gmlivery.open_window(screen)
+    elif "mod_open_button" in geo and \
+            geo["mod_open_button"].collidepoint(x, y):
+        open_mod_folder()
     elif "frame" not in geo:
         pass                     # the colour rows are on APPEARANCE only
     elif gmfill.handle_click(screen, geo, x, y):
@@ -250,6 +253,14 @@ def handle_click(screen, x, y):
             geo["hue_bar"].left <= x <= geo["hue_bar"].right:
         set_hue(screen, hue_at(geo, x))
     return True
+
+
+def open_mod_folder():
+    """Data's "Open mod folder" (252 P4, work order 254): the folder the
+    resolver reads (`usermod.mod_dir`), whether the switch is on or not —
+    a modder finds it before switching it on; created if missing."""
+    from core import openfolder
+    return openfolder.open_folder(usermod.mod_dir())
 
 
 def save(screen):
@@ -297,6 +308,7 @@ def render(screen, surface):
               "livery": ("livery", "Livery"),
               "mods": ("mods", "Mod folder"),
               "mod_files": ("mod_files_label", "Mod files"),
+              "mod_open": ("mod_open", "Location"),
               "language": ("language", "Language")}
     for name, (key, default) in labels.items():
         if name in geo:
@@ -320,6 +332,9 @@ def render(screen, surface):
         _render_livery_button(screen, surface, geo, words, size)
     if "mod_files" in geo:
         _render_mod_files(screen, surface, geo, words, size)
+    if "mod_open_button" in geo:
+        _render_button(screen, surface, geo["mod_open_button"],
+                       words.get("mod_open_button", "Open mod folder"), size)
     if "language" in geo:
         gmlang.render_note(screen, surface, geo, words, size)
 
@@ -336,8 +351,16 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
     gmfill.render_glass_bar(screen, surface, bar)
     reset = geo["glass_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
-          COL_OPTION if glass._value is None or gmfill.glass_dim()
-          else COL_STATE, reset.x, reset, _reset_room(screen, reset))
+          reset_colour(), reset.x, reset, _reset_room(screen, reset))
+
+
+def reset_colour():
+    """The glass row's RESET: dimmed as the bar is while the glass is off
+    (Data, 252 P2; `gmfill.handle_click` takes its click then), else lit
+    while the value is the player's."""
+    if gmfill.glass_dim():
+        return gmfill.dimmed(COL_OPTION)
+    return COL_OPTION if glass._value is None else COL_STATE
 
 
 def _render_livery_button(screen, surface, geo, words, size):
@@ -345,10 +368,15 @@ def _render_livery_button(screen, surface, geo, words, size):
     rect = geo.get("livery_button")
     if rect is None:
         return
+    _render_button(screen, surface, rect, words.get("livery_open", "Open"),
+                   size)
+
+
+def _render_button(screen, surface, rect, word, size):
+    """A row's button with its word, the word made smaller until it fits."""
     hud.small_button(surface, rect, screen.layout.scale,
                      "hover" if rect.collidepoint(mouse_input.pos())
                      else "normal")
-    word = words.get("livery_open", "Open")
     img = screen.style.render_text(word, size, tuple(COL_OPTION[:3]))
     while img.get_width() > rect.w * 0.9 and size > 8:
         size -= 1

@@ -672,6 +672,11 @@
       "orionlayer_band": "mod_files"
     },
     {
+      "help_id": "orionlayer.mod_open",
+      "node": "orionlayer",
+      "orionlayer_band": "mod_open"
+    },
+    {
       "help_id": "orionlayer.tab_appearance",
       "node": "orionlayer",
       "ol_part": "tab_appearance"
