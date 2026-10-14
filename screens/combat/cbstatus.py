@@ -98,6 +98,24 @@ MAX_PLAYERS = 8
 #: `Draw_Crew_Level_Stars_`: a star per crew level above green, 11 apart.
 STAR_STEP = 11
 
+#: HD EXTENSION `shield_from_painted` (work order 257, variant B, OFF by
+#: default): with ORIONLAYER_SHIELD_OUTLINE=painted the rings round a
+#: painted unit are grown from the painted picture's own outline, as it
+#: is turned and mirrored for the facing, by the same steps at the
+#: picture's k (`shield_canvas(k)`, `outline_thick`, the masks k x k per
+#: pixel). A unit without a painted picture keeps the original's rings
+#: either way. Whether B replaces A is Data's decision (work order 257).
+OUTLINE_ENV = "ORIONLAYER_SHIELD_OUTLINE"
+#: How many variant-B ring pictures are kept (one is 98 k square: 2.4 MB
+#: at k = 8).
+PAINTED_KEPT = 16
+
+
+def painted_outline():
+    """Whether variant B is switched on."""
+    import os
+    return os.environ.get(OUTLINE_ENV, "").strip().lower() == "painted"
+
 
 def _cdiv(a, b):
     """C's division, toward zero."""
@@ -122,7 +140,7 @@ def _place(canvas, ship, x, y):
     """`Add_Picture_To_Bitmap_` (bitmap.cpp:770): every non-zero pixel,
     clipped."""
     h, w = ship.shape
-    x1, y1 = min(CANVAS, x + w), min(CANVAS, y + h)
+    x1, y1 = min(canvas.shape[1], x + w), min(canvas.shape[0], y + h)
     if x1 <= x or y1 <= y:
         return
     part = ship[:y1 - y, :x1 - x]
@@ -137,41 +155,69 @@ def ship_x(facing):
     return 14 if q in (1, 2) else 16
 
 
-def shield_canvas(ship, unit, masks, dividers):
+def outline_thick(canvas, colour, k):
+    """`outline` k pixels thick: every empty pixel (0 or the colour) within
+    k steps left, right, up or down of a drawn one — the original's one
+    pixel at k times the drawing (work order 257, variant B). k = 1 is
+    `outline` itself, pixel for pixel."""
+    solid = (canvas != 0) & (canvas != colour)
+    grown = solid.copy()
+    for _ in range(k):
+        step = grown.copy()
+        step[1:, :] |= grown[:-1, :]
+        step[:-1, :] |= grown[1:, :]
+        step[:, 1:] |= grown[:, :-1]
+        step[:, :-1] |= grown[:, 1:]
+        grown = step
+    canvas[grown & ~solid] = colour
+
+
+def _scaled_mask(mask, k):
+    """A COMBAT.LBX mask at k times its pixels, each pixel a k x k block
+    (variant B's "masks scaled to the painted size")."""
+    return mask if k == 1 else np.kron(mask, np.ones((k, k), np.uint8))
+
+
+def shield_canvas(ship, unit, masks, dividers, k=1):
     """The 98 x 98 bitmap `Draw_Ship_Status_` draws, as palette indices,
-    and the bitmap of where the unit itself is on it."""
-    canvas = np.zeros((CANVAS, CANVAS), np.uint8)
+    and the bitmap of where the unit itself is on it. With `k` > 1 (work
+    order 257, variant B) the same steps on a bitmap k times the size:
+    `ship` is then the painted picture's outline, each ring k pixels
+    thick, the masks and the unit's place k times theirs."""
+    canvas = np.zeros((CANVAS * k, CANVAS * k), np.uint8)
     facing = int(unit["facing_dir"])
-    x = ship_x(facing)
-    _place(canvas, ship, x, 11)
+    x = ship_x(facing) * k
+    _place(canvas, ship, x, 11 * k)
+    ring = outline if k == 1 else (lambda cv, c: outline_thick(cv, c, k))
     if int(unit["shield_type"]) > 0 and int(unit["shield_current_hits"]) > 0:
-        outline(canvas, 1)
-        outline(canvas, 2)
+        ring(canvas, 1)
+        ring(canvas, 2)
         val = min(10, _cdiv(int(unit["shield_arc_max"]) + 19, 10))
         if 0 <= val - 1 <= 9:
             colours, steps = SHIELD_CASES[(val - 1) // 2]
             for c in colours:
-                outline(canvas, c)
+                ring(canvas, c)
             quadrant, turn = facing // 4, facing % 4
             for arc in range(4):
                 strength = int(unit["shield_arc_current"][arc])
                 if strength >= steps[0][0]:
                     continue
                 part = canvas.copy()
-                mask = masks[(arc - quadrant + 4) % 4 + turn * 4]
+                mask = _scaled_mask(masks[(arc - quadrant + 4) % 4 + turn * 4],
+                                    k)
                 h, w = mask.shape
                 part[:h, :w][mask == 0] = 0
                 for below, c in steps:
                     if strength < below:
                         part[part == c] = 1
                 canvas[part != 0] = part[part != 0]
-        div = dividers[facing % 4]
+        div = _scaled_mask(dividers[facing % 4], k)
         h, w = div.shape
         canvas[:h, :w][div != 0] = 0
-        _place(canvas, ship, x, 11)
+        _place(canvas, ship, x, 11 * k)
     hull = np.zeros_like(canvas, dtype=bool)
     probe = np.zeros_like(canvas)
-    _place(probe, np.where(ship != 0, 3, 0).astype(np.uint8), x, 11)
+    _place(probe, np.where(ship != 0, 3, 0).astype(np.uint8), x, 11 * k)
     hull[probe != 0] = True
     canvas[(canvas == 1) | (canvas == 2)] = 0
     return canvas, hull
@@ -267,6 +313,8 @@ class StatusPicture:
         #: in the original's pixels — what a live check holds against the
         #: engine's frame
         self.indices = None
+        self._masks_now = None
+        self._painted = {}        # variant B's rings, `painted_rings`
 
     def _combat(self, art, entry):
         """COMBAT.LBX `entry` as indices (the masks, bars and stars)."""
@@ -331,7 +379,13 @@ class StatusPicture:
         idx = np.zeros((BOX.h, BOX.w), np.uint8)
         drawn = np.zeros((BOX.h, BOX.w), bool)
 
+        layers = [(idx, drawn)]
+
         def put(px, x, y, keep_zero=False):
+            for target, mark in layers:
+                _put(target, mark, px, x, y, keep_zero)
+
+        def _put(idx, drawn, px, x, y, keep_zero):
             if px is None:
                 return
             x0, y0 = x - BOX.x, y - BOX.y
@@ -351,8 +405,12 @@ class StatusPicture:
         put(np.zeros((0x1C5 - 0x17B + 1, 0x66 - 0x0F + 1), np.uint8),
             0x0F, 0x17B, keep_zero=True)
         put(self._combat(art, STARS_BG), 0x0F, 0x17B)
+        # variant B (work order 257) draws its own rings: the box without
+        # them is the same steps less this one
+        bare_idx, bare_drawn = idx.copy(), drawn.copy()
         rings = np.where(hull, 0, canvas).astype(np.uint8)
         put(rings, *AT)
+        layers.append((bare_idx, bare_drawn))
         frames, cuts = grey_windows(unit)
         put(self._combat(art, BAR_TOP), AT[0] - 1, AT[1] - 1)
         put(self._combat(art, frames[0]), AT[0], AT[1] + 0x4E)
@@ -388,18 +446,55 @@ class StatusPicture:
             with_stars[1][y:y + h, x:x + w][on] = True
         self.indices = with_stars + (hull_box,)
         pal = art.palette_with()
-        rgba = np.zeros((BOX.h, BOX.w, 4), np.uint8)
-        for i in np.unique(idx[drawn]):
-            rgb = pal.get(int(i), (int(i),) * 3)
-            sel = drawn & (idx == i)
-            rgba[sel, :3] = rgb[:3]
-            rgba[sel, 3] = 255
-        box = pygame.image.frombuffer(rgba.tobytes(), (BOX.w, BOX.h),
-                                      "RGBA").copy()
+        box, bare = (_surface(i, d, pal) for i, d in ((idx, drawn),
+                                                       (bare_idx, bare_drawn)))
         star = art.surface("combat", CREW_STAR)
+        self._masks_now = masks
         self._box = (box, (AT[0] + ship_x(unit["facing_dir"]) - BOX.x,
-                           AT[1] + 11 - BOX.y), ship.shape, star, stars)
+                           AT[1] + 11 - BOX.y), ship.shape, star, stars, bare)
         return self._box
+
+    def painted_rings(self, art, colour, unit, monster, picture):
+        """Variant B's rings (work order 257): `shield_canvas` at the
+        painted picture's k on its outline, as an RGBA surface 98 k wide,
+        kept per ship, facing, shield and picture size (the detail
+        setting), with that key; None for a drawing that is not painted."""
+        k = int(round(cbart.hd_factor(picture)))
+        if k <= 1 or self._masks_now is None:
+            return None
+        key = (colour, monster, int(unit["picture_num"]),
+               int(unit["facing_dir"]), picture.get_size(),
+               int(unit["shield_type"]), int(unit["shield_current_hits"]),
+               int(unit["shield_arc_max"]),
+               tuple(int(v) for v in unit["shield_arc_current"]))
+        got = self._painted.get(key)
+        if got is None:
+            sil = silhouette(picture)
+            canvas, hull = shield_canvas(sil, unit, *self._masks_now, k)
+            rings = np.where(hull, 0, canvas).astype(np.uint8)
+            got = _surface(rings, rings != 0, art.palette_with())
+            if len(self._painted) >= PAINTED_KEPT:
+                self._painted.clear()
+            self._painted[key] = got
+        return key, got
+
+
+def silhouette(picture, threshold=128):
+    """A painted picture's outline as variant B reads it: its pixels at
+    alpha `threshold` and up, as a drawing (0xFE, a colour no ring uses)."""
+    alpha = pygame.surfarray.array_alpha(picture).T
+    return np.where(alpha >= threshold, 0xFE, 0).astype(np.uint8)
+
+
+def _surface(idx, drawn, pal):
+    rgba = np.zeros(idx.shape + (4,), np.uint8)
+    for i in np.unique(idx[drawn]):
+        rgb = pal.get(int(i), (int(i),) * 3)
+        sel = drawn & (idx == i)
+        rgba[sel, :3] = rgb[:3]
+        rgba[sel, 3] = 255
+    return pygame.image.frombuffer(rgba.tobytes(), idx.shape[::-1],
+                                   "RGBA").copy()
 
 
 def fit(rect):
@@ -415,7 +510,12 @@ def draw(surface, rect, status, art, colour, unit, monster, picture, style,
     built = status.build(art, colour, unit, monster)
     if built is None:
         return False
-    box, (sx, sy), _shape, star, stars = built
+    box, (sx, sy), _shape, star, stars, bare = built
+    got_b = status.painted_rings(art, colour, unit, monster, picture) \
+        if picture is not None and painted_outline() else None
+    rings_key, rings_b = got_b or (None, None)
+    if rings_b is not None:
+        box = bare
     k = fit(rect)
     out = pygame.Rect(0, 0, round(BOX.w * k), round(BOX.h * k))
     out.center = rect.center
@@ -424,21 +524,37 @@ def draw(surface, rect, status, art, colour, unit, monster, picture, style,
         """The original's (x, y) in the box, in the window."""
         return out.x + round(x * k), out.y + round(y * k)
 
-    big = status._scaled.get(out.size)
+    big = status._scaled.get(("box", rings_b is not None, out.size))
     if big is None:
-        big = status._scaled[out.size] = pygame.transform.scale(box, out.size)
+        big = status._scaled[("box", rings_b is not None, out.size)] = \
+            cbart.display_format(pygame.transform.scale(box, out.size))
     surface.blit(big, out)
     clip = surface.get_clip()
     x0, y0 = at(AT[0] - BOX.x, AT[1] - BOX.y)
     canvas = pygame.Rect(x0, y0, round(CANVAS * k), round(CANVAS * k))
     surface.set_clip(canvas.clip(out).clip(clip) if clip else canvas.clip(out))
+    if rings_b is not None:
+        key = ("rings", rings_key, canvas.size)
+        img = status._scaled.get(key)
+        if img is None:
+            img = status._scaled[key] = cbart.display_format(
+                cbart.smooth(rings_b, canvas.size))
+        surface.blit(img, canvas)
     if picture is not None:
         f = cbart.hd_factor(picture)
         size = (max(1, round(picture.get_width() * k / f)),
                 max(1, round(picture.get_height() * k / f)))
-        img = (cbart.smooth if f > 1 and size[0] < picture.get_width()
-               else pygame.transform.scale)(picture, size)
-        surface.blit(img, at(sx, sy))
+        # kept with the box: the picture is scaled once per size, not
+        # every frame (work order 257: "nothing per frame")
+        # the picture itself is kept beside it, so a new picture with a
+        # recycled id() is never served the old one's (fundament P828)
+        held = status._scaled.get(("ship", size))
+        if held is None or held[0] is not picture:
+            how = cbart.smooth if f > 1 and size[0] < picture.get_width() \
+                else pygame.transform.scale
+            held = status._scaled[("ship", size)] = (
+                picture, cbart.display_format(how(picture, size)))
+        surface.blit(held[1], at(sx, sy))
     surface.set_clip(clip)
     if star is not None and stars:
         s = pygame.transform.scale(star, (round(star.get_width() * k),

@@ -247,6 +247,16 @@ class Panel:
                           time.monotonic())
         return True
 
+    @classmethod
+    def status_room(cls, size, scale):
+        """The room of the unit's status box (`cbstatus`): the right half
+        of the panel's left column — one home for the panel's geometry
+        and for the tools that measure the box (work order 257)."""
+        pad = int(16 * scale)
+        inner = cls.area(*size).inflate(-2 * pad, -2 * pad)
+        left = pygame.Rect(inner.x, inner.y, int(inner.w * 0.30), inner.h)
+        return pygame.Rect(left.centerx, left.y, left.w // 2, left.h)
+
     @staticmethod
     def area(win_w, win_h):
         """The panel's band: the original's 129 of 480 rows, at the bottom."""
@@ -302,7 +312,7 @@ class Panel:
             y += small + 3
         # the original's status picture (work order 256, `cbstatus`); the
         # planet, or a unit whose pictures are missing, keeps HD's rings
-        box = pygame.Rect(left.centerx, left.y, left.w // 2, left.h)
+        box = self.status_room(surface.get_size(), scale)
         if status is None or not cbstatus.draw(
                 surface, box, self.status, *status, picture, style, scale):
             draw_shields(surface, box, unit, picture)
