@@ -24,11 +24,13 @@ system the unit carries, a damaged one dimmed (:543-591).
 DEVIATION `hud_panel`: HD draws all of it as HUD blocks along the bottom
 of the window, in OrionLayer's words where the original uses its own
 pictures and labels, not COMBAT.LBX 0. The reduced map sits at the right
-end as the original's (`cbmap`, work order 209 B1). DEVIATION
-`shield_rings`: the shields round the unit's picture are HD's rings, one
-per ten points left in each of the four arcs (front, right, back, left
-as `Facing_Shield_` counts them, cmbtfire.cpp:226-237), not the original's
-COMBAT.LBX ring masks.
+end as the original's (`cbmap`, work order 209 B1). The unit's picture
+is the original's box since work order 256 (`cbstatus`: the shield grown
+from the unit's outline, the bars, the crew stars). DEVIATION
+`shield_rings`, now only for the planet (OMISSION `status_planet`) and a
+unit whose pictures are missing: HD's rings, one per ten points left in
+each of the four arcs (front, right, back, left as `Facing_Shield_` counts
+them, cmbtfire.cpp:226-237), not the original's COMBAT.LBX ring masks.
 TRANSCRIPTION `weapon_switch` (work order 200): each weapon row IS the
 original's own switch — a hidden field over the row (combat1.cpp:180-183)
 that cycles the slot's `active` 1 -> 0 -> -1 -> 1 (:594-613): 1 fires on
@@ -69,7 +71,7 @@ from core import lang
 from core.hud import blocks as hud
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
-from . import cbart, cbmap
+from . import cbart, cbmap, cbstatus
 
 TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
 BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
@@ -227,6 +229,7 @@ class Panel:
         self.tabs = {}            # "weapons" / "specials" -> window rect
         self.buttons = None       # the button block (the OPTIONS panel's place)
         self._row_wait = None     # (row, active before, time) after a switch
+        self.status = cbstatus.StatusPicture()
 
     def switch(self, row, state, client):
         """A click on weapon row `row`: the original's own field, once the
@@ -251,10 +254,13 @@ class Panel:
         return pygame.Rect(0, win_h - h, win_w, h)
 
     def draw(self, surface, style, unit, names, ken, actives, board_mode, live,
-             scale, picture=None, specials=False, computer=False, hover=None):
+             scale, picture=None, specials=False, computer=False, hover=None,
+             status=None):
         """`hover` is the CTGT mask of the unit or missile under the pointer
         (bit k: slot k can hit it), None when the pointer is over neither;
-        `computer` whether the acting unit is the computer's."""
+        `computer` whether the acting unit is the computer's; `status`
+        (art, colour, unit, monster) for the status picture, None for the
+        planet."""
         band = self.area(*surface.get_size())
         hud.panel(surface, band.inflate(-8, -8), scale, dense=True)
         pad = int(16 * scale)
@@ -294,8 +300,12 @@ class Panel:
                 text, small, hudtext.colour("label")[:3]),
                 pygame.Rect(left.x, y, left.w // 2, small + 2), align="left")
             y += small + 3
-        draw_shields(surface, pygame.Rect(left.centerx, left.y, left.w // 2,
-                                          left.h), unit, picture)
+        # the original's status picture (work order 256, `cbstatus`); the
+        # planet, or a unit whose pictures are missing, keeps HD's rings
+        box = pygame.Rect(left.centerx, left.y, left.w // 2, left.h)
+        if status is None or not cbstatus.draw(
+                surface, box, self.status, *status, picture, style, scale):
+            draw_shields(surface, box, unit, picture)
         # the reduced map at the right end, as the original's (work order
         # 209 B1, `cbmap`); the room is taken from the weapons column, so the
         # buttons keep their size and move left by the map's width

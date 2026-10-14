@@ -89,8 +89,13 @@ UNIT_SPEC = SplicedSpec("s_combat_data", 309, [
     ("structure_damage", 192, "i16"), ("armor_remaining", 194, "i16"),
     ("picture_num", 196, "i16"),
     ("drive_max_hits", 198, "i16"), ("computer_max_hits", 200, "i16"),
+    # work order 256: the internal systems' hits, for the status picture's
+    # internals bar (`Max_Total_Internal_Space_`, cmbtfir2.cpp:517-534)
+    ("weapon_total_hits", 202, "i16[8]"), ("special_device_hits", 234, "i16[8]"),
     ("shield_max_hits", 250, "i16"), ("drive_current_hits", 252, "i16"),
-    ("computer_current_hits", 254, "i16"), ("shield_current_hits", 304, "i16"),
+    ("computer_current_hits", 254, "i16"),
+    ("weapon_hits", 256, "i16[8]"), ("special_hits", 288, "i16[8]"),
+    ("shield_current_hits", 304, "i16"),
     ("black_hole_flag", 306, "i8"), ("black_hole_source_idx", 307, "u8"),
     ("previous_owner", 308, "u8"),
 ], cut=("ship_image_seg", "drive_max_hits"), verified=True)

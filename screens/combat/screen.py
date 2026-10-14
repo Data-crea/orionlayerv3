@@ -302,7 +302,7 @@ class CombatScreen(CombatInput, ScreenBase):
                          self._board or self._pops.scan_mode and "scan", live,
                          self.layout.scale, pic, self._specials,
                          self._computer(self._state.combat or c),
-                         self._hover(c))
+                         self._hover(c), self._status_of(c, unit))
         if self._panel.map is not None:              # work order 209 B1
             cbmap.draw(surface, self._panel.map, c, self._play.ordnance,
                        self._cam, self._art, self._play.colours,
@@ -369,6 +369,16 @@ class CombatScreen(CombatInput, ScreenBase):
         if key not in self._cache:
             self._cache[key] = cbart.planet_picture(self._art, self._state, c)
         return self._cache[key]
+
+    def _status_of(self, c, unit):
+        """What the panel's status picture needs (`cbstatus`), None for
+        the planet (unit 0, OMISSION `status_planet`)."""
+        if not c["cur_ship"]:
+            return None
+        owner = unit["previous_owner"] if unit["previous_owner"] <= 7 \
+            else unit["owner"]
+        return (self._art, self._play.colours.get(owner, 0), unit,
+                cbdraw.from_monster_file(unit))
 
     # ── input ──────────────────────────────────────────────────────
     def _send(self, op, a=0, b=0, c=0):
