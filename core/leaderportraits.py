@@ -1,43 +1,45 @@
-"""The leaders' HD portraits — work order 234. HD EXTENSION `hd_portraits`:
-the original has one 73 x 88 drawing per leader (OFFICER.LBX `0x15 + n`); HD
-draws a painted picture in its place while the mod folder is on.
+"""The leaders' HD portraits — work orders 234 and 255.
 
-WHERE THEY LIVE. `mods/leader_portraits/<category>/<pict_num>_<name>.png`,
-`colony_leaders/` and `ship_officers/` (the leader's `type`,
-`core/structs/leader.py`), `pict_num` two digits — the identity the game
-knows the leader by (HERODATA.LBX's record number, held equal on every save
-by `dev:tools/leader_check.py`). The name after the number is for people: a
-picture is found by its number, so a file renamed with a different name
-still counts and the folder can hold a translation's spelling.
+HD EXTENSION `hd_portraits`: the original has one 73 x 88 drawing per
+leader (OFFICER.LBX `0x15 + n`); HD draws a painted, cut-out picture in its
+place.
+
+WHERE THEY LIVE (work order 255, Data's order). In the base pack, under
+the Leaders screen's assets: `screens/leaders/assets/portraits/<category>/
+<pict_num>_<name>.png`, `colony_leaders/` and `ship_officers/` (the
+leader's `type`, `core/structs/leader.py`), `pict_num` two digits — the
+identity the game knows the leader by (HERODATA.LBX's record number, held
+equal on every save by `dev:tools/leader_check.py`). The name after the
+number is for people: a picture is found by its number, so a file renamed
+with a different name still counts. Each picture is a cut-out with an
+alpha channel (Data's set of 14 October 2026), installed by
+`dev:tools/leader_portraits_install.py`.
 
 WHICH FILE WINS. Each source root in order (`Resources.roots`, decision
-16): the player's mod folder's `files/` — so
-`files/mods/leader_portraits/colony_leaders/01_kimbuzzi.png` there replaces
-the tree's picture by the existing convention, decision 72 — then the
-developer mods, then the tree. The first root with a `<nn>_*.png` for the
-leader answers; an unreadable file costs one log line and the next root is
-asked.
+16): the player's mod folder's `files/` while it is on — so
+`files/screens/leaders/assets/portraits/colony_leaders/01_kimbuzzi.png`
+there replaces the pack's picture, decision 72 — then the developer mods,
+the tree, the base pack. The first root with a `<nn>_*.png` for the leader
+answers; an unreadable file costs one log line and the next root is asked.
+Work order 234's set under `files/mods/leader_portraits/` is not read any
+more: it would hide every new picture.
 
-WHEN. Only while the player's mod folder is on (`usermod.active()`): the
-pictures are mod content (the order, step 4). Folder off, or no picture for
-a leader: the caller draws the original's portrait itself, in the same box
-— never the original's screen (Data's rule since work order 187; the
-portrait is HD's own drawing of the extracted art, as before this order).
+NONE FOR A LEADER: the caller draws the original's portrait itself, in the
+same place — never the original's screen (Data's rule since work order
+187). That is the case for every leader whose new picture had no alpha
+channel (work order 255, parked) and on a machine without the pack.
 
-HOW BIG. Every box gets the WHOLE picture, scaled to fit inside it and
-centred (`fit`); nothing is cut. The boxes do not share one proportion
-(measured at 3840x2160, work order 234 step 3): the Leaders row's cell is
-540 x 343, the two popups the original's 73 x 88. The set is cut for the
-Leaders screen (its height binds) and stored 528 high, the tallest box —
-which proportion the other boxes should cut to is parked for Data
-(234-parked-for-data.md).
+HOW BIG. Every box gets the WHOLE picture, scaled to fit inside it (`fit`);
+nothing is cut. The pictures are stored at the largest size HD draws one at
+3840x2160 (work order 255: the turn's leader offer, 73 x 88 at 6 x), so
+every place scales down.
 
 DARK. The original swaps in a darkened drawing (`0x8F + n`) while a
 leader travels or is for hire (officer.cpp:2656, :3533). Measured over all
 67 pairs of the extracted art: the dark drawing is 0.546 of the normal one's
 brightness (0.524-0.556, every channel alike within 0.05), so HD multiplies
 the picture by `DARK` — DEVIATION `dark_hd`: a multiply, not the original's
-palette remap.
+palette remap. The alpha stays as it is.
 """
 import glob
 import logging
@@ -47,7 +49,7 @@ import pygame
 
 log = logging.getLogger("orionlayer")
 
-FOLDER = "mods/leader_portraits"
+FOLDER = "screens/leaders/assets/portraits"
 #: `LEADER_TYPE_*` -> the sub-folder (core/structs/leader.py).
 CATEGORY = {0: "ship_officers", 1: "colony_leaders"}
 #: The original's drawing, the box both popups give a portrait.
@@ -59,15 +61,8 @@ _cache = {}
 _fitted = {}
 
 
-def enabled():
-    from core import usermod
-    return usermod.active()
-
-
 def path_for(pict_num, leader_type):
-    """The picture file for a leader, or None (folder off, or no file)."""
-    if not enabled():
-        return None
+    """The picture file for a leader, or None."""
     cat = CATEGORY.get(int(leader_type))
     if cat is None:
         return None
@@ -96,7 +91,8 @@ def _load(path):
         return hit[1]
     try:
         img = pygame.image.load(path)
-        img = img.convert() if pygame.display.get_surface() else img
+        img = img.convert_alpha() if pygame.display.get_surface() \
+            else img
     except (pygame.error, OSError) as exc:
         log.warning("leader portraits: %s unreadable (%s) — the original's "
                     "portrait is drawn", path, exc)

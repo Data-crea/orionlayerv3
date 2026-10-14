@@ -42,6 +42,21 @@ UNIT = {"de": "MC"}
 UNIT_DEFAULT = "BC"
 
 
+def skill_value(sid, level, unit=UNIT_DEFAULT):
+    """A skill's bonus as `Print_Officer_Data_` prints it (the table's own
+    format, `leaderskills.c_format`), in the session's money unit.
+
+    DEVIATION `skill_unit`: the formats of Famous ("-%dBC") and Megawealth
+    ("+10BC", "+15BC") carry the unit as a literal in `MOX::_skill_data`
+    (mox.cpp:667-722), so the original prints "BC" in every language; HD
+    prints the unit `Get_Monetary_Unit_String_` gives the cost lines ("MC"
+    in German, Data's order of work order 255)."""
+    value = ls.c_format(ls.SKILLS[sid][6], ls.skill_bonus(level, sid))
+    if unit != UNIT_DEFAULT and value.endswith(UNIT_DEFAULT):
+        value = value[:-len(UNIT_DEFAULT)] + unit
+    return value
+
+
 def the_word(words, index):
     """`Leader_Name_`'s ", the " for leader `index`, or None — HESTRNGS
     0x110 / 0x182 AS THE FILE HAS THEM, trailing space included.
@@ -142,7 +157,7 @@ def row(slot, idx, rec, view, game_state, words, warlord_of):
     skills = []
     for sid in shown:
         name_id = ls.SKILL_NAME_ESTRINGS[sid]
-        value = ls.c_format(ls.SKILLS[sid][6], ls.skill_bonus(level, sid))
+        value = skill_value(sid, level, words.unit)
         skills.append((sid, words.estring(name_id) or "", value))
     general = sum(1 for s in shown if ls.SKILLS[s][2] == ls.GENERAL)
     return Row(slot=slot, index=idx, rec=rec, name=name, level=level,

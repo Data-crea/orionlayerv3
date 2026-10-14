@@ -65,6 +65,11 @@ VALUE_RIGHT_INSET = 3
 #: :3575), the name 0x16 right of the icon's x (:3778).
 SKILL_DY, SKILL_STEP = 0x10, 0x11
 SKILL_ICON_DX, SKILL_ICON_DY = 2, -4
+#: OFFICER.LBX 0x58..0x72's own size: every one of the 27 skill icons is
+#: 16 x 16 (their headers, read by `dev:tools/skill_icons_export.py` for
+#: work order 255) — the square a painted icon is fitted into where the
+#: original's would stand.
+SKILL_ICON_SIZE = 16
 SKILL_NAME_DX = 2 + 0x16
 #: `Set_Fitted_Font_Style_(status, …, 4, 0x4A, 1)` (:3719-3726): the
 #: status line is fitted to 74 px.

@@ -222,12 +222,6 @@ def draw_frame_boxes(surface, screen, slots=None, art=None):
 
 # ── Where words stand on a picture (work order 237) ──────
 
-#: The name and the two cost lines share the text line's top: the band
-#: they take, in native px below `text_y` (the name 10 px, the cost lines
-#: two of 7 at the HD font's line height, `NATIVE_TEXT`).
-NAME_BAND = 19
-
-
 def word_zones(screen, slot, row, art):
     """[(window Rect, ceiling)] where a row's words stand — the ground
     `ldrpics.dim` keeps under each word's floor. A row with a leader: the
@@ -240,22 +234,32 @@ def word_zones(screen, slot, row, art):
     if row is None:
         return [(z, ldrpics.ceiling(ink, box))
                 for z, ink in caption_lines(screen, slot)[1]]
+    from . import ldrslot
     normal = ldrpics.ceiling(text_colour(art, "normal"), box)
     red = ldrpics.ceiling(text_colour(art, "red"), box)
-    ty = geom.text_y(slot)
-    zones = [(rect(layout, (geom.TEXT_X, ty - 1,
-                            geom.TEXT_X + geom.RIGHT_COLUMN - 1,
-                            ty + NAME_BAND)), normal)]
+    slot = slot_of(screen, row)
+    style, pad = screen.style, slot.px(0.02)
+    zones = []
+    for surf, at in cost_lines(screen, row, (255, 255, 255), slot):
+        zones.append((pygame.Rect(at, surf.get_size()).inflate(2 * pad, 0),
+                      normal))
+    cost_left = min([z.x for z, _c in zones] + [slot.cost_right])
+    room = cost_left - slot.text_x - slot.px(ldrslot.NAME_CAP)
+    for text, cap, top, ceil in (
+            (row.name, ldrslot.NAME_CAP, slot.name_top, normal),
+            (row.status, ldrslot.STATUS_CAP, slot.status_top,
+             red if row.status_red else normal)):
+        if text:
+            surf, c = _render_cap(style, text, slot.px(cap), (255, 255, 255),
+                                  room)
+            zones.append((pygame.Rect(slot.text_x, top - c, surf.get_width(),
+                                      surf.get_height()).inflate(2 * pad, 0),
+                          ceil))
     zones += [(r, normal) for r in skill_line_rects(screen, row)]
-    sy = geom.status_y(slot)
-    zones.append((rect(layout, (geom.PORTRAIT_X, sy - 1,
-                                geom.PORTRAIT_X + geom.PORTRAIT_W - 1,
-                                sy + NATIVE_TEXT["status"] + 2)), red))
     if row.eta:
-        cell = rect(layout, geom.portrait_cell(slot))
-        h = font_px(layout, "status")
-        zones.append((pygame.Rect(cell.x, cell.centery - h // 2 - 4,
-                                  cell.w, h * 2 + 8), red))
+        p = portrait_rect(screen, row, art)
+        h = slot.px(ldrslot.STATUS_CAP) * 2
+        zones.append((pygame.Rect(p.x, p.centery - h, p.w, 2 * h), red))
     return zones
 
 
@@ -331,121 +335,273 @@ def draw_rows(surface, screen, rows, art, lit=()):
         _draw_row(surface, screen, row, art, row.index in lit)
 
 
-def _draw_row(surface, screen, row, art, lit):
-    layout, style = screen.layout, screen.style
-    i = row.slot
-    ink = text_colour(art, "selected" if lit else "normal")
-    # The portrait, centred in its cell (officer.cpp:640-642): the HD
-    # picture from the mod folder fitted whole into the cell (work order
-    # 234, `core.leaderportraits`), else the original's drawing.
-    cell = rect(layout, geom.portrait_cell(i))
-    hd = leaderportraits.picture(row.rec, cell.size, dark=row.dark)
-    sprite = art.portrait(row.rec.pict_num, dark=row.dark) \
-        if hd is None and art is not None and art.available else None
+def _cap_size(style, cap_px):
+    """The font size whose capitals are `cap_px` tall (the empty caption's
+    rule, `caption_lines`)."""
+    return max(MIN_FONT, int(round(cap_px / hudtext.cap_ratio(style))))
+
+
+def _render_cap(style, text, cap_px, colour, max_w=None):
+    """`text` with capitals `cap_px` tall, shrunk to `max_w`; the surface
+    and the y of its capitals' top inside it."""
+    size = _cap_size(style, cap_px)
+    if max_w is not None:
+        size = fit(style, text or " ", max(1, max_w), size)
+    surf = style.render_text(text or " ", size, colour)
+    cap_top = style.render_text("H", size, colour).get_bounding_rect().y
+    return surf, cap_top
+
+
+def blit_cap(surface, style, text, x, cap_top, cap_px, colour, max_w,
+             align="left"):
+    """One word of a slot: capitals `cap_px` tall standing at `cap_top`,
+    shrunk to `max_w` (`fit`, the screen's rule), anchored `left` or `right`
+    at `x`. Every word of a slot is drawn here, as every other word of the
+    screen is by `blit_text` (the screen's text check watches both).
+    Returns the drawn Rect, or None."""
+    if not text:
+        return None
+    surf, cap = _render_cap(style, text, cap_px, colour, max_w)
+    if align == "right":
+        x -= surf.get_width()
+    surface.blit(surf, (x, cap_top - cap))
+    return pygame.Rect(x, cap_top - cap, surf.get_width(), surf.get_height())
+
+
+def _widest_skill_name(screen, size):
+    """The widest skill name of the language at `size` — the value column
+    is set by it (`ldrslot.value_right`), so it stands still from leader to
+    leader and from row to row."""
+    words = getattr(screen, "_words", None)
+    names = []
+    if words is not None:
+        from core import leaderskills as ls
+        names = [words.estring(n) or "" for n in ls.SKILL_NAME_ESTRINGS]
+    names += [name for r in getattr(screen, "_rows", ()) or ()
+              for _sid, name, _v in r.skills]
+    key = (size, tuple(names))
+    hit = getattr(screen, "_widest_skill", None)
+    if hit is not None and hit[0] == key:
+        return hit[1]
+    w = max((screen.style.render_text(n, size, (255, 255, 255)).get_width()
+             for n in names if n), default=0)
+    screen._widest_skill = (key, w)
+    return w
+
+
+def slot_of(screen, row):
+    """Row `row`'s `ldrslot.Slot` — every rectangle the drawing, the dimmed
+    ground and both right clicks use (decision 5)."""
+    from . import ldrslot
+    layout = screen.layout
+    box = rect(layout, row_box(row.slot))
+    inner = hud.panel_inner(box, layout.scale)
+    slot = ldrslot.Slot(box, inner, len(row.skills))
+    size = _cap_size(screen.style, slot.px(ldrslot.SKILL_CAP))
+    values = [v for r in getattr(screen, "_rows", ()) or () for _s, _n, v
+              in r.skills] + [v for _s, _n, v in row.skills]
+    widest_v = max((screen.style.render_text(v, size, (255, 255, 255))
+                    .get_width() for v in values if v), default=0)
+    right = ldrslot.value_right(slot, _widest_skill_name(screen, size),
+                                widest_v)
+    return ldrslot.Slot(box, inner, len(row.skills), right)
+
+
+def portrait_picture(screen, row, art, slot):
+    """What stands in the slot's portrait column: the HD picture fitted to
+    the column (`core.leaderportraits`, work order 255), else the
+    original's drawing at the largest integer step that fits (HD EXTENSION
+    `sprite_scale`), else None."""
+    col = slot.portrait_column
+    hd = leaderportraits.picture(row.rec, col.size, dark=row.dark)
     if hd is not None:
-        surface.blit(hd, hd.get_rect(center=cell.center))
-    elif sprite is not None:
-        big = magnified(sprite, layout)
-        surface.blit(big, big.get_rect(center=cell.center))
+        return hd
+    sprite = art.portrait(row.rec.pict_num, dark=row.dark) \
+        if art is not None and art.available else None
+    if sprite is None:
+        return None
+    w, h = sprite.get_size()
+    step = max(1, min(col.w // max(1, w), col.h // max(1, h)))
+    return pygame.transform.scale_by(sprite, step) if step > 1 else sprite
+
+
+def plate_size(slot):
+    """Where neither picture is there, the plate stands where the
+    original's drawing would: 73 x 88 at the column's whole step."""
+    nw, nh = leaderportraits.NATIVE_SIZE
+    col = slot.portrait_column
+    step = max(1, min(col.w // nw, col.h // nh))
+    return (nw * step, nh * step)
+
+
+def portrait_rect(screen, row, art):
+    """Where row `row`'s portrait is drawn — the portrait's right click
+    ("where is this leader") answers there, not at the native field's
+    83 px (`ldrinput.right_click`)."""
+    slot = slot_of(screen, row)
+    pic = portrait_picture(screen, row, art, slot)
+    if pic is None:
+        return slot.portrait_rect(plate_size(slot))
+    return slot.portrait_rect(pic.get_size())
+
+
+def _draw_row(surface, screen, row, art, lit):
+    """DEVIATION `mockup_slot` (`ldrslot`): the original's words and rules
+    (`ldrrows`, officer.cpp:3578-3838) at the mockup's places."""
+    from . import ldrslot
+    style = screen.style
+    ink = text_colour(art, "selected" if lit else "normal")
+    slot = slot_of(screen, row)
+    # The portrait standing on the column's floor, in front of the slot's
+    # picture: the HD cut-out (work order 255), else the original's drawing.
+    pic = portrait_picture(screen, row, art, slot)
+    if pic is not None:
+        at = slot.portrait_rect(pic.get_size())
+        surface.blit(pic, at)
     else:
-        screen.style.draw_plate(surface, cell.inflate(-4, -4),
-                                layout.scale, BOX_OUTLINE)
-    # The name, centred in 160 px from text_x + 22 (:3630-3633).
-    ty = geom.text_y(i)
-    name_left = point(layout, geom.TEXT_X + geom.NAME_DX, ty)
-    name_w = rect(layout, (geom.TEXT_X + geom.NAME_DX, ty,
-                           geom.TEXT_X + geom.NAME_DX + geom.NAME_W - 1,
-                           ty)).w
-    blit_text(surface, style, row.name, name_left[0] + name_w // 2,
-              name_left[1], name_w, font_px(layout, "name"), ink, "center")
-    _draw_cost(surface, screen, row, ink, ty)
-    _draw_status(surface, screen, row, art, ink, i)
-    _draw_skills(surface, screen, row, art, ink, i)
+        at = slot.portrait_rect(plate_size(slot))
+        screen.style.draw_plate(surface, at, screen.layout.scale, BOX_OUTLINE)
+    cost_left = _draw_cost(surface, screen, row, ink, slot)
+    room = cost_left - slot.text_x - slot.px(ldrslot.NAME_CAP)
+    # The name at the top of the text column (:3624-3634's words).
+    blit_cap(surface, style, row.name, slot.text_x, slot.name_top,
+             slot.px(ldrslot.NAME_CAP), ink, room)
+    _draw_status(surface, screen, row, art, ink, slot, at, room)
+    _draw_skills(surface, screen, row, art, ink, slot)
 
 
-def _draw_cost(surface, screen, row, ink, ty):
-    """The two cost lines, in the original's two alignments (:3636-3675)."""
-    layout, style = screen.layout, screen.style
-    size = font_px(layout, "cost")
-    right = point(layout, geom.TEXT_X + geom.RIGHT_COLUMN
-                  - geom.COST_RIGHT_INSET, ty)
-    line_h = style.render_text("0", size, ink).get_height()
-    room = rect(layout, (geom.TEXT_X + geom.NAME_DX + geom.NAME_W, ty,
-                         geom.TEXT_X + geom.RIGHT_COLUMN, ty)).w
-    label = style.render_text(row.cost_label or " ", fit(
-        style, row.cost_label or " ", room, size), ink)
-    if row.cost_align == "right":
-        blit_text(surface, style, row.cost_value, right[0], right[1],
-                  room, size, ink, "right")
-        if row.cost_label:
-            surface.blit(label, (right[0] - label.get_width(),
-                                 right[1] + line_h))
-        return
-    left = right[0] - label.get_width()
-    blit_text(surface, style, row.cost_value, left, right[1], room, size, ink)
+def cost_room(slot):
+    """The cost column's width: from the value column's right edge (and its
+    gap) to the slot's — the cost can never run into a skill's value."""
+    from . import ldrslot
+    return slot.cost_right - slot.values_right - int(round(
+        slot.box.w * ldrslot.VALUE_GAP))
+
+
+def cost_specs(screen, row, slot):
+    """[(text, cap px, x, cap top, align)] of the two cost lines at the
+    slot's top right, in the original's two alignments (:3636-3675): for
+    hire both right-aligned; otherwise the value starts where the label
+    starts — never past the slot's right edge (German's "  Nr.", HESTR
+    0x10A with two spaces in the file, is wider than its label "Inst.")."""
+    from . import ldrslot
+    style, right, room = screen.style, slot.cost_right, cost_room(slot)
+    vcap, lcap = slot.px(ldrslot.COST_CAP), slot.px(ldrslot.LABEL_CAP)
+    out = []
+    lab_x = None
     if row.cost_label:
-        surface.blit(label, (left, right[1] + line_h))
+        lab = _render_cap(style, row.cost_label, lcap, (255, 255, 255),
+                          room)[0]
+        lab_x = right - lab.get_width()
+    if row.cost_value:
+        val = _render_cap(style, row.cost_value, vcap, (255, 255, 255),
+                          room)[0]
+        if row.cost_align == "right" or lab_x is None:
+            out.append((row.cost_value, vcap, right, slot.y(
+                ldrslot.COST_TOP), "right"))
+        else:
+            out.append((row.cost_value, vcap,
+                        min(lab_x, right - val.get_width()),
+                        slot.y(ldrslot.COST_TOP), "left"))
+    if row.cost_label:
+        out.append((row.cost_label, lcap, right, slot.y(ldrslot.LABEL_TOP),
+                    "right"))
+    return out
 
 
-def _draw_status(surface, screen, row, art, ink, i):
-    """The line under the portrait and the ETA over it (:3677-3745)."""
-    layout, style = screen.layout, screen.style
-    cx = point(layout, geom.PORTRAIT_X + geom.PORTRAIT_W // 2, 0)[0]
-    y = point(layout, 0, geom.status_y(i))[1]
-    fit_w = rect(layout, (0, 0, geom.STATUS_FIT_W - 1, 0)).w
+def cost_lines(screen, row, ink, slot):
+    """[(surface, topleft)] of the cost lines as `cost_specs` places them —
+    what the words' dimmed ground and the fit check measure."""
+    out = []
+    for text, cap_px, x, top, align in cost_specs(screen, row, slot):
+        surf, cap = _render_cap(screen.style, text, cap_px, ink,
+                                cost_room(slot))
+        if align == "right":
+            x -= surf.get_width()
+        out.append((surf, (x, top - cap)))
+    return out
+
+
+def _draw_cost(surface, screen, row, ink, slot):
+    """The cost at the top right; returns the left edge it takes."""
+    left = slot.cost_right
+    for text, cap_px, x, top, align in cost_specs(screen, row, slot):
+        r = blit_cap(surface, screen.style, text, x, top, cap_px, ink,
+                     cost_room(slot), align)
+        if r is not None:
+            left = min(left, r.x)
+    return left
+
+
+def _draw_status(surface, screen, row, art, ink, slot, portrait, room):
+    """The status line under the name (INVENTION `status_under_name`; the
+    original's words and red, :3677-3738) and the ETA over the portrait
+    (:3742-3745)."""
+    from . import ldrslot
+    style = screen.style
     colour = text_colour(art, "red") if row.status_red else ink
-    blit_text(surface, style, row.status, cx, y, fit_w,
-              font_px(layout, "status"), colour, "center")
+    blit_cap(surface, style, row.status, slot.text_x, slot.status_top,
+             slot.px(ldrslot.STATUS_CAP), colour, room)
     if row.eta:
-        cell = rect(layout, geom.portrait_cell(i))
-        drawn = blit_text(surface, style, row.eta, cell.centerx,
-                          cell.centery, cell.w, font_px(layout, "status"),
-                          text_colour(art, "red"), "center")
-        if drawn is not None:
-            # Two lines above and two below, in the red pair
-            # (officer.cpp:3093-3096).
-            red = text_colour(art, "red")
-            for dy in (-3, -2):
-                pygame.draw.line(surface, red, (drawn.x, drawn.y + dy),
-                                 (drawn.right, drawn.y + dy))
-            for dy in (0, 1):
-                pygame.draw.line(surface, red,
-                                 (drawn.x, drawn.bottom + dy),
-                                 (drawn.right, drawn.bottom + dy))
+        red = text_colour(art, "red")
+        cap_px = slot.px(ldrslot.STATUS_CAP)
+        width = _render_cap(style, row.eta, cap_px, red, portrait.w)[0] \
+            .get_width()
+        drawn = blit_cap(surface, style, row.eta, portrait.centerx
+                         - width // 2, portrait.centery - cap_px // 2,
+                         cap_px, red, portrait.w)
+        # Two lines above and two below, in the red pair
+        # (officer.cpp:3093-3096).
+        for dy in (-3, -2):
+            pygame.draw.line(surface, red, (drawn.x, drawn.y + dy),
+                             (drawn.right, drawn.y + dy))
+        for dy in (0, 1):
+            pygame.draw.line(surface, red, (drawn.x, drawn.bottom + dy),
+                             (drawn.right, drawn.bottom + dy))
 
 
 def skill_line_rects(screen, row):
     """Each skill line's window rect, top down — the drawing's AND the
     right-click's (decision 5)."""
-    layout = screen.layout
-    out = []
-    for k, y in enumerate(geom.skill_rows(row.slot, len(row.skills))):
-        out.append(rect(layout, (geom.TEXT_X, y - 1,
-                                 geom.TEXT_X + geom.RIGHT_COLUMN - 1,
-                                 y + geom.SKILL_STEP - 2)))
-    return out
+    return [line for line, _icon, _cy in slot_of(screen, row).skill_lines()]
 
 
-def _draw_skills(surface, screen, row, art, ink, i):
-    """Icon, name, value per displayed skill (:3747-3837)."""
-    layout, style = screen.layout, screen.style
-    size = font_px(layout, "skill")
-    value_right = point(layout, geom.TEXT_X + geom.RIGHT_COLUMN
-                        - geom.VALUE_RIGHT_INSET, 0)[0]
-    for (sid, name, value), y in zip(row.skills,
-                                      geom.skill_rows(i, len(row.skills))):
+def skill_icon(icon, size):
+    """A skill icon in its `size` square: the original's drawing at the
+    largest integer step that fits (HD EXTENSION `sprite_scale`), a painted
+    one larger than the square scaled down smoothly to it (work order 255:
+    a redrawn icon from the mod folder, `core.blobart`, is drawn at the
+    slot's size, never magnified)."""
+    w, h = icon.get_size()
+    if w > size or h > size:
+        k = min(size / w, size / h)
+        return pygame.transform.smoothscale(
+            icon, (max(1, round(w * k)), max(1, round(h * k))))
+    step = max(1, min(size // max(1, w), size // max(1, h)))
+    return pygame.transform.scale_by(icon, step) if step > 1 else icon
+
+
+def _draw_skills(surface, screen, row, art, ink, slot):
+    """Icon, name, value per displayed skill (:3747-3837's words): one line
+    each, the value right-aligned in its own column."""
+    from . import ldrslot
+    style = screen.style
+    cap_px = slot.px(ldrslot.SKILL_CAP)
+    for (sid, name, value), (line, icon_r, cy) in zip(row.skills,
+                                                       slot.skill_lines()):
         icon = art.skill_icon(sid) if art is not None and art.available \
             else None
-        icon_at = point(layout, geom.TEXT_X + geom.SKILL_ICON_DX,
-                        y + geom.SKILL_ICON_DY)
         if icon is not None:
-            surface.blit(magnified(icon, layout), icon_at)
-        name_at = point(layout, geom.TEXT_X + geom.SKILL_NAME_DX, y)
-        drawn_v = blit_text(surface, style, value, value_right, name_at[1],
-                            value_right - name_at[0], size, ink, "right")
-        room = (drawn_v.x if drawn_v else value_right) - name_at[0] - 4
-        blit_text(surface, style, name, name_at[0], name_at[1], room,
-                  size, ink)
+            pic = skill_icon(icon, icon_r.h)
+            surface.blit(pic, pic.get_rect(center=icon_r.center))
+        top = cy - cap_px // 2
+        drawn = blit_cap(surface, style, value, slot.values_right, top,
+                         cap_px, ink, slot.values_right - slot.skill_name_x,
+                         "right")
+        room = (drawn.x if drawn else slot.values_right) \
+            - slot.skill_name_x - int(round(slot.box.w * ldrslot.VALUE_GAP))
+        blit_cap(surface, style, name, slot.skill_name_x, top, cap_px, ink,
+                 room)
 
 
 # ── Buttons ───────────────────────────────────────────────

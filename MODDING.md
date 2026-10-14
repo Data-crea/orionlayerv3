@@ -76,15 +76,22 @@ Screens whose geometry is code (the battle) have no frame slot.
 
 ### Leader portraits in HD
 
-Painted portraits of all 67 leaders exist as a mod of their own, outside
-this repository (the repository holds no picture):
-its folder goes into your mod folder as
-`files/mods/leader_portraits/` (`colony_leaders/`, `ship_officers/`,
-named `<nn>_<name>.png` by the leader's number in the game). They are
-drawn while the Mod folder is On, each whole in the place the game's
-small portrait has; Off, or without a picture, the game's own portrait
-is drawn. To replace one, put a PNG of the same name there; the mod's
-`README.md` gives the names, the size (431 x 528) and the steps.
+OrionLayer's base pack holds painted, cut-out portraits (PNG with
+transparency) for the leaders, in the pack's folder
+screens/leaders/assets/portraits/ (`colony_leaders/`, `ship_officers/`,
+named `<nn>_<name>.png` by the leader's number in the game). A leader
+without one shows the game's own portrait. To replace a portrait, or to
+give a leader one, put a PNG with transparency in your mod folder under
+`files/screens/leaders/assets/portraits/<colony_leaders|ship_officers>/`
+named `<nn>_<anything>.png` — the number decides, the name after it is
+yours. The largest place a portrait is drawn at 3840 x 2160 is 438 x 528
+(the turn's leader offer); every place scales down from it.
+
+The leaders' skill icons are the game's own 16 x 16 pictures. A redrawn
+icon goes under `files/screens/leaders/assets/gamedata/officer/` as
+`skill_<k>_0.png` (`<k>` = the skill's number / 2; one icon serves a
+skill and its starred variant); it is drawn as painted, fitted into the
+icon's square — 61 x 61 at 3840 x 2160.
 
 ### The Leaders screen's pictures
 

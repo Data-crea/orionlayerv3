@@ -56,11 +56,10 @@ It does NOT apply to:
       drawings. Every picture of the pack is under CC BY 4.0.
 
   The leader portraits
-      The 67 high-resolution leader portraits are a mod
-      for the player's mod folder (files/mods/leader_portraits/), neither
-      in this repository nor in the base pack. They are the maintainer's
-      redrawings of the game's leader portraits; the copyright in the
-      underlying work remains with its rightsholder.
+      The high-resolution leader portraits are in the base pack
+      (screens/leaders/assets/portraits/), not in this repository. They
+      are the maintainer's redrawings of the game's leader portraits; the
+      copyright in the underlying work remains with its rightsholder.
 
   The display font
       assets/shared/fonts/Aldrich-Regular.ttf is Copyright (c) 2011

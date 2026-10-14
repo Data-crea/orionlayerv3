@@ -34,6 +34,9 @@ GAME_ART = ("assets/shared/background_cockpit.png",
             "screens/galaxy_map/assets/stars/*/*.png",
             "screens/main_menu/assets/logo.png",
             "screens/new_game/assets/*/*.png",
+            # Data's cut-out leader portraits, redrawings of the game's
+            # (work order 255, `core/leaderportraits.py`)
+            "screens/leaders/assets/portraits/*/*.png",
             "screens/select_race/assets/portraits/*.*")
 
 #: EVERY OTHER PICTURE IN THE TREE, and why `files/` does not list it

@@ -40,6 +40,7 @@ from core import textfit
 from . import ldrdraw as draw
 from . import ldrgeom as geom
 from . import ldrpopup
+from . import ldrrows
 
 #: `Box_Centered_On_XY_` off the main screen (textbox.cpp:52-55): x 130;
 #: the paragraph is 339 wide (:186) inside a 380-wide box.
@@ -147,10 +148,17 @@ def _popup_skills(surface, screen, rec, level, words, art, ink):
         icon = art.skill_icon(sid) if art is not None and art.available \
             else None
         if icon is not None:
-            surface.blit(draw.magnified(icon, layout),
-                         draw.point(layout, ldrpopup.TEXT_X + 2, y - 4))
+            # the original's 16 px square at the screen's step; a painted
+            # icon from the mod folder is fitted into it (work order 255)
+            side = draw.magnified(pygame.Surface(
+                (geom.SKILL_ICON_SIZE, geom.SKILL_ICON_SIZE)), layout)
+            pic = draw.skill_icon(icon, side.get_width())
+            at = draw.point(layout, ldrpopup.TEXT_X + 2, y - 4)
+            surface.blit(pic, pic.get_rect(center=(
+                at[0] + side.get_width() // 2,
+                at[1] + side.get_height() // 2)))
         at = draw.point(layout, ldrpopup.TEXT_X + geom.SKILL_NAME_DX, y)
-        value = ls.c_format(ls.SKILLS[sid][6], ls.skill_bonus(level, sid))
+        value = ldrrows.skill_value(sid, level, words.unit)
         drawn = draw.blit_text(surface, screen.style, value, right, at[1],
                                right - at[0], size, ink, "right")
         draw.blit_text(surface, screen.style,

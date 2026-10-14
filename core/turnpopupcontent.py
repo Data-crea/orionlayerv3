@@ -80,7 +80,7 @@ def leader_card(state, index, app=None):
     name = ls.leader_name(rec, title_word, the_word)
     skills = []
     for sid in ls.displayed_skills(rec):
-        value = ls.c_format(ls.SKILLS[sid][6], ls.skill_bonus(level, sid))
+        value = ldrrows.skill_value(sid, level, words.unit)
         skills.append(((words.estring(ls.SKILL_NAME_ESTRINGS[sid]) or ""),
                        value))
 

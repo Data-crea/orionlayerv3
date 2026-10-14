@@ -81,9 +81,10 @@ FRAME_TREE = "screens/{screen}/assets/frame.png"
 #: (`<name>@2x.png`, decision 50), read through `files_root`; and the
 #: colony screen's surface pictures in its own format (work order 232,
 #: `screens/colony/colsurface.py`), which the tree does not ship yet; and
-#: the leaders' HD portraits (work order 234, `core/leaderportraits.py`),
-#: found by their number, so a picture under another name after the
-#: number is a picture, not a typo; and the Leaders screen's seven picture
+#: the leaders' HD portraits (work orders 234 and 255,
+#: `core/leaderportraits.py`, in the base pack since 255), found by their
+#: number, so a picture under another name after the number is a picture,
+#: not a typo — and a leader the pack has no picture for can get one; and the Leaders screen's seven picture
 #: places (work order 237, `screens/leaders/ldrpics.NAMES`, held equal by
 #: the leaders' smoke group), by exact name, so a misspelt one says so.
 #: Globs relative to the tree.
@@ -91,7 +92,7 @@ SLOTS = ("screens/*/assets/frame.png",
          "screens/*/assets/gamedata/*.png",
          "assets/shared/figures/*.png",
          "screens/colony/assets/surfaces/*.png",
-         "mods/leader_portraits/*/*.png",
+         "screens/leaders/assets/portraits/*/*.png",
          "screens/leaders/assets/pictures/screen_background.png",
          "screens/leaders/assets/pictures/slot_[1234]_background.png",
          "screens/leaders/assets/pictures/slot_empty_background.png",

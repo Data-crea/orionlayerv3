@@ -209,15 +209,19 @@ def right_button(screen, down, screen_x, screen_y):
                          big[0], field.index)
                 screen.app.client.cancel_field(field.index)
                 return True
-        if point is not None:
-            for slot, _idx, _rec in view.listed():
-                if _inside(point, ldrgeom.portrait_field(slot)):
-                    field = _field_at(view, ldrgeom.portrait_field(slot))
-                    if field is not None and screen.app.connected:
-                        log.info("leaders: where is leader %d -> field %d",
-                                 _idx, field.index)
-                        screen.app.client.cancel_field(field.index)
-                    return True
+        for row in screen._rows:
+            # The portrait answers where it is DRAWN (work order 255: the
+            # mockup's slot draws it larger than the native field's 83 px)
+            # and sends the native field, as the original's right click
+            # on its portrait does (officer.cpp:2923-2930).
+            if ldrdraw.portrait_rect(screen, row, screen._art) \
+                    .collidepoint(screen_x, screen_y):
+                field = _field_at(view, ldrgeom.portrait_field(row.slot))
+                if field is not None and screen.app.connected:
+                    log.info("leaders: where is leader %d -> field %d",
+                             row.index, field.index)
+                    screen.app.client.cancel_field(field.index)
+                return True
     # the screen's own entry: a shell button's help is its native field's
     # (`LeadersScreen.open_help_at`). Until work order 248 this called
     # `open_help` here, which knows the tabs but not the shell's row, so a
