@@ -11,7 +11,7 @@ import logging
 import pygame
 
 from core import combatblocks as cb
-from . import cbdraw, cbhelp, cbmap, cbpanel
+from . import cbdraw, cbhelp, cbmap, cbpanel, cbtarget
 
 log = logging.getLogger("combat")
 
@@ -74,6 +74,30 @@ class CombatInput:
             return None
         masks = targets["units"]
         return masks[unit] if unit < len(masks) else 0
+
+    def _target(self, c):
+        """What the systems window shows instead of the systems
+        (`cbtarget`, TRANSCRIPTION `target_box`, work order 259): a missile
+        under its hidden field, else a unit other than the acting one —
+        only in the player's own orders and outside SCAN and BOARD mode, the
+        pointer pictures 1 and 12 (combat1.cpp:1730-1834) — or None."""
+        if self._pointer is None or self._cam is None or self._board or \
+                self._pops.scan_mode or not self._own_turn() or \
+                not self._cam.on_field(*self._pointer):
+            return None
+        m = cbtarget.missile_under(self._play.ordnance, self._cam,
+                                   *self._pointer)
+        if m is not None:
+            return ("missile", m, c,
+                    (self._play.ordnance or {}).get("missiles", []),
+                    self._cache)
+        cell = self._cam.cell_at(*self._pointer)
+        unit = self._unit_at(cell) if cell is not None else None
+        if unit is None or unit == c["cur_ship"]:
+            return None
+        u = c["units"][unit]
+        return ("unit", u, self._status_of(dict(c, cur_ship=unit), u),
+                cbdraw.unit_picture(self._art, self._play.colours, u, 0))
 
     def _computer(self, c):
         """`Ship_Controlled_By_Computer_` (combat1.cpp:217-227): another

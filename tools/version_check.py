@@ -181,6 +181,7 @@ FIX_NUMBERS = {
     "doc/ext_invasion.patch": (91,),
     "doc/ext_settle_pops.patch": (92,),
     "doc/ext_layout_table.patch": (93,),
+    "doc/ext_combat_absorber_charge.patch": (94,),
 }
 
 

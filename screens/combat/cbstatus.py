@@ -49,10 +49,11 @@ file, OrionLayer's words.
 OMISSION `status_planet`: the planet's box (its picture and its defences'
 names, :2068-2129, and its bars, :958-994) is not this — the panel keeps
 HD's rings for the planet.
-UNVERIFIED `status_internals`: a ship's internals bar with its internal
-systems hit was not seen live (work order 258's runs never reached them);
-a monster's bars (builder 10 and up, :1087-1138), undamaged and damaged,
-were held against the engine's hover box in work order 258, 0 differing.
+TRANSCRIPTION `status_internals`: a ship's internals bar with its internal
+systems hit, held live in work order 259 — the damage set in the test save
+(`g259_internal_damage`: shield and drive 40 % and 80 %, computer 1), own
+and hovered units, painted and the game's drawings, 0 differing; a
+monster's bars (builder 10 and up, :1087-1138) in work order 258.
 """
 import numpy as np
 import pygame

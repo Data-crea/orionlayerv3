@@ -476,6 +476,13 @@ LOCAL_PATCHES = {
         "records at the offsets of orion2re 1.60, and on v2 every value from "
         "s_player's total_pop on is read from the wrong bytes (no stars on "
         "the map, wrong sidebar)"),
+    # Work order 259: on the fork's branch `orionlayer` only, 42f32654.
+    "doc/ext_combat_absorber_charge.patch": (
+        os.path.join("src", "game", "cmbtfire.cpp"),
+        "OrionLayer, open fix 94.",
+        "the engine does not send the Energy Absorber's charge (open fix "
+        "94): HD draws the glow only once the state after a FIRE arrives, "
+        "after the shot the original already shows it under"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

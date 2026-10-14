@@ -71,7 +71,7 @@ from core import lang
 from core.hud import blocks as hud
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
-from . import cbart, cbmap, cbstatus
+from . import cbart, cbmap, cbstatus, cbtarget
 
 TABS = (("weapons", "WEAPONS"), ("specials", "SPECIALS"))
 BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
@@ -230,6 +230,7 @@ class Panel:
         self.buttons = None       # the button block (the OPTIONS panel's place)
         self._row_wait = None     # (row, active before, time) after a switch
         self.status = cbstatus.StatusPicture()
+        self.target_status = cbstatus.StatusPicture()   # `cbtarget`'s box
 
     def switch(self, row, state, client):
         """A click on weapon row `row`: the original's own field, once the
@@ -315,12 +316,14 @@ class Panel:
 
     def draw(self, surface, style, unit, names, ken, actives, board_mode, live,
              scale, picture=None, specials=False, computer=False, hover=None,
-             status=None):
+             status=None, target=None):
         """`hover` is the CTGT mask of the unit or missile under the pointer
         (bit k: slot k can hit it), None when the pointer is over neither;
         `computer` whether the acting unit is the computer's; `status`
         (art, colour, unit, monster) for the status picture, None for the
-        planet."""
+        planet; `target` what the systems window shows instead of the
+        systems (`cbtarget`, work order 259): ("unit", unit, status,
+        picture) or ("missile", missile, battle, missiles, cache)."""
         band = self.area(*surface.get_size())
         gap, ins = self._spacing(scale)
         pad = ins
@@ -383,11 +386,28 @@ class Panel:
                  (64, word("max_speed", "Max Speed"), unit["current_speed"]),
                  (75, word("remaining", "Remaining"), unit["movement_left"]))
         sysw = wins["systems"].inflate(-2 * ins, -2 * ins)
-        hudtext.blit(surface, style.render_text(
-            word("systems", "Systems"), size, hudtext.colour("value")[:3]),
-            pygame.Rect(sysw.x, sysw.y, sysw.w, size + ins // 2),
-            align="center")
+        title = pygame.Rect(sysw.x, sysw.y, sysw.w, size + ins // 2)
         top = sysw.y + size + ins
+        if target is not None and not specials:
+            # the unit or missile under the pointer (`cbtarget`, work
+            # order 259): in the systems' place, as the original's box at
+            # x 400; under SPECIALS the systems stay (cmbtdrw1.cpp:708)
+            room = pygame.Rect(sysw.x, top, sysw.w, sysw.bottom - top)
+            if target[0] == "unit":
+                cbtarget.draw_unit(surface, title, room, self.target_status,
+                                   target[1], target[2], target[3], style,
+                                   scale, size, ken, draw_shields)
+            else:
+                cbtarget.draw_missile(
+                    surface, title, room, target[1], target[2], target[3],
+                    getattr(self, "_art", None), names, ken, style, small,
+                    lambda w: WEAPON_TYPE[w] if 0 <= w < len(WEAPON_TYPE)
+                    else 0, target[4])
+            facts = ()
+        else:
+            hudtext.blit(surface, style.render_text(
+                word("systems", "Systems"), size,
+                hudtext.colour("value")[:3]), title, align="center")
         # the rows' pitch is the original's ten of its 85: the words keep
         # inside it (`text` at most the panel's small size)
         pitch = (sysw.bottom - top) * 10 / 85

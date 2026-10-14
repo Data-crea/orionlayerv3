@@ -38,7 +38,12 @@ PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
                   # cmbtdrw1.cpp:360-425), work order 258
                   "systems": 36, "drive": 14, "no_drive": 37, "shields": 39,
                   "no_shields": 38, "computer": 21, "structure": 16,
-                  "armor": 18, "max_speed": 40, "remaining": 90}
+                  "armor": 18, "max_speed": 40, "remaining": 90,
+                  # the hovered missile's box (`Draw_Missile_Status_`,
+                  # cmbtmis.cpp:1395-1436), work order 259: "Target:" run
+                  # into the name, the quantity's words with their space
+                  "target": 52, "missile": 53, "torpedo": 54,
+                  "missiles": 107, "torpedoes": 108}
 
 #: The bits in the order the original tests them, 0x10 last.
 ARC_ORDER = (0x01, 0x02, 0x04, 0x08, 0x10)

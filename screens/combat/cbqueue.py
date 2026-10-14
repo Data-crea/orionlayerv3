@@ -41,6 +41,38 @@ def same_firing(first, ev):
         -1 not in (ev.get("slot"), first.get("slot"))
 
 
+#: open fix 94 (work order 259): the Energy Absorber's charge as the engine
+#: takes it. TRANSCRIPTION `absorber_charge`: the original takes every
+#: shot's damage of a FIRE — and with it every charge (`Apply_Ship_Damage_`,
+#: cmbtfire.cpp:776-791) — in its slot loop (`Fire_Beam_Weapon_`, :1323)
+#: and plays the one `Beam_SFX_` loop only after it (:1461), so the glow is
+#: on from the loop's first frame: a FIRE takes the charges recorded
+#: between its shots as it starts.
+CHARGE = "absorb"
+
+
+def _next_shot(first, queue, i):
+    """Where the next shot of `first`'s FIRE is in `queue`, at `i` or past
+    the charges there, else None."""
+    while i < len(queue) and queue[i]["kind"] == CHARGE:
+        i += 1
+    return i if i < len(queue) and same_firing(first, queue[i]) else None
+
+
+def take_firing(first, queue, charge):
+    """The other shots of `first`'s FIRE, taken out of `queue`; each charge
+    recorded between them is handed to `charge` now (`absorber_charge`)."""
+    shots = []
+    while True:
+        j = _next_shot(first, queue, 0)
+        if j is None:
+            return shots
+        for e in queue[:j]:
+            charge(e)
+        del queue[:j]
+        shots.append(queue.pop(0))
+
+
 def aims_for(first, aim):
     """`aim` (open fix 82) or a spin (83) is one of `first`'s: the same
     shooter and target."""
@@ -52,10 +84,13 @@ def fire_extent(queue):
     """The queue's head FIRE: (its entries, the index after its last shot)
     — entries counted as `cbshot.plan_firing` groups them."""
     first, i, entries, slot = queue[0], 0, 0, object()
-    while i < len(queue) and (i == 0 or same_firing(first, queue[i])):
-        if queue[i].get("slot") != slot:
-            entries, slot = entries + 1, queue[i].get("slot")
-        i += 1
+    while i < len(queue):
+        j = i if i == 0 else _next_shot(first, queue, i)
+        if j is None:
+            break
+        if queue[j].get("slot") != slot:
+            entries, slot = entries + 1, queue[j].get("slot")
+        i = j + 1
     return entries, i
 
 

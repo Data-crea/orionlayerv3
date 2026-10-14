@@ -221,6 +221,10 @@ EVENTS = {
     # open fix 83: the sixteenths of a turn the gyro destabilizer spins its
     # target after the line — the engine's random draw (cmbtspec.cpp:566-575)
     23: ("gyro_spin", ("source", "target", "turns")),
+    # open fix 94 (work order 259): the Energy Absorber's charge
+    # (`reflected_damage_pool`) after a hit charged it, or 0 after its
+    # discharge or its side's turn emptied it, and the change
+    24: ("absorb", ("unit", "pool", "change")),
 }
 #: MSG_COMBAT_COMMAND's ops (ext_api.h, `CombatCommandOp`), open fix 58.
 COMMANDS = {"move": 1, "fire": 2, "fire_missile": 3, "face": 4,

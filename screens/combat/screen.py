@@ -302,7 +302,8 @@ class CombatScreen(CombatInput, ScreenBase):
                          self._board or self._pops.scan_mode and "scan", live,
                          self.layout.scale, pic, self._specials,
                          self._computer(self._state.combat or c),
-                         self._hover(c), self._status_of(c, unit))
+                         self._hover(c), self._status_of(c, unit),
+                         self._target(c))
         if self._panel.map is not None:              # work order 209 B1
             cbmap.draw(surface, self._panel.map, c, self._play.ordnance,
                        self._cam, self._art, self._play.colours,

@@ -239,11 +239,14 @@ class Player:
                     not self._aims_ready(now):
                 return
             ev = self._queue.pop(0)
-            if ev["kind"] in cbsound.KINDS:
+            if ev["kind"] in cbsound.KINDS or ev["kind"] == cbqueue.CHARGE:
                 # a sound with no animation of HD's before it — a field's
                 # click, an engine noise that starts before its move is
-                # recorded (cmbtmov1.cpp): now
-                self.sounds.at(now, ev)
+                # recorded (cmbtmov1.cpp) — or a charge (open fix 94): now
+                if ev["kind"] == cbqueue.CHARGE:
+                    self._charge(ev)
+                else:
+                    self.sounds.at(now, ev)
                 self._played = max(self._played, ev["seq"])
                 self._adopt()
                 continue
@@ -280,6 +283,12 @@ class Player:
 
     def unit(self, i):
         return self._unit(i)
+
+    def _charge(self, ev):
+        """The Energy Absorber's charge on the shown unit (open fix 94)."""
+        u = self._unit(ev.get("unit", -1))
+        if u is not None:
+            u["reflected_damage_pool"] = ev.get("pool", 0)
 
     def _unit(self, i):
         units = self.shown["units"] if self.shown else []
@@ -340,9 +349,7 @@ class Player:
             # TRANSCRIPTION `firing` (`cbshot`, work order 212): every shot
             # of one FIRE is one loop — the queued shots at the same target
             # go with this one
-            shots = [ev]
-            while self._queue and cbqueue.same_firing(ev, self._queue[0]):
-                shots.append(self._queue.pop(0))
+            shots = [ev] + cbqueue.take_firing(ev, self._queue, self._charge)
             ev["_tail"] = shots[-1]["seq"]
             self.last_beam = shots[-1]
             u = None if ev.get("at_missile") else \
