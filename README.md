@@ -86,6 +86,11 @@ and reads the texts and pictures it needs from your game:
 At its end setup reports the engine it found and whether every change
 OrionLayer needs is in it.
 
+*Optional:* painted leader portraits come as their own download,
+`orionlayer-leader-portraits.zip`; unpack it into OrionLayer's mod folder
+(its place is shown in the game: GAME, SETTINGS, ORIONLAYER, SYSTEM).
+Without it the leaders show the game's own portraits.
+
 **4. Play:**
 
 ```sh
@@ -155,6 +160,9 @@ in [MODDING.md](MODDING.md).
 - **The base pack**, OrionLayer's own pictures, is by Data (Daniel
   Sattler) under Creative Commons Attribution 4.0 (CC BY 4.0); its
   `LICENSE.txt` comes with it.
+- **The leader portraits** (the optional download) are redrawings of the
+  game's portraits; the copyright in the original artwork stays with its
+  rightsholder, and they are not under the base pack's licence.
 - **The font** is Aldrich by Matthew Desmond (MADType), under the SIL Open
   Font License.
 - **Master of Orion II** is by Simtex / MicroProse. Its makers and the

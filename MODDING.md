@@ -76,12 +76,16 @@ Screens whose geometry is code (the battle) have no frame slot.
 
 ### Leader portraits in HD
 
-OrionLayer's base pack holds painted, cut-out portraits (PNG with
-transparency) for the leaders, in the pack's folder
-screens/leaders/assets/portraits/ (`colony_leaders/`, `ship_officers/`,
-named `<nn>_<name>.png` by the leader's number in the game). A leader
-without one shows the game's own portrait. To replace a portrait, or to
-give a leader one, put a PNG with transparency in your mod folder under
+Painted, cut-out portraits (PNG with transparency) for the leaders are an
+optional download of their own, `orionlayer-leader-portraits.zip` — not
+part of the base pack: they are redrawings of the game's portraits, and
+the base pack's licence cannot cover them. Unpack it into your mod folder;
+the pictures land in `files/screens/leaders/assets/portraits/`
+(`colony_leaders/`, `ship_officers/`, named `<nn>_<name>.png` by the
+leader's number in the game). A leader without one, and every leader
+while the mod folder is off, shows the game's own portrait. To replace a
+portrait, or to give a leader one, put a PNG with transparency in your mod
+folder under
 `files/screens/leaders/assets/portraits/<colony_leaders|ship_officers>/`
 named `<nn>_<anything>.png` — the number decides, the name after it is
 yours. The largest place a portrait is drawn at 3840 x 2160 is 438 x 528

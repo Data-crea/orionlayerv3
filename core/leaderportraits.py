@@ -4,9 +4,13 @@ HD EXTENSION `hd_portraits`: the original has one 73 x 88 drawing per
 leader (OFFICER.LBX `0x15 + n`); HD draws a painted, cut-out picture in its
 place.
 
-WHERE THEY LIVE (work order 255, Data's order). In the base pack, under
-the Leaders screen's assets: `screens/leaders/assets/portraits/<category>/
-<pict_num>_<name>.png`, `colony_leaders/` and `ship_officers/` (the
+WHERE THEY LIVE (work order 268, Data's decision of work order 262
+answering 255 P3; before it, work order 255, the base pack). In the
+player's mod folder, from their own download (`orionlayer-leader-
+portraits.zip`, made by `dev:tools/leader_portraits_install.py --zip`) —
+not in the base pack, whose licence cannot cover redrawings of the game's
+portraits: `files/screens/leaders/assets/portraits/<category>/
+<pict_num>_<name>.png` (a slot of `core.usermod`), `colony_leaders/` and `ship_officers/` (the
 leader's `type`, `core/structs/leader.py`), `pict_num` two digits — the
 identity the game knows the leader by (HERODATA.LBX's record number, held
 equal on every save by `dev:tools/leader_check.py`). The name after the
@@ -16,10 +20,9 @@ alpha channel (Data's set of 14 October 2026), installed by
 `dev:tools/leader_portraits_install.py`.
 
 WHICH FILE WINS. Each source root in order (`Resources.roots`, decision
-16): the player's mod folder's `files/` while it is on — so
-`files/screens/leaders/assets/portraits/colony_leaders/01_kimbuzzi.png`
-there replaces the pack's picture, decision 72 — then the developer mods,
-the tree, the base pack. The first root with a `<nn>_*.png` for the leader
+16): the player's mod folder's `files/` while it is on — where the
+download puts them, decision 72 — then the developer mods, the tree, the
+base pack (which holds none since work order 268). The first root with a `<nn>_*.png` for the leader
 answers; an unreadable file costs one log line and the next root is asked.
 Work order 234's set under `files/mods/leader_portraits/` is not read any
 more: it would hide every new picture.
@@ -27,7 +30,8 @@ more: it would hide every new picture.
 NONE FOR A LEADER: the caller draws the original's portrait itself, in the
 same place — never the original's screen (Data's rule since work order
 187). That is the case for every leader whose new picture had no alpha
-channel (work order 255, parked) and on a machine without the pack.
+channel (work order 255, parked), on a machine without the download, and
+while the mod folder is off.
 
 HOW BIG. Every box gets the WHOLE picture, scaled to fit inside it (`fit`);
 nothing is cut. The pictures are stored at the largest size HD draws one at
