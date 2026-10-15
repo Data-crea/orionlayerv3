@@ -289,12 +289,16 @@ CAPTION = (("title", "label", 0.420, 0.094), ("hint", "sub", 0.608, 0.066))
 def caption_lines(screen, slot):
     """([(surface, topleft)], [(Rect, ink)]) of row `slot`'s caption:
     the words from the text table (`ldrtexts`, decision 73), each line
-    shrunk where it would pass the box's right edge."""
+    shrunk where it would pass the box's right edge. None in hire mode,
+    where "assign a leader from the pool" is not what the player is doing
+    (Data's decision, work order 262 answering 237 P2)."""
     from core import modtexts
     from core.hud import text as hudtext
+    view = getattr(screen, "_view", None)
+    if view is not None and view.hire_mode:
+        return [], []
     layout, style = screen.layout, screen.style
     box = rect(layout, row_box(slot))
-    view = getattr(screen, "_view", None)
     tab = "colony" if view is not None and \
         view.view == geom.VIEW_COLONY else "ship"
     room = box.right - (box.x + int(box.w * CAPTION_X)) - box.h // 6

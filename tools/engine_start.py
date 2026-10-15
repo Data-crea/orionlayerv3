@@ -298,17 +298,34 @@ INTRO_SECONDS = 112.9
 #: order 229 E); older ones go to ~/claude/_to_delete/engine_logs/.
 KEEP_LOGS = 30
 
+#: A player's earlier engine logs kept beside play.py's, as `<log>.1` (the
+#: last start) to `<log>.5` (Data's decision, work order 262 answering 229
+#: P1): a crash while playing stays readable after the next start. A
+#: player's cache, not this project's working files, so the oldest is
+#: dropped rather than moved to ~/claude/_to_delete/.
+PLAYER_KEEP = 5
+
+
+def _rotate_player(log_path):
+    for n in range(PLAYER_KEEP, 0, -1):
+        newer = f"{log_path}.{n - 1}" if n > 1 else log_path
+        if os.path.exists(newer):
+            os.replace(newer, f"{log_path}.{n}")
+    return f"{log_path}.1"
+
 
 def keep_previous(log_path, out=print):
     """Before a start overwrites `log_path`: under ~/claude/, the previous
     engine log moves to `engine_logs/<its time>_<name>` beside it, the
     newest KEEP_LOGS stay. A crash's log was lost to the next start (the
-    224-227 crashes). A player's own log (play.py's) is left alone."""
+    224-227 crashes). A player's own log (play.py's) turns over in place,
+    PLAYER_KEEP deep."""
     import shutil
-    root = os.path.realpath(workdirs.ROOT) + os.sep
-    if not os.path.realpath(log_path).startswith(root) or \
-            not os.path.exists(log_path) or os.path.getsize(log_path) == 0:
+    if not os.path.exists(log_path) or os.path.getsize(log_path) == 0:
         return None
+    root = os.path.realpath(workdirs.ROOT) + os.sep
+    if not os.path.realpath(log_path).startswith(root):
+        return _rotate_player(log_path)
     keep = os.path.join(os.path.dirname(log_path), "engine_logs")
     os.makedirs(keep, exist_ok=True)
     stamp = time.strftime("%Y%m%d_%H%M%S",
