@@ -115,10 +115,15 @@ class PlanetsScreen(ScreenBase):
     def _push_sort_key(self):
         """Impose the HD sort key on the game once, on entry — the colony
         summary's trade; a click on the key the game already holds changes
-        nothing (plntsum.cpp:2013-2018)."""
-        for spec in self._data.get("sort", {}).get("buttons", []):
-            if spec["key"] == self._list.sort_key:
-                self._inject(spec, f"entry sort {spec['key']}")
+        nothing (plntsum.cpp:2013-2018). One send, as the colony summary's:
+        a key named twice in layout.json must not inject twice (work order
+        264, D16). No name-first step: `Sort_Planet_Summary_` is the C
+        library's unstable `qsort`, so a prior order does not survive it
+        ([planets.rows])."""
+        spec = next((b for b in self._data.get("sort", {}).get("buttons", [])
+                     if b["key"] == self._list.sort_key), None)
+        if spec is not None:
+            self._inject(spec, f"entry sort {spec['key']}")
 
     # ── State helpers ─────────────────────────────────────
 
