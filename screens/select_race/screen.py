@@ -28,6 +28,9 @@ from screens.select_race.info_panel import (
 
 class SelectRaceScreen(ScreenBase):
     SCREEN_NAME = "select_race"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     #: Synthetic, reported by `doc/ext_screen_id.patch` in
     #: `Race_Selection_Screen_`; see `core/screen_names.py`. It was 6
     #: (SCREEN_RACE) until work order 128, which is the Races screen.

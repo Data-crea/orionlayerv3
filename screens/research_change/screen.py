@@ -141,6 +141,9 @@ MARKED = {
 
 class ResearchChangeScreen(ResearchPanelScreen):
     SCREEN_NAME = "research_change"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = 36         # SCREEN_TECH_CHANGE, the engine's own
     MODE = "change"
     LAYOUT_PATH = "screens/research_change/layout.json"

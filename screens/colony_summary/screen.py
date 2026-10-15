@@ -136,6 +136,9 @@ NATIVE_W, NATIVE_H = colonyempire.NATIVE_W, colonyempire.NATIVE_H
 
 class ColonySummaryScreen(ScreenBase):
     SCREEN_NAME = "colony_summary"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = 20         # SCREEN_COLONY_SUMMARY
     USE_FRAME = False           # no frame image since decision 71
     #: THE SCREEN SHELL (work order 225): the table and the three lower

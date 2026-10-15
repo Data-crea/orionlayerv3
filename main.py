@@ -29,6 +29,7 @@ from core import f12notice
 from core import overlays
 from core import pointergate
 from core import frameguard
+from core import drawgate
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
@@ -192,6 +193,9 @@ class App:
         #: frame: "without_f12" must stay 0 (work order 188: the flash
         #: rule everywhere, not only on the walks' recorded transitions).
         self.native_frames = {"f12": 0, "without_f12": 0}
+        #: A still screen's frame that would draw the same picture again
+        #: is not drawn (work order 273, `core/drawgate.py`).
+        self._draw_gate = drawgate.DrawGate()
         #: The HD message box and the turn-time popups (open fixes 29 and
         #: 49, work order 188), drawn over the held frame: `core/overlays`.
         self._overlays = overlays.Overlays(self)
@@ -541,6 +545,9 @@ class App:
     def _render(self):
         """Render based on current mode."""
         shown = self._showing_original()
+        if shown or frameguard.suspended(self) is not None or \
+                self._handover.holding or not self.dispatcher.active:
+            self._draw_gate.forget()     # another picture: redraw after it
         if self._frame_trace is not None:
             frametrace.record_app_frame(self, shown)
         if shown:
@@ -590,6 +597,8 @@ class App:
             else:
                 self._notice_view.reset(self.surface)
         elif self.dispatcher.active:
+            if not self._draw_gate.needed(self):
+                return          # the window keeps this very picture (273)
             self._notice_view.reset()
             self.surface.fill((4, 6, 14))
             self.dispatcher.render(self.surface)

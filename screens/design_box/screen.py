@@ -50,6 +50,9 @@ log = logging.getLogger("ship_design")
 
 class DesignBoxScreen(ScreenBase):
     SCREEN_NAME = "design_box"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     # Literal, as every screen's is (the id check reads them off the
     # source); `dbgeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 55

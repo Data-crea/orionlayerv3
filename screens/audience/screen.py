@@ -49,6 +49,9 @@ log = logging.getLogger("audience")
 
 class AudienceScreen(ScreenBase):
     SCREEN_NAME = "audience"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     # Literal, as every screen's is (the id check reads them off the
     # source); `augeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 57

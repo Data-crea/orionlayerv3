@@ -49,6 +49,9 @@ KEY_ESC = 27
 
 class PlanetsScreen(ScreenBase):
     SCREEN_NAME = "planets"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = 32         # SCREEN_PLANET_SUMMARY, orion2_consts.h:487
     USE_FRAME = False
     SHELL_WORN = True           # work order 225, `shell_planets.png`

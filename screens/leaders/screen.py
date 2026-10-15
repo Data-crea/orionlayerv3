@@ -95,6 +95,9 @@ ROW = (("hire", 0), ("pool", 1), ("dismiss", 2), ("cancel", 3),
 
 class LeadersScreen(ScreenBase):
     SCREEN_NAME = "leaders"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = ldrgeom.GAME_SCREEN_ID   # 29, orion2_consts.h:484
     USE_FRAME = False
     SHELL_WORN = True

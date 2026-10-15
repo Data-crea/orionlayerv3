@@ -59,6 +59,9 @@ log = logging.getLogger("refit")
 
 class RefitScreen(ScreenBase):
     SCREEN_NAME = "refit"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = None
     SHARES_GAME_SCREEN_ID = geom.SHARED_SCREEN_ID
     USE_FRAME = False

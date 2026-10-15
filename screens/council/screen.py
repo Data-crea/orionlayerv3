@@ -44,6 +44,9 @@ def popup_of(state):
 
 class CouncilScreen(ScreenBase):
     SCREEN_NAME = "council"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = GAME_SCREEN_ID
     USE_FRAME = False
     SHELL_WORN = True

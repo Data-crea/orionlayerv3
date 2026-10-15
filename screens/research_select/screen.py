@@ -128,6 +128,9 @@ REGIONS_NATIVE = (("science_room", (0, 0, 160, 479)),
 
 class ResearchSelectScreen(ResearchPanelScreen):
     SCREEN_NAME = "research_select"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = 53         # synthetic, open fix 24, wire only
     MODE = "select"
     LAYOUT_PATH = "screens/research_select/layout.json"

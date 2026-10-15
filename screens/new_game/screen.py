@@ -53,6 +53,9 @@ def _values(info):
 
 class NewGameScreen(ScreenBase):
     SCREEN_NAME = "new_game"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = 13     # SCREEN_NEW_GAME
     USE_FRAME = True
     FRAME_TITLE = "New Game"

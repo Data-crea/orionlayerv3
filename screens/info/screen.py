@@ -61,6 +61,9 @@ HISTORY, TECH, RACES, TURNS, REFERENCE = range(5)
 
 class InfoScreen(ScreenBase):
     SCREEN_NAME = "info"
+    #: Its picture moves only with input, the game and the window: a frame
+    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
+    STILL = True
     GAME_SCREEN_ID = geom.GAME_SCREEN_ID
     USE_FRAME = False
     SHELL_WORN = True

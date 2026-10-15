@@ -135,8 +135,18 @@ def count_connections(port=17362):
     return total if found else None
 
 
+#: The kinds the engine sends again unchanged (work order 273): a repeat of
+#: one of these is not a change (`GameClient.changes`).
+REPEATED = (MSG_STATE, MSG_VISUAL, MSG_FIELDS, MSG_SAVE_SLOTS)
+
+
 class GameClient:
     """Connects to the orion2re Extension API."""
+
+    #: Also on the class: a stand-in made without `__init__` counts too.
+    changes = 0
+    _last_state = None
+    _last_of = None
 
     def __init__(self):
         self.host = 'localhost'
@@ -160,6 +170,14 @@ class GameClient:
         # instead of starting a reconnect.
         self.shutdown_expected = False
         self.game_ended = False
+        # WHAT CAME THAT CAN CHANGE A PICTURE (work order 273,
+        # `core/drawgate.py`): the engine sends the whole snapshot — and the
+        # framebuffer — on every tick, changed or not, so a message of a
+        # kind that repeats counts only when its bytes differ from the
+        # previous one of its kind; an event always counts.
+        self.changes = 0
+        self._last_state = None
+        self._last_of = {}
 
     def connect(self, host='localhost', port=17362,
                 subscribe_state=True, subscribe_fields=True,
@@ -210,6 +228,9 @@ class GameClient:
                 pass
         self.sock = None
         self.connected = False
+        self.changes += 1
+        self._last_state = None
+        self._last_of = {}
 
     def poll(self):
         """Read all available messages. Non-blocking.
@@ -493,6 +514,16 @@ class GameClient:
     def _handle_message(self, msg_type, flags, payload):
         """Process a received message."""
         self.stats["bytes"] += len(payload) + 16
+        if msg_type not in REPEATED:
+            self.changes += 1
+        else:
+            if self._last_of is None:
+                self._last_of = {}
+            if payload != self._last_of.get(msg_type):
+                self.changes += 1
+                self._last_of[msg_type] = payload
+            if msg_type == MSG_STATE:
+                self._last_state = self._last_of[msg_type]
         if msg_type == MSG_HELLO_REPLY:
             caps = struct.unpack_from("<H", payload, 2)[0] \
                 if len(payload) >= 4 else 0
