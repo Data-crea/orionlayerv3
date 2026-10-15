@@ -79,10 +79,6 @@ STAR_HIT_SCALE = 0.60
 #: window or at maximum zoom-out.
 MIN_STAR_HIT_PX = 10
 
-#: Cache-key prefix for the sidebar readout icons, so they cannot
-#: collide with a star folder or a nebula form name.
-SIDEBAR_ICON_PREFIX = "sidebar_icons/"
-
 #: Box-name prefix for the per-element sidebar boxes. Each row owns
 #: sb_<row>_text and (except the stardate) sb_<row>_icon, so both are
 #: draggable in the F3 editor like on every other screen.
@@ -157,21 +153,19 @@ class GalaxyMapScreen(ScreenBase):
         **NOT a boolean, and that is the whole point of this method.**
         `asset_path` resolves through `res.screen_file`, so which FILE
         a name reaches depends on the active **skin** and the active
-        **mods**; and `nebula_forms` and `sidebar_icons` come from
-        `layout.json`, which `enter` re-reads and a mod can replace.
+        **mods**; and `nebula_forms` comes from `layout.json`, which
+        `enter` re-reads and a mod can replace.
         A guard that only asked "loaded already?" would pin the map to
         artwork from a skin that is no longer active — a second copy
         nobody updates, in a new place.
 
-        So the key is those four together, and `_load_sprites` reloads
+        So the key is those three together, and `_load_sprites` reloads
         when any of them moves and at no other time.
         """
         res = self.app.res
         return (getattr(res, "skin", None),
                 tuple(getattr(res, "mod_dirs", ()) or ()),
-                tuple(self._data.get("nebula_forms", []) or ()),
-                tuple(sorted((self._data.get("sidebar_icons", {})
-                              or {}).items())))
+                tuple(self._data.get("nebula_forms", []) or ()))
 
     def _load_sprites(self, force=False):
         """Star icons, black hole and nebula shapes (mod-resolved).
@@ -256,16 +250,6 @@ class GalaxyMapScreen(ScreenBase):
             if path:
                 self._cache.put(
                     form, pygame.image.load(path).convert_alpha())
-
-        # Sidebar readout icons. A missing file is not fatal: the row
-        # then renders as it did before the icons existed.
-        for key, filename in self._data.get("sidebar_icons", {}).items():
-            path = self.asset_path("assets", "icons", filename)
-            if path:
-                self._cache.put(f"{SIDEBAR_ICON_PREFIX}{key}",
-                                pygame.image.load(path).convert_alpha())
-            else:
-                log.warning("Sidebar icon not found: %s", filename)
 
         # LAST, so a throw above leaves the key unset and the next
         # `enter` tries again rather than trusting a half-filled cache.
@@ -590,12 +574,6 @@ class GalaxyMapScreen(ScreenBase):
 
     def _render_sidebar(self, surface):
         hudview.render_sidebar(self, surface)
-
-    def _sidebar_icons(self):
-        """Row key -> cache key, for the icons that actually loaded."""
-        return {key: f"{SIDEBAR_ICON_PREFIX}{key}"
-                for key in self._data.get("sidebar_icons", {})
-                if self._cache.has(f"{SIDEBAR_ICON_PREFIX}{key}")}
 
     def _sidebar_geometry(self, rows, icons):
         """Row key -> (text rect, icon rect|None), from the sb_* boxes.

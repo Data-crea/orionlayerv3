@@ -781,26 +781,8 @@ Add more files and more names to the list together.
 
 ### Sidebar readouts
 
-```
-screens/galaxy_map/assets/icons/<name>.png
-```
-
-Five icons — `treasury`, `command`, `food`, `freighters`,
-`research` — sitting beside the numbers in the right-hand column.
-Which file belongs to which row is `sidebar_icons` in `layout.json`;
-a row left out of that map gets no icon, which is why the stardate
-has none. The artwork is freestanding with an alpha channel and is
-fitted into its box aspect-correct, so any resolution works.
-
-To re-cut them from a single painted sheet:
-
-```bash
-python tools/make_sidebar_icons.py --sheet my_sheet.png --out mods/my_mod/screens/galaxy_map/assets/icons
-```
-
-The source rects are a table at the top of that script; `--probe`
-prints the alpha components of a new sheet so the table can be
-updated.
+The readouts' icons are the HUD's own glyphs (`assets/shared/hud/`); there
+is no separate picture per readout.
 
 **Positions are not in layout.json.** Every readout owns two boxes
 in `boxes.json`, `sb_<row>_text` and `sb_<row>_icon`, both movable
@@ -867,8 +849,8 @@ Rules that keep a screen consistent with the rest:
 - **A font you ship in a mod needs its licence next to it.**
 - After any change, start OrionLayer (`python main.py` runs without the
   game) and look at what you changed.
-- Some assets are **not in the repository** — the ship steps, the cut
-  sidebar icons, the colony output panel's six icons
+- Some assets are **not in the repository** — the ship steps, the colony
+  output panel's six icons
   (`screens/colony_summary/assets/output/`, 31x31, the size in
   `layout.json` `output.icon_size`; a replacement of any other size is
   refused) and the black hole master are generated, and the help

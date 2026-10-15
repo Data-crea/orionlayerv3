@@ -111,9 +111,6 @@ STEPS = [
     ("make_ship_icons.py", [],
      os.path.join(GM, "ships", "player"),
      "ship and monster steps, scaled from ships/_src/"),
-    ("make_sidebar_icons.py", [],
-     os.path.join(GM, "icons", "treasury.png"),
-     "5 sidebar icons, cut from icons/_source_sheet.png"),
     ("make_black_hole_master.py", [],
      os.path.join(GM, "black_hole.png"),
      "rotatable black hole master"),
@@ -150,8 +147,6 @@ REQUIRED_INPUTS = [
     # boxes to what the screens draw.
     (os.path.join(ROOT, "screens", "colony_summary",
                   "layout_reference.json"), "colony layout reference"),
-    (basepack.source(os.path.join(_GM, "icons", "_source_sheet.png"), ROOT),
-     "sidebar icon sheet"),
     (basepack.source(os.path.join(_GM, "_black_hole_src.png"), ROOT),
      "black hole source"),
     (basepack.source(os.path.join(_CS, "_src", "output", "symbols.png"),

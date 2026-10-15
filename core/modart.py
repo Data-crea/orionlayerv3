@@ -28,7 +28,6 @@ GAME_ART = ("assets/shared/background_cockpit.png",
             "screens/empire_identity/assets/*.png",
             "screens/galaxy_map/assets/black_hole.png",
             "screens/galaxy_map/assets/gas_giant.png",      # work order 236
-            "screens/galaxy_map/assets/icons/*.png",
             "screens/galaxy_map/assets/nebula/*.png",
             "screens/galaxy_map/assets/ships/*/*.png",
             "screens/galaxy_map/assets/stars/*/*.png",
