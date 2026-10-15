@@ -1,0 +1,9 @@
+{
+  "_comment": "The galactic council (open fix 96's id 70), work order 270. Geometry is screens/council/clgeom.py, the drawing cldraw.py; the marks name every difference from the original, each held by check 090zzzzb and named in dev:doc/state/council.md.",
+  "marks": {
+    "transcription_council": "TRANSCRIPTION (work order 270) \u2014 the council's steps, numbers and words as the engine holds and formats them (open fix 96): the three top lines and the message as Draw_Main_Council_Screen prints them (council.cpp:148-211), the vote and the ruling as Get_List_Field builds them (:213-281, :598-675); a click while it waits is its full-screen field (:72-99), a list item its field.",
+    "deviation_no_chamber": "DEVIATION \u2014 the chamber (COUNCIL.LBX's file animation), the members' portraits round the hall and the nominees' figures are not drawn; the nominees are panels and the members rows, each in its player's map colour, the member voting now lit.",
+    "hd_extension_council_labels": "HD EXTENSION \u2014 the panels' labels (NOMINEE, VOTES RECEIVED, OWN VOTES, COUNCIL MEMBERS, VOTES, ELECTED) and the hint 'Click to continue' while the game waits for a click; the original's chamber says them by its pictures.",
+    "hd_extension_shell": "HD EXTENSION \u2014 the screen shell (decisions 86-90): GALACTIC COUNCIL on the plate, the top lines, the hall and the message as panels of the content rectangle."
+  }
+}

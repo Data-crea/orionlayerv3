@@ -140,6 +140,11 @@ SCREENS = {
     #: `core.handover.overlay_for`), and the ground combat, an HD screen.
     68: ("(synthetic)",     None),            # the colony combat popup
     69: ("(synthetic)",     "ground_combat"),  # the ground combat
+    #: 70, synthetic, ON THE WIRE ONLY WITH OPEN FIX 96 (work order 270):
+    #: the galactic council (`council::Main_Council_Screen`), an HD screen
+    #: while TPOP kind 12 is on the wire; before it the council ran under
+    #: the processing id 12 with the F12 notice.
+    70: ("(synthetic)",     "council"),        # the galactic council
 }
 
 #: The last value of orion2re's own SCREEN enum:

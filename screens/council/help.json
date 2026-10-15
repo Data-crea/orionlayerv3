@@ -1,0 +1,6 @@
+{
+  "_comment": "The galactic council has no right-click help: Main_Council_Screen deactivates the help list (council.cpp:102). No region.",
+  "_source": "orion2re orionlayer, council.cpp:102",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit. The original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307); at four HD resolutions a fixed box either wastes half the screen on two lines or clips a long entry. Marked once per file, here, and in core/helppopup.py.",
+  "regions": []
+}

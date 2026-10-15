@@ -354,13 +354,19 @@ def name_box_for(state, top=None):
     return box
 
 
+#: TPOP kinds that are HD screens of their own, not popups over the held
+#: frame: the ground combat (open fix 91's kind 11, `screens/ground_combat`)
+#: and the galactic council (open fix 96's kind 12, `screens/council`,
+#: work order 270).
+SCREEN_KINDS = ("ground_combat", "council")
+
+
 def popup_under_box(app):
-    """The turn popup HD draws, whether or not a box stands over it. The
-    ground combat (open fix 91's kind 11) is a screen of its own
-    (`screens/ground_combat`), not a popup over the held frame."""
+    """The turn popup HD draws, whether or not a box stands over it — none
+    for a kind that is a screen of its own (`SCREEN_KINDS`)."""
     popup = getattr(app.client.state, "turn_popup", None)
     if popup is not None and not (popup["kind"] == "leader_hire"
                                   and popup["args"][7] == 1) and \
-            popup["kind"] != "ground_combat":
+            popup["kind"] not in SCREEN_KINDS:
         return popup
     return None

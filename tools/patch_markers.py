@@ -490,6 +490,12 @@ LOCAL_PATCHES = {
         "the engine does not send the Stellar Converter's two totals (open "
         "fix 95): HD shows no damage numbers after the converter, where the "
         "original shows two over its target"),
+    # Work order 270: on the fork's branch `orionlayer` only, be79dadf.
+    "doc/ext_council.patch": (
+        os.path.join("src", "game", "council.cpp"),
+        "OrionLayer, open fix 96.",
+        "the engine does not send the galactic council (open fix 96): it "
+        "runs under id 12 and HD shows only the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
