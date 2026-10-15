@@ -48,8 +48,9 @@ import copy
 import random
 import time
 
-from . import (cbart, cbbeam, cbblast, cbcloak, cbdraw, cbflare, cbflight,
-               cbqueue, cbreflect, cbsfx, cbshot, cbsound)
+from . import (cbart, cbbeam, cbbeamfx, cbblast, cbcloak, cbdraw, cbflare,
+               cbflight, cbnumbers, cbqueue, cbreflect, cbsfx, cbshot,
+               cbsound)
 
 CELL = cbdraw.CELL
 MOVE_S = 0.15
@@ -91,7 +92,8 @@ class Player:
         self._queue = []         # [event, ...] still to play
         self._after = []         # [(last seq, combat, ordnance)]
         self._anim = None        # (event, start time, duration)
-        self._marks = []         # floating numbers: (text, wx, wy, t0, rgb)
+        self._marks = []         # floating words: (text, wx, wy, t0, rgb)
+        self._numbers, self._num_cache = [], {}   # `cbnumbers` (265)
         self._next_seq = None
         self._last_queued = None
         self._played = -1
@@ -339,10 +341,9 @@ class Player:
                 u = self._unit(ev.get("unit", ev.get("target", -1)))
                 hit = ev.get("past_shields") or ev.get("hits")
                 length = sfx_times(p, p.get("step", ev["_step"]))
-                if u is not None and hit and not ev.get("at_missile"):
-                    self._marks.append((str(hit), *cbdraw.centre(u),
-                                        now + p["_number_at"],
-                                        (0xff, 0xcc, 0x40)))
+                if u is not None and not ev.get("at_missile"):
+                    self._number(u, hit, ev.get("absorbed"),
+                                 now + p["_number_at"])
                 if ev.get("_destroyed"):
                     # the missiles destroyed, over the missile as the blast
                     # starts (`Add_Damage_Indicator_For_Missile_`,
@@ -375,14 +376,16 @@ class Player:
                 return BOLT_S
             f = ev["_firing"] = cbshot.plan_firing(
                 planned, cbshot.flared(self, ev, u), self.fast)
+            src = self._unit(ev.get("source", -1))
+            side = 1 if src is None or u is None else cbnumbers.side_of(
+                cbdraw.centre(u), cbdraw.centre(src), cbbeamfx.get_angle)
             for (_e, _b, evs), hit in zip(f["entries"], f["hits"]):
-                dmg = sum(int(e.get("past_shields", 0) or 0) for e in evs)
-                if u is not None and dmg:
-                    # the number appears in the pass the bolt strikes
-                    # (beams.cpp:1660-1672)
-                    self._marks.append((str(dmg), *cbdraw.centre(u),
-                                        now + hit * FRAME_S,
-                                        (0xff, 0xcc, 0x40)))
+                if u is not None:
+                    # the numbers appear in the pass the bolt strikes
+                    # (beams.cpp:1660-1672), the pair the entry summed
+                    self._number(u, *(sum(int(e.get(k, 0) or 0) for e in evs)
+                                      for k in ("past_shields", "absorbed")),
+                                 now + hit * FRAME_S, side)
             return len(f["rows"]) * FRAME_S
         if k == "flight":
             ev["_base"] = copy.deepcopy(self.ordnance)
@@ -398,11 +401,9 @@ class Player:
             pas = ev.get("_pass") or {}
             u = self._unit(pas.get("target", -1)) \
                 if not pas.get("at_missile") else None
-            if u is not None and pas.get("past_shields"):
-                self._marks.append((str(pas["past_shields"]),
-                                    *cbdraw.centre(u),
-                                    now + p["frames"] * FRAME_S,
-                                    (0xff, 0xcc, 0x40)))
+            if u is not None:
+                self._number(u, pas.get("past_shields"), pas.get("absorbed"),
+                             now + p["frames"] * FRAME_S)
             # the numbers are waited for only when the pass did damage
             # (`Add_Damage_Indicator_For_Ship_` queues no zero, cmbtmis.cpp:
             # 946-967; measured: 3 ticks for a pass that hit nothing)
@@ -411,10 +412,9 @@ class Player:
             return (p["frames"] + p["numbers"]) * FRAME_S
         if k in ("missile_hit", "fighter_pass"):
             u = self._unit(ev.get("target", -1))
-            if u is not None and ev.get("past_shields"):
-                self._marks.append((str(ev["past_shields"]),
-                                    *cbdraw.centre(u), now,
-                                    (0xff, 0xcc, 0x40)))
+            if u is not None:
+                self._number(u, ev.get("past_shields"), ev.get("absorbed"),
+                             now)
             if k == "missile_hit" and u is not None and ev.get("target") and \
                     ev.get("absorbed", 0) > 0 and not ev.get("anti_missile"):
                 m = next((m for m in (self.ordnance or {}).get("missiles", [])
@@ -461,11 +461,10 @@ class Player:
             b = ev["_beam"] = cbreflect.plan(self, ev)
             u = self._unit(ev.get("shooter", -1))
             if b is not None:
-                if u is not None and ev.get("past_shields"):
-                    self._marks.append((str(ev["past_shields"]),
-                                        *cbdraw.centre(u), now + len(
-                                            b["ticks"]) * FRAME_S / 2,
-                                        (0xff, 0xcc, 0x40)))
+                if u is not None:
+                    self._number(u, ev.get("past_shields"),
+                                 ev.get("absorbed"),
+                                 now + len(b["ticks"]) * FRAME_S / 2)
                 return len(b["ticks"]) * FRAME_S
         if k in ("capture", "raid", "blast_hit", "web_damage", "bomb",
                  "special"):
@@ -669,6 +668,16 @@ class Player:
             img = style.render_text(text, size, rgb)
             surface.blit(img, (x - img.get_width() // 2, y))
         self._marks = keep
+        self._numbers = cbnumbers.draw(
+            surface, cam, style, self._numbers, now, FRAME_S,
+            art.palette_with() if art is not None else None, self._num_cache)
+
+    def _number(self, u, total, hull, t0, side=1):
+        """Queue a hit's two damage numbers (`cbnumbers`, work order 265)."""
+        m = cbnumbers.mark(cbdraw.centre(u), u["size_class"], total, hull,
+                           t0, side)
+        if m is not None:
+            self._numbers.append(m)
 
     def _draw_event(self, surface, cam, art, ev, t, cache):
         k = ev["kind"]
