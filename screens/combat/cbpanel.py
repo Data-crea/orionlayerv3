@@ -78,6 +78,10 @@ BUTTONS = (("auto", "AUTO", ord("A")), ("scan", "SCAN", ord("S")),
            ("board", "BOARD", ord("B")), ("retreat", "RETREAT", ord("R")),
            ("wait", "WAIT", ord("W")), ("done", "DONE", ord("D")),
            ("options", "OPTIONS", ord("O")))
+#: HD's own buttons after the original's (no field, no hotkey): LOG beside
+#: OPTIONS, in the place the original leaves free (INVENTION `battle_log`,
+#: `cblog`, work order 267) — OPTIONS moves from the middle to the left.
+HD_BUTTONS = (("log", "LOG", None),)
 #: `TECHDATA::_weapons[i].type` (techdata.cpp:481-527, the struct's last
 #: field): 0 beam, 1 missile, 2 torpedo, 3 bomb, 4 fighter, 5 special.
 WEAPON_TYPE = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 1, 1, 1, 1, 2, 2, 2,
@@ -228,6 +232,7 @@ class Panel:
         self.rows = []            # (window rect, slot) of the weapon rows
         self.tabs = {}            # "weapons" / "specials" -> window rect
         self.buttons = None       # the button block (the OPTIONS panel's place)
+        self.log_open = False     # LOG drawn "on" while its window is up
         self._row_wait = None     # (row, active before, time) after a switch
         self.status = cbstatus.StatusPicture()
         self.target_status = cbstatus.StatusPicture()   # `cbtarget`'s box
@@ -434,7 +439,7 @@ class Panel:
         mid = wins["weapons"].inflate(-2 * ins, -2 * ins)
         self.left, self.mid, self.facts = left, mid, wins["systems"]
         right = wins["buttons"].inflate(-2 * ins, -2 * ins)
-        rows = (len(BUTTONS) + 1) // 2
+        rows = (len(BUTTONS + HD_BUTTONS) + 1) // 2
         bw = (right.w - pad) // 2
         bh = max(small + 8, (right.h - (rows - 1) * (pad // 2)) // rows)
         # TRANSCRIPTION `tab_words` (work order 200): the original's WEAPONS
@@ -515,18 +520,20 @@ class Panel:
                 self.help_rows.append((r, k))
         # the buttons (right), each only while the live list carries it
         self.buttons = right
-        for n, (key, word, hotkey) in enumerate(BUTTONS):
+        every = BUTTONS + HD_BUTTONS
+        for n, (key, word, hotkey) in enumerate(every):
             r = pygame.Rect(right.x + (n % 2) * (bw + pad),
                             right.y + (n // 2) * (bh + pad // 2), bw, bh)
-            if n == len(BUTTONS) - 1 and n % 2 == 0:    # OPTIONS, centred
+            if n == len(every) - 1 and n % 2 == 0:    # the last, centred
                 r.x = right.x + (right.w - bw) // 2
             state = "active" if board_mode == {"board": True,
-                                               "scan": "scan"}.get(key) else \
-                "normal" if key in live else "disabled"
+                                               "scan": "scan"}.get(key) or \
+                key == "log" and self.log_open else \
+                "normal" if key in live or hotkey is None else "disabled"
             hud.small_button(surface, r, scale, state, word,
                              style_renderer=style)
             self.all_buttons[key] = r
-            if key in live:
+            if key in live or hotkey is None:
                 self.rects[key] = r
         return band
 

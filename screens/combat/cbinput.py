@@ -120,6 +120,15 @@ class CombatInput:
         return None
 
     def handle_click(self, screen_x, screen_y):
+        # the battle log (`cblog`, work order 267): its window takes every
+        # click while it is up; LOG opens it at any moment, AUTO included
+        if self._logwin.click(screen_x, screen_y):
+            return None
+        r = self._panel.rects.get("log")
+        if r is not None and r.collidepoint(screen_x, screen_y) and \
+                not self._opts.up(self._state):
+            self._logwin.toggle()
+            return None
         if self._tail:                       # its end playing: no input
             return None
         if self.help_consumes_click(screen_x, screen_y):
@@ -211,7 +220,7 @@ class CombatInput:
             self._press = [(screen_x, screen_y), (screen_x, screen_y), False]
             return
         press, self._press = self._press, None
-        if self._tail:
+        if self._tail or self._logwin.open:
             return
         if press is None or press[2] or cbhelp.right(self, screen_x,
                                                      screen_y):
@@ -239,10 +248,14 @@ class CombatInput:
         return super().handle_mouse_motion(screen_x, screen_y)
 
     def handle_mousewheel(self, dy, screen_x, screen_y):
+        if self._logwin.wheel(dy):
+            return
         if self._cam is not None:
             self._cam.zoom(dy, (screen_x, screen_y))
 
     def handle_key(self, key):
+        if self._logwin.key(key):
+            return
         if self._tail:
             return
         if self._pops.key(key, self._state, self.app.client) or \

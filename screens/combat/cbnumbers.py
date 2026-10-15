@@ -2,20 +2,22 @@
 
 TRANSCRIPTION of `BEAMS::Add_Damage_Indicator_For_Ship` and
 `Draw_Damage_Indicator` (beams.cpp:245-266, :312-364): every hit queues two
-numbers, the damage (`total_dmg`) and the structure damage (`hull_dmg`),
-each drawn only when above 0; the damage at the point, the structure
-20 native px to its left (a third place, 10 px left, is the shield's, and
+numbers, the damage through the shields (`total_dmg`) and the damage the
+shields took (`hull_dmg` in the source's names; `Apply_Ship_Damage`'s
+`sys_dmg` is the shield arc's hits spent, cmbtfire.cpp:975-990 — work order
+267 corrected the "structure" of 265), each drawn only when above 0; the
+damage at the point, the shields' 20 native px to its left (a third place, 10 px left, is the shield's, and
 no caller fills it). The point is the unit's centre (`Ship_Center_Offsets`)
 moved by its size class x 8 up and to the side; for 9 frames of a tick
 each the numbers rise 1 px and drift 1 px to that side, then they are gone.
 Each frame takes its colours from its own three entries of a ramp: the
-damage from 0xB0-0xBA (orange, fading to dark red), the structure from
+damage from 0xB0-0xBA (orange, fading to dark red), the shields' from
 0xC0-0xCC (blue-violet); the first entry is the shadow, one pixel down
 (`Set_Font_Style_Shadow_Down`), the second the glyph.
 
 Every hit event carries both values (open fix 56): `past_shields` is
 `accum_hit_x` / `dmg_accum` / `total_damage`, `absorbed` is `accum_hit_y` /
-`sys_dmg_accum` / `struct_damage` (cmbtfire.cpp:1497, cmbtmis.cpp:886,
+`sys_dmg_accum` / `struct_damage` (the shields' share, whatever the name) (cmbtfire.cpp:1497, cmbtmis.cpp:886,
 cmbtspec.cpp:1989, combinit.cpp:3306). Until work order 265 HD drew only
 the first, in one yellow.
 

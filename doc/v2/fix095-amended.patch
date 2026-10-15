@@ -1,0 +1,39 @@
+From c255dc673b38abce2c082fe213c3ffc572e1d313 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Thu, 15 Oct 2026 11:41:49 +0200
+Subject: [PATCH] OrionLayer Open Fix 95, amended: the comments name the second
+ total as the damage the shields took (Apply_Ship_Damage's sys_dmg), not
+ structure damage (work order 267)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.h     | 2 +-
+ src/game/cmbtspec.cpp | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index bd19eb6f..7d2d0e5a 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -187,7 +187,7 @@ enum CombatEventType : uint8_t {
+     CEV_BEAM_AIM = 22,      // source, target, weapon, fire points, from x px, y px, to x px, y px (an entry's last fire point, the target and its miss offset) — OrionLayer, open fix 82.
+     CEV_GYRO_SPIN = 23,     // source, target, turns (sixteenths of a turn the target spins after the line's eight) — OrionLayer, open fix 83.
+     CEV_ABSORB = 24,        // unit, charge after, change (the Energy Absorber's reflected_damage_pool: charged by a hit, emptied by its discharge or after its side's units have acted) — OrionLayer, open fix 94.
+-    CEV_CONVERTER_HIT = 25, // source, target, damage, structure damage (the Stellar Converter's two totals after its four hits, the numbers the original shows over the target) — OrionLayer, open fix 95.
++    CEV_CONVERTER_HIT = 25, // source, target, damage through the shields, damage the shields took (the Stellar Converter's two totals after its four hits — Apply_Ship_Damage's dmg_out and sys_dmg — the numbers the original shows over the target) — OrionLayer, open fix 95.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+diff --git a/src/game/cmbtspec.cpp b/src/game/cmbtspec.cpp
+index 7e4b3f50..9294a370 100755
+--- a/src/game/cmbtspec.cpp
++++ b/src/game/cmbtspec.cpp
+@@ -1070,7 +1070,7 @@ namespace CMBTSPEC {
+             total_struct_damage += current_struct_damage;
+         }
+ #ifdef ORION2RE_EXT
+-        ext::Combat_Note(ext::CEV_CONVERTER_HIT, attacker_idx, target_idx, total_damage, total_struct_damage);  // OrionLayer, open fix 95. The two totals Add_Damage_Indicator_For_Ship shows, after the four hits.
++        ext::Combat_Note(ext::CEV_CONVERTER_HIT, attacker_idx, target_idx, total_damage, total_struct_damage);  // OrionLayer, open fix 95. The two totals Add_Damage_Indicator_For_Ship shows, after the four hits; total_struct_damage is the shields' share (sys_dmg).
+ #endif
+ 
+         if (MOX::apply_damage_to_planet == 1 && MOX::super_fast_flag == 0) {

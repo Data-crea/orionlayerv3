@@ -33,8 +33,8 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import (cbart, cbcloak, cbdraw, cbmap, cbopts, cbpanel, cbplay,
-               cbpopups, cbview)
+from . import (cbart, cbcloak, cbdraw, cblog, cbmap, cbopts, cbpanel,
+               cbplay, cbpopups, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -105,6 +105,8 @@ class CombatScreen(CombatInput, ScreenBase):
         self._fades = cbcloak.Fades()         # work order 210 C1
         self._pops = cbpopups.Popups()
         self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
+        self._log = cblog.BattleLog()         # LOG and its window (267)
+        self._logwin = cblog.LogWindow()
         self._specials = False               # the panel's SPECIALS view
         self._language = "en"
         self._ken = None
@@ -162,6 +164,10 @@ class CombatScreen(CombatInput, ScreenBase):
         events = (getattr(game_state, "combat_events", None) or {}).get(
             "events", [])
         self._tail = self.finishing(game_state)
+        self._log.add(events, combat if combat is not None and not self._tail
+                      else self._play.shown, self._weapon_name,
+                      lambda i: self._names.name("specials", i)
+                      if self._names else None)
         if self._tail:
             # the battle's last events, played on the battle as it stood;
             # the state after it (no CMBT, another battle, another screen)
@@ -176,6 +182,7 @@ class CombatScreen(CombatInput, ScreenBase):
         if combat["serial"] != self._serial:
             self._serial = combat["serial"]
             self._cam, self._board = None, False
+            self._logwin.open = False
             self._play.reset()
             self._fades.reset()
             self._pops.reset()
@@ -298,6 +305,7 @@ class CombatScreen(CombatInput, ScreenBase):
                     getattr(self._state, "fields", None), hk))}
         pic = cbdraw.unit_picture(self._art, self._play.colours, unit, 0)
         self._panel_unit = unit
+        self._panel.log_open = self._logwin.open
         self._panel.draw(surface, self.style, unit, self._names, self._ken,
                          [w["active"] for w in (self._state.combat["units"][
                              c["cur_ship"]] if self._state.combat else unit)[
@@ -315,6 +323,8 @@ class CombatScreen(CombatInput, ScreenBase):
                         band, self._panel.buttons)
         self._pops.draw(surface, self.style, self.layout.scale, self._state,
                         c, self._weapon_name)
+        self._logwin.draw(surface, self.style, self.layout.scale, area,
+                          self._log, self._play.colours)
         self.render_help(surface)               # `cbhelp`, work order 200
 
     def _follow(self, c):
