@@ -8,7 +8,8 @@ four parts, and `Row` carries exactly those four, as data:
   the cost        two lines right of the name. A leader FOR HIRE:
                   "%d BC" right-aligned, and HESTR 0x108 "to hire" under
                   it, right-aligned too. Anyone else: the upkeep "%d BC"
-                  — or HESTR 0x10A "no" when it is 0 — printed LEFT-
+                  — or HESTR 0x10A "no" when it is 0 (in German HD's
+                  "kein", `upkeep_word`) — printed LEFT-
                   aligned at the x where the label HESTR 0x109 "maint"
                   starts, and the label under it (:3636-3675). The two
                   alignments differ in the original and are kept apart.
@@ -40,6 +41,13 @@ H_STRIP_ETA1, H_STRIP_ETAN = 0x92, 0x93
 #: `Get_Monetary_Unit_String_` (harold.cpp:1188-1203).
 UNIT = {"de": "MC"}
 UNIT_DEFAULT = "BC"
+#: DEVIATION `no_upkeep_word`: the word printed instead of an upkeep of 0
+#: (HESTR 0x10A, officer.cpp:3661), per language where HD replaces the
+#: file's. The German HGSTRNGS.LBX has "  Nr." — "no" read as "Nummer";
+#: the English file says "  no" over "maint", the German one itself says
+#: "keine Instandhaltungskosten" in HESTR 0x129. HD prints "kein" over
+#: "Inst." (Data's order of work order 276). Any other language: the file's.
+NO_UPKEEP = {"de": "kein"}
 
 
 def skill_value(sid, level, unit=UNIT_DEFAULT):
@@ -90,12 +98,20 @@ class Words:
         self.h = hstrings if hstrings is not None and \
             getattr(hstrings, "state", None) == "ok" else None
         self.unit = UNIT.get(language, UNIT_DEFAULT)
+        self.no_upkeep = NO_UPKEEP.get(language)
 
     def estring(self, index):
         return self.e.string(index) if self.e is not None else None
 
     def hstring(self, index):
         return self.h.message(index) if self.h is not None else None
+
+
+def upkeep_word(words):
+    """What stands where an upkeep of 0 is printed: HD's word for the
+    language (DEVIATION `no_upkeep_word`), else HESTR 0x10A as the file has
+    it."""
+    return words.no_upkeep or words.hstring(H_NO) or ""
 
 
 def location_name(rec, game_state):
@@ -133,7 +149,7 @@ def row(slot, idx, rec, view, game_state, words, warlord_of):
         cost_label = words.hstring(H_TO_HIRE) or ""
         align = "right"
     else:
-        cost_value = (words.hstring(H_NO) or "") if upkeep == 0 \
+        cost_value = upkeep_word(words) if upkeep == 0 \
             else f"{upkeep} {words.unit}"
         cost_label = words.hstring(H_MAINT) or ""
         align = "label_left"

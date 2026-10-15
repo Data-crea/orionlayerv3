@@ -486,8 +486,10 @@ def cost_specs(screen, row, slot):
     """[(text, cap px, x, cap top, align)] of the two cost lines at the
     slot's top right, in the original's two alignments (:3636-3675): for
     hire both right-aligned; otherwise the value starts where the label
-    starts — never past the slot's right edge (German's "  Nr.", HESTR
-    0x10A with two spaces in the file, is wider than its label "Inst.")."""
+    starts — never past the slot's right edge (the German file's "  Nr.",
+    HESTR 0x10A with two spaces, was wider than its label "Inst."; HD
+    prints "kein" there since work order 276, but a player's other
+    language may still carry a wide word)."""
     from . import ldrslot
     style, right, room = screen.style, slot.cost_right, cost_room(slot)
     vcap, lcap = slot.px(ldrslot.COST_CAP), slot.px(ldrslot.LABEL_CAP)
