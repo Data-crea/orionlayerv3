@@ -25,14 +25,13 @@ and the lit edge); "pressed" is the short click feedback: the hover shape
 and the word in the GAME menu's pressed orange (`core.pressfeedback`).
 Work order 225, decision 92: the two never look alike.
 """
-from collections import OrderedDict
-
 import numpy as np
 import pygame
 
 from core.hud import art
 from core.hud.icons import _drawn, icon_beside  # noqa: F401 (179)
 from core.hud import glass
+from core.hud import lru
 from core.hud import raster
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
@@ -42,9 +41,11 @@ STATES = ("normal", "hover", "active", "pressed", "disabled")
 #: Drawn shapes, keyed on everything that changes the pixels. Bounded,
 #: because a caller with a new size every frame (a resize drag) must not
 #: grow it without limit; 400 covers every block of every screen at one
-#: window size several times over.
-_CACHE = OrderedDict()
+#: window size several times over. And by bytes (work order 263, `lru`):
+#: 400 shapes at 3840x2160 were gigabytes.
 _CACHE_MAX = 400
+_CACHE_BYTES = 192 * 2 ** 20
+_CACHE = lru.Cache(_CACHE_MAX, _CACHE_BYTES)
 
 #: The title plate's lit inner hexagon, in `title_plate.png` px
 #: (x0, y0, x1, y1): measured on the cut piece, the inside of the rim the
@@ -53,14 +54,8 @@ TITLE_TEXT_BOX = (1737, 27, 3024, 190)
 
 
 def _cached(key, build):
-    if key in _CACHE:
-        _CACHE.move_to_end(key)
-        return _CACHE[key]
-    val = build()
-    _CACHE[key] = val
-    if len(_CACHE) > _CACHE_MAX:
-        _CACHE.popitem(last=False)
-    return val
+    val = _CACHE.get(key)
+    return val if val is not None else _CACHE.put(key, build())
 
 
 def clear():

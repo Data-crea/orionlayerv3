@@ -50,7 +50,7 @@ from . import gmfill, gmlang
 #: Every row, in Data's order of the tabs (`olwin.TABS`): what the right-
 #: click help regions name (help.json `orionlayer_band`).
 BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone", "floor",
-         "monsters", "frame_rate", "painted", "livery", "mods", "mod_files",
+         "monsters", "frame_rate", "idle_rate", "painted", "livery", "mods", "mod_files",
          "mod_open", "language")
 
 #: the heading colour of the rows until work order 251, the livery
@@ -304,6 +304,7 @@ def render(screen, surface):
               "floor": ("floor", "Map floor"),
               "monsters": ("monsters", "Monster values"),
               "frame_rate": ("frame_rate", "Frame rate"),
+              "idle_rate": ("idle_rate", "When idle"),
               "painted": ("painted", "Painted detail"),
               "livery": ("livery", "Livery"),
               "mods": ("mods", "Mod folder"),

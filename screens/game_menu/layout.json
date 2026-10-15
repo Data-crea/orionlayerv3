@@ -277,6 +277,11 @@
         "monitor": "Monitor ({hz} Hz)",
         "unlimited": "Unlimited"
       },
+      "idle_rate": "When idle",
+      "idle_rate_steps": {
+        "30": "30 a second",
+        "off": "Off"
+      },
       "painted": "Painted detail",
       "painted_steps": {
         "auto": "Auto ({k}x)",
@@ -445,6 +450,10 @@
     "orionlayer.frame_rate": {
       "title": "FRAME RATE",
       "body": "How often OrionLayer draws a new picture: 30, 60 or 120 times a second, as often as your monitor shows one (the default), or as often as the computer can. The battle's animations and sounds last the same at every setting; a higher rate only makes motion smoother, a lower one spares the computer. Applied at once."
+    },
+    "orionlayer.idle_rate": {
+      "title": "WHEN IDLE",
+      "body": "After a second in which you neither move the mouse nor press a key, OrionLayer draws only 30 pictures a second, until you do again; this spares the computer while you look at the map. Battles keep the full frame rate. Off keeps the frame rate above at all times. Applied at once."
     },
     "orionlayer.painted": {
       "title": "PAINTED DETAIL",

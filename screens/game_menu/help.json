@@ -466,6 +466,11 @@
       "orionlayer_band": "frame_rate"
     },
     {
+      "help_id": "orionlayer.idle_rate",
+      "node": "orionlayer",
+      "orionlayer_band": "idle_rate"
+    },
+    {
       "help_id": "orionlayer.livery",
       "node": "orionlayer",
       "orionlayer_band": "livery"

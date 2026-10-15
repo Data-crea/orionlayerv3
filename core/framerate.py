@@ -29,6 +29,31 @@ FALLBACK_HZ = 60
 _said = False
 
 
+#: The idle frame rate (work order 263, Data's decision of work order 262
+#: answering 255 P5 d). HD EXTENSION `idle_rate`: after IDLE_AFTER seconds
+#: without any event the loop drops to this rate until the next one; a
+#: screen whose class sets FULL_RATE (the battles, where the player watches
+#: without touching anything) keeps the player's rate. Measured in work
+#: order 255: the map at rest, 4K, one core from 83 % at 60 Hz to 42 % at
+#: 30. Nothing lasts longer for it (decision 78); motion is less smooth.
+IDLE_STEPS = ("30", "off")
+IDLE_DEFAULT = "30"
+IDLE_AFTER = 1.0
+
+
+def loop_cap(base, idle_choice, quiet_for, full_rate=False):
+    """The loop's cap: `base` (from `cap`) unless the player has been
+    quiet for IDLE_AFTER seconds, the idle rate is on and the screen does
+    not keep its full rate; then the idle rate, never above `base`.
+    `quiet_for` None (no event seen yet) is not quiet."""
+    choice = idle_choice if idle_choice in IDLE_STEPS else IDLE_DEFAULT
+    if choice == "off" or full_rate or quiet_for is None \
+            or quiet_for < IDLE_AFTER:
+        return base
+    rate = int(choice)
+    return rate if base == 0 else min(base, rate)
+
+
 def cap(choice, hz=None):
     """The frames a second `clock.tick` is given for a choice: 0 for
     unlimited (pygame's "no cap"), the monitor's rate for "monitor"."""

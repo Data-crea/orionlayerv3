@@ -40,6 +40,7 @@ what lies under the box (`ground`, `t_for`), and the layer blitted.
 """
 import numpy as np
 
+from core.hud import lru
 from core.hud import style as hudstyle
 
 #: The slider's value, 0..1; None = the default (`chosen.glass.slider_default`,
@@ -284,8 +285,10 @@ def clear_clamps():
 
 # ── the edgeless glass: every fill that is not a panel ───────────────
 
-_DRAWN = {}
+#: Bounded by count and, since work order 263, by bytes (`lru`).
 _DRAWN_MAX = 600
+_DRAWN_BYTES = 64 * 2 ** 20
+_DRAWN = lru.Cache(_DRAWN_MAX, _DRAWN_BYTES)
 
 
 #: The ground under each glass panel drawn so far, by surface: (rect,
@@ -365,9 +368,7 @@ def draw(surface, rect, dense=False, shade=None, shade_alpha=0.0):
             view[...] = np.clip(px, 0, 255).astype(np.uint8).transpose(
                 1, 0, 2)
             del view
-        if len(_DRAWN) >= _DRAWN_MAX:
-            _DRAWN.pop(next(iter(_DRAWN)))
-        _DRAWN[key] = surf
+        _DRAWN.put(key, surf)
     under = _panel_ground(surface, rect) if on else None
     if under is not None:
         # inside a glass panel: over what lay under the panel

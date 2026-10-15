@@ -121,6 +121,9 @@ DEFAULTS = {
     # The frame rate (work order 212, decision 79, `core/framerate`): 30, 60,
     # 120, the monitor's rate or unlimited; applied at once.
     "frame_rate": "monitor",
+    # The idle frame rate (work order 263, `core/framerate.loop_cap`): 30
+    # after a second without input, or off.
+    "idle_frame_rate": "30",
     # How finely the battle holds a painted picture (work order 219,
     # `core/paintdetail`): auto, normal (4 x) or high (8 x); from the next
     # battle on.

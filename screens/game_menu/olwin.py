@@ -48,7 +48,7 @@ NODE = "orionlayer"
 TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
                         "fill_tone")),
         ("gameplay", ("floor", "monsters")),
-        ("graphics", ("frame_rate", "painted", "livery")),
+        ("graphics", ("frame_rate", "idle_rate", "painted", "livery")),
         ("system", ("mods", "mod_files", "mod_open", "language")))
 TAB_NAMES = tuple(name for name, _ in TABS)
 #: The window in the game window: its height's share, its width capped by

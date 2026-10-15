@@ -86,6 +86,9 @@ class CombatScreen(CombatInput, ScreenBase):
     SCREEN_NAME = "combat"
     GAME_SCREEN_ID = GAME_SCREEN_ID
     EXTRA_SCREEN_IDS = (66, 67)          # scan view, board popup (199 C1)
+    #: The player watches a battle without input: no idle rate here
+    #: (`framerate.loop_cap`, work order 263).
+    FULL_RATE = True
     USE_FRAME = False
 
     def __init__(self, app):

@@ -30,6 +30,7 @@ CHOICES = {
     "floor": ("floor_lift", "floor_steps"),
     "monsters": ("monster_values", "monster_steps"),
     "frame_rate": ("frame_rate", "frame_rate_steps"),
+    "idle_rate": ("idle_frame_rate", "idle_rate_steps"),
     "painted": ("painted_detail", "painted_steps"),
     "mods": ("user_mod", "mod_steps"),
     "language": ("language", "language_steps"),
@@ -45,6 +46,7 @@ def values(screen, name):
         "floor": lambda: gmorion.FLOOR_STEPS,
         "monsters": lambda: gmorion.MONSTER_STEPS,
         "frame_rate": lambda: tuple(framerate.STEPS),
+        "idle_rate": lambda: tuple(framerate.IDLE_STEPS),
         "painted": lambda: tuple(paintdetail.STEPS),
         "mods": lambda: gmorion.MOD_STEPS,
         "language": lambda: tuple(lang.LANGUAGES),
@@ -64,6 +66,7 @@ def current(screen, name):
     if now in steps:
         return now
     return {"colours": playercolors.ORIGINAL, "frame_rate": framerate.DEFAULT,
+            "idle_rate": framerate.IDLE_DEFAULT,
             "painted": paintdetail.DEFAULT}.get(name, steps[0])
 
 

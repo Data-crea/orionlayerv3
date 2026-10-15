@@ -51,6 +51,9 @@ class GroundCombatScreen(ScreenBase):
     SCREEN_NAME = "ground_combat"
     GAME_SCREEN_ID = GAME_SCREEN_ID
     USE_FRAME = False
+    #: The player watches a battle without input: no idle rate here
+    #: (`framerate.loop_cap`, work order 263).
+    FULL_RATE = True
     SHELL_WORN = True
 
     def __init__(self, app):

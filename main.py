@@ -245,6 +245,7 @@ class App:
     def run(self):
         """Main loop."""
         self._guard = frameguard.FrameGuard.for_app()
+        self._input_at = time.monotonic()
         while self.running:
             self._guard.frame(self)
             self.clock.tick(self.frame_cap())
@@ -258,11 +259,18 @@ class App:
         """The loop's cap: the player's frame rate (decision 79,
         `core/framerate`), the monitor's rate asked again every two
         seconds, since the window can move to another display.
-        `TARGET_FPS` stays the rate the measuring tools drive the loop at."""
+        `TARGET_FPS` stays the rate the measuring tools drive the loop at.
+        A quiet second drops it to the idle rate (`framerate.loop_cap`)."""
         now = time.monotonic()
         if now >= getattr(self, "_hz_at", 0.0):
             self._hz, self._hz_at = framerate.monitor_hz(), now + 2.0
-        return framerate.cap(self.user_settings.get("frame_rate"), self._hz)
+        base = framerate.cap(self.user_settings.get("frame_rate"), self._hz)
+        last = getattr(self, "_input_at", None)
+        screen = getattr(getattr(self, "dispatcher", None), "active", None)
+        return framerate.loop_cap(
+            base, self.user_settings.get("idle_frame_rate"),
+            None if last is None else now - last,
+            getattr(screen, "FULL_RATE", False))
 
     def _handle_events(self):
         # BEFORE the queue is drained, so anything posted here is in
@@ -271,6 +279,7 @@ class App:
         if self._debug_input is not None:
             self._debug_input.pump()
         for event in coalesce_motion(pygame.event.get()):
+            self._input_at = time.monotonic()
             # Adjust mouse positions for fullscreen offset
             if self._fs_offset and hasattr(event, 'pos'):
                 ox, oy = self._fs_offset
