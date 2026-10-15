@@ -16,9 +16,9 @@ identity the game knows the leader by (HERODATA.LBX's record number, held
 equal on every save by `dev:tools/leader_check.py`). The name after the
 number is for people: a picture is found by its number, so a file renamed
 with a different name still counts. Each picture is a cut-out with an
-alpha channel (Data's set of 14 October 2026; the colony leaders since
-work order 275 his full figures of 15 October, cut to one bust window),
-installed by `dev:tools/leader_portraits_install.py`.
+alpha channel (since work order 275 Data's full figures of 15 October
+2026, every leader, cut to one bust window), installed by
+`dev:tools/leader_portraits_install.py`.
 
 WHICH FILE WINS. Each source root in order (`Resources.roots`, decision
 16): the player's mod folder's `files/` while it is on — where the
@@ -30,9 +30,8 @@ more: it would hide every new picture.
 
 NONE FOR A LEADER: the caller draws the original's portrait itself, in the
 same place — never the original's screen (Data's rule since work order
-187). That is the case for the ship officers whose new picture had no
-alpha channel (work order 255, parked), on a machine without the download,
-and while the mod folder is off.
+187). That is the case on a machine without the download, for a leader
+the download has no picture for, and while the mod folder is off.
 
 HOW BIG. Every box gets the WHOLE picture, scaled to fit inside it (`fit`);
 nothing is cut. The pictures are stored at the largest size HD draws one at
