@@ -32,7 +32,8 @@ artwork (SCIENCE.LBX and the technology animations, TURNSUM.LBX, the
 BUFFER0.LBX popup frames with the system display, EVENTS.LBX's GNN picture
 and animation, COLONY's landing art); the planet choice's and the
 discovery's system display is a list of the star's planets (named) instead
-of the planets' pictures; the science room
+of the planets' pictures; the troop popup (open fix 98, work order 274) is a
+table of its lines under the planet's name, without the troops' figures; the science room
 lists every discovery at once where the original shows one per click (each
 click is still sent, as the original counts them); the GNN picture is not
 drawn. (A popup's right click is the original's since work order 200 —
@@ -309,7 +310,7 @@ def state_key(popup):
 #: others takes any input. A leader offer takes no key (its answers carry
 #: ESTRINGS hotkeys HD does not type for the player).
 KEY_KINDS = ("science", "turn_summary", "planet_choice", "discovery",
-             "leader_level", "gnn", "combat_target", "landing")
+             "leader_level", "gnn", "combat_target", "landing", "troops")
 
 
 def key_action(view, popup, event):

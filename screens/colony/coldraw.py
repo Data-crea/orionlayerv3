@@ -576,6 +576,10 @@ def _units(surface, screen, view, words, state=None):
     from . import colart
     counts = view.units()
     figures, step = unit_layout(counts)
+    # what the drawing covers per kind, the click's rects (decision 5): a
+    # click there is the game's military field for that kind, which opens
+    # its troop popup (colony.cpp:2007-2013, open fix 98)
+    screen.unit_hits = []
     if not figures:
         return
     art = colart.load()
@@ -601,6 +605,17 @@ def _units(surface, screen, view, words, state=None):
                       int(round(12 * nd.native_scale(screen.layout))))
         if big is not None:
             surface.blit(big, (x, top))
+        # a lone figure with its count spans the original's three slots
+        # (colony_main.cpp:1208, :1217-1224), a figure of a row one
+        span = nd.point(screen.layout, x_native + step * (
+            3 if count is not None else 1), 480)[0] - x
+        hit = pygame.Rect(x, top, max(span, big.get_width() if big is not None
+                                      else 0), foot - top)
+        known = next((h for h in screen.unit_hits if h[0] == kind), None)
+        if known is None:
+            screen.unit_hits.append((kind, hit, slot * step))
+        else:
+            known[1].union_ip(hit)
         if count is not None:
             fmt = words.e(0x7C) or "x %d"
             cx, _y = nd.point(screen.layout, (slot + 1) * step, 480)

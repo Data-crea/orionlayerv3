@@ -503,6 +503,13 @@ LOCAL_PATCHES = {
         "the engine does not send the Planets screen's state (open fix "
         "97): HD cannot send colony or outpost ships, show an order or "
         "undo it"),
+    # Work order 274: on the fork's branch `orionlayer` only, 2a09cb76.
+    "doc/ext_troop_popup.patch": (
+        os.path.join("src", "game", "newpup.cpp"),
+        "OrionLayer, open fix 98.",
+        "the engine does not send the colony screen's troop popup (open "
+        "fix 98): a click on the marines or armour shows only the F12 "
+        "notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

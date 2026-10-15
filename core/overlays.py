@@ -132,6 +132,14 @@ class Overlays:
         if d.overlay is not None:
             return False
         top = d.active
+        # a popup the original opens over the screen it was asked from
+        # stands over that screen as it was last drawn: the held frame
+        # (the troop popup over the colony screen, newpup.cpp:13-21 — its
+        # auto function redraws the colony screen; the colony's own page
+        # cannot be drawn again under id 71, its live list is the popup's)
+        popup = getattr(self.app.client.state, "turn_popup", None) or {}
+        if popup.get("kind") in HELD_KINDS:
+            return False
         # a screen whose data is there and whose list a box replaced
         # (`modal_is_box`) has a page to stand behind it; one that cannot
         # vouch for its data has none
@@ -268,6 +276,11 @@ class Overlays:
                                     (field.y + field.y_end) // 2)
         else:
             app.client.activate_field(field.index)
+
+
+#: The turn-time popups that stand over the held frame, the screen they
+#: were opened from as it was last drawn (open fix 98, work order 274).
+HELD_KINDS = ("troops",)
 
 
 def follow_game(screen, state):

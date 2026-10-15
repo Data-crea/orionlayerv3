@@ -130,6 +130,9 @@ def _field(state, index):
 #: help (`line_right`); the landing, which any input ends
 #: (colland.cpp:227-232). The science room and GNN deactivate help and read
 #: only positive fields (science.cpp:178, events.cpp:2573, :2604): nothing.
+#: The troop popup's id, open fix 98 (`core.turnpopupwire.IDS`).
+TROOPS_ID = 71
+
 RIGHT_HELP = {"turn_summary": 247, "planet_choice": 563,
               "leader_level": 564}
 
@@ -246,6 +249,19 @@ def content(popup, state, words, app=None):
             lines = [popup["text"]]
         buttons = [(words["continue"], ("activate", anywhere)
                     if anywhere else None)]
+    elif kind == "troops":
+        # the colony screen's troop popup (open fix 98, work order 274):
+        # one full-screen field ends it (`NEWPUP::Reset_Fields_`,
+        # newpup.cpp:193-197); the planet's name stands as its title. ONLY
+        # WHILE THE GAME REPORTS ITS ID: the colony screen's own full-screen
+        # field has the same shape and demolishes the building under the
+        # real pointer (`core.colony_guard`)
+        from core import troopwire
+        title = title or (_planet_name(state, a[0]) if a[0] >= 0 else None)
+        lines = troopwire.rows(popup.get("troops") or {})
+        ours = getattr(state, "current_screen", None) == TROOPS_ID
+        buttons = [(words["close"], ("activate", anywhere)
+                    if anywhere and ours else None)]
     elif kind == "landing":
         title = title or _planet_name(state, a[0])
         buttons = [(words["continue"], act(a[3]) or (

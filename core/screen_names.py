@@ -145,6 +145,10 @@ SCREENS = {
     #: while TPOP kind 12 is on the wire; before it the council ran under
     #: the processing id 12 with the F12 notice.
     70: ("(synthetic)",     "council"),        # the galactic council
+    #: 71, synthetic, ON THE WIRE ONLY WITH OPEN FIX 98 (work order 274):
+    #: the colony screen's troop popup (`NEWPUP::Troop_Popup`), which the
+    #: App draws over the held colony screen like 59-64.
+    71: ("(synthetic)",     None),             # the troop popup
 }
 
 #: The last value of orion2re's own SCREEN enum:

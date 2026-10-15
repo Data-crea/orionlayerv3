@@ -185,6 +185,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_converter_totals.patch": (95,),
     "doc/ext_council.patch": (96,),
     "doc/ext_planets_send.patch": (97,),
+    "doc/ext_troop_popup.patch": (98,),
 }
 
 

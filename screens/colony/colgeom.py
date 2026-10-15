@@ -23,6 +23,9 @@ GAME_SCREEN_ID = 1
 
 #: Field types as the wire reports them (fields.cpp:241-245, :634-639).
 TYPE_BUTTON, TYPE_SCROLL, TYPE_HIDDEN, TYPE_MULTI_HOT = 0, 6, 7, 8
+#: The units' fields start at `0x1DF - h`, a figure's height above the
+#: foot (colony_main.cpp:1217-1224); no figure is half the screen tall.
+UNIT_FIELD_TOP = 240
 ESC = 0x1B
 
 # ── The top band (colony.cpp:621-635; help table erichelp.cpp:90-108) ──

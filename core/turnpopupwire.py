@@ -16,13 +16,16 @@ KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          10: "colony_combat", 11: "ground_combat",
          # open fix 96 (work order 270): the galactic council; its tail is
          # `core.councilwire`'s
-         12: "council"}
+         12: "council",
+         # open fix 98 (work order 274): the colony screen's troop popup;
+         # its tail is `core.troopwire`'s
+         13: "troops"}
 #: The ids open fix 49 reports (40, 52 and 33 are the game's own); 68 and
 #: 69 are open fix 91's.
 IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
        60: "planet_choice", 61: "discovery", 62: "leader_level", 63: "gnn",
        64: "combat_target", 33: "landing", 68: "colony_combat",
-       69: "ground_combat", 70: "council"}
+       69: "ground_combat", 70: "council", 71: "troops"}
 #: The system display's slots (MAX_PLANETS_PER_STAR) and ship buttons.
 SLOTS, SHIP_SLOTS = 5, 15
 
@@ -89,6 +92,9 @@ def parse(gs, data, pos):
         if KINDS[kind] == "council":
             from core import councilwire
             popup["council"] = councilwire.read_tail(take, text)
+        if KINDS[kind] == "troops":
+            from core import troopwire
+            popup["troops"] = troopwire.read_tail(take, text)
     except ValueError:
         return pos
     gs.turn_popup = popup
@@ -96,7 +102,7 @@ def parse(gs, data, pos):
 
 
 def build(kind, args=(), title=None, text=None, messages=None, system=None,
-          targets=None, invasion=None, council=None):
+          targets=None, invasion=None, council=None, troops=None):
     """The block as the engine writes it — for the checks' stand-ins."""
     code = {v: k for k, v in KINDS.items()}[kind]
     out = b"TPOP" + _st.pack("<BBh", 1, code, len(args))
@@ -139,6 +145,9 @@ def build(kind, args=(), title=None, text=None, messages=None, system=None,
     if kind == "council":
         from core import councilwire
         out += councilwire.build_tail(council)
+    if kind == "troops":
+        from core import troopwire
+        out += troopwire.build_tail(troops)
     return out
 
 

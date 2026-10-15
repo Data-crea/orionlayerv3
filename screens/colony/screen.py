@@ -406,6 +406,23 @@ class ColonyScreen(ScreenBase):
                     and nd.field_hit(self.layout, f, screen_x, screen_y):
                 self.send(f, "system display")
                 return None
+        # the marines and armour at the foot: the game's military field of
+        # that kind, which opens its troop popup (colony.cpp:2007-2013;
+        # HD's popup on open fix 98, work order 274)
+        for kind, rect, native_x in getattr(self, "unit_hits", []):
+            if not rect.collidepoint(screen_x, screen_y):
+                continue
+            # its own field starts at the figures' foot row, never at the
+            # top: the full-screen field [0] shares x 0 and y_end 479 and
+            # demolishes the building under the real pointer
+            # (`core.colony_guard`)
+            f = next((f for f in self._live()
+                      if f.field_type == geom.TYPE_HIDDEN and
+                      f.x == native_x and f.y_end == 479 and
+                      f.y >= geom.UNIT_FIELD_TOP), None)
+            if f is not None:
+                self.send(f, "troops")
+            return None
         return None
 
     def help_extra_rect(self, spec):
