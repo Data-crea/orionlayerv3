@@ -1,21 +1,16 @@
-"""New Game Screen — Settings display with transparent background cutouts.
-
-Rendering order:
-  1. Black fill
-  2. Setting images at their cutout slots
-  3. Background PNG on top (transparent cutouts reveal settings)
-  4. Category titles above each cutout
-  5. Dynamic value labels below each cutout
-  6. Toggle buttons (blue=on, dark=off) with labels
-  7. Frame overlay
+"""New Game Screen — the five game settings, the three switches, Cancel
+and Accept, in the screen shell (work order 225).
 
 No status line: the original prints none, and the one HD drew ("New Game
 | Click settings to cycle | ESC -> Main Menu") was a leftover that Data
 found on the multiplayer New Game (work order 196 B1).
 
-All positions live in layout.json (v2 hd-space, 3440x1440) and are
-converted to screen coordinates via the background's cover-scale
-transform — mod-overridable like every other data file.
+Every rect is the shell's (`_shell_slot`, `_shell_toggle`), read by the
+drawing, the click and the help (decision 5). The v2 drawing before the
+shell — positions in 3440x1440 space mapped through the cut-out
+background's cover scale — is gone (work order 272, the redundancy
+audit's N20); layout.json keeps the value maps, the fields and each
+slot's proportion, mod-overridable like every other data file.
 
 Input routing:
   Settings (type=7 click-through) -> ACTIVATE_FIELD
@@ -68,9 +63,7 @@ class NewGameScreen(ScreenBase):
     #: (title, picture, value) and the three switches; the title on the
     #: plate, CANCEL and ACCEPT the shell's buttons (`screenframe`). Every
     #: rect comes from `_shell_slot` / `_shell_toggle`, which the drawing,
-    #: the click and the help all read (decision 5). The v2 3440x1440
-    #: positions of layout.json and the background's cover scale they went
-    #: through are no longer read.
+    #: the click and the help all read (decision 5).
     SHELL_WORN = True
     #: The panels in reading order; the last holds the switches.
     SHELL_PANELS = ("difficulty", "galaxy_size", "galaxy_age", "players",
@@ -84,13 +77,6 @@ class NewGameScreen(ScreenBase):
     def __init__(self, app):
         super().__init__(app)
         self._cfg = {}           # layout.json contents
-        self._bg_orig = None
-        self._bg_screen = None
-        self._bg_scale = 1.0
-        self._bg_crop_x = 0.0
-        self._bg_crop_y = 0.0
-        self._hd2i_x = 1.0       # hd (3440x1440) -> bg image factors
-        self._hd2i_y = 1.0
         self._setting_imgs = {}
         self._current = {}       # category -> image filename
         self._labels = {}        # category -> display label
@@ -108,8 +94,6 @@ class NewGameScreen(ScreenBase):
 
     def exit(self):
         super().exit()
-        self._bg_orig = None
-        self._bg_screen = None
         self._setting_imgs.clear()
         self._scaled_cache.clear()
 
@@ -118,55 +102,21 @@ class NewGameScreen(ScreenBase):
     def _load_layout_cfg(self):
         self._cfg = self.app.res.load_json(
             "screens/new_game/layout.json", {})
-        img_w, img_h = self._cfg.get("background_image_size",
-                                     [1937, 812])
-        self._hd2i_x = img_w / 3440
-        self._hd2i_y = img_h / 1440
-
-    def _load_background(self):
-        """Override ScreenBase: cutout background needs its own
-        cover-scale that keeps scale/crop factors for _hd_to_screen."""
-        path = self.asset_path("assets", "background.png")
-        if path:
-            self._bg_orig = pygame.image.load(path).convert_alpha()
-            self._scale_background()
-
-    def _scale_background(self):
-        if not self._bg_orig:
-            return
-        win_w, win_h = self.app.win_w, self.app.win_h
-        img_w, img_h = self._bg_orig.get_size()
-        self._bg_scale = max(win_w / img_w, win_h / img_h)
-        sw = int(img_w * self._bg_scale)
-        sh = int(img_h * self._bg_scale)
-        self._bg_crop_x = (sw - win_w) / 2
-        self._bg_crop_y = (sh - win_h) / 2
-        scaled = pygame.transform.smoothscale(self._bg_orig, (sw, sh))
-        cx, cy = int(self._bg_crop_x), int(self._bg_crop_y)
-        self._bg_screen = scaled.subsurface(
-            (cx, cy, win_w, win_h)).copy()
-        self._scaled_cache.clear()
 
     def picture_rect(self, category):
         """Where `category`'s picture is drawn: the shell's picture rect
-        (work order 225), else its v2 slot's panel inner rect."""
-        if self.SHELL_WORN:
-            return self._shell_slot(category)[1]
-        slot = self._cfg.get("setting_slots", {}).get(category)
-        panel = pygame.Rect(*self._hd_to_screen(*slot["rect"]))
-        return hud.panel_inner(panel, self.layout.scale)
+        (work order 225)."""
+        return self._shell_slot(category)[1]
 
-    def setting_picture(self, category, panel=None):
+    def setting_picture(self, category):
         """The picture for `category`'s current setting, scaled to
-        `picture_rect` (or to `panel`'s inner rect when one is given), or
-        None. One function for the drawing and the check that holds the
-        picture to its source (work order 172)."""
+        `picture_rect`, or None. One function for the drawing and the
+        check that holds the picture to its source (work order 172)."""
         filename = self._current.get(category)
         img = self._get_setting_image(category, filename) if filename else None
         if img is None:
             return None
-        inner = (hud.panel_inner(panel, self.layout.scale) if panel
-                 is not None else self.picture_rect(category))
+        inner = self.picture_rect(category)
         return self._get_scaled(img, inner.w, inner.h)
 
     def _preload_setting_images(self):
@@ -192,31 +142,6 @@ class NewGameScreen(ScreenBase):
             self._scaled_cache[key] = (
                 pygame.transform.smoothscale(surf, (w, h)))
         return self._scaled_cache[key]
-
-    # ── Coordinate transform ─────────────────────────────────
-
-    def _hd_to_screen(self, hd_x, hd_y, hd_w=0, hd_h=0):
-        """Convert v2 hd coords (3440x1440) -> screen pixels."""
-        s = self._bg_scale
-        cx, cy = self._bg_crop_x, self._bg_crop_y
-        ix, iy = hd_x * self._hd2i_x, hd_y * self._hd2i_y
-        iw, ih = hd_w * self._hd2i_x, hd_h * self._hd2i_y
-        return (int(ix * s - cx), int(iy * s - cy),
-                int(iw * s), int(ih * s))
-
-    def _hd_rect(self, hd_tuple):
-        return pygame.Rect(*self._hd_to_screen(*hd_tuple))
-
-    def _hd_font_size(self, hd_size):
-        return max(8, int(hd_size * self._hd2i_y * self._bg_scale))
-
-    def _toggle_icon_rect(self, index):
-        """hd rect of toggle icon number `index` (from layout.json)."""
-        t = self._cfg.get("toggles", {})
-        size = t.get("icon_size", 80)
-        return (t.get("x", 2186),
-                t.get("y0", 830) + index * t.get("dy", 105),
-                size, size)
 
     # ── The shell's geometry (work order 225) ────────────────
 
@@ -289,77 +214,12 @@ class NewGameScreen(ScreenBase):
     # ── Render ───────────────────────────────────────────────
 
     def render(self, surface):
-        # THE HUD STYLE, decision 71 (work order 169). The cutout
-        # background (assets/background.png) framed the five setting
-        # pictures with its holes — a frame in all but name — so it is
-        # no longer drawn; it is still LOADED, because its cover-scale is
-        # what `_hd_to_screen` maps the slots through. The screen draws
-        # the universal background (work order 173; the cutout is a
-        # geometry template, not a picture), and each picture on a HUD
-        # panel.
+        # THE HUD STYLE, decision 71 (work order 169): the universal
+        # background (work order 173), the shell's panels with each
+        # picture on its own, the plate and the buttons, the help.
         backgrounds.draw(surface, self.SCREEN_NAME)
-        if self.SHELL_WORN:
-            self._render_shell_panels(surface)
-            self._render_frame(surface)     # the plate and the buttons
-            self.render_help(surface)
-            return
-        if not self._bg_screen:
-            return
-        slots = self._cfg.get("setting_slots", {})
-        cats = self._cfg.get("categories", {})
-        text_cfg = self._cfg.get("text", {})
-
-        # 1. Boxes (the editor's panels) FIRST — work order 172. The
-        #    2560x1440 box list carries an `inner_panel` box on every
-        #    picture slot, and since 169 that skin is a FILLED HUD panel;
-        #    drawn after the pictures it covered all five, at every frame
-        #    colour. The pictures come after everything that frames them.
-        for box in self.boxes:
-            box.render(surface, self.layout, self.style)
-
-        # 2. Each setting picture on its HUD panel, drawn last of its
-        #    slot and touched by nothing afterwards.
-        for cat, slot in slots.items():
-            sx, sy, sw, sh = self._hd_to_screen(*slot["rect"])
-            if sw <= 0 or sh <= 0:
-                continue
-            panel = pygame.Rect(sx, sy, sw, sh)
-            hud.panel(surface, panel, self.layout.scale)
-            img = self.setting_picture(cat, panel)
-            if img is not None:
-                surface.blit(img, hud.panel_inner(panel, self.layout.scale))
-
-        # 4. + 5. Category titles / dynamic value labels
-        tfont = self.style.get_font(self._hd_font_size(
-            text_cfg.get("title_font_size", 36)))
-        lfont = self.style.get_font(self._hd_font_size(
-            text_cfg.get("label_font_size", 38)))
-        title_dy = text_cfg.get("title_dy", 55)
-        label_dy = text_cfg.get("label_dy", 30)
-        for cat, slot in slots.items():
-            rect = slot["rect"]
-            center_x = rect[0] + rect[2] // 2
-            title = cats.get(cat, {}).get("title", "")
-            if title:
-                tx, ty, _, _ = self._hd_to_screen(
-                    center_x, rect[1] - title_dy)
-                surf = tfont.render(title.upper(), True, TITLE_COLOR)
-                surface.blit(surf, (tx - surf.get_width() // 2, ty))
-            label = self._labels.get(cat, "")
-            if label:
-                lx, ly, _, _ = self._hd_to_screen(
-                    center_x, rect[1] + rect[3] + label_dy)
-                surf = lfont.render(label, True, LABEL_COLOR)
-                surface.blit(surf, (lx - surf.get_width() // 2, ly))
-
-        # 6. Toggle buttons
-        self._render_toggles(surface)
-
-        # 7. Frame overlay
-        if self.USE_FRAME:
-            self._render_frame(surface)
-
-        # 8. Right-click help, above everything including the frame.
+        self._render_shell_panels(surface)
+        self._render_frame(surface)     # the plate and the buttons
         self.render_help(surface)
 
     def _render_shell_panels(self, surface):
@@ -397,47 +257,18 @@ class NewGameScreen(ScreenBase):
             surface.blit(w, (box.right + box.w // 2,
                              row.centery - w.get_height() // 2))
 
-    def _render_toggles(self, surface):
-        t = self._cfg.get("toggles", {})
-        lfont = self.style.get_font(self._hd_font_size(
-            t.get("label_font_size", 32)))
-        labels = t.get("labels", {})
-        for i, name in enumerate(t.get("order", [])):
-            is_on = self._toggle_states.get(name, False)
-            icon_hd = self._toggle_icon_rect(i)
-            ix, iy, iw, ih = self._hd_to_screen(*icon_hd)
-            if iw > 0 and ih > 0:
-                # The HUD checkbox — a tick while ON (work order 172: the
-                # small button's lit fill alone was too faint to read,
-                # and on a dark frame colour invisible). The knob
-                # pictures (toggle_on/off.png) were removed with their
-                # loader by work order 189.
-                hud.checkbox(surface, pygame.Rect(ix, iy, iw, ih),
-                             self.layout.scale, is_on)
-            lx_hd = icon_hd[0] + t.get("label_offset_x", 100)
-            ly_hd = icon_hd[1] + icon_hd[3] // 2
-            lx, ly, _, _ = self._hd_to_screen(lx_hd, ly_hd)
-            surf = lfont.render(labels.get(name, name).upper(), True,
-                                TOGGLE_LABEL_COLOR)
-            surface.blit(surf, (lx, ly - surf.get_height() // 2))
-
     # ── Input ────────────────────────────────────────────────
 
     def help_extra_rect(self, spec):
         """Region kinds only this screen has.
 
-        `slot` and `toggle` both live in the cover-scaled background
-        space, not in the 1080p reference space the base class knows,
-        so they resolve through the same `_hd_rect` the click path
-        uses — decision 5, one function for drawing, clicking and now
-        for the help region as well.
+        `slot` and `toggle` are the shell's panel and switch row — the
+        same rects the drawing and the click use (decision 5).
         """
         cat = spec.get("slot")
         if cat:
             slot = self._cfg.get("setting_slots", {}).get(cat)
-            if slot and self.SHELL_WORN:
-                return self._shell_slot(cat)[0]
-            return self._hd_rect(slot["rect"]) if slot else None
+            return self._shell_slot(cat)[0] if slot else None
 
         name = spec.get("toggle")
         if name:
@@ -445,12 +276,7 @@ class NewGameScreen(ScreenBase):
             order = t.get("order", [])
             if name not in order:
                 return None
-            if self.SHELL_WORN:
-                return self._shell_toggle(order.index(name))[0]
-            icon = self._toggle_icon_rect(order.index(name))
-            return self._hd_rect((icon[0], icon[1] - 5,
-                                  t.get("click_width", 600),
-                                  t.get("dy", 105)))
+            return self._shell_toggle(order.index(name))[0]
         return None
 
     def handle_click(self, screen_x, screen_y):
@@ -461,9 +287,7 @@ class NewGameScreen(ScreenBase):
         # Settings: ACTIVATE_FIELD
         for cat, slot in self._cfg.get("setting_slots", {}).items():
             # The whole panel answers under the shell, as the slot did.
-            hit = (self._shell_slot(cat)[0] if self.SHELL_WORN
-                   else self._hd_rect(slot["rect"]))
-            if hit.collidepoint(screen_x, screen_y):
+            if self._shell_slot(cat)[0].collidepoint(screen_x, screen_y):
                 self.app.client.activate_field(slot["field_id"])
                 return
         # Toggles: type=1 radio buttons — must use INJECT_CLICK.
@@ -473,13 +297,8 @@ class NewGameScreen(ScreenBase):
         # Use field rects from FIELD_LIST when available (dynamic)
         # rather than hardcoded click_640 coordinates (static).
         t = self._cfg.get("toggles", {})
-        cw = t.get("click_width", 600)
-        dy = t.get("dy", 105)
         for i, name in enumerate(t.get("order", [])):
-            icon = self._toggle_icon_rect(i)
-            region = (self._shell_toggle(i)[0] if self.SHELL_WORN else
-                      self._hd_rect((icon[0], icon[1] - 5, cw, dy)))
-            if region.collidepoint(screen_x, screen_y):
+            if self._shell_toggle(i)[0].collidepoint(screen_x, screen_y):
                 fid = t.get("field_ids", {}).get(name)
                 cx, cy = self._toggle_click_pos(name, fid)
                 if cx:

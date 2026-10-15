@@ -145,14 +145,13 @@ DETAIL_COLOR = palette.col("colony_summary", "row_detail",
                            (132, 148, 180))
 NO_FARM_COLOR = palette.col("colony_summary", "no_farming", (150, 120, 110))
 #: The cell plate's line is the HUD outline since decision 71
-#: (`listgrid.row_palette()[3]`, `panel.edge_dim`); the skin's
-#: `plate_outline` (Data's #29394C) is no longer read by this list (the
-#: redundancy audit's N34, parked by work order 228).
+#: (`listgrid.row_palette()[3]`, `panel.edge_dim`).
 # SINCE DECISION 71 (work order 169) THE FOUR COLOURS BELOW ARE THE HUD
 # TABLE'S, through `listgrid.row_palette` — the one home every table
-# reads. Decision 57's colors.json keys stay in the skin, unread by this
-# list; the roles (A/B stripe by LIST index, a filled scanned row, no
-# hover colour) are unchanged.
+# reads. Decision 57's colors.json keys (row_a, row_b, row_selected,
+# plate_outline) went with work order 272, the redundancy audit's N34;
+# the roles (A/B stripe by LIST index, a filled scanned row, no hover
+# colour) are unchanged.
 from core import listgrid as _lg
 
 #: THE ROW FILLS — HD EXTENSION, decision 57. Data's table, 13 September
@@ -163,7 +162,7 @@ from core import listgrid as _lg
 #: colour, although the table offers one: the row under the pointer IS
 #: the scanned colony (colsum.cpp:880-890, transcribed in
 #: `colonyselect`), so a hover fill could only ever be covered by the
-#: selected one. `colors.json` `_row_fill_note` carries the values.
+#: selected one.
 # row_a, row_b and row_selected — the three roles, now the HUD table's.
 ROW_A, ROW_B, ROW_SELECTED = _lg.row_palette()[:3]
 

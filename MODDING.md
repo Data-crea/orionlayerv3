@@ -259,13 +259,14 @@ cmbtshp/<colour * 45 + picture>_<frame>_engine.png   for a colour's own file
 
 ### The other extracted pictures
 
-Fleets, Leaders, Races, the Ship Designer and the diplomacy audience draw
-the game's pictures the same way, from the files their extractors write
-into `screens/<screen>/assets/gamedata/`. A PNG at
-`files/screens/<screen>/assets/gamedata/<group>/<entry>_<frame>.png`
+Fleets, Leaders, Races, the Ship Designer, the diplomacy audience and the
+Info screen's Tech Review draw the game's pictures the same way, from the
+files their extractors write into `screens/<screen>/assets/gamedata/`. A
+PNG at `files/screens/<screen>/assets/gamedata/<group>/<entry>_<frame>.png`
 replaces the drawing stored as `<group>/<entry>.bin` (frame 0 for a still
-picture; the Races screen keeps its drawings without a group folder,
-`…/gamedata/portrait_3_0.png`), used as painted — no palette and no ship colours, so a ship you
+picture; the Races screen and the Tech Review keep their drawings without
+a group folder, `…/gamedata/portrait_3_0.png`,
+`files/screens/info/assets/gamedata/app_<application>_0.png`), used as painted — no palette and no ship colours, so a ship you
 paint shows in your colours for every owner. The Ship Designer draws the
 Fleets screen's ships, so one PNG serves both.
 

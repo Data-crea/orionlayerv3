@@ -65,8 +65,6 @@ NOT_LISTED = {
     # — into the developer store (Data: kept for the Select Race
     # redesign); a player's tree no longer carries them, so they need no
     # rule here.
-    "screens/new_game/assets/background.png":
-        "the cut-outs' geometry, never drawn (work order 199 D3)",
     "*/_src/*": "the sources an extractor or a tool works from",
     "*_ref/*": "an extraction's reference sheets, loaded by nothing",
 }

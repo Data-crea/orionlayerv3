@@ -136,21 +136,10 @@
       80,
       120
     ],
-    "selected": [
-      120,
-      170,
-      255
-    ],
     "border": [
       50,
       70,
       110
-    ],
-    "cell_bg": [
-      16,
-      20,
-      38,
-      160
     ],
     "name_selected": [
       180,
@@ -714,28 +703,6 @@
       0,
       0
     ],
-    "row_a": [
-      10,
-      18,
-      30
-    ],
-    "row_b": [
-      17,
-      30,
-      46
-    ],
-    "row_selected": [
-      24,
-      43,
-      114
-    ],
-    "_row_fill_note": "HD EXTENSION - decision 57, Data's table of 13 September 2026 (references/doc/briefs/95-palette.png): row_a #0A121E and row_b #111E2E alternate down the list by LIST INDEX (A, B, A, B from the top of the sorted list, so a scroll or a sort never breaks the stripe), and the scanned colony's row is filled row_selected #182B72. THE ORIGINAL HAS NONE OF THIS: the only Fill_/Line_ calls in colsum.cpp are the scroll thumb (:759-765) and its only per-row state is the NAME's colour (Set_Colony_Font_To_Blue_, colsum.cpp:554, see _row_name_note). The selected fill is driven by the SAME variable as that name colour - colonyselect.Selection.colony, the transcription of _g_colony_n - so the fill and the bright name cannot disagree. WHY THERE IS NO row_hover KEY although the table gives a hover colour (#18345A): on this screen the row under the pointer IS the scanned colony, transcribed from colsum.cpp:880-890 (hover moves _g_colony_n), so a hovered row is always the selected row and the selected fill wins - a hover key would be a colour nothing can ever show. Drawn in colonylist.render UNDER the cell outlines. Data's decision (a), 13 September 2026.",
-    "plate_outline": [
-      41,
-      57,
-      76
-    ],
-    "_plate_outline_note": "#29394C, Data's table ('Trennlinien'), 13 September 2026: the 1 px outline around every cell of every band of the colony list (colonylist.render through StyleRenderer.draw_plate, decision 51 - a DEVIATION IN KIND, since the original paints its cell plates into the COLSUM.LBX bitmap). It had no entry here and lived as a code default (55, 65, 85) in colonylist; it has no code default now (palette.require, decision 14). ONLY THE LIST'S CELLS: the header plates are drawn with panel.thin_border, a key every screen shares, and planet_output's own line is output_separator - both unchanged.",
     "header_background": [
       9,
       17,

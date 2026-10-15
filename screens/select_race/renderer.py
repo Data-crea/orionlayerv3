@@ -9,6 +9,7 @@ import pygame
 from core import palette
 from core.hud import blocks as hud
 from core import gridlayout
+from core import imagebox
 
 # Colors — every value can be overridden in the skin's
 # colors.json under the "select_race" section.
@@ -25,8 +26,6 @@ COL_HIGHLIGHT = _c("highlight",  (100, 210, 140))
 COL_KEYWORD   = _c("keyword",    (140, 185, 240))
 COL_SUBTITLE  = _c("subtitle",   (120, 104, 176))
 COL_SEPARATOR = _c("separator",  (60, 80, 120))
-COL_SELECTED  = _c("selected",   (120, 170, 255))
-COL_CELL_BG   = _c("cell_bg",    (16, 20, 38, 160))
 COL_NAME_SEL  = _c("name_selected", (180, 220, 255))
 COL_GOLD      = _c("gold",       (212, 160, 74))
 
@@ -96,10 +95,12 @@ def render_race_grid(surface, L, style, races, selected_id, rect,
         name_sh = int(NAME_H * L.scale)
         port_h = sh - name_sh
 
-        # Cell background
-        bg = pygame.Surface((sw, port_h), pygame.SRCALPHA)
-        bg.fill(COL_CELL_BG)
-        surface.blit(bg, (sx, sy))
+        # The cell is a field of the box fill's family (decision 94), the
+        # chosen race's the family's "selected" (decision 92) — work order
+        # 272, the audit's N24: a fill and a selection colour of its own
+        # until then. The portrait covers it; a missing one shows it.
+        cell_r = pygame.Rect(sx, sy, sw, port_h)
+        hud.field(surface, cell_r, L.scale, on=selected)
 
         # Portrait thumbnail
         img = portraits.get(race["id"])
@@ -108,22 +109,19 @@ def render_race_grid(surface, L, style, races, selected_id, rect,
         if img:
             cache_key = (race["id"], sw, port_h)
             if cache_key not in thumb_cache:
-                thumb_cache[cache_key] = _make_thumbnail(
+                # the one cover-fill (work order 272, the audit's G3:
+                # this was its names-only copy)
+                thumb_cache[cache_key] = imagebox.cover(
                     img, sw, port_h, crop, zoom)
             surface.blit(thumb_cache[cache_key], (sx, sy))
         else:
             render_portrait_placeholder(surface, sx, sy, sw, port_h,
                                         (100, 120, 180), style)
 
-        # Selection border
-        if selected:
-            bdr = pygame.Surface((sw, port_h), pygame.SRCALPHA)
-            pygame.draw.rect(bdr, (*COL_SELECTED, 200),
-                             (0, 0, sw, port_h), 3, border_radius=3)
-            surface.blit(bdr, (sx, sy))
-        else:
-            # The HUD outline (work order 223, proposal A).
-            hud.outline(surface, pygame.Rect(sx, sy, sw, port_h), L.scale)
+        # The HUD outline over the portrait (work order 223, proposal A),
+        # lit on the chosen race: the field's own edge, which the portrait
+        # covers.
+        hud.outline(surface, cell_r, L.scale, lit=selected)
 
         # Race name below portrait
         is_custom = (race.get("key") == "custom" or race["id"] == 13)
@@ -137,25 +135,6 @@ def render_race_grid(surface, L, style, races, selected_id, rect,
         nx = sx + (sw - n_surf.get_width()) // 2
         ny = sy + port_h + (name_sh - n_surf.get_height()) // 2
         surface.blit(n_surf, (nx, ny))
-
-
-def _make_thumbnail(img, tw, th, crop=(0.5, 0.5), zoom=1.0):
-    """Cover-fill thumbnail with zoom and crop.
-
-    zoom=1.0: default cover-fill (image fills the cell exactly)
-    zoom>1.0: zoom in (shows less of the image, more detail)
-    zoom<1.0: zoom out (shows more of the image, may letterbox)
-    crop=[0-1, 0-1]: anchor point for pan (0.5, 0.5 = center)
-    """
-    iw, ih = img.get_width(), img.get_height()
-    base_scale = max(tw / iw, th / ih)
-    scale = base_scale * max(0.3, zoom)
-    sw = max(tw, int(iw * scale))
-    sh = max(th, int(ih * scale))
-    scaled = pygame.transform.smoothscale(img, (sw, sh))
-    cx = int(crop[0] * max(0, sw - tw))
-    cy = int(crop[1] * max(0, sh - th))
-    return scaled.subsurface((cx, cy, tw, th)).copy()
 
 
 # ── Portrait helpers ─────────────────────────────────────

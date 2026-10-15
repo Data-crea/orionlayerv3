@@ -8,16 +8,19 @@ loader's path, each picture's own palette over the main one
 (decisions 38, 40, 42).
 
 **FILE BY FILE THROUGH THE RESOURCE ROOTS** (decisions 16 and 72, 195's rule
-for a picture Data adds): each file is `Resources.resolve`d, so a mod or the
-player's mod folder replaces one picture and the rest stay the game's.
+for a picture Data adds): each file is read through `core.blobart.Source`,
+as every other screen's extracted pictures, so a mod or the player's mod
+folder replaces one picture and the rest stay the game's — and a PNG
+painted for an application, `app_<id>_0.png` beside `app_<id>.bin`, is
+drawn as painted (blobart's route; until work order 272 the Tech Review
+had a resolver of its own without it, the redundancy audit's N3).
 """
 import json
 import logging
-import os
 
 import pygame
 
-from core import lbx
+from core import blobart, lbx
 
 log = logging.getLogger("info")
 
@@ -32,30 +35,24 @@ class InfoArt:
 
     def __init__(self, folder=None):
         self.folder = folder
+        self._src = blobart.Source(REL, folder)
         self.reason = ""
         self._palette = None
         self._cache = {}
         self._load()
 
-    def _path(self, name):
-        if self.folder is not None:
-            return os.path.join(self.folder, name)
-        from core import resources
-        return resources.res.resolve(f"{REL}/{name}")
-
     def _load(self):
         try:
-            path = self._path("manifest.json")
-            if not path:
-                raise OSError("no manifest.json")
-            with open(path, encoding="utf-8") as fh:
+            with open(self._src.path("manifest.json"),
+                      encoding="utf-8") as fh:
                 manifest = json.load(fh)
             if int(manifest.get("format", 0)) != FORMAT_VERSION:
                 self.reason = (f"The Tech Review pictures are format "
                                f"{manifest.get('format')}, this build reads "
                                f"{FORMAT_VERSION}. Run: {HOW}")
                 return
-            with open(self._path("palette.json"), encoding="utf-8") as fh:
+            with open(self._src.path("palette.json"),
+                      encoding="utf-8") as fh:
                 self._palette = {i: tuple(c) for i, c in
                                  enumerate(json.load(fh))}
         except (OSError, TypeError, ValueError) as exc:
@@ -73,11 +70,12 @@ class InfoArt:
         key = int(app_id)
         if key in self._cache:
             return self._cache[key]
-        surface = None
-        path = self._path(f"app_{key}.bin")
+        surface = self._src.painted(f"app_{key}.bin")
+        if surface is not None:
+            self._cache[key] = surface
+            return surface
         try:
-            with open(path, "rb") as fh:
-                blob = fh.read()
+            blob = self._src.read(f"app_{key}.bin")
             header = lbx.parse_header(blob, f"app {key}")
             pixels = lbx.decode_frame(blob, header, 0)
             if pixels is not None:

@@ -1,9 +1,5 @@
 {
-  "_comment": "New Game screen layout data. All rects/positions in v2 hd-space (3440x1440). Mod-overridable; value maps key game values to image filenames (assets/<category>/<image>.png) and display labels.",
-  "background_image_size": [
-    1937,
-    812
-  ],
+  "_comment": "New Game screen layout data. The screen wears the shell: every rect is the shell's (screen.py `_shell_slot` / `_shell_toggle`). Mod-overridable; a setting slot's rect gives only its picture's proportion (width to height), value maps key game values to image filenames (assets/<category>/<image>.png) and display labels, a toggle is clicked at its live field's centre, else at click_640.",
   "setting_slots": {
     "difficulty": {
       "rect": [
@@ -225,13 +221,6 @@
     }
   },
   "toggles": {
-    "x": 2186,
-    "y0": 830,
-    "dy": 105,
-    "icon_size": 80,
-    "click_width": 600,
-    "label_offset_x": 100,
-    "label_font_size": 32,
     "order": [
       "tactical_combat",
       "random_events",
@@ -261,11 +250,5 @@
       "random_events": 11,
       "antarans_attack": 12
     }
-  },
-  "text": {
-    "title_dy": 55,
-    "title_font_size": 36,
-    "label_dy": 30,
-    "label_font_size": 38
   }
 }

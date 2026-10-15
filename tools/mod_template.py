@@ -225,8 +225,9 @@ def names_txt(hud_sizes):
               "cmbtfgtr, cmbtsfx, beams, sphersfx, combat;",
               "  ships: entry = colour x 45 + design picture, frame = 4 x "
               "facing (0-4, the rest are flips) + glow (0-3))",
-              "", "  Fleets, Leaders, Races, the Ship Designer and the "
-              "audience (work order 199), the same way:",
+              "", "  Fleets, Leaders, Races, the Ship Designer, the "
+              "audience (work order 199) and the Tech Review (272), the "
+              "same way:",
               "  files/screens/<screen>/assets/gamedata/<group>/<entry>_"
               "<frame>.png  for the extracted <group>/<entry>.bin",
               "", "  the colony screen's surface (work order 232), one PNG "
