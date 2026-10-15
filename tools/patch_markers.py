@@ -483,6 +483,13 @@ LOCAL_PATCHES = {
         "the engine does not send the Energy Absorber's charge (open fix "
         "94): HD draws the glow only once the state after a FIRE arrives, "
         "after the shot the original already shows it under"),
+    # Work order 266: on the fork's branch `orionlayer` only, cb2bf131.
+    "doc/ext_combat_converter_totals.patch": (
+        os.path.join("src", "game", "cmbtspec.cpp"),
+        "OrionLayer, open fix 95.",
+        "the engine does not send the Stellar Converter's two totals (open "
+        "fix 95): HD shows no damage numbers after the converter, where the "
+        "original shows two over its target"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

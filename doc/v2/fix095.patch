@@ -1,0 +1,45 @@
+From cb2bf131c6114834728fe14964bb32176802d25e Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Thu, 15 Oct 2026 10:35:14 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2095:=20the=20Stellar?=
+ =?UTF-8?q?=20Converter's=20two=20totals=20as=20a=20battle=20event=20(CEV?=
+ =?UTF-8?q?=5FCONVERTER=5FHIT=2025:=20source,=20target,=20damage,=20struct?=
+ =?UTF-8?q?ure=20damage=20=E2=80=94=20after=20its=20four=20hits,=20the=20n?=
+ =?UTF-8?q?umbers=20Add=5FDamage=5FIndicator=5FFor=5FShip=20shows=20over?=
+ =?UTF-8?q?=20the=20target)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.h     | 1 +
+ src/game/cmbtspec.cpp | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 41b799b1..bd19eb6f 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -187,6 +187,7 @@ enum CombatEventType : uint8_t {
+     CEV_BEAM_AIM = 22,      // source, target, weapon, fire points, from x px, y px, to x px, y px (an entry's last fire point, the target and its miss offset) — OrionLayer, open fix 82.
+     CEV_GYRO_SPIN = 23,     // source, target, turns (sixteenths of a turn the target spins after the line's eight) — OrionLayer, open fix 83.
+     CEV_ABSORB = 24,        // unit, charge after, change (the Energy Absorber's reflected_damage_pool: charged by a hit, emptied by its discharge or after its side's units have acted) — OrionLayer, open fix 94.
++    CEV_CONVERTER_HIT = 25, // source, target, damage, structure damage (the Stellar Converter's two totals after its four hits, the numbers the original shows over the target) — OrionLayer, open fix 95.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+diff --git a/src/game/cmbtspec.cpp b/src/game/cmbtspec.cpp
+index 77fd7ea7..7e4b3f50 100755
+--- a/src/game/cmbtspec.cpp
++++ b/src/game/cmbtspec.cpp
+@@ -1069,6 +1069,9 @@ namespace CMBTSPEC {
+             total_damage += current_damage;
+             total_struct_damage += current_struct_damage;
+         }
++#ifdef ORION2RE_EXT
++        ext::Combat_Note(ext::CEV_CONVERTER_HIT, attacker_idx, target_idx, total_damage, total_struct_damage);  // OrionLayer, open fix 95. The two totals Add_Damage_Indicator_For_Ship shows, after the four hits.
++#endif
+ 
+         if (MOX::apply_damage_to_planet == 1 && MOX::super_fast_flag == 0) {
+             palette::Restore_Glass_Remap_Block(MOX::shield_remap_colors);

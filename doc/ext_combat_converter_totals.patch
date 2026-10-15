@@ -1,0 +1,45 @@
+OrionLayer open fix 95 — the Stellar Converter's two totals as a battle event
+=============================================================================
+
+Work order 266 (260 P1, Data's decision of work order 262). orion2re on the
+fork's branch `orionlayer` (v2.0.0), on top of open fix 94; commit cb2bf131.
+Not on `orionlayer-local`. Every line under ORION2RE_EXT.
+
+Stellar_Converter (cmbtspec.cpp:986-1084) draws its line, THEN does four
+hits through CMBTFIRE::Apply_Ship_Damage, summing the damage and the
+structure damage in two locals, and shows them over the target
+(Add_Damage_Indicator_For_Ship, then Draw_Damage_Message_Queue_Until_Done).
+The two sums were on no wire, so a client showed no numbers after the
+converter (every other hit's pair is in its own event, open fix 56).
+
+CEV_CONVERTER_HIT (25): source, target, damage, structure damage — recorded
+by Combat_Note (open fix 82: it keeps open fix 79's tick count) after the
+four hits, before the numbers are queued. Nothing in the game's play
+changes.
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 41b799b1..bd19eb6f 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -187,6 +187,7 @@ enum CombatEventType : uint8_t {
+     CEV_BEAM_AIM = 22,      // source, target, weapon, fire points, from x px, y px, to x px, y px (an entry's last fire point, the target and its miss offset) — OrionLayer, open fix 82.
+     CEV_GYRO_SPIN = 23,     // source, target, turns (sixteenths of a turn the target spins after the line's eight) — OrionLayer, open fix 83.
+     CEV_ABSORB = 24,        // unit, charge after, change (the Energy Absorber's reflected_damage_pool: charged by a hit, emptied by its discharge or after its side's units have acted) — OrionLayer, open fix 94.
++    CEV_CONVERTER_HIT = 25, // source, target, damage, structure damage (the Stellar Converter's two totals after its four hits, the numbers the original shows over the target) — OrionLayer, open fix 95.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+diff --git a/src/game/cmbtspec.cpp b/src/game/cmbtspec.cpp
+index 77fd7ea7..7e4b3f50 100755
+--- a/src/game/cmbtspec.cpp
++++ b/src/game/cmbtspec.cpp
+@@ -1069,6 +1069,9 @@ namespace CMBTSPEC {
+             total_damage += current_damage;
+             total_struct_damage += current_struct_damage;
+         }
++#ifdef ORION2RE_EXT
++        ext::Combat_Note(ext::CEV_CONVERTER_HIT, attacker_idx, target_idx, total_damage, total_struct_damage);  // OrionLayer, open fix 95. The two totals Add_Damage_Indicator_For_Ship shows, after the four hits.
++#endif
+ 
+         if (MOX::apply_damage_to_planet == 1 && MOX::super_fast_flag == 0) {
+             palette::Restore_Glass_Remap_Block(MOX::shield_remap_colors);

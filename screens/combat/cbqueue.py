@@ -91,6 +91,25 @@ def take_charges(queue):
     return out
 
 
+def take_converter(queue, special):
+    """The converter's charges (`take_charges`), and its two totals (open
+    fix 95, recorded after them) put on its `special` event as every hit's
+    pair, so its numbers rise after its line (work order 266). An engine
+    without the fix sends no totals: no numbers, as before."""
+    charges = take_charges(queue)
+    for i, e in enumerate(queue):
+        if e["kind"] == "converter_hit":
+            if e.get("source") == special.get("source") and \
+                    e.get("target") == special.get("target"):
+                special["past_shields"] = e.get("past_shields", 0)
+                special["absorbed"] = e.get("absorbed", 0)
+                del queue[i]
+            break
+        if e["kind"] not in cbsound.KINDS and e["kind"] not in INSTANT:
+            break
+    return charges
+
+
 def aims_for(first, aim):
     """`aim` (open fix 82) or a spin (83) is one of `first`'s: the same
     shooter and target."""

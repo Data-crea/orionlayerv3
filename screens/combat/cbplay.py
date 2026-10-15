@@ -337,7 +337,7 @@ class Player:
             if p is not None:
                 ev["_sfx"] = p
                 if k == "special" and w == cbsfx.CONVERTER:   # work order 260
-                    ev["_charges"] = cbqueue.take_charges(self._queue)
+                    ev["_charges"] = cbqueue.take_converter(self._queue, ev)
                 u = self._unit(ev.get("unit", ev.get("target", -1)))
                 hit = ev.get("past_shields") or ev.get("hits")
                 length = sfx_times(p, p.get("step", ev["_step"]))

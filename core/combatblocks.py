@@ -226,6 +226,10 @@ EVENTS = {
     # discharge emptied it or the engine did after its side's units had
     # acted (work order 260), and the change
     24: ("absorb", ("unit", "pool", "change")),
+    # open fix 95 (work order 266): the Stellar Converter's two totals after
+    # its four hits — the numbers the original shows over the target
+    # (cmbtspec.cpp:1060-1084), named as every other hit's pair
+    25: ("converter_hit", ("source", "target", "past_shields", "absorbed")),
 }
 #: MSG_COMBAT_COMMAND's ops (ext_api.h, `CombatCommandOp`), open fix 58.
 COMMANDS = {"move": 1, "fire": 2, "fire_missile": 3, "face": 4,

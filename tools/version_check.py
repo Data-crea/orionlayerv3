@@ -182,6 +182,7 @@ FIX_NUMBERS = {
     "doc/ext_settle_pops.patch": (92,),
     "doc/ext_layout_table.patch": (93,),
     "doc/ext_combat_absorber_charge.patch": (94,),
+    "doc/ext_combat_converter_totals.patch": (95,),
 }
 
 
