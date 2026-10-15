@@ -52,6 +52,45 @@ TEXT_INDEX = {"normal": 68, "selected": 71, "red": 129}
 TEXT_FALLBACK = {"normal": (120, 156, 192), "selected": (160, 208, 236),
                  "red": (196, 0, 0)}
 
+#: DEVIATION `mockup_ink` (work order 278, Data's second mockup,
+#: `~/claude/references/leaders_skills_mockup_278.png`): an unlit row's
+#: words in the mockup's colours, read off its ink (the brightest tenth of
+#: each word's pixels) — the name near-white, the status line and the cost
+#: label light blue, the skill names cyan, the values near-white. The
+#: original prints the whole row in `_normal_text_colors` (68) and a lit
+#: row in 71; a lit row (HD's hover) keeps 71 for every word.
+#: INVENTION `skill_colours`: a skill the game marks with its "*" (the
+#: improved level of a skill, `MOX::_skill_data`'s own names) in gold, and
+#: a value below zero (Famous' cost) in orange-red — Data's choice in work
+#: order 278; the original draws both in the row's one colour
+#: (officer.cpp:3747-3837).
+MOCKUP_INK = {"name": (243, 247, 251), "status": (186, 218, 236),
+              "skill": (127, 216, 237), "starred": (225, 199, 117),
+              "value": (213, 234, 246), "negative": (235, 150, 120)}
+
+
+def row_inks(art, lit):
+    """{role: colour} for a row's words: the mockup's (`mockup_ink`,
+    `skill_colours`), or the original's lit colour for every word."""
+    if lit:
+        sel = text_colour(art, "selected")
+        return {key: sel for key in MOCKUP_INK}
+    return dict(MOCKUP_INK)
+
+
+def skill_inks(inks, name, value):
+    """(name colour, value colour) of one skill line (`skill_colours`)."""
+    starred = name.rstrip().endswith("*")
+    negative = value.lstrip().startswith("-")
+    return (inks["starred"] if starred else inks["skill"],
+            inks["negative"] if negative else inks["value"])
+
+
+def status_words(row):
+    """The status line as it is shown: in capitals since work order 278
+    (mockup 2's "OFFIZIERSSTAB"); the game's words otherwise."""
+    return (row.status or "").upper()
+
 #: The inner boxes: the research screens' two colours, read from the
 #: sections that own them (work order 166 C) — not copied here.
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
@@ -247,7 +286,7 @@ def word_zones(screen, slot, row, art):
     room = cost_left - slot.text_x - slot.px(ldrslot.NAME_CAP)
     for text, cap, top, ceil in (
             (row.name, ldrslot.NAME_CAP, slot.name_top, normal),
-            (row.status, ldrslot.STATUS_CAP, slot.status_top,
+            (status_words(row), ldrslot.STATUS_CAP, slot.status_top,
              red if row.status_red else normal)):
         if text:
             surf, c = _render_cap(style, text, slot.px(cap), (255, 255, 255),
@@ -373,14 +412,25 @@ def blit_cap(surface, style, text, x, cap_top, cap_px, colour, max_w,
 
 
 def _widest_skill_name(screen, size):
-    """The widest skill name of the language at `size` — the value column
-    is set by it (`ldrslot.value_right`), so it stands still from leader to
-    leader and from row to row."""
+    """The widest skill name of the language at `size` that the shown tab's
+    leaders can have — the value column is set by it (`ldrslot.
+    value_right`), so it stands still from leader to leader and from row to
+    row. Since work order 278 (Data's second mockup, the compact block)
+    only the general skills and the tab's own kind count: a ship officer's
+    column no longer waits for "Landwirtschaftsleiter*"."""
     words = getattr(screen, "_words", None)
     names = []
     if words is not None:
         from core import leaderskills as ls
-        names = [words.estring(n) or "" for n in ls.SKILL_NAME_ESTRINGS]
+        view = getattr(getattr(screen, "_view", None), "view", None)
+        kinds = {ls.GENERAL}
+        if view in (None, geom.VIEW_SHIP):
+            kinds.add(ls.SHIP_SPECIAL)
+        if view in (None, geom.VIEW_COLONY):
+            kinds.add(ls.COLONY_SPECIAL)
+        names = [words.estring(n) or "" for sid, n in
+                 enumerate(ls.SKILL_NAME_ESTRINGS) if ls.SKILLS[sid][2]
+                 in kinds]
     names += [name for r in getattr(screen, "_rows", ()) or ()
               for _sid, name, _v in r.skills]
     key = (size, tuple(names))
@@ -454,7 +504,7 @@ def _draw_row(surface, screen, row, art, lit):
     (`ldrrows`, officer.cpp:3578-3838) at the mockup's places."""
     from . import ldrslot
     style = screen.style
-    ink = text_colour(art, "selected" if lit else "normal")
+    inks = row_inks(art, lit)
     slot = slot_of(screen, row)
     # The portrait standing on the column's floor, in front of the slot's
     # picture: the HD cut-out (work order 255), else the original's drawing.
@@ -465,13 +515,13 @@ def _draw_row(surface, screen, row, art, lit):
     else:
         at = slot.portrait_rect(plate_size(slot))
         screen.style.draw_plate(surface, at, screen.layout.scale, BOX_OUTLINE)
-    cost_left = _draw_cost(surface, screen, row, ink, slot)
+    cost_left = _draw_cost(surface, screen, row, inks, slot)
     room = cost_left - slot.text_x - slot.px(ldrslot.NAME_CAP)
     # The name at the top of the text column (:3624-3634's words).
     blit_cap(surface, style, row.name, slot.text_x, slot.name_top,
-             slot.px(ldrslot.NAME_CAP), ink, room)
-    _draw_status(surface, screen, row, art, ink, slot, at, room)
-    _draw_skills(surface, screen, row, art, ink, slot)
+             slot.px(ldrslot.NAME_CAP), inks["name"], room)
+    _draw_status(surface, screen, row, art, inks["status"], slot, at, room)
+    _draw_skills(surface, screen, row, art, inks, slot)
 
 
 def cost_room(slot):
@@ -528,10 +578,13 @@ def cost_lines(screen, row, ink, slot):
     return out
 
 
-def _draw_cost(surface, screen, row, ink, slot):
-    """The cost at the top right; returns the left edge it takes."""
+def _draw_cost(surface, screen, row, inks, slot):
+    """The cost at the top right, the value in the values' ink and the
+    label in the status line's (`mockup_ink`); returns the left edge it
+    takes."""
     left = slot.cost_right
     for text, cap_px, x, top, align in cost_specs(screen, row, slot):
+        ink = inks["status"] if text == row.cost_label else inks["value"]
         r = blit_cap(surface, screen.style, text, x, top, cap_px, ink,
                      cost_room(slot), align)
         if r is not None:
@@ -546,7 +599,7 @@ def _draw_status(surface, screen, row, art, ink, slot, portrait, room):
     from . import ldrslot
     style = screen.style
     colour = text_colour(art, "red") if row.status_red else ink
-    blit_cap(surface, style, row.status, slot.text_x, slot.status_top,
+    blit_cap(surface, style, status_words(row), slot.text_x, slot.status_top,
              slot.px(ldrslot.STATUS_CAP), colour, room)
     if row.eta:
         red = text_colour(art, "red")
@@ -587,9 +640,9 @@ def skill_icon(icon, size):
     return pygame.transform.scale_by(icon, step) if step > 1 else icon
 
 
-def _draw_skills(surface, screen, row, art, ink, slot):
+def _draw_skills(surface, screen, row, art, inks, slot):
     """Icon, name, value per displayed skill (:3747-3837's words): one line
-    each, the value right-aligned in its own column."""
+    each, the value right-aligned in its own column, in `skill_inks`."""
     from . import ldrslot
     style = screen.style
     cap_px = slot.px(ldrslot.SKILL_CAP)
@@ -601,13 +654,14 @@ def _draw_skills(surface, screen, row, art, ink, slot):
             pic = skill_icon(icon, icon_r.h)
             surface.blit(pic, pic.get_rect(center=icon_r.center))
         top = cy - cap_px // 2
+        name_ink, value_ink = skill_inks(inks, name, value)
         drawn = blit_cap(surface, style, value, slot.values_right, top,
-                         cap_px, ink, slot.values_right - slot.skill_name_x,
-                         "right")
+                         cap_px, value_ink,
+                         slot.values_right - slot.skill_name_x, "right")
         room = (drawn.x if drawn else slot.values_right) \
             - slot.skill_name_x - int(round(slot.box.w * ldrslot.VALUE_GAP))
-        blit_cap(surface, style, name, slot.skill_name_x, top, cap_px, ink,
-                 room)
+        blit_cap(surface, style, name, slot.skill_name_x, top, cap_px,
+                 name_ink, room)
 
 
 # ── Buttons ───────────────────────────────────────────────

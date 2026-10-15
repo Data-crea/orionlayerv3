@@ -21,6 +21,15 @@ original prints under the portrait stands under the name (the mockup has
 none — INVENTION `status_under_name`, the order's own suggestion). The ETA
 stays over the portrait, as the original prints it (:3742-3745).
 
+SINCE WORK ORDER 278 the text column follows Data's second mockup
+(`~/claude/references/leaders_skills_mockup_278.png`, 726 x 872, the left
+half of a 1080p Leaders screen: its slot 1 spans y 56-258 from x 11, HD's
+slot 1 at 1920x1080 is 1079 x 206 from x 28 — positions below are the
+mockup's ink, taken from its slot's left edge and scaled by 206 / 202):
+the name, the status line and the skills further left and the skill block
+compact, the value column close after the names, the name a little higher
+and smaller; the skill lines' heights were already the mockup's.
+
 ONE HOME. Every rectangle of a slot comes from `Slot`, and the drawing
 (`ldrdraw`), the words' dimmed ground (`ldrdraw.word_zones`), the skill
 help's right click and the portrait's right click (`ldrinput`) all read it
@@ -28,31 +37,37 @@ help's right click and the portrait's right click (`ldrinput`) all read it
 """
 import pygame
 
-#: The text column's left edge: the name's and the icons' x (mockup slot
-#: 1: the name's ink from x 419, the icons' frames from 420, box from 46).
-TEXT_X = 0.403
+#: The text column's left edge: the name's and the status line's x (mockup
+#: 2: the name's ink from x 387 — (387 - 11) * 1.02 = 383 of 1079).
+TEXT_X = 0.355
+#: The skill icons' left edge (mockup 2: from x 396, a step in from the
+#: name).
+ICON_X = 0.364
 #: Between the portrait column and the text column.
 COLUMN_GAP = 0.015
-#: The name: cap tops at 0.110 of the box (slot 2, 325 - 305 = 20 of 180;
-#: slot 1 sets it at 0.160 with two skills — the denser slot is the one a
-#: five-skill leader needs), capitals 0.094 tall (17 px in both slots, the
-#: empty caption's title's height, `ldrdraw.CAPTION`).
-NAME_TOP, NAME_CAP = 0.110, 0.094
-#: The status line under the name (INVENTION `status_under_name`): the
-#: cost label's small size raised to the empty caption's hint (0.066).
-STATUS_GAP, STATUS_CAP = 0.032, 0.055
+#: The name: cap tops at 0.084 of the box, capitals 0.086 tall (mockup 2:
+#: ink from y 73 in the slot from y 56 — 17 of 202 — and 17 px tall;
+#: work order 255's mockup had 0.110 and 0.094).
+NAME_TOP, NAME_CAP = 0.084, 0.086
+#: The status line under the name (INVENTION `status_under_name`), in
+#: capitals since work order 278 (mockup 2: "OFFIZIERSSTAB", cap tops at
+#: y 103 = 0.233 of the slot, 9 px of ink at the mockup's scale — 0.052
+#: holds its look beside the rendered capitals, measured side by side).
+STATUS_GAP, STATUS_CAP = 0.063, 0.052
 #: The cost at the top right: right edge 0.037 of the width in from the
 #: box's (937 against 971 of 925), the value's capitals from 0.149 of the
 #: height and 0.066 tall (147-158 in slot 1), the label's from 0.260 and
 #: 0.044 tall ("MAINT", 167-174).
 COST_RIGHT, COST_TOP, COST_CAP = 0.037, 0.149, 0.066
 LABEL_TOP, LABEL_CAP = 0.260, 0.044
-#: The skills: the name from 0.461 of the width (472 in slot 1), the value
-#: column's right edge at 0.659 (656 and 653 in both slots), the words'
-#: capitals 0.067 tall (12 px), an icon 0.15 of the height (27 px in slot
-#: 2), the lines 0.156 apart (28 px in slot 2, four skills; 31 in slot 1).
-SKILL_NAME_X, VALUE_RIGHT = 0.461, 0.659
-SKILL_CAP, ICON, PITCH = 0.067, 0.150, 0.156
+#: The skills: the name from 0.410 of the width (mockup 2: x 445), the
+#: value column's right edge at 0.617 (x 664) — the compact block of work
+#: order 278; the words' capitals 0.062 tall (mockup 2: 12 of 202), an
+#: icon 0.150 of the height at most (mockup 2's five lines: 22 px, which
+#: the closed-up pitch gives), the lines 0.156 apart, closed up to 0.124 at
+#: five (mockup 2: 25 px).
+SKILL_NAME_X, VALUE_RIGHT = 0.410, 0.617
+SKILL_CAP, ICON, PITCH = 0.062, 0.150, 0.156
 #: An icon takes at most this share of its line's pitch.
 ICON_OF_PITCH = 0.95
 #: Where the skill block may run: from under the status line to the
@@ -141,7 +156,7 @@ class Slot:
             line = pygame.Rect(self.text_x, int(round(cy - pitch / 2)),
                                self.values_right - self.text_x,
                                max(1, int(round(pitch))))
-            out.append((line, pygame.Rect(self.text_x, y0, s, s), cy))
+            out.append((line, pygame.Rect(self.x(ICON_X), y0, s, s), cy))
         return out
 
     @property
