@@ -95,7 +95,8 @@ The leaders' skill icons are the game's own 16 x 16 pictures. A redrawn
 icon goes under `files/screens/leaders/assets/gamedata/officer/` as
 `skill_<k>_0.png` (`<k>` = the skill's number / 2; one icon serves a
 skill and its starred variant); it is drawn as painted, fitted into the
-icon's square — 61 x 61 at 3840 x 2160.
+icon's square — at 3840 x 2160 64 x 64 in the hire offer, 61 x 61 on a
+slot (49 x 49 with five skills); a square picture of 64 x 64 serves all.
 
 ### The Leaders screen's pictures
 

@@ -228,7 +228,14 @@ def _draw_system(surface, screen, view, game_state, art, star):
 
 
 def _draw_grid(surface, screen, view, game_state, art, block):
-    """The ship view's big icons, from the block, in its display order."""
+    """The ship view's big icons, from the block, in its display order.
+
+    INVENTION `grid_names`: each icon's ship name in a band at the foot of
+    its cell, the picture fitted into the cell above the band (work order
+    277: drawn over the picture before, which Data saw as names written
+    into the ships). The original draws the picture and the damage bars
+    only (flt1.cpp:67-114) and names a ship in the strip while it is
+    under the pointer."""
     ships = block.get("ship_idx") or []
     first = max(0, int(block.get("first_row", 0))) * geom.GRID_COLUMNS
     raws = getattr(game_state, "ships_raw", None) or []
@@ -244,7 +251,9 @@ def _draw_grid(surface, screen, view, game_state, art, block):
             continue
         rec = ship_struct.SPEC.parse(raws[idx])
         cell = draw.rect(layout, geom.grid_cell(slot))
-        _draw_ship_picture(surface, screen, cell, rec, game_state)
+        band = name_band(size)
+        _draw_ship_picture(surface, screen, cell, rec, game_state,
+                           picture_area(cell, band))
         draw.blit_text(surface, screen.style, rec.name, cell.centerx,
                        cell.bottom - size - 2, cell.w - 4, size, ink,
                        "center")
@@ -254,7 +263,18 @@ def _draw_grid(surface, screen, view, game_state, art, block):
                              cell, max(1, int(layout.scale * 2)))
 
 
-def _draw_ship_picture(surface, screen, cell, rec, game_state):
+def name_band(size):
+    """The height of the name band at a cell's foot (`grid_names`): the
+    name's size and 2 px above and below it."""
+    return size + 4
+
+
+def picture_area(cell, band):
+    """The part of a grid cell above its name band (`grid_names`)."""
+    return pygame.Rect(cell.x, cell.y, cell.w, max(1, cell.h - band))
+
+
+def _draw_ship_picture(surface, screen, cell, rec, game_state, area=None):
     """The ship's own picture, the Fleets screen's way: the SPRITE set by
     `previous_owner`, the colour RAMP by `owner` (ken.cpp:451-466,
     `screens/fleets/fltrows.cells`), centred in the 0x39 cell by the
@@ -265,7 +285,13 @@ def _draw_ship_picture(surface, screen, cell, rec, game_state):
     HD EXTENSION `painted_lists` (work order 239, `core/shippicture`): with
     the mod folder on and a painted picture for this ship, the painted ship
     in the owner's colour and the player's livery, fitted into the sprite's
-    own drawn pixels."""
+    own drawn pixels.
+
+    `area` (the cell above its name band, INVENTION `grid_names`): the
+    drawn pixels are centred in it instead of the original's cell offset:
+    a painted ship at its footprint's size, scaled down smoothly where that
+    is larger than the area; the sprite at the largest integer step up to
+    the screen's at which it fits."""
     from core import shippicture
     from screens.fleets import fltart, fltrows
     layout = screen.layout
@@ -281,11 +307,28 @@ def _draw_ship_picture(surface, screen, cell, rec, game_state):
     if sprite is None:
         return
     step = max(1, int(draw.native_scale(layout)))
-    ox, oy = fltart.cell_offset(sprite.get_width(), sprite.get_height(),
-                                cell=geom.GRID_CELL)
-    at = (cell.x + ox * step, cell.y + oy * step)
-    hd = shippicture.fitted(screen.app, held, int(rec.picture_num),
-                            shippicture.footprint(sprite, at, step),
+    if area is None:
+        ox, oy = fltart.cell_offset(sprite.get_width(), sprite.get_height(),
+                                    cell=geom.GRID_CELL)
+        at = (cell.x + ox * step, cell.y + oy * step)
+        box = shippicture.footprint(sprite, at, step)
+    else:
+        # the painted ship: the footprint at the screen's step, centred in
+        # the area and scaled down smoothly where it is larger
+        drawn = sprite.get_bounding_rect(min_alpha=1)
+        box = pygame.Rect(0, 0, max(1, drawn.w * step),
+                          max(1, drawn.h * step))
+        k = min(1.0, area.w / box.w, area.h / box.h)
+        box.size = (max(1, int(box.w * k)), max(1, int(box.h * k)))
+        box.center = area.center
+        # the sprite: the largest integer step at which it fits (HD
+        # EXTENSION `sprite_scale`), centred the same way
+        while step > 1 and (drawn.w * step > area.w
+                            or drawn.h * step > area.h):
+            step -= 1
+        at = (int(round(area.centerx - (drawn.x + drawn.w / 2) * step)),
+              int(round(area.centery - (drawn.y + drawn.h / 2) * step)))
+    hd = shippicture.fitted(screen.app, held, int(rec.picture_num), box,
                             state=game_state,
                             size=getattr(rec, "size", None))
     if hd is not None:
