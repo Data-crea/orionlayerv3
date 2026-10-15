@@ -73,6 +73,24 @@ def take_firing(first, queue, charge):
         shots.append(queue.pop(0))
 
 
+def take_charges(queue):
+    """The charges recorded right after a special's event, past its sounds
+    and the events HD draws nothing for, taken out of `queue` (work order
+    260): the Stellar Converter draws its line and THEN does its damage
+    (`Stellar_Converter_`, cmbtspec.cpp:1014-1035) — HD applies them when
+    the line's frames end, before the numbers' hold, as the original does."""
+    out, keep, done = [], [], False
+    for e in queue:
+        if not done and e["kind"] == CHARGE:
+            out.append(e)
+            continue
+        if e["kind"] not in cbsound.KINDS and e["kind"] not in INSTANT:
+            done = True
+        keep.append(e)
+    queue[:] = keep
+    return out
+
+
 def aims_for(first, aim):
     """`aim` (open fix 82) or a spin (83) is one of `first`'s: the same
     shooter and target."""

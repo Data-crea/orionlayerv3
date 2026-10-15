@@ -226,7 +226,7 @@ class Player:
         while True:
             if self._anim is not None:
                 ev, t0, dur = self._anim
-                self._attach(ev, t0, dur)
+                self._attach(ev, t0, dur, now)
                 if now - t0 < dur:
                     return
                 self._finish(ev)
@@ -253,11 +253,15 @@ class Player:
             self._anim = (ev, now, self._start(ev, now))
             self._last = ev
 
-    def _attach(self, ev, t0, dur):
+    def _attach(self, ev, t0, dur, now=None):
         """The sounds the engine recorded after `ev` and before its next
         event: started at their ticks into HD's animation of `ev`
         (`cbsound.offset`), whether they came with it or with a snapshot
         sent during its animation (the shield flare polls, beams.cpp:705)."""
+        if ev.get("_charges") and (time.monotonic() if now is None else
+                                   now) - t0 >= ev["_sfx"]["_number_at"]:
+            for c in ev.pop("_charges"):    # the converter's, its frames done
+                self._charge(c)
         while self._queue and (self._queue[0]["kind"] in cbsound.KINDS or
                                self._queue[0]["kind"] in cbqueue.INSTANT):
             # an event with nothing to draw (a missile gone, merged or
@@ -330,6 +334,8 @@ class Player:
                 p = cbsfx.plan(ev, self._unit, self._art, self._last)
             if p is not None:
                 ev["_sfx"] = p
+                if k == "special" and w == cbsfx.CONVERTER:   # work order 260
+                    ev["_charges"] = cbqueue.take_charges(self._queue)
                 u = self._unit(ev.get("unit", ev.get("target", -1)))
                 hit = ev.get("past_shields") or ev.get("hits")
                 length = sfx_times(p, p.get("step", ev["_step"]))
@@ -501,6 +507,8 @@ class Player:
     def _finish(self, ev):
         """The event's lasting effect on the shown battle."""
         k = ev["kind"]
+        for c in ev.pop("_charges", ()):    # never lost (work order 260)
+            self._charge(c)
         if k == "flight":
             self.ordnance = cbflight.at(ev["_flight"], ev["_base"],
                                         ev["_flight"]["frames"])

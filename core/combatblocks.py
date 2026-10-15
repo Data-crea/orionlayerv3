@@ -223,7 +223,8 @@ EVENTS = {
     23: ("gyro_spin", ("source", "target", "turns")),
     # open fix 94 (work order 259): the Energy Absorber's charge
     # (`reflected_damage_pool`) after a hit charged it, or 0 after its
-    # discharge or its side's turn emptied it, and the change
+    # discharge emptied it or the engine did after its side's units had
+    # acted (work order 260), and the change
     24: ("absorb", ("unit", "pool", "change")),
 }
 #: MSG_COMBAT_COMMAND's ops (ext_api.h, `CombatCommandOp`), open fix 58.

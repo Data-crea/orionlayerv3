@@ -1,0 +1,44 @@
+From 105c4054a324168b080e93c17a7450995750cb66 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Thu, 15 Oct 2026 06:10:29 +0200
+Subject: [PATCH] =?UTF-8?q?OrionLayer=20Open=20Fix=2094,=20amended:=20the?=
+ =?UTF-8?q?=20comments=20say=20where=20a=20side's=20charges=20are=20emptie?=
+ =?UTF-8?q?d=20=E2=80=94=20after=20its=20units=20have=20acted,=20not=20as?=
+ =?UTF-8?q?=20its=20turn=20begins=20(work=20order=20260,=20measured=20agai?=
+ =?UTF-8?q?nst=20the=20original=20running=20alone)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.h    | 2 +-
+ src/game/combat1.cpp | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 428ceb50..41b799b1 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -186,7 +186,7 @@ enum CombatEventType : uint8_t {
+     CEV_FIGHTER_BEAM = 21,  // missile, beam weapon, group x px, y px, facing, quantity, target x px, y px — OrionLayer, open fix 77.
+     CEV_BEAM_AIM = 22,      // source, target, weapon, fire points, from x px, y px, to x px, y px (an entry's last fire point, the target and its miss offset) — OrionLayer, open fix 82.
+     CEV_GYRO_SPIN = 23,     // source, target, turns (sixteenths of a turn the target spins after the line's eight) — OrionLayer, open fix 83.
+-    CEV_ABSORB = 24,        // unit, charge after, change (the Energy Absorber's reflected_damage_pool: charged by a hit, emptied by its discharge or its side's turn) — OrionLayer, open fix 94.
++    CEV_ABSORB = 24,        // unit, charge after, change (the Energy Absorber's reflected_damage_pool: charged by a hit, emptied by its discharge or after its side's units have acted) — OrionLayer, open fix 94.
+ };
+ 
+ /// OrionLayer, open fix 58. One command per battle action (decision 52), consumed where the human's input is read.
+diff --git a/src/game/combat1.cpp b/src/game/combat1.cpp
+index 401f7e1c..2a51a746 100755
+--- a/src/game/combat1.cpp
++++ b/src/game/combat1.cpp
+@@ -1224,7 +1224,7 @@ namespace COMBAT1 {
+                         MOX::combat_data[i].owner == active_player_id) {
+ #ifdef ORION2RE_EXT
+                         if (MOX::combat_data[i].reflected_damage_pool != 0) {
+-                            ext::Combat_Note(ext::CEV_ABSORB, i, 0, (int16_t)-MOX::combat_data[i].reflected_damage_pool);  // OrionLayer, open fix 94. Emptied as its side's turn begins.
++                            ext::Combat_Note(ext::CEV_ABSORB, i, 0, (int16_t)-MOX::combat_data[i].reflected_damage_pool);  // OrionLayer, open fix 94. Emptied after its side's units have acted (this block follows the side's ship loop).
+                         }
+ #endif
+                         MOX::combat_data[i].reflected_damage_pool = 0;

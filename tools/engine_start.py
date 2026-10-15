@@ -100,6 +100,12 @@ def run_env(reason=None, out=print):
     settings — English adds nothing."""
     import vdisplay
     env = vdisplay.engine_env(reason, out=out)
+    if os.environ.get("ORIONLAYER_ENGINE_SHOWN") == "1":
+        # work order 260: the original ALONE, no client — its window shown
+        # from the start (open fix 43 hides it only on its starter's word),
+        # so it draws and presents as the game does without OrionLayer
+        env.pop("ORION2RE_HIDE_WINDOW", None)
+        out("ENGINE SHOWN: the window is not hidden (ORIONLAYER_ENGINE_SHOWN)")
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if root not in sys.path:
         sys.path.insert(0, root)
