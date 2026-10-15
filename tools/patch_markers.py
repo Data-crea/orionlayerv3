@@ -496,6 +496,13 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 96.",
         "the engine does not send the galactic council (open fix 96): it "
         "runs under id 12 and HD shows only the F12 notice"),
+    # Work order 271: on the fork's branch `orionlayer` only, 360b8d0c.
+    "doc/ext_planets_send.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "open fix 97.",
+        "the engine does not send the Planets screen's state (open fix "
+        "97): HD cannot send colony or outpost ships, show an order or "
+        "undo it"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

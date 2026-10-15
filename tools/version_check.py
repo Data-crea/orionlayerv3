@@ -184,6 +184,7 @@ FIX_NUMBERS = {
     "doc/ext_combat_absorber_charge.patch": (94,),
     "doc/ext_combat_converter_totals.patch": (95,),
     "doc/ext_council.patch": (96,),
+    "doc/ext_planets_send.patch": (97,),
 }
 
 

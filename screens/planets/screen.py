@@ -11,11 +11,17 @@ What drives the game from here, and how (decision 20):
   restrictions  INJECT_KEY "1".."5", the radio fields' own hotkeys, with
                 `native_click` as the fallback
 
+  sending       with open fix 97's PLSM block (work order 271,
+                `planetsend`): the two send buttons, a row click while a
+                send is armed, a click on an order's marker to undo it —
+                each the game's own field, the planet brought into the
+                game's window by its star icon first
+
 What is local and sends nothing: the list, its scroll window (decision
-46), the hover, the star click in the inset, the bottom windows. The two
-send buttons are DISPLAY ONLY — sending ships is its own brief (decision
-21). The Planets In Range toggle drives the game and the HD list does not
-filter on it: a marked gap (`planetrows.FILTER_GAPS`).
+46), the hover, the star click in the inset, the bottom windows. Without
+PLSM the two send buttons are display only, as before. The Planets In
+Range toggle drives the game and the HD list does not filter on it: a
+marked gap (`planetrows.FILTER_GAPS`).
 
 The rows, the order and the words are `planetrows` and `planetwords`; the
 drawing is `planetdraw`; this file owns the boxes, the input and the wire.
@@ -31,7 +37,7 @@ from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
 
-from . import monsterpanel, planetdraw, planetrows, planetwords
+from . import monsterpanel, planetdraw, planetrows, planetsend, planetwords
 
 log = logging.getLogger("planets")
 
@@ -89,6 +95,7 @@ class PlanetsScreen(ScreenBase):
         # MOX::_scanned_field = -1 on entry (plntsum.cpp:1945).
         self._first, self._hover = 0, None
         self._selected = self._scanned = None
+        self._sender = planetsend.Sender()
         # No frame image since decision 71 (work order 189 removed the loader).
         self.update(game_state)
         self._push_sort_key()
@@ -104,7 +111,11 @@ class PlanetsScreen(ScreenBase):
         if game_state is not self._state or self._view is None:
             self._view = planetrows.View(game_state)
             self._stars_cache = None
+        fresh = self.new_snapshot(game_state)
         self._state = game_state
+        sender = getattr(self, "_sender", None)
+        if sender is not None:
+            sender.step(self.app, planetsend.block(game_state), fresh)
         if self._list.refresh(self._view, self._filters):
             self._clear_scanned()
         self._clamp_after_filter()
@@ -183,6 +194,12 @@ class PlanetsScreen(ScreenBase):
         rows = self._list.rows
         planetdraw.render_list(self, surface, rows, cells, self._first,
                                self._hover, self._selected)
+        self._sender.draw_marks(
+            surface, self, planetsend.block(self._state), rows, self._first,
+            planetdraw.row_bands(self),
+            planetdraw.columns(self, self._data.get("list", {})).get(
+                "planet"),
+            self.layout.font_size(17), self.layout.scale)
         planetdraw.render_scroll(self, surface, len(rows), self._first,
                                  self.visible)
         stars = self._inset_stars()
@@ -232,9 +249,13 @@ class PlanetsScreen(ScreenBase):
         send = self._data.get("send", {})
         for key in ("colony", "outpost"):
             spec = send.get(key, {})
+            state = planetsend.button_state(planetsend.block(self._state),
+                                            key)
             planetdraw.render_control(
                 self, surface, "send_" + key, spec.get("label"),
-                enabled=self._send_available(spec.get("hotkey", "?")),
+                active=state == "active",
+                enabled=self._send_available(spec.get("hotkey", "?"))
+                if state is None else state != "disabled",
                 mouse=mouse)
         planetdraw.render_divider(self, surface)
         planetdraw.render_return(self, surface,
@@ -267,11 +288,17 @@ class PlanetsScreen(ScreenBase):
                 self._clamp_after_filter()
                 self._inject(spec, f"restriction {spec['key']}")
                 return None
+        b = planetsend.block(self._state)
         for key in ("colony", "outpost"):
             if self._hit("send_" + key, pos):
-                log.info("Send %s ship: not built in brief 101 — the send "
-                         "chain is its own brief (decision 21)", key)
+                if not self._sender.toggle(self.app, b, key):
+                    log.info("Send %s ship: no field (no PLSM, or the game "
+                             "offers none)", key)
                 return None
+        mark = self._sender.mark_at(pos)
+        if mark is not None:
+            self._sender.request(*mark)
+            return None
         if planetdraw.return_hit(self, pos):
             self._return()
             return None
@@ -279,8 +306,15 @@ class PlanetsScreen(ScreenBase):
         if star is not None:
             self._star_click(star)
             return None
-        # A row click is swallowed: with no armed send the original does
-        # nothing with it (Scan_Summary_Box_Fields_, plntsum.cpp:1284-1295).
+        # A row click sends the nearest ship while a send is armed
+        # (Scan_Summary_Box_Fields_, plntsum.cpp:1284-1289); without one
+        # the original does nothing with it.
+        area = planetdraw.window(self, "rows")
+        if planetsend.armed(b) and area and area.collidepoint(pos):
+            band = listgrid.band_at(planetdraw.row_bands(self), screen_y)
+            index = self._first + band if band is not None else -1
+            if 0 <= index < len(self._list.rows):
+                self._sender.request("send", self._list.rows[index]["index"])
         return None
 
     def _star_click(self, star):

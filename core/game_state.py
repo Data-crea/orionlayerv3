@@ -130,6 +130,7 @@ class GameState:
     #: The turn-time popup that is up, open fix 49 (work order 188):
     #: `core/turnpopup.py` names every key.
     turn_popup: Optional[dict] = None        # "TPOP", fix 49
+    planets_screen: Optional[dict] = None    # "PLSM", fix 97
     #: The Hall of Fame while it is up, open fix 50 (work order 188):
     #: `core/hofblocks.py` names every key.
     hall_of_fame: Optional[dict] = None      # "HOFM", fix 50
@@ -458,7 +459,9 @@ def parse_state(data: bytes) -> GameState:
     pos = fleetbuttons.parse(gs, data, pos)   # FBTN, open fix 86
     pos = namebox.parse(gs, data, pos)        # INBX, open fix 87
     pos = textfields.parse(gs, data, pos)     # TXTF, open fix 88
-    pos = systemwindow.parse(gs, data, pos)   # SYSW, open fix 90, LAST
+    pos = systemwindow.parse(gs, data, pos)   # SYSW, open fix 90
+    from core import planetsblock
+    pos = planetsblock.parse(gs, data, pos)   # PLSM, open fix 97, LAST
     return gs
 
 

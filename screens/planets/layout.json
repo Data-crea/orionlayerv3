@@ -133,7 +133,7 @@
       "label": "Send Outpost Ship",
       "hotkey": "O"
     },
-    "_note": "DISPLAY ONLY in brief 101. Add_Plntsum_Fields_ adds the hidden field \"C\" (386,408-609,413) only when Send_Colony_Button_Selectable_ and \"O\" (413,437-610,442) only when Send_Outpost_Button_Selectable_ (plntsum.cpp:703-713), so a button is drawn available exactly when the game's field list carries its hotkey. Clicking one does nothing: sending ships is a second brief, an event-driven chain (decision 21).",
+    "_note": "Add_Plntsum_Fields_ adds the hidden field \"C\" (386,408-609,413) only when Send_Colony_Button_Selectable_ and \"O\" (413,437-610,442) only when Send_Outpost_Button_Selectable_ (plntsum.cpp:703-713). With open fix 97's PLSM (work order 271, planetsend.py) a button shows the game's state (armed = on; the game arms one itself on entry, Determine_Button_Status_, :814-848) and a click is its field; a row click while a send is armed is the game's row field for that planet, an order's marker its undo field. Without PLSM the buttons are display only, available exactly when the game's field list carries their hotkey, as before.",
     "_labels_note": "OUR WORDING: the two buttons are PLNTSUM.LBX artwork."
   },
   "return": {
@@ -149,7 +149,7 @@
     ],
     "label_font": 15,
     "_note": "The original's own small galaxy map, Wrapper_For_Planet_Summary_Galaxy_Map_ (plntsum.cpp:1351): MOVEBOX::Draw_Galaxy_Map_Box_(nullptr, nullptr, 443, 17, 180, 116, 0, 0, 0, 0, 2, -1) - the colony summary's renderer (colonyinset) with this box's size. The scanned star gets a 9x9 outline in its owner's colour (graphics::Box_ at star - 1, plntsum.cpp:1370-1377).",
-    "_deviation_note": "DEVIATION, three: (1) view_mode 2 blits _planet_summary_galaxy_star_seg[colour] and animates the scanned star (movebox.cpp:82-92); HD draws the colony inset's measured 3x3 sprite, still. (2) This screen does not set _using_colony_screen_palette, so the original fills the box black and gives a black hole colour index 10; HD keeps the colony inset's black-hole ring and panel fill. (3) The directional line to the nearest ship and the colony/outpost markers belong to the send mode and wait with the send brief.",
+    "_deviation_note": "DEVIATION, three: (1) view_mode 2 blits _planet_summary_galaxy_star_seg[colour] and animates the scanned star (movebox.cpp:82-92); HD draws the colony inset's measured 3x3 sprite, still. (2) This screen does not set _using_colony_screen_palette, so the original fills the box black and gives a black hole colour index 10; HD keeps the colony inset's black-hole ring and panel fill. (3) The directional line to the nearest ship in send mode is not drawn (work order 271 built the send and the markers, planetsend.py; the markers are tags, HD EXTENSION send_markers).",
     "_star_click_note": "TRANSCRIBED: a click on a star field scrolls the list to that star's first planet, and only when the list holds more than eight rows (plntsum.cpp:2052-2064). HD scrolls its own window (viewing only, decision 46). When the star has no planet in the list the original opens a warning box (H 0x14F); HD does not build that box - nothing happens and the log says so. Hovering a star sets the scanned field to star + 1000 (:2066-2068), which is what the status line reads. The star fields are 5x5 native boxes at Get_Galaxy_Map_Star_XY_ mode 0 (:1256-1259); HD hit-tests the drawn dot, scaled."
   },
   "status": {
