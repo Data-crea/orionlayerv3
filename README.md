@@ -38,22 +38,48 @@ and bugs.
   the two talk is described in the fork's
   [docs/extension-api.md](https://github.com/Data-crea/orion2re/blob/orionlayer/docs/extension-api.md).
   You build it yourself in step 1 below, which needs CMake, Ninja and a C++
-  compiler.
-- **xdotool** (optional), so the start can skip the game's intro.
+  compiler — and, on Linux, the development packages of SDL3, the library
+  the engine draws and plays sound with.
+- **xdotool** (optional, Linux), so the start can skip the game's intro.
 
-On Debian or Ubuntu everything but the game comes with:
+On Debian or Ubuntu everything but the game comes with this one line (the
+build tools, git, Python's venv, xdotool, and what SDL3 needs to build):
 
 ```sh
-sudo apt install build-essential cmake ninja-build git python3-venv xdotool
+sudo apt install build-essential cmake ninja-build pkg-config git \
+    python3-venv xdotool libasound2-dev libpulse-dev libaudio-dev \
+    libfribidi-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
+    libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev \
+    libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev \
+    libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev \
+    libudev-dev libthai-dev libusb-1.0-0-dev libpipewire-0.3-dev \
+    libwayland-dev libdecor-0-dev liburing-dev
 ```
+
+On Windows you need Python 3.10 or newer and git, and Visual Studio 2022
+with "Desktop development with C++" (it brings CMake and Ninja); see
+[On Windows](#on-windows).
 
 ## Getting started
 
 These are the steps on Linux, from an empty folder to the HD main menu.
-Below, the game is in `~/Master of Orion 2`; use your own folder. On
-Windows the steps are the same in principle; the engine's build command
-is in the fork's README, and OrionLayer itself has not been tried there
-yet.
+Below, the game is in `~/Master of Orion 2`; use your own folder. Do
+steps 1 and 2 in the same folder: setup looks for the engine's source
+beside OrionLayer's (`orion2re` next to `orionlayerv3`) and checks there
+that it carries every change OrionLayer needs. Windows: see
+[On Windows](#on-windows).
+
+**The short way.** Clone OrionLayer and let one script do steps 1 to 3
+(it clones the engine beside it, builds it into your game folder, makes
+the Python environment and runs setup):
+
+```sh
+git clone https://github.com/Data-crea/orionlayerv3.git
+cd orionlayerv3
+tools/install.sh "$HOME/Master of Orion 2"
+```
+
+Then play (step 4). The same, step by step:
 
 **1. Build the engine.** This puts the engine and its own data into your
 game folder:
@@ -100,6 +126,28 @@ Without it the leaders show the game's own portraits.
 The game starts with its own window hidden, the intro is skipped (with
 xdotool), and OrionLayer opens on the HD main menu. Choose LOAD GAME or
 NEW GAME as in the original. Closing OrionLayer stops the game.
+
+### On Windows
+
+OrionLayer has not been tried on Windows yet; these are the same steps
+with Windows' commands. In an "x64 Native Tools Command Prompt for VS
+2022", in one folder, with the game in `C:\GOG Games\Master of Orion 2`:
+
+```bat
+git clone --recurse-submodules --branch orionlayer https://github.com/Data-crea/orion2re.git
+cd orion2re
+cmake --preset win64-release -DORION2RE_EXT=ON -DORION2RE_GAME_DIR="C:\GOG Games\Master of Orion 2"
+cmake --build --preset win64-release
+cd ..
+git clone https://github.com/Data-crea/orionlayerv3.git
+cd orionlayerv3
+py -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python tools\setup.py --engine "C:\GOG Games\Master of Orion 2\orion2re.exe" --game "C:\GOG Games\Master of Orion 2" --extract
+.venv\Scripts\python play.py
+```
+
+The game's intro cannot be skipped there (xdotool is Linux's).
 
 ### Where your game and engine are
 

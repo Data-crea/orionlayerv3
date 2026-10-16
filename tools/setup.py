@@ -391,8 +391,15 @@ def engine_report(tree=None):
     if tree is None:
         # Work order 230 F: what a STRANGER can do. Since work order 243
         # the engine is public: the fork's README says how to build it.
-        out.append("    no orion2re found here. Without it OrionLayer still "
-                   "starts: python main.py shows the screens, with no game.")
+        # Work order 282: say WHERE it looks — the engine's SOURCE is what
+        # is checked, not the program, and a stranger whose clone sat
+        # elsewhere was only told "not found"
+        out.append("    no orion2re source found here: setup looks beside "
+                   "this folder (../orion2re), then in ~/orion2re.")
+        out.append("    The engine's clone belongs beside this folder (README, "
+                   "\"Getting started\": steps 1 and 2 in the same folder).")
+        out.append("    Without it OrionLayer still starts: python main.py "
+                   "shows the screens, with no game.")
         out.append("    To play you need an orion2re built as above: README, "
                    "\"Getting started\", step 1, and the fork's own "
                    "README (github.com/Data-crea/orion2re, branch "
