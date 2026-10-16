@@ -31,6 +31,9 @@ original's box art OFFICER.LBX 1 / 2 is no longer drawn — DEVIATION
                 the star picture and the orbits; HD writes the star's
                 name and draws each planet in orbit order as the colony
                 screens' planet disc with its name, the colonies marked.
+                With Data's view picture in the mod folder the star and
+                its orbits are drawn after all (`ldrsystem`, TRANSCRIPTION
+                `system_orbits`, 16 Oct 2026).
   ship view     the big icons of `_small_ship_stack_ptr`, 5 x 3 at
                 (302, 19) stepping 62 x 60 (`Get_Fltscrn_Big_Icon_XY_`,
                 flt2.cpp:116-128), each the ship's picture out of the
@@ -161,8 +164,12 @@ def draw_view_box(surface, screen, view, game_state, art):
     if block is None:
         return
     if view.view == geom.VIEW_COLONY:
-        _draw_system(surface, screen, view, game_state, art,
-                     int(block.get("star_displayed", -1)))
+        from . import ldrsystem
+        star = int(block.get("star_displayed", -1))
+        if ldrsystem.shows(screen):
+            ldrsystem.draw(surface, screen, game_state, art, star)
+        else:
+            _draw_system(surface, screen, view, game_state, art, star)
     else:
         _draw_grid(surface, screen, view, game_state, art, block)
         _draw_scroll(surface, screen, block)
@@ -212,7 +219,7 @@ def _draw_system(surface, screen, view, game_state, art, star):
         centre = (left + cell * k + cell // 2, top + disc_max // 2)
         disc = None
         if int(p.planet_type) != 2:        # not a gas giant
-            discs = colonyplanets.set_for(screen, side)
+            discs = colonyplanets.set_for(screen, side, int(p.size))
             disc = discs.get(int(p.climate)) if discs is not None else None
         if disc is not None:
             surface.blit(disc, disc.get_rect(center=centre))

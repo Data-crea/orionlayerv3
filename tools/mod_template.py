@@ -284,12 +284,13 @@ def ship_masters():
 
 
 def leaders_pictures():
-    """NAMES.txt's lines for the Leaders screen's seven picture places
+    """NAMES.txt's lines for the Leaders screen's eight picture places
     (`screens/leaders/ldrpics`), with the size each box has at 3840x2160."""
     from screens.leaders import ldrpics
     what = {"screen": "the screen's own background, the whole window",
             "slot_empty": "a row with no leader; HD writes the caption",
-            "minimap": "the galaxy box, under the stars and fleets"}
+            "minimap": "the galaxy box, under the stars and fleets",
+            "view": "the colony view's star in space, under the orbits"}
     out = []
     for place, name in ldrpics.NAMES.items():
         size = ldrpics.RECOMMENDED["slot" if place.startswith("slot")

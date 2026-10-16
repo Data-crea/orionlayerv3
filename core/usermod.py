@@ -96,7 +96,8 @@ SLOTS = ("screens/*/assets/frame.png",
          "screens/leaders/assets/pictures/screen_background.png",
          "screens/leaders/assets/pictures/slot_[1234]_background.png",
          "screens/leaders/assets/pictures/slot_empty_background.png",
-         "screens/leaders/assets/pictures/minimap_background.png")
+         "screens/leaders/assets/pictures/minimap_background.png",
+         "screens/leaders/assets/pictures/view_background.png")
 #: The galaxy map's ship masters (work order 243, Data's decision): a whole
 #: master `files/<SHIP_MASTERS>/<kind>.png` replaces every icon cut from it
 #: (`core.shipcut`: the four steps and the Planets panel's picture), cut

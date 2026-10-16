@@ -163,6 +163,12 @@ def render(screen, surface, popup, state, app=None, words=None):
         if pic is not None:
             big = pygame.transform.scale(pic, (pic.get_width() * s,
                                                pic.get_height() * s))
+            # Data's painted battle planet, the same picture as in battle,
+            # at the drawing's size (DEVIATION `painted_planets`).
+            from screens.colony_summary import colonyplanets
+            from core import resources
+            big = colonyplanets.painted(resources.res, climate, size_,
+                                        max(big.get_size())) or big
             cx, cy = bm.point(bm.x0 + BOX_W // 2, bm.y0 + BOX_H // 2)
             surface.blit(big, big.get_rect(center=(cx, cy)))
     defender, attacker = _player(state, a[8]), _player(state, a[7])

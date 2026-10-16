@@ -100,7 +100,7 @@ slot (49 x 49 with five skills); a square picture of 64 x 64 serves all.
 
 ### The Leaders screen's pictures
 
-The Leaders screen has seven picture places, filled only from your mod
+The Leaders screen has eight picture places, filled only from your mod
 folder (OrionLayer ships none of them), each under
 `files/screens/leaders/assets/pictures/`:
 
@@ -110,6 +110,7 @@ folder (OrionLayer ships none of them), each under
 | `slot_1_background.png` … `slot_4_background.png` | row 1 to 4 while a leader stands in it (both tabs) | 2158 x 413 |
 | `slot_empty_background.png` | a row with no leader; OrionLayer writes the caption | 2158 x 413 |
 | `minimap_background.png` | the galaxy box, under the stars and fleets | 1444 x 700 |
+| `view_background.png` | the box above it in the colony view: a star in space; OrionLayer draws the system's orbits and planets over it, centred on the brightest warm disc it finds (the star), and keeps the ship view as it was | 1498 x 784 |
 
 Paint them without a frame: OrionLayer draws the frame round each box in
 your frame colour and clips the picture to it. Any size of roughly that

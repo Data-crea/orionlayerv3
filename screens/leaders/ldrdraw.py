@@ -252,7 +252,9 @@ def draw_frame_boxes(surface, screen, slots=None, art=None):
                 ldrpics.slot_place(i, slots.get(i) is not None),
                 word_zones(screen, i, slots.get(i), art)):
             draw_box(surface, screen, row_box(i))
-    draw_box(surface, screen, geom.VIEW_BOX)
+    from . import ldrsystem
+    if not ldrsystem.draw_box(surface, screen, art):
+        draw_box(surface, screen, geom.VIEW_BOX)
     if not ldrpics.draw_box(surface, rect(layout, geom.GALAXY_BOX),
                             layout.scale, "minimap", map_zones(screen)):
         draw_box(surface, screen, geom.GALAXY_BOX)

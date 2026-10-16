@@ -2,13 +2,16 @@
 
 HD EXTENSION `box_pictures`: the original draws its rows, galaxy box and
 screen into OFFICER.LBX 0 (officer.cpp:648) and has no picture per box; HD
-gives seven places a painted picture from the player's mod folder:
+gives eight places a painted picture from the player's mod folder:
 
     screen        the screen's own background, the whole window
     slot_1..4     a row's box while a leader stands in it (row 1 to 4, the
                   same on both tabs — the chat's setting, parked)
     slot_empty    a row's box with no leader, under HD's caption
     minimap       the galaxy box, under the stars and fleets
+    view          the view box in the colony view: a star in space, the
+                  system's orbits and planets drawn over it (`ldrsystem`,
+                  Data, 16 Oct 2026); the ship view keeps the glass panel
 
 WHERE THEY LIVE (Data's decision): `files/screens/leaders/assets/pictures/
 <name>.png` in the mod folder, `FOLDER` + `NAMES`; none is in either tree.
@@ -64,12 +67,13 @@ NAMES = {"screen": "screen_background.png",
          "slot_3": "slot_3_background.png",
          "slot_4": "slot_4_background.png",
          "slot_empty": "slot_empty_background.png",
-         "minimap": "minimap_background.png"}
+         "minimap": "minimap_background.png",
+         "view": "view_background.png"}
 #: The box each place fills at 3840x2160, measured through the screen's own
 #: geometry (`ldrdraw.row_box`, `ldrgeom.GALAXY_BOX`; work order 237, the
 #: wider boxes of 238's even margins): the size the mod kit recommends. 1920x1080 and 3440x1440 draw it smaller.
 RECOMMENDED = {"screen": (3840, 2160), "slot": (2158, 413),
-               "minimap": (1444, 700)}
+               "minimap": (1444, 700), "view": (1498, 784)}
 #: Where a cover cut sits across, 0 left .. 1 right; 0.5 unless named.
 ANCHOR = {"slot_empty": 0.0}
 #: The floor every word keeps on its ground (decision 94).
@@ -206,6 +210,43 @@ def dim(img, zones, feather):
     return surf
 
 
+# ── the view picture's star ───────────────────────────────
+
+#: A pixel of the painted star: bright and warm (red and green high, blue
+#: low — the nebula round it is blue). Measured on Data's
+#: view_background.png of 16 Oct 2026: its disc and corona, nothing else.
+SUN_RGB_MIN = (200, 110)
+SUN_BLUE_MAX = 120
+#: Fewer such pixels than this share of the box is no star (a picture
+#: without one): the orbits then stand at the original's centre.
+SUN_MIN_SHARE = 0.002
+_suns = {}
+
+
+def sun_centre(place, size):
+    """(x, y) of the painted star in the picture as `cover` lays it into a
+    box of `size` — the centre of its warm pixels' rows and columns that
+    are at least a quarter full (the corona's thin rays left out) — or
+    None. Measured once per file and size."""
+    img = source(place)
+    if img is None:
+        return None
+    key = (path(place), _sources[path(place)][0], tuple(size))
+    if key not in _suns:
+        pic = cover(img, size, ANCHOR.get(place, 0.5))
+        a = pygame.surfarray.array3d(pic).astype(np.int32)    # (w, h, 3)
+        warm = (a[..., 0] > SUN_RGB_MIN[0]) & (a[..., 1] > SUN_RGB_MIN[1]) \
+            & (a[..., 2] < SUN_BLUE_MAX)
+        found = None
+        if warm.sum() >= SUN_MIN_SHARE * warm.size:
+            cols, rows = warm.sum(1), warm.sum(0)
+            xs = np.nonzero(cols > cols.max() * 0.25)[0]
+            ys = np.nonzero(rows > rows.max() * 0.25)[0]
+            found = ((xs.min() + xs.max()) / 2.0, (ys.min() + ys.max()) / 2.0)
+        _suns[key] = found
+    return _suns[key]
+
+
 # ── drawing a box ─────────────────────────────────────────
 
 def boxed(place, size, scale, zones=()):
@@ -260,3 +301,4 @@ def clear():
     """Forget every loaded and drawn picture (the smoke suite)."""
     _sources.clear()
     _drawn.clear()
+    _suns.clear()

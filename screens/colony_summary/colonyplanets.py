@@ -19,6 +19,19 @@ whatever the layout asks for, one cached set per pixel size, no
 (decision 28 and its marked exception). The master is 54 px because
 that is the row icon's height at 1920x1080, so the reference
 resolution draws this art at 1:1 and every other size steps from it.
+
+**DEVIATION `painted_planets` (Data, 16 Oct 2026): DATA'S BATTLE PLANETS
+FIRST.** Where the player's mod folder holds Data's painted battle
+planets (`files/screens/combat/assets/gamedata/cmbtplnt/<n>_0.png`, n =
+climate * 6 + size, the combat screen's own slot, decision 81), every
+place that draws a planet draws THAT picture, for the planet's climate
+and size (`painted`): the discs here, the galaxy map's system window,
+the Leaders screen's system display, the Planets list, the colony
+screen's system display and the invasion popup. A painted picture is
+many times the size it is drawn at, so it is cut to its ink and SMOOTHLY
+scaled down (decision 28 is about magnifying the game's pixel art, which
+these are not). Without them the discs stand as before; a list, which
+knows no size, takes LIST_PLANET_SIZE.
 """
 import logging
 import os
@@ -41,11 +54,24 @@ MASTER_SIZE = 54
 NAMES = ("toxic", "radiated", "barren", "desert", "tundra",
          "ocean", "swamp", "arid", "terran", "gaia")
 
+#: Data's painted battle planets, resolved like every file (the mod
+#: folder first); in the project tree this slot holds no PNG, so a hit
+#: is a painting. Smaller than PAINTED_MIN is not one (the stored
+#: drawings are 56..150 px) and is left to the discs.
+PAINTED = "screens/combat/assets/gamedata/cmbtplnt/{}_0.png"
+PAINTED_MIN = 200
+#: The size a place that knows none draws (the lists): large.
+LIST_PLANET_SIZE = 3
+_painted_src = {}
+_painted_drawn = {}
+
 #: How many sets are kept, by pixel size. Two are live at once on this
 #: screen — the row icon and the big disc in `planet_info` — and a
 #: resize makes two more; four is that with one window's worth of
-#: history, and each set is ten sprites.
-SET_CACHE = 4
+#: history, and each set is ten sprites. Since `painted_planets` a
+#: place that draws planets by size (the galaxy map's system window,
+#: five sizes at once) keeps a set per size, so twelve.
+SET_CACHE = 12
 
 
 def name_for(climate):
@@ -61,6 +87,63 @@ def name_for(climate):
     return NAMES[climate] if 0 <= climate < len(NAMES) else None
 
 
+def _painted_source(path):
+    import pygame
+    try:
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        return None
+    hit = _painted_src.get(path)
+    if hit is not None and hit[0] == stamp:
+        return hit[1]
+    img = None
+    try:
+        img = pygame.image.load(path)
+        img = img.convert_alpha() if pygame.display.get_surface() else img
+        if max(img.get_size()) < PAINTED_MIN:
+            img = None
+        else:
+            img = img.subsurface(img.get_bounding_rect(min_alpha=8)).copy()
+    except (pygame.error, OSError, ValueError) as err:
+        log.warning("planets: %s will not load (%s)", path, err)
+        img = None
+    _painted_src[path] = (stamp, img)
+    return img
+
+
+def painted(resources, climate, planet_size, side):
+    """Data's painted planet for `climate` and `planet_size` on a `side`
+    px square (centred, its proportion kept), or None when the mod folder
+    has none (`painted_planets`)."""
+    import pygame
+    side = int(side)
+    if climate is None or planet_size is None or side <= 0:
+        return None
+    climate, planet_size = int(climate), int(planet_size)
+    if not (0 <= climate < len(NAMES) and 0 <= planet_size <= 4):
+        return None
+    path = resources.resolve(PAINTED.format(climate * 6 + planet_size))
+    if not path or not path.lower().endswith(".png"):
+        return None
+    src = _painted_source(path)
+    if src is None:
+        return None
+    key = (path, _painted_src[path][0], side)
+    hit = _painted_drawn.get(key)
+    if hit is not None:
+        return hit
+    w, h = src.get_size()
+    k = side / max(w, h)
+    pic = pygame.transform.smoothscale(
+        src, (max(1, round(w * k)), max(1, round(h * k))))
+    out = pygame.Surface((side, side), pygame.SRCALPHA)
+    out.blit(pic, pic.get_rect(center=(side // 2, side // 2)))
+    if len(_painted_drawn) > 256:
+        _painted_drawn.clear()
+    _painted_drawn[key] = out
+    return out
+
+
 class PlanetSet:
     """The ten discs at one pixel size, or a stated absence.
 
@@ -70,18 +153,25 @@ class PlanetSet:
     feature, not an error.
     """
 
-    def __init__(self, resources, size, root=None):
+    def __init__(self, resources, size, root=None, planet_size=None):
         size = int(size)
         assert size > 0, f"a planet set needs a pixel size, got {size}"
         self.size = size
         self.state = "missing"
         self.planets = {}
         self.refused = []
+        self.planet_size = LIST_PLANET_SIZE if planet_size is None \
+            else int(planet_size)
         self._load(resources, root)
 
     def _load(self, resources, root):
         import pygame
-        for name in NAMES:
+        for climate, name in enumerate(NAMES):
+            pic = None if root else painted(resources, climate,
+                                            self.planet_size, self.size)
+            if pic is not None:
+                self.planets[name] = pic
+                continue
             for base in ([root] if root else resources.roots()):
                 path = os.path.join(base, "screens", "colony_summary",
                                     PLANET_DIR, f"{name}.png")
@@ -145,8 +235,10 @@ def icon_size(area, cfg):
                - 2 * colonytrack.figure_step(area, cfg))
 
 
-def set_for(screen, size):
-    """The planet set at `size` px, cached per App with an LRU.
+def set_for(screen, size, planet_size=None):
+    """The planet set at `size` px, cached per App with an LRU; with
+    Data's painted planets, those of `planet_size` (LIST_PLANET_SIZE when
+    the place knows none).
 
     Keyed by pixel size for the same reason `colonyfigures.set_for`
     is: the row icon's size comes from the band and the panel's from
@@ -156,5 +248,8 @@ def set_for(screen, size):
     size = int(size)
     if size <= 0:
         return None
-    return setcache.lru(screen.app, "planet_sets", size,
-                        lambda: PlanetSet(screen.app.res, size), SET_CACHE)
+    key = size if planet_size is None else (size, int(planet_size))
+    args = (screen.app.res, size) if planet_size is None else \
+        (screen.app.res, size, None, int(planet_size))
+    return setcache.lru(screen.app, "planet_sets", key,
+                        lambda: PlanetSet(*args), SET_CACHE)

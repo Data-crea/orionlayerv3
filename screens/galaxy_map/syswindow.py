@@ -301,7 +301,7 @@ def draw_view(screen, surface, view, model, state=None):
         rect.center = centre
         disc = None
         if p["type"] != 2:
-            discs = colonyplanets.set_for(screen, side)
+            discs = colonyplanets.set_for(screen, side, p.get("size"))
             disc = discs.get(p["climate"]) if discs is not None else None
         else:
             # Data's painted gas giant (work order 236, `gasgiant`)

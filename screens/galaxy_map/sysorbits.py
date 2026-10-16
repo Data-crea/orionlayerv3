@@ -65,6 +65,46 @@ BELT_DOTS = (449, 853, 856, 1181, 1332)
 BELT_GREYS = ((36, 36, 40), (44, 44, 52), (72, 72, 80))
 BELT_BAND = (0.94, 1.05)
 SUPERSAMPLE = 3
+#: `angle::sin_table` (angle.cpp:136-226): sin of 0..89 degrees * 65536.
+SIN_TABLE = tuple(int(round(math.sin(math.radians(d)) * 65536))
+                  for d in range(90))
+
+
+def _sin(angle, magnitude):
+    """`angle::Sin` (angle.cpp:288-336) for magnitude >= 0."""
+    a = angle % 360
+
+    def t(i):
+        return (SIN_TABLE[i] * magnitude + 0x8000) >> 16
+    if a < 90:
+        return t(a)
+    if a == 90:
+        return magnitude
+    if a < 180:
+        return t(180 - a)
+    if a < 270:
+        return -t(a - 180)
+    return -magnitude if a == 270 else -t(360 - a)
+
+
+def _div(a, b):
+    """C's integer division, truncating towards zero."""
+    q = abs(a) // abs(b)
+    return q if (a >= 0) == (b > 0) else -q
+
+
+def orbit_place(star, orbit, stardate):
+    """TRANSCRIPTION `GEO::Get_Orbit_Display_X_Y` (geo.cpp:244-283): a
+    planet's place off the orbit centre in native px, from the star, the
+    orbit and the stardate alone — for a window that has no engine field
+    to read it off (the Leaders screen's system display)."""
+    angle = _div((int(star) * 7 + int(stardate)) * 5311,
+                 int(orbit) * 100 + int(star) + 150) % 360
+    rx, ry = ORBIT_CONSTS[int(orbit) + 1]
+    x = _sin(angle + 90, rx) + 5
+    y = _sin(angle, ry) - 5
+    return (_div(x + 5 if x >= 0 else x - 5, 10),
+            -_div(y + 5 if y >= 0 else y - 5, 10))
 
 
 def frame(view):
@@ -92,8 +132,11 @@ def place(planet, s, cx, cy):
     return cx + ax * s, cy + ay * s
 
 
-def ring(surface, orbit, s, cx, cy, hole=None):
-    """One orbit's ellipse, antialiased, with `hole` (x, y, r) kept clear."""
+def ring(surface, orbit, s, cx, cy, hole=None, colours=None):
+    """One orbit's ellipse, antialiased, with `hole` (x, y, r) kept clear;
+    `colours` (core, side) in place of the original's; side None draws
+    the core alone."""
+    core_rgb, side_rgb = colours or (RING, RING_SIDE)
     rx, ry = radii(orbit, s)
     k = SUPERSAMPLE
     w, h = int(2 * rx + 6), int(2 * ry + 6)
@@ -101,10 +144,11 @@ def ring(surface, orbit, s, cx, cy, hole=None):
     side = max(1, int(round(RING_WIDTH * s * k)))
     core = max(1, int(round(s * k)))
     half = (side - core) // 2
-    pygame.draw.ellipse(big, RING_SIDE + (255,), pygame.Rect(
-        3 * k - half, 3 * k - half, int(2 * rx * k) + 2 * half,
-        int(2 * ry * k) + 2 * half), side)
-    pygame.draw.ellipse(big, RING + (255,), pygame.Rect(
+    if side_rgb is not None:
+        pygame.draw.ellipse(big, tuple(side_rgb) + (255,), pygame.Rect(
+            3 * k - half, 3 * k - half, int(2 * rx * k) + 2 * half,
+            int(2 * ry * k) + 2 * half), side)
+    pygame.draw.ellipse(big, tuple(core_rgb) + (255,), pygame.Rect(
         3 * k, 3 * k, int(2 * rx * k), int(2 * ry * k)), core)
     if hole is not None:
         hx, hy, hr = hole
@@ -129,11 +173,12 @@ def belt(surface, orbit, s, cx, cy, seed):
         surface.fill(rng.choice(BELT_GREYS), (int(x), int(y), dot, dot))
 
 
-def draw(surface, view, model, draw_planet):
+def draw(surface, view, model, draw_planet, at=None, colours=None):
     """Belts, then each planet's ring and the planet itself, back to front.
     `draw_planet(planet, centre, side)` draws the disc and returns its
-    hit rect."""
-    s, cx, cy = frame(view)
+    hit rect. `at` (scale, centre x, centre y) in place of `frame(view)`,
+    `colours` the rings' (core, side)."""
+    s, cx, cy = at or frame(view)
     prev = surface.get_clip()
     surface.set_clip(view)
     try:
@@ -146,7 +191,7 @@ def draw(surface, view, model, draw_planet):
             px, py = place(p, s, cx, cy)
             side = planet_dim(p) * s
             ring(surface, int(p["orbit"]), s, cx, cy,
-                 hole=(px, py, side / 2 + PIERCE * s))
+                 hole=(px, py, side / 2 + PIERCE * s), colours=colours)
             hits.append((p, draw_planet(p, (int(px), int(py)),
                                         max(4, int(side)))))
         return hits

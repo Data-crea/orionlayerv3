@@ -51,6 +51,7 @@ from core.hud import text as hudtext
 from core.structs import colony as colony_struct
 from screens.colony_summary import colonyfigures, colonyoutputicons
 from screens.colony_summary import colonyrows, colonysurfaces
+from screens.colony_summary.colonyplanets import painted as painted_planet
 from screens.colony_summary.colonyplanets import set_for as planet_set_for
 from screens.leaders import ldrdraw as nd
 
@@ -359,6 +360,12 @@ def _system(surface, screen, view, state, words):
             pic = system_picture(art, planet, state, view)
             pic = nd.magnified(pic, screen.layout) if pic is not None \
                 else None
+            # Data's painted planet at the drawing's own size, where the
+            # mod folder has one (DEVIATION `painted_planets`).
+            if pic is not None and planet.planet_type == PLANET:
+                pic = painted_planet(screen.app.res, planet.climate,
+                                     getattr(planet, "size", None),
+                                     max(pic.get_size())) or pic
         else:
             pic = planets.get(planet.climate) if planets is not None and \
                 planet.planet_type == PLANET else None
