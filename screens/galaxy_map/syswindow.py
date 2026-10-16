@@ -41,7 +41,21 @@ What is drawn, and from where:
                  square centred on the planet, four corner brackets 2 px
                  thick and 8 long — in the owner's colour
 
-The window's look (work order 230 C, Data's decision 3, both windows):
+The window's look since 16 October 2026 (Data: "like in Leaders, larger,
+with the pennants"; work order 284), both windows:
+
+  HD EXTENSION   `system_view_picture` (Data's decision): with the
+                 Leaders screen's "view" picture in the mod folder, the
+                 view is that picture, as the Leaders star system (`ldrsystem`): the rings centred
+                 on its painted star, which stands for the sun, in the
+                 mockup's cyan (DEVIATION `ring_colour`, `ldrsystem.
+                 VIEW_RING`); the planets painted; the pennants kept in
+                 the owners' colours. The window larger than the
+                 original's (boxes.json, the "system_*" group, x 1.45).
+                 Without the picture, the look below.
+
+Until then (work order 230 C, Data's decision 3, both windows), and still
+without the picture:
 
   DATA'S DECISION `system_window_look`: the window is black with stars
                  (`sysstars`, the original's view), not filled with the
@@ -283,6 +297,9 @@ def draw_view(screen, surface, view, model, state=None):
             surface.blit(sf, (view.x + (view.w - sf.get_width()) // 2, y))
             y += sf.get_height()
         return []
+    looked = _view_picture(screen, surface, view, model, state)
+    if looked is not None:
+        return looked
     stars = getattr(screen, "_stars", None) or []
     star = stars[model["star"]] if 0 <= model["star"] < len(stars) else None
     name = sun_icon_name(star)
@@ -315,6 +332,54 @@ def draw_view(screen, surface, view, model, state=None):
         return rect
 
     drawn = sysorbits.draw(surface, view, model, planet)
+    markers(surface, state if state is not None else
+            getattr(screen, "_state", None), drawn, s)
+    return drawn
+
+
+def _planet_picture(screen, surface, p, centre, side):
+    """A planet as the Leaders star system draws it: Data's painted planet
+    for its climate and size (DEVIATION `painted_planets`), the painted
+    gas giant; its rect."""
+    from screens.galaxy_map import gasgiant
+    rect = pygame.Rect(0, 0, side, side)
+    rect.center = centre
+    if p["type"] == 2:
+        pic = gasgiant.picture(side)
+    else:
+        discs = colonyplanets.set_for(screen, side, p.get("size"))
+        pic = discs.get(p["climate"]) if discs is not None else None
+    if pic is not None:
+        surface.blit(pic, pic.get_rect(center=centre))
+    else:
+        pygame.draw.circle(surface, GAS_GIANT[:3], centre, side // 2, 2)
+    return rect
+
+
+def _view_picture(screen, surface, view, model, state):
+    """HD EXTENSION `system_view_picture` (Data, 16 Oct 2026: "like in Leaders,
+    larger, with the pennants"): with the Leaders screen's "view" picture
+    in the mod folder, the window's view is that picture — the Leaders star
+    system's look (`ldrsystem`): the rings centred on the picture's painted
+    star, which stands for the sun, in the mockup's cyan; the planets on
+    them where the engine put them, as before; the pennants in the owners'
+    colours kept. Returns the planets drawn, or None without the picture
+    (the window as before: black with stars, the original's sun and blues)."""
+    from screens.leaders import ldrpics, ldrsystem
+    pic = ldrpics.boxed(ldrsystem.PLACE, view.size, screen.layout.scale)
+    if pic is None:
+        return None
+    surface.blit(pic, view.topleft)
+    hud.panel(surface, view, screen.layout.scale, filled=False)
+    s, cx, cy = sysorbits.frame(view)
+    sun = ldrpics.sun_centre(ldrsystem.PLACE, view.size)
+    if sun is not None:
+        cx, cy = view.x + sun[0], view.y + sun[1]
+    drawn = sysorbits.draw(
+        surface, view, model,
+        lambda p, centre, side: _planet_picture(screen, surface, p, centre,
+                                                side),
+        at=(s, cx, cy), colours=ldrsystem.VIEW_RING)
     markers(surface, state if state is not None else
             getattr(screen, "_state", None), drawn, s)
     return drawn

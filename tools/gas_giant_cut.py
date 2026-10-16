@@ -15,14 +15,15 @@ and this file is how the cut is repeated). The source is Data's
 **THE SIZE, MEASURED, NOT CHOSEN.** HD draws a system window's planet on
 a square of `_rot_plan_dim[size]` native px (`sysorbits.PLANET_DIM`), a
 gas giant at the HUGE size (sys.cpp:116-118): 24 native px, at 3840x2160
-24 x 2.832 = 67 device px — the largest any supported window draws it
-(nothing above 4K, Data). So the canvas is `CANVAS` = 67 and 4K draws
-the master 1:1; every smaller window scales it down. In that square the
+24 x 4.083 = 98 device px since the window grew (work order 284, the
+"system_*" boxes x 1.45; 24 x 2.832 = 67 before) — the largest any
+supported window draws it (nothing above 4K, Data). So the canvas is
+`CANVAS` = 98 and 4K draws the master 1:1; every smaller window scales it down. In that square the
 original's gas giant is exactly as large as its largest huge planet —
 BUFFER0.LBX 0x5C + 50 and terran-huge 0x5C + 44 are both 26 px across on
 the same 31 x 31 canvas, in every one of the 40 frames — so the disc is
 cut as large as HD's largest huge disc stands in its square: terran,
-50 of 54 px (`colonyplanets`, measured), 62 of 67. A smoke check holds
+50 of 54 px (`colonyplanets`, measured), 91 of 98. A smoke check holds
 both numbers against the layout and the discs.
 
 **THE CUT, MEASURED.** The picture is a disc on transparency, clean
@@ -54,9 +55,9 @@ from core import basepack  # noqa: E402
 OUT = os.path.join(basepack.base_dir(), "screens", "galaxy_map", "assets",
                    "gas_giant.png")
 #: The square a gas giant is drawn on at 3840x2160 (module docstring).
-CANVAS = 67
-#: The disc's diameter in it: terran-huge's 50 of 54, of 67.
-DISC = 62
+CANVAS = 98
+#: The disc's diameter in it: terran-huge's 50 of 54, of 98.
+DISC = 91
 RAYS = 720
 SUPERSAMPLE = 4
 
