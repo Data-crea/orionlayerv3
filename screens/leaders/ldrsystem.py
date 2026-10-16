@@ -14,7 +14,8 @@ the box.
 HD EXTENSION `view_picture`: the star and the space behind it are Data's
 picture, the Leaders picture place "view" (`ldrpics`); the rings are
 centred on its painted star (`ldrpics.sun_centre`), so the picture's star
-needs no exact place. DEVIATION `ring_colour`: the rings one thin line in
+needs no exact place; the system scaled to stand between the star's name
+and the box's foot (`fit`, work order 285). DEVIATION `ring_colour`: the rings one thin line in
 the cyan of Data's mockup (`VIEW_RING`), not the original's dark blues.
 INVENTION `colony_brackets`: a planet with a colony wears the mockup's
 corner brackets (`BRACKET`). The planets are Data's painted ones where the
@@ -42,8 +43,31 @@ VIEW_RING = ((80, 190, 225), None)
 BRACKET = (232, 196, 64)
 BRACKET_ARM = 0.25
 BRACKET_GAP = 0.10
+#: The room kept clear under the star's name and over the box's foot, of
+#: the name's font size.
+NAME_GAP = 0.4
 #: `PLANET_TYPE` (orion2_consts.h:400-403).
 ASTEROID, GAS_GIANT = 1, 2
+#: The outermost orbit a planet can stand on (five per star, 0-4).
+OUTER_ORBIT = 4
+
+
+def reach():
+    """How far the system reaches up and down from its centre, per unit of
+    scale: the outermost orbit's half height and the largest planet's half
+    side on it."""
+    return (sysorbits.radii(OUTER_ORBIT, 1.0)[1]
+            + sysorbits.PLANET_DIM[sysorbits.HUGE] / 2.0)
+
+
+def fit(s, cy, top, bottom):
+    """THE ORBITS BETWEEN TWO LINES (work order 285, Data: they ran into the
+    star's name): the scale, at most `s`, at which the outermost orbit with
+    the largest planet on it stays between `top` and `bottom` round a centre
+    at `cy` — whatever the star's own orbits, so the system's size does not
+    change from star to star."""
+    r = reach()
+    return max(0.1, min(s, (cy - top) / r, (bottom - cy) / r))
 
 
 def shows(screen):
@@ -70,13 +94,17 @@ def draw_box(surface, screen, art):
 
 def frame_at(screen):
     """(scale, centre x, centre y): the original's view fitted into the
-    box, the rings' centre on the picture's star where it has one."""
+    box, the rings' centre on the picture's star where it has one, the
+    whole system under the star's name and above the box's foot (`fit`)."""
     r = ldrdraw.rect(screen.layout, geom.VIEW_BOX)
     s, cx, cy = sysorbits.frame(r)
     sun = ldrpics.sun_centre(PLACE, r.size)
     if sun is not None:
         cx, cy = r.x + sun[0], r.y + sun[1]
-    return s, cx, cy
+    size = ldrdraw.font_px(screen.layout, "strip")
+    gap = int(size * NAME_GAP)
+    top = r.y + size // 2 + int(size * 1.2) + gap      # the name's foot
+    return fit(s, cy, top, r.bottom - gap), cx, cy
 
 
 def model(game_state, star):

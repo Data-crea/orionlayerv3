@@ -145,6 +145,9 @@ TITLE_BAND = (12, 37)
 #: gives medians 55 / 52 / 40 (work order 230, P607): the middle is taken
 #: and the spread said, since HD's star is not the original's drawing.
 SUN_CANVAS_NATIVE = 52
+#: The room kept clear at the view's top and foot, of its height, when the
+#: Leaders picture's star centres the orbits (work order 285).
+VIEW_GAP = 0.02
 #: Decision 94's word floor with its margin, for the title's letters.
 WORD_FLOOR = 4.6
 
@@ -375,6 +378,9 @@ def _view_picture(screen, surface, view, model, state):
     sun = ldrpics.sun_centre(ldrsystem.PLACE, view.size)
     if sun is not None:
         cx, cy = view.x + sun[0], view.y + sun[1]
+    # inside the view whatever the picture's star (work order 285)
+    gap = int(view.h * VIEW_GAP)
+    s = ldrsystem.fit(s, cy, view.y + gap, view.bottom - gap)
     drawn = sysorbits.draw(
         surface, view, model,
         lambda p, centre, side: _planet_picture(screen, surface, p, centre,
