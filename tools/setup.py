@@ -390,7 +390,7 @@ def engine_report(tree=None):
     tree, missing = version_check.tree_report(tree)
     if tree is None:
         # Work order 230 F: what a STRANGER can do. Since work order 243
-        # the engine is public: the fork's README says how to build it.
+        # the engine is public, and OrionLayer's README builds it.
         # Work order 282: say WHERE it looks — the engine's SOURCE is what
         # is checked, not the program, and a stranger whose clone sat
         # elsewhere was only told "not found"
@@ -400,10 +400,10 @@ def engine_report(tree=None):
                    "\"Getting started\": steps 1 and 2 in the same folder).")
         out.append("    Without it OrionLayer still starts: python main.py "
                    "shows the screens, with no game.")
-        out.append("    To play you need an orion2re built as above: README, "
-                   "\"Getting started\", step 1, and the fork's own "
-                   "README (github.com/Data-crea/orion2re, branch "
-                   "orionlayer).")
+        # Data, work order 282: a player never switches to the fork's page
+        out.append("    To play you need that engine (github.com/Data-crea/"
+                   "orion2re, branch orionlayer) built as README, \"Getting "
+                   "started\", says: tools/install.sh, or step 1.")
         out.append("    Once you have the program: python play.py --engine "
                    "PATH --game DIR (README, \"Where your game and engine "
                    "are\").")
