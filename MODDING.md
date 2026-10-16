@@ -77,7 +77,7 @@ Screens whose geometry is code (the battle) have no frame slot.
 ### Leader portraits in HD
 
 Painted, cut-out portraits (PNG with transparency) for the leaders are an
-optional download of their own, `orionlayer-leader-portraits.zip` — not
+optional download of their own, [`orionlayer-leader-portraits.zip`](https://github.com/Data-crea/orionlayerv3/releases/tag/leader-portraits-8218a046e53e) — not
 part of the base pack: they are redrawings of the game's portraits, and
 the base pack's licence cannot cover them. Unpack it into your mod folder;
 the pictures land in `files/screens/leaders/assets/portraits/`

@@ -87,7 +87,7 @@ At its end setup reports the engine it found and whether every change
 OrionLayer needs is in it.
 
 *Optional:* painted leader portraits come as their own download,
-`orionlayer-leader-portraits.zip`; unpack it into OrionLayer's mod folder
+[`orionlayer-leader-portraits.zip`](https://github.com/Data-crea/orionlayerv3/releases/tag/leader-portraits-8218a046e53e); unpack it into OrionLayer's mod folder
 (its place is shown in the game: GAME, SETTINGS, ORIONLAYER, SYSTEM).
 Without it the leaders show the game's own portraits.
 
