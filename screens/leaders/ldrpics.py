@@ -223,11 +223,12 @@ SUN_MIN_SHARE = 0.002
 _suns = {}
 
 
-def sun_centre(place, size):
-    """(x, y) of the painted star in the picture as `cover` lays it into a
-    box of `size` — the centre of its warm pixels' rows and columns that
-    are at least a quarter full (the corona's thin rays left out) — or
-    None. Measured once per file and size."""
+def sun_disc(place, size):
+    """(x, y, radius) of the painted star in the picture as `cover` lays
+    it into a box of `size` — the centre of its warm pixels' rows and
+    columns that are at least a quarter full (the corona's thin rays left
+    out), the radius half the larger span — or None. Measured once per
+    file and size, on the picture as painted (never on `mute`'s)."""
     img = source(place)
     if img is None:
         return None
@@ -242,27 +243,150 @@ def sun_centre(place, size):
             cols, rows = warm.sum(1), warm.sum(0)
             xs = np.nonzero(cols > cols.max() * 0.25)[0]
             ys = np.nonzero(rows > rows.max() * 0.25)[0]
-            found = ((xs.min() + xs.max()) / 2.0, (ys.min() + ys.max()) / 2.0)
+            found = ((xs.min() + xs.max()) / 2.0, (ys.min() + ys.max()) / 2.0,
+                     max(xs.max() - xs.min(), ys.max() - ys.min()) / 2.0)
         _suns[key] = found
     return _suns[key]
 
 
+def sun_centre(place, size):
+    """(x, y) of the painted star in the picture as `cover` lays it into a
+    box of `size` (`sun_disc`), or None."""
+    disc = sun_disc(place, size)
+    return None if disc is None else disc[:2]
+
+
+# ── the view's space held back (work order 286) ──────────
+
+#: INVENTION `view_muted` (Data, work order 286): the view picture's space
+#: and nebulae compete with the star and the planets, so the picture is
+#: held back once, when it is laid into the box (`boxed`, cached with it;
+#: nothing per frame): its saturation to VIEW_SATURATION of the painted,
+#: its brightness to VIEW_BRIGHTNESS (both in sRGB, as the eye reads
+#: them), and whatever is still brighter than VIEW_HIGHLIGHT_KNEE of full
+#: scale only rises at VIEW_HIGHLIGHT_GAIN above it (the bright nebula
+#: structures; hue kept). The painted star is kept as painted: untouched
+#: within SUN_KEEP of its disc's radius, held back fully from SUN_FADE
+#: (its corona's warm glow reaches about 2.1 radii, measured on Data's
+#: picture of 16 Oct 2026). Only the Leaders view box: the galaxy map's
+#: system window shares the picture and is not part of the order.
+VIEW_BRIGHTNESS = 0.55
+VIEW_SATURATION = 0.62
+VIEW_HIGHLIGHT_KNEE = 0.22
+VIEW_HIGHLIGHT_GAIN = 0.45
+SUN_KEEP, SUN_FADE = 1.3, 2.2
+
+
+def _smooth(t):
+    t = np.clip(t, 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
+def mute(img, disc=None):
+    """`img` held back (`VIEW_*`), the star of `disc` (x, y, radius) in
+    the picture's px kept as painted."""
+    rgb = pygame.surfarray.array3d(img).astype(np.float64) / 255.0
+    luma = (rgb * np.array([0.299, 0.587, 0.114])).sum(-1)[..., None]
+    out = luma + VIEW_SATURATION * (rgb - luma)
+    out = np.clip(out, 0.0, 1.0) * VIEW_BRIGHTNESS
+    y = (out * np.array([0.299, 0.587, 0.114])).sum(-1)[..., None]
+    knee = VIEW_HIGHLIGHT_KNEE
+    held = np.where(y > knee, knee + (y - knee) * VIEW_HIGHLIGHT_GAIN, y)
+    out = out * held / np.maximum(y, 1e-9)
+    if disc is not None:
+        cx, cy, r = disc
+        w, h = luma.shape[:2]
+        d = np.hypot(np.arange(w)[:, None] + 0.5 - cx,
+                     np.arange(h)[None, :] + 0.5 - cy) / max(1.0, r)
+        keep = 1.0 - _smooth((d - SUN_KEEP) / (SUN_FADE - SUN_KEEP))
+        out = out + (rgb - out) * keep[..., None]
+    surf = img.copy()
+    pygame.surfarray.blit_array(
+        surf, np.round(np.clip(out, 0.0, 1.0) * 255.0).astype(np.uint8))
+    return surf
+
+
+# ── a shade behind a slot's words (work order 286) ────────
+
+#: INVENTION `text_shade` (Data, work order 286): behind the words of every
+#: slot with a leader (`ldrslot.Slot.text_area`) a black gradient on the
+#: slot's picture, so the words read on any picture: TEXT_SHADE_ALPHA at
+#: the name's x, easing to nothing over TEXT_SHADE_WIDTH of the slot's
+#: width; it comes in over TEXT_SHADE_LEAD of the width left of the name
+#: and runs out over TEXT_SHADE_FEATHER of the slot's height above and
+#: below the words — no edge anywhere. Laid into the slot's picture
+#: (`boxed`), so the portrait, the icons and the words stand in front of
+#: it; an empty slot and a slot without a picture get none.
+TEXT_SHADE_ALPHA = 0.60
+TEXT_SHADE_WIDTH = 0.55
+TEXT_SHADE_LEAD = 0.04
+TEXT_SHADE_FEATHER = 0.10
+_shades = {}
+
+
+def text_shade(lead, width, height, feather):
+    """The shade's surface: black, `lead` px coming in, `width` px running
+    out, `height` px of words with `feather` px soft above and below.
+    Made once per size."""
+    lead, width = max(1, int(lead)), max(1, int(width))
+    height, feather = max(1, int(height)), max(1, int(feather))
+    key = (lead, width, height, feather, TEXT_SHADE_ALPHA)
+    hit = _shades.get(key)
+    if hit is not None:
+        return hit
+    w, h = lead + width, height + 2 * feather
+    xs = np.arange(w, dtype=np.float64)[:, None] + 0.5
+    ys = np.arange(h, dtype=np.float64)[None, :] + 0.5
+    across = np.where(xs < lead, _smooth(xs / lead),
+                      1.0 - _smooth((xs - lead) / width))
+    down = _smooth(np.minimum(ys, h - ys) / feather)
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    # LOOK EXCEPTION picture: Data's shade behind a slot's words (work order 286) darkens the slot's picture, as ldrpics.dim does; not a panel, field or outline
+    surf.fill((0, 0, 0, 0))
+    a = pygame.surfarray.pixels_alpha(surf)
+    a[:] = np.round(255 * TEXT_SHADE_ALPHA * across * down).astype(np.uint8)
+    del a
+    if len(_shades) > 16:
+        _shades.clear()
+    _shades[key] = surf
+    return surf
+
+
+def shade(pic, area):
+    """`pic` with the text shade laid over `area` (the words, in the
+    picture's px)."""
+    w, h = pic.get_size()
+    a = pygame.Rect(area)
+    lead = TEXT_SHADE_LEAD * w
+    feather = TEXT_SHADE_FEATHER * h
+    surf = text_shade(lead, TEXT_SHADE_WIDTH * w, a.h, feather)
+    pic.blit(surf, (a.x - int(lead), a.y - int(feather)))
+    return pic
+
+
 # ── drawing a box ─────────────────────────────────────────
 
-def boxed(place, size, scale, zones=()):
-    """The picture of `place` covering `size`, words' zones dimmed,
-    clipped to the panel's outline (transparent outside), or None."""
+def boxed(place, size, scale, zones=(), muted=False, words=None):
+    """The picture of `place` covering `size`, held back (`muted`, the
+    Leaders view), words' zones dimmed, the text shade over `words` (a
+    Rect, a slot's words), clipped to the panel's outline (transparent
+    outside), or None. Made once per size and arguments."""
     img = source(place)
     if img is None:
         return None
     w, h = int(size[0]), int(size[1])
     key = (place, path(place), _sources[path(place)][0], w, h,
-           round(scale, 4), tuple((tuple(r), round(c, 6)) for r, c in zones))
+           round(scale, 4), tuple((tuple(r), round(c, 6)) for r, c in zones),
+           bool(muted), tuple(words) if words is not None else None)
     hit = _drawn.get(key)
     if hit is not None:
         return hit
-    pic = dim(cover(img, (w, h), ANCHOR.get(place, 0.5)), zones,
-              FEATHER * h)
+    pic = cover(img, (w, h), ANCHOR.get(place, 0.5))
+    if muted:
+        pic = mute(pic, sun_disc(place, (w, h)))
+    pic = dim(pic, zones, FEATHER * h)
+    if words is not None:
+        pic = shade(pic, words)
     ss = 4
     big = pygame.Surface((w * ss, h * ss))
     big.fill((0, 0, 0))
@@ -282,14 +406,18 @@ def boxed(place, size, scale, zones=()):
     return out
 
 
-def draw_box(surface, rect, scale, place, zones=()):
+def draw_box(surface, rect, scale, place, zones=(), muted=False,
+             words=None):
     """The box with its picture and the panel's edge, or False (nothing
-    drawn: the caller draws the box as before). `zones` in window px."""
+    drawn: the caller draws the box as before). `zones` and `words` in
+    window px."""
     r = pygame.Rect(rect)
     if r.w < 4 or r.h < 4:
         return False
     local = [(pygame.Rect(z).move(-r.x, -r.y), c) for z, c in zones]
-    pic = boxed(place, r.size, scale, local)
+    if words is not None:
+        words = pygame.Rect(words).move(-r.x, -r.y)
+    pic = boxed(place, r.size, scale, local, muted, words)
     if pic is None:
         return False
     surface.blit(pic, r.topleft)
@@ -302,3 +430,4 @@ def clear():
     _sources.clear()
     _drawn.clear()
     _suns.clear()
+    _shades.clear()

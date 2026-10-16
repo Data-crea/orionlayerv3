@@ -247,10 +247,12 @@ def draw_frame_boxes(surface, screen, slots=None, art=None):
     layout = screen.layout
     for i in range(geom.ROWS):
         r = rect(layout, row_box(i))
+        row = slots.get(i) if slots is not None else None
         if slots is None or not ldrpics.draw_box(
                 surface, r, layout.scale,
-                ldrpics.slot_place(i, slots.get(i) is not None),
-                word_zones(screen, i, slots.get(i), art)):
+                ldrpics.slot_place(i, row is not None),
+                word_zones(screen, i, row, art),
+                words=slot_of(screen, row).text_area if row else None):
             draw_box(surface, screen, row_box(i))
     from . import ldrsystem
     if not ldrsystem.draw_box(surface, screen, art):

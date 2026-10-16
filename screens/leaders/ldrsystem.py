@@ -38,6 +38,10 @@ from . import ldrpics
 PLACE = "view"
 #: The rings' core in the mockup's cyan; no darker sides.
 VIEW_RING = ((80, 190, 225), None)
+#: The rings' opacity on the Leaders view (Data, work order 286: a little
+#: more discreet on the held-back picture, `ldrpics.mute`); the galaxy
+#: map's system window keeps VIEW_RING opaque.
+VIEW_RING_ALPHA = 0.60
 #: The colony brackets: the mockup's gold, each arm a quarter of the
 #: planet's side, `BRACKET_GAP` of the side clear of it.
 BRACKET = (232, 196, 64)
@@ -89,7 +93,8 @@ def draw_box(surface, screen, art):
     band = pygame.Rect(r.x, r.y, r.w, int(size * 2.2))
     ceil = ldrpics.ceiling(ldrdraw.text_colour(art, "normal"),
                            fill.member("panel"))
-    return ldrpics.draw_box(surface, r, layout.scale, PLACE, [(band, ceil)])
+    return ldrpics.draw_box(surface, r, layout.scale, PLACE, [(band, ceil)],
+                            muted=True)
 
 
 def frame_at(screen):
@@ -130,6 +135,12 @@ def model(game_state, star):
     return {"star": star, "planets": planets, "belts": belts}
 
 
+def ring_colours():
+    """VIEW_RING with its core at VIEW_RING_ALPHA."""
+    core, side = VIEW_RING
+    return (tuple(core) + (int(round(255 * VIEW_RING_ALPHA)),), side)
+
+
 def _brackets(surface, rect, width):
     gap = max(2, int(rect.w * BRACKET_GAP))
     r = rect.inflate(2 * gap, 2 * gap)
@@ -168,7 +179,7 @@ def draw(surface, screen, game_state, art, star):
         return at
 
     hits = sysorbits.draw(surface, r, model(game_state, star), planet,
-                          at=frame_at(screen), colours=VIEW_RING)
+                          at=frame_at(screen), colours=ring_colours())
     size = ldrdraw.font_px(layout, "strip")
     ldrdraw.blit_text(surface, screen.style, stars[star].name, r.centerx,
                    r.y + size // 2, r.w - 8, int(size * 1.2),

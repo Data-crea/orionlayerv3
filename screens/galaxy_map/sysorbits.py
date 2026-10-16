@@ -135,8 +135,10 @@ def place(planet, s, cx, cy):
 def ring(surface, orbit, s, cx, cy, hole=None, colours=None):
     """One orbit's ellipse, antialiased, with `hole` (x, y, r) kept clear;
     `colours` (core, side) in place of the original's; side None draws
-    the core alone."""
+    the core alone; a core with a fourth value is drawn at that alpha."""
     core_rgb, side_rgb = colours or (RING, RING_SIDE)
+    core_a = core_rgb[3] if len(core_rgb) > 3 else 255
+    core_rgb = tuple(core_rgb[:3])
     rx, ry = radii(orbit, s)
     k = SUPERSAMPLE
     w, h = int(2 * rx + 6), int(2 * ry + 6)
@@ -148,7 +150,7 @@ def ring(surface, orbit, s, cx, cy, hole=None, colours=None):
         pygame.draw.ellipse(big, tuple(side_rgb) + (255,), pygame.Rect(
             3 * k - half, 3 * k - half, int(2 * rx * k) + 2 * half,
             int(2 * ry * k) + 2 * half), side)
-    pygame.draw.ellipse(big, tuple(core_rgb) + (255,), pygame.Rect(
+    pygame.draw.ellipse(big, core_rgb + (core_a,), pygame.Rect(
         3 * k, 3 * k, int(2 * rx * k), int(2 * ry * k)), core)
     if hole is not None:
         hx, hy, hr = hole

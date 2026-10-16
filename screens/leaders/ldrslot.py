@@ -198,6 +198,20 @@ class Slot:
     def skill_name_x(self):
         return self.x(SKILL_NAME_X)
 
+    @property
+    def text_area(self):
+        """Where the words stand, for the shade behind them
+        (`ldrpics.text_shade`, work order 286): from the name's x to the
+        value column, the name's top to the last skill line's foot (the
+        status line's without skills)."""
+        bottom = self.status_top + self.px(STATUS_CAP)
+        block = self.skill_block(0)
+        if block is not None:
+            bottom = max(bottom, block.bottom)
+        top = self.name_top
+        return pygame.Rect(self.text_x, top, self.values_right - self.text_x,
+                           max(1, bottom - top))
+
 
 def value_right(slot, widest_name, widest_value):
     """The value column's right edge: the mockup's, moved right only as far
