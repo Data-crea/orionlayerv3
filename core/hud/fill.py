@@ -83,6 +83,12 @@ GROUND = ("panel", "dense", "cell", "row_b", "header", "button",
 #: "Selected" stands at least this far off a cell (decision 71 as amended
 #: by work order 223: "'on' at least 12 L* off a field").
 ON_OFF_FIELD = 12.0
+#: The control's top keeps this much more room: both shades are whole
+#: numbers, so the drawn cell can land above its target and the drawn
+#: 'on' below its own (16 Oct 2026: at the control's top, yellows and
+#: cyans came out 0.13 L* short under the background of 16 Oct 2026;
+#: 1 L* of room costs the top 0.85 L* of panel brightness).
+ROUNDING_ROOM = 1.0
 
 _glass_on = None
 _colour = None
@@ -290,7 +296,7 @@ def y_max():
         return _fixed["y_max"]
     wf = _word_floor()
     by_words = wf / max(ratio(n) for n in GROUND)
-    by_on = _y_of_L(_L(wf) - ON_OFF_FIELD) / ratio("cell")
+    by_on = _y_of_L(_L(wf) - ON_OFF_FIELD - ROUNDING_ROOM) / ratio("cell")
     _fixed["y_max"] = min(by_words, by_on)
     return _fixed["y_max"]
 

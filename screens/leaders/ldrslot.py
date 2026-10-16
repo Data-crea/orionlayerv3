@@ -38,13 +38,26 @@ help's right click and the portrait's right click (`ldrinput`) all read it
 import pygame
 
 #: The text column's left edge: the name's and the status line's x (mockup
-#: 2: the name's ink from x 387 — (387 - 11) * 1.02 = 383 of 1079).
-TEXT_X = 0.355
-#: The skill icons' left edge (mockup 2: from x 396, a step in from the
-#: name).
-ICON_X = 0.364
-#: Between the portrait column and the text column.
-COLUMN_GAP = 0.015
+#: 2: the name's ink from x 387 — (387 - 11) * 1.02 = 383 of 1079 = 0.355),
+#: moved left by TEXT_SHIFT since 16 Oct 2026 (Data: half the space
+#: between the portrait and the words).
+TEXT_X = 0.312
+#: The space between a skill icon and its name: 8 px of a 206 px slot at
+#: 1920x1080 (Data's readability test of 16 Oct 2026; the icon's left
+#: edge follows from it — was ICON_X, mockup 2's x 396, 0.364 before the
+#: shift).
+ICON_GAP = 0.039
+#: 16 Oct 2026's shift of the whole text column: half the median space
+#: between a portrait's ink and the name, measured over all 67 portraits
+#: at 1920x1080 (93 px of a 1079 px slot — 0.086; half is 0.043). The
+#: portraits stay where they stood: their column keeps its right edge.
+TEXT_SHIFT = 0.043
+#: The portrait column's right edge (mockup 2's text column less its
+#: 0.015 gap). It no longer follows TEXT_X: the column's clear right part
+#: now lies under the name and the skill icons, short of the skills'
+#: words — the widest figure's ink (ship officer 52) reaches 4 px past
+#: TEXT_X at 1080p, at its foot, 6 px short of the icons.
+PORTRAIT_RIGHT = 0.340
 #: The name: cap tops at 0.084 of the box, capitals 0.086 tall (mockup 2:
 #: ink from y 73 in the slot from y 56 — 17 of 202 — and 17 px tall;
 #: work order 255's mockup had 0.110 and 0.094).
@@ -61,13 +74,18 @@ STATUS_GAP, STATUS_CAP = 0.063, 0.052
 COST_RIGHT, COST_TOP, COST_CAP = 0.037, 0.149, 0.066
 LABEL_TOP, LABEL_CAP = 0.260, 0.044
 #: The skills: the name from 0.410 of the width (mockup 2: x 445), the
-#: value column's right edge at 0.617 (x 664) — the compact block of work
+#: value column's right edge at 0.617 (x 664), both less TEXT_SHIFT since
+#: 16 Oct 2026 — the compact block of work
 #: order 278; the words' capitals 0.062 tall (mockup 2: 12 of 202), an
 #: icon 0.150 of the height at most (mockup 2's five lines: 22 px, which
 #: the closed-up pitch gives), the lines 0.156 apart, closed up to 0.124 at
 #: five (mockup 2: 25 px).
-SKILL_NAME_X, VALUE_RIGHT = 0.410, 0.617
-SKILL_CAP, ICON, PITCH = 0.062, 0.150, 0.156
+SKILL_NAME_X, VALUE_RIGHT = 0.367, 0.574
+#: Data's readability test of 16 Oct 2026: every icon 26 x 26 at
+#: 1920x1080 (26 of a 206 px slot), at every skill count but never taller
+#: than its line — was 0.150, closed to ICON_OF_PITCH of the line at five.
+#: The lines' pitch is kept.
+SKILL_CAP, ICON, PITCH = 0.062, 0.126, 0.156
 #: An icon takes at most this share of its line's pitch.
 ICON_OF_PITCH = 0.95
 #: Where the skill block may run: from under the status line to the
@@ -105,9 +123,9 @@ class Slot:
 
     @property
     def portrait_column(self):
-        """Where the portrait may stand: the panel's inner rect left of the
-        text column, its full height."""
-        right = self.x(TEXT_X - COLUMN_GAP)
+        """Where the portrait may stand: the panel's inner rect up to
+        PORTRAIT_RIGHT, its full height."""
+        right = self.x(PORTRAIT_RIGHT)
         return pygame.Rect(self.inner.x, self.inner.y,
                            max(1, right - self.inner.x), self.inner.h)
 
@@ -141,7 +159,9 @@ class Slot:
 
     @property
     def icon(self):
-        return self.px(min(ICON, self.pitch * ICON_OF_PITCH))
+        """ICON, never taller than its line (at five lines and 2560x1440
+        the rounding would make it 35 px in a 34 px line)."""
+        return min(self.px(ICON), max(1, int(round(self.box.h * self.pitch))))
 
     def skill_lines(self):
         """[(line Rect, icon Rect, text centre y)] top down: the line from
@@ -156,8 +176,23 @@ class Slot:
             line = pygame.Rect(self.text_x, int(round(cy - pitch / 2)),
                                self.values_right - self.text_x,
                                max(1, int(round(pitch))))
-            out.append((line, pygame.Rect(self.x(ICON_X), y0, s, s), cy))
+            out.append((line, pygame.Rect(self.skill_name_x
+                                          - self.px(ICON_GAP) - s, y0, s, s),
+                        cy))
         return out
+
+    def skill_block(self, pad):
+        """The skill list's shared ground: from the first icon's left to
+        the value column's right edge, the first line's top to the last
+        line's bottom, `pad` px round it (None without skills)."""
+        lines = self.skill_lines()
+        if not lines:
+            return None
+        top = min(min(l.top, i.top) for l, i, _cy in lines)
+        bottom = max(max(l.bottom, i.bottom) for l, i, _cy in lines)
+        left = min(i.left for _l, i, _cy in lines)
+        return pygame.Rect(left, top, self.values_right - left,
+                           bottom - top).inflate(2 * pad, 2 * pad)
 
     @property
     def skill_name_x(self):

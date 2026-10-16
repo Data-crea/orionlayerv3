@@ -27,6 +27,7 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
                   nearest-neighbour, so every pixel is the original's
                   and the art lines up with the fields over it
 """
+import numpy as np
 import pygame
 
 from core.hud import blocks as hud
@@ -294,11 +295,33 @@ def word_zones(screen, slot, row, art):
             zones.append((pygame.Rect(slot.text_x, top - c, surf.get_width(),
                                       surf.get_height()).inflate(2 * pad, 0),
                           ceil))
-    zones += [(r, normal) for r in skill_line_rects(screen, row)]
+    zones += skill_list_zones(slot, normal)
     if row.eta:
         p = portrait_rect(screen, row, art)
         h = slot.px(ldrslot.STATUS_CAP) * 2
         zones.append((pygame.Rect(p.x, p.centery - h, p.w, 2 * h), red))
+    return zones
+
+
+def skill_list_zones(slot, ceiling):
+    """The skill list's words' floor as ONE zone behind the whole list (the
+    shared ground's body, `skill_ground`), not a zone per line, whose right
+    edge runs out over the ground's own SKILL_GROUND_TAIL: strips whose
+    ceiling climbs to no limit, the picture's feather smoothing the steps
+    (Data's readability test of 16 Oct 2026 — a hard ceiling ending at
+    the values showed as an edge on a bright picture)."""
+    block = slot.skill_block(slot.px(SKILL_GROUND_PAD))
+    if block is None:
+        return []
+    zones = [(block, ceiling)]
+    tail = int(round(slot.box.w * SKILL_GROUND_TAIL))
+    n = SKILL_TAIL_STEPS
+    for k in range(1, n):
+        x0 = block.right + tail * (k - 1) // n
+        x1 = block.right + tail * k // n
+        t = float(_smooth(k / n))
+        zones.append((pygame.Rect(x0, block.y, x1 - x0, block.h),
+                      ceiling + (1.0 - ceiling) * t))
     return zones
 
 
@@ -640,12 +663,77 @@ def skill_icon(icon, size):
     return pygame.transform.scale_by(icon, step) if step > 1 else icon
 
 
+#: INVENTION `skill_ground` (Data's readability tests of 16 Oct 2026):
+#: one dark ground behind a row's whole skill list — icons, names and
+#: values — so they read on any slot picture, with no box to be seen; the
+#: original has none. Across the list it is a horizontal gradient: it
+#: starts at SKILL_GROUND_ALPHA at the left, eases to SKILL_GROUND_HOLD of
+#: that by the value column's right edge (still dark behind every value),
+#: then runs out to nothing over SKILL_GROUND_TAIL of the slot's width
+#: past it. Top, bottom and the left edge are soft over
+#: SKILL_GROUND_FEATHER of the slot's height; SKILL_GROUND_PAD of it lies
+#: round the list. Colour #080F17, Data's.
+SKILL_GROUND = (8, 15, 23)
+SKILL_GROUND_ALPHA = 0.70
+SKILL_GROUND_HOLD = 0.85
+SKILL_GROUND_TAIL = 0.12
+SKILL_GROUND_PAD = 0.030
+SKILL_GROUND_FEATHER = 0.050
+#: The words' floor runs out in this many strips over the same tail.
+SKILL_TAIL_STEPS = 12
+_ground_cache = {}
+
+
+def _smooth(t):
+    t = np.clip(t, 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
+def skill_ground(size, body_w, feather):
+    """The ground's surface at `size`: `body_w` px behind the list, the
+    rest the run-out to the right; soft `feather` px at the top, the
+    bottom and the left."""
+    w, h = int(size[0]), int(size[1])
+    body_w = max(1, min(w, int(body_w)))
+    key = (w, h, body_w, feather, SKILL_GROUND, SKILL_GROUND_ALPHA,
+           SKILL_GROUND_HOLD)
+    hit = _ground_cache.get(key)
+    if hit is not None:
+        return hit
+    f = max(1.0, float(feather))
+    xs = np.arange(w, dtype=np.float64)[:, None] + 0.5
+    ys = np.arange(h, dtype=np.float64)[None, :] + 0.5
+    hold = 1.0 - (1.0 - SKILL_GROUND_HOLD) * _smooth(xs / body_w)
+    tail = 1.0 - _smooth((xs - body_w) / max(1, w - body_w))
+    across = np.where(xs <= body_w, hold, SKILL_GROUND_HOLD * tail)
+    soft = _smooth(np.minimum(np.minimum(ys, h - ys), xs) / f)
+    alpha = np.round(255 * SKILL_GROUND_ALPHA * across * soft)
+    surf = pygame.Surface((w, h), pygame.SRCALPHA)
+    # LOOK EXCEPTION picture: Data's skill-list ground (#080F17, 16 Oct 2026) darkens the slot's picture behind the words, as ldrpics.dim does; not a panel, field or outline
+    surf.fill((*SKILL_GROUND, 0))
+    a = pygame.surfarray.pixels_alpha(surf)
+    a[:] = alpha.astype(np.uint8)
+    del a
+    if len(_ground_cache) > 16:
+        _ground_cache.clear()
+    _ground_cache[key] = surf
+    return surf
+
+
 def _draw_skills(surface, screen, row, art, inks, slot):
     """Icon, name, value per displayed skill (:3747-3837's words): one line
-    each, the value right-aligned in its own column, in `skill_inks`."""
+    each, the value right-aligned in its own column, in `skill_inks`, on
+    the list's shared ground (`skill_ground`)."""
     from . import ldrslot
     style = screen.style
     cap_px = slot.px(ldrslot.SKILL_CAP)
+    block = slot.skill_block(slot.px(SKILL_GROUND_PAD))
+    if block is not None:
+        body_w = block.w
+        block.w += int(round(slot.box.w * SKILL_GROUND_TAIL))
+        at = block.clip(slot.inner)
+        pic = skill_ground(block.size, body_w, slot.px(SKILL_GROUND_FEATHER))
+        surface.blit(pic, at, at.move(-block.x, -block.y))
     for (sid, name, value), (line, icon_r, cy) in zip(row.skills,
                                                        slot.skill_lines()):
         icon = art.skill_icon(sid) if art is not None and art.available \
