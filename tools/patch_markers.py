@@ -510,6 +510,13 @@ LOCAL_PATCHES = {
         "the engine does not send the colony screen's troop popup (open "
         "fix 98): a click on the marines or armour shows only the F12 "
         "notice"),
+    # Work order 295: on the fork's branch `orionlayer` only, 29047f2d.
+    "doc/ext_bitmap_line_short.patch": (
+        os.path.join("src", "game", "bitmap.cpp"),
+        "OrionLayer, open fix 99.",
+        "a tractor beam clipped to one pixel at the screen's edge stops the "
+        "engine with SIGFPE (open fix 99): the battle ends without a "
+        "message"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

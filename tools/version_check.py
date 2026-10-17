@@ -186,6 +186,7 @@ FIX_NUMBERS = {
     "doc/ext_council.patch": (96,),
     "doc/ext_planets_send.patch": (97,),
     "doc/ext_troop_popup.patch": (98,),
+    "doc/ext_bitmap_line_short.patch": (99,),
 }
 
 

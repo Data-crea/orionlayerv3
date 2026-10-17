@@ -1,0 +1,51 @@
+OrionLayer open fix 99 — a bitmap line too short for its picture
+=================================================================
+
+Work order 295 (Data, 17 October 2026: "repariere zuerst die Engine").
+orion2re on the fork's branch `orionlayer` (v2.0.0), on top of open fix
+98; commit 29047f2d. Not on `orionlayer-local`. Not under ORION2RE_EXT:
+it is a crash, with or without a client.
+
+bitmap::Draw_Bitmap_Line (bitmap.cpp, the 1.60 source :298-470) draws a
+picture stretched along a line: scale_factor = line_len * 100 / width
+(:336), later (rx - mid_x) * 100 / scale_factor (:458). A line shorter
+than a hundredth of the picture's width makes scale_factor 0 and the
+second an integer division by zero — SIGFPE in the game thread, the engine
+gone without a message. CMBTSPEC::Draw_Clipped_Tractor_Line clips a
+tractor beam to the screen first (cmbtspec.cpp:56): seen live in work
+order 295 (g293_diablo_fight, a 4K battle; core of 17 October 2026 20:17,
+PID 109391), the beam cut to (0,350)-(0,349), line_len 1, the tractor
+picture 129 px wide. The same code stands in the 1.60 source.
+
+The line returns before the render buffer is locked when width <= 0 or
+line_len * 100 / width == 0: nothing of such a line would be drawn (its
+picture scaled to 0 %). Every other line draws as before.
+
+commit 29047f2de146a51efb95f1f21ad40793e4f2c8ff
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Sat Oct 17 20:54:21 2026 +0200
+
+    OrionLayer Open Fix 99: a bitmap line shorter than a hundredth of its picture's width is not drawn (Draw_Bitmap_Line scaled the picture to 0 % and divided by it: SIGFPE, seen on a tractor beam clipped to one pixel at the screen's edge)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/game/bitmap.cpp b/src/game/bitmap.cpp
+index 59a553f5..a42bc7a3 100755
+--- a/src/game/bitmap.cpp
++++ b/src/game/bitmap.cpp
+@@ -306,6 +306,15 @@ namespace bitmap {
+             return;
+         }
+ 
++        // OrionLayer, open fix 99. A line shorter than a hundredth of its
++        // picture's width scales the picture to 0 % (scale_factor below) and
++        // the scaling divides by it: SIGFPE. A tractor beam clipped at the
++        // screen's edge to one pixel (Draw_Clipped_Tractor_Line) is such a
++        // line. Nothing of it would be drawn: return before locking.
++        if (img->width <= 0 || (line_len * 100) / img->width == 0) {
++            return;
++        }
++
+         video::g_screen_res_x = platform::Lock_Appropriate_Render_Buffer();
+         uint8_t* video_page = (uint8_t*)video::current_video_page;
+ 
