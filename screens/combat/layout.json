@@ -95,6 +95,7 @@
     "deviation_scan_words": "DEVIATION \u2014 the scan's labels are the game's KENTEXT lines where the player's file was extracted (core/kentext.py PANEL_MESSAGES), without their bullet and colon; OrionLayer's English otherwise, and its own words for what the original does not print (work order 290).",
     "hd_extension_scan_states": "HD EXTENSION \u2014 a part's state by colour and word: operational, damaged, destroyed; the original colours only a destroyed special system (cmbtdrw1.cpp:3939-3963) (work order 290).",
     "omission_scan_planet": "OMISSION \u2014 the planet's scan (unit 0) shows its record's values, not the original's ground-defence line and building shield names (cmbtdrw1.cpp:3578-3593, :3720-3726) (work order 290).",
-    "hd_extension_scan_transparency": "HD EXTENSION \u2014 a slider in the scan's foot lets the battle through the window's boxes, 0 to 85 %; the words, buttons and pictures stay whole; the player's setting scan_transparency, 0 by default (Data, work order 292)."
+    "hd_extension_scan_transparency": "HD EXTENSION \u2014 a slider in the scan's foot lets the battle's space (the star layers over the whole window; no unit, no legal box, no panel, not the shell's background picture) through the window's and the boxes' fills, 0 to 85 %; the edges, words, buttons and pictures stay whole; the player's setting scan_transparency, 0 by default (Data, work order 292).",
+    "hd_extension_scan_hover": "HD EXTENSION \u2014 in SCAN mode the systems window shows the unit under the pointer as the target box does, the unit only, no missile; the original's scan pointer (picture 13, combat1.cpp:1785-1790) shows nothing there (Data, 17 Oct 2026) \u2014 `cbinput._target`"
   }
 }

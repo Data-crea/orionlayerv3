@@ -79,14 +79,17 @@ class CombatInput:
         """What the systems window shows instead of the systems
         (`cbtarget`, TRANSCRIPTION `target_box`, work order 259): a missile
         under its hidden field, else a unit other than the acting one —
-        only in the player's own orders and outside SCAN and BOARD mode, the
-        pointer pictures 1 and 12 (combat1.cpp:1730-1834) — or None."""
+        only in the player's own orders and outside BOARD mode, the
+        pointer pictures 1 and 12 (combat1.cpp:1730-1834) — or None.
+        HD EXTENSION `scan_hover`: in SCAN mode too, the unit only — the
+        original's scan pointer (13, :1785-1790) shows nothing there, HD
+        shows the unit the click would scan (Data, 17 Oct 2026)."""
         if self._pointer is None or self._cam is None or self._board or \
-                self._pops.scan_mode or not self._own_turn() or \
+                not self._own_turn() or \
                 not self._cam.on_field(*self._pointer):
             return None
-        m = cbtarget.missile_under(self._play.ordnance, self._cam,
-                                   *self._pointer)
+        m = None if self._pops.scan_mode else cbtarget.missile_under(
+            self._play.ordnance, self._cam, *self._pointer)
         if m is not None:
             return ("missile", m, c,
                     (self._play.ordnance or {}).get("missiles", []),

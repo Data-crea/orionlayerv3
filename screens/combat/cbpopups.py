@@ -145,9 +145,9 @@ class Popups:
         self._sources = sources
         see = sources.transparency() if kind != "board" and \
             sources is not None else 0.0
-        # the battle as drawn, for the scan's transparency (a copy only
-        # while the slider is above 0)
-        under = surface.copy() if see > 0 else None
+        # the battle's space, for the scan's transparency (only while the
+        # slider is above 0)
+        under = sources.backdrop(surface.get_size()) if see > 0 else None
         surface.blit(msgbox.dimmed_base(surface, None, msgbox.DIM_ALPHA),
                      (0, 0))
         if kind == "board":

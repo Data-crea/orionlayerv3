@@ -8,9 +8,11 @@ systems on the right; the weapons across the foot — not COMBAT.LBX 5 with
 the game's own lines (cmbtdrw1.cpp:3223-4007). No weapon or special icons
 (Data: the game has none).
 
-HD EXTENSION `scan_transparency`: a slider in the foot lets the battle
-through the window's boxes, 0 to 85 %, the words stay whole; the player's
-setting `scan_transparency` (Data, work order 292).
+HD EXTENSION `scan_transparency`: a slider in the foot lets the battle's
+space — stars and nebula, no unit, no panel — through the window's and
+the boxes' fills, 0 to 85 %, the edges and the
+words stay whole; the player's setting `scan_transparency` (Data, work
+order 292).
 HD EXTENSION `scan_modes`: NORMAL shows what the original's scan shows;
 DETAILED, the default (Data), adds the four arcs, the weapons' and the
 special systems' hits, a weapon's original count and the crew's experience.
@@ -78,9 +80,10 @@ class View:
              transparency=0.0, under=None):
         """One frame of the scan of `model` (`cbscan.Model`); `pics` hands
         in the pictures (`ship`, `upright`, `portrait`, `skill_icon`).
-        `transparency` 0..`MAX_TRANSPARENCY` lets `under` — the battle as
-        drawn before the window — through the window's boxes, never
-        through its words (HD EXTENSION `scan_transparency`)."""
+        `transparency` 0..`MAX_TRANSPARENCY` lets `under` — the battle's
+        space, `Sources.backdrop` — through the window's and the boxes'
+        fills, never through their edges or words (HD EXTENSION
+        `scan_transparency`)."""
         self.rects = {}
         k = k_of(surface)
         w, h = surface.get_size()
@@ -110,6 +113,10 @@ class View:
             see = under.subsurface(win).copy()
             see.set_alpha(int(255 * min(MAX_TRANSPARENCY, transparency)))
             surface.blit(see, win)
+            # only the fills let the battle through: the edges again
+            hud.panel(surface, R(*WINDOW), scale, lit=True, filled=False)
+            for box in BOXES.values():
+                hud.panel(surface, R(*box), scale, dense=True, filled=False)
         text("SHIP SCAN", R(960, 40, 0, 0).topleft, 40, value, "midtop")
         for n, (key, word) in enumerate((("normal", "Normal"),
                                          ("detailed", "Detailed"))):
@@ -444,6 +451,7 @@ class Sources:
         self._words = None
         self._leader_art = None
         self._pictures = {}
+        self._backdrop = None
 
     def words(self):
         s = self._screen
@@ -489,6 +497,29 @@ class Sources:
         from core import usersettings
         if save and us.path != os.devnull:
             usersettings.save(us)
+
+    def backdrop(self, size):
+        """What the transparency lets through: the battle's space only —
+        the field's star layers over the whole window, the panel band's
+        part included; no unit, no legal box, no panel and not the shell's
+        background picture (Data, 17 Oct 2026). Kept while the camera, the
+        art and the nebula stay."""
+        s = self._screen
+        cam, c = s._cam, s._shown()
+        if cam is None:
+            return None
+        nebula = bool(c and c.get("in_nebula"))
+        key = (tuple(size), cam.scale, cam.ox, cam.oy, tuple(cam.area),
+               nebula, id(s._art))
+        if self._backdrop is None or self._backdrop[0] != key:
+            import types
+            from . import cbdraw
+            surf = pygame.Surface(size)
+            whole = types.SimpleNamespace(area=(0, 0, *size), scale=cam.scale,
+                                          ox=cam.ox, oy=cam.oy)
+            cbdraw.draw_background(surf, whole, s._art, nebula, s._cache)
+            self._backdrop = (key, surf)
+        return self._backdrop[1]
 
     def pictures(self, unit):
         """Made once per unit, picture and colours (P828: kept with what
