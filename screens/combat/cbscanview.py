@@ -58,9 +58,11 @@ DETAIL_TAG = (200, 120, 255)
 SLIDER = (1260, 1010, 420, 16)
 MAX_TRANSPARENCY = 0.85
 BAR_BACK = (40, 46, 60)
-#: The facing at which a unit's nose points up the screen (`cbart.
-#: stored_facing`: 0 is nose right, the quarter turn is 4 or 12).
-NOSE_UP = 12
+#: The facing at which a unit's nose points up the screen, so the shield
+#: ring's Front stands at its nose: 0 is nose right, 4 nose up, 12 nose
+#: down (`cbart.stored_facing`; rendered, work order 296 — 12 had stood
+#: here since work order 290 and drew the engines under "Front").
+NOSE_UP = 4
 #: The weapons table's columns, reference px from the box's left.
 WEAPON_COLUMNS = (("#", 176), ("Weapon", 210), ("Count", 560),
                   ("Arc", 700), ("Ammo", 820), ("Mods", 950),
