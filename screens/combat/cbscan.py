@@ -20,7 +20,10 @@ scan view (`cbscanview` draws them), in two modes the player switches:
              DEFAULT, for every unit, own and enemy, attacker and defender):
              the same record, finer — the four shield arcs, a weapon's
              original count and its hits, a special system's hits, the
-             crew's experience. The original's scan shows any living unit's
+             crew's experience. Laid out as Rocco asked (work order 294):
+             the arcs without the weakest-arc and shield-name lines, the
+             computer's name and bonus above the beam attack, a weapon
+             slot as "count/original" and the HP of the weapon in front. The original's scan shows any living unit's
              record to anyone (combat1.cpp:952, no owner test,
              `Tactical_Combat_View_Subject` cmbtdrw1.cpp:18-29), stores
              nothing and costs nothing; the computer reads every record
@@ -201,18 +204,17 @@ def weapon_hp(hits, per_unit):
     return hits // per, partial or None, per
 
 
-def weapon_hp_text(hits, per_unit):
-    """"2 x 25/25", "12/12 + 4/12", "4/12"; "" without hits per weapon."""
-    whole, partial, per = weapon_hp(hits, per_unit)
+def weapon_hp_text(count, hits, per_unit):
+    """The HP of the slot's weapon in front (Rocco's feedback, work order
+    294): the partial one's "1/3", else a whole one's "3/3", "0/3" when
+    none is left; "" without hits per weapon. The others are whole — a hit
+    takes from one weapon at a time (`weapon_hp`)."""
+    _whole, partial, per = weapon_hp(hits, per_unit)
     if per <= 0:
         return ""
-    parts = []
-    if whole:
-        parts.append(f"{per}/{per}" if whole == 1 else
-                     f"{whole} x {per}/{per}")
-    if partial is not None:
-        parts.append(f"{partial}/{per}")
-    return " + ".join(parts) or f"0/{per}"
+    if count <= 0:
+        return f"0/{per}"
+    return f"{per if partial is None else partial}/{per}"
 
 
 class Words:
@@ -374,9 +376,9 @@ def weapon_rows(unit, words, unit_hits=None, hits_per_unit=None):
             state = DAMAGED
         else:
             state = OK
-        hp = f"0/{int(unit['weapon_total_hits'][k])}" if count <= 0 \
-            else weapon_hp_text(hits, hits_per[k])
+        hp = weapon_hp_text(count, hits, hits_per[k])
         rows.append({"slot": k, "id": wid, "count": count, "whole": whole,
+                     "count_of": f"{max(0, count)}/{whole}",
                      "name": name, "arc": arc_cell(w, words),
                      "ammo": ammo_cell(w, words), "mods": mods_cell(w, words),
                      "hp": hp, "state": state,
@@ -478,6 +480,8 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         computer=hits("computer_current_hits", "computer_max_hits"),
         computer_name=words.part("computers", computer),
         computer_line=comp_line,
+        computer_bonus=signed(bonus)
+        if int(unit["computer_current_hits"]) > 0 else comp_line,
         shield_name=words.part("shields", int(unit["shield_type"]))
         if 0 <= int(unit["shield_type"]) < 10 else None,
         shield_system=hits("shield_current_hits", "shield_max_hits")

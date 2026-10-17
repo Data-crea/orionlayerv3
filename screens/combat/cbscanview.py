@@ -245,7 +245,9 @@ class View:
             row(r, y + px(68), m.words["marines"], str(m.marines))
         # ── D the shields ──────────────────────────────────────
         r = R(*BOXES["shields"])
-        c = (r.centerx, r.y + px(186))
+        # Detailed has no lines under the ring (work order 294): the ring
+        # and its four arcs stand in the middle of the box below its title
+        c = (r.centerx, r.y + px(226 if detailed else 186))
         img = fit(pics.upright, pygame.Rect(0, 0, px(130), px(130)))
         if img is not None:
             surface.blit(img, img.get_rect(center=c))
@@ -274,22 +276,25 @@ class View:
                      (lr.centerx, lr.bottom), 24, rgb, "midtop")
         if detailed:
             tag((c[0] + px(64), c[1] - rad - px(42)))
-            if m.shield_max > 0:
-                text("All arcs share one maximum",
-                     (r.right - px(16), r.y + px(14)), 16, label, "topright")
-        y = r.bottom - px(68)
-        row(r, y, "Weakest arc", m.shield_line, size=22)
-        if m.shield_name:
-            row(r, y + px(30), "Shield", m.shield_name, size=22)
+        else:
+            y = r.bottom - px(68)
+            row(r, y, "Weakest arc", m.shield_line, size=22)
+            if m.shield_name:
+                row(r, y + px(30), "Shield", m.shield_name, size=22)
         # ── E the combat values ────────────────────────────────
         r = R(*BOXES["values"])
         y = r.y + px(44)
         evade = f"{m.evasion}%"
-        for lab, val in ((m.words["beam_attack"], cbscan.signed(m.attack)),
-                         (m.words["beam_defense"], cbscan.signed(m.defense)),
-                         (m.words["missile_evasion"], evade),
-                         ("Combat speed", f"{m.speed[0]} / {m.speed[1]}"),
-                         (m.words["computer"], m.computer_line)):
+        values = [(m.words["beam_attack"], cbscan.signed(m.attack)),
+                  (m.words["beam_defense"], cbscan.signed(m.defense)),
+                  (m.words["missile_evasion"], evade),
+                  ("Combat speed", f"{m.speed[0]} / {m.speed[1]}")]
+        if detailed:        # the computer by its name, first (work order 294)
+            values.insert(0, (m.computer_name or m.words["computer"],
+                              m.computer_bonus))
+        else:
+            values.append((m.words["computer"], m.computer_line))
+        for lab, val in values:
             row(r, y, lab, val)
             y += px(32)
         # ── F hull and systems ─────────────────────────────────
@@ -361,15 +366,16 @@ class View:
         for n, wr in enumerate(rows):
             rgb = STATE_RGB[wr["state"]] if wr["state"] != cbscan.OK \
                 else value
-            count = str(wr["count"]) if not detailed or not wr["lost"] \
-                else f"{wr['count']} of {wr['whole']}"
+            # Detailed: "count/original" and the HP of the weapon in front,
+            # HP and State in the state's colour (work order 294)
+            count = wr["count_of"] if detailed else str(wr["count"])
             cells = {"#": str(n + 1), "Weapon": wr["name"], "Count": count,
                      "Arc": wr["arc"], "Ammo": wr["ammo"],
                      "Mods": wr["mods"], "HP": wr["hp"],
-                     "State": wr["state"] if wr["state"] != cbscan.DAMAGED
-                     or not wr["lost"] else f"{wr['lost']} destroyed"}
+                     "State": wr["state"]}
             for name, x in cols:
-                ink = rgb if name in ("Count", "State") else value
+                ink = STATE_RGB[wr["state"]] if name in ("HP", "State") \
+                    else rgb if name == "Count" else value
                 text(cells[name], (r.x + px(x), y), size, ink)
             y += step
         if not rows:
