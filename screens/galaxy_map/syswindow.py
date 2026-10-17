@@ -52,6 +52,9 @@ with the pennants"; work order 284), both windows:
                  VIEW_RING`); the planets painted; the pennants kept in
                  the owners' colours. The window larger than the
                  original's (boxes.json, the "system_*" group, x 1.45).
+                 Since work order 289 the picture held back and the rings
+                 at their alpha as in Leaders (INVENTION `view_muted`,
+                 `ldrpics.mute`, `ldrsystem.ring_colours`).
                  Without the picture, the look below.
 
 Until then (work order 230 C, Data's decision 3, both windows), and still
@@ -366,10 +369,13 @@ def _view_picture(screen, surface, view, model, state):
     system's look (`ldrsystem`): the rings centred on the picture's painted
     star, which stands for the sun, in the mockup's cyan; the planets on
     them where the engine put them, as before; the pennants in the owners'
-    colours kept. Returns the planets drawn, or None without the picture
-    (the window as before: black with stars, the original's sun and blues)."""
+    colours kept. The picture held back and the rings at their alpha, as the
+    Leaders view's (INVENTION `view_muted`, work order 289). Returns the
+    planets drawn, or None without the picture (the window as before: black
+    with stars, the original's sun and blues)."""
     from screens.leaders import ldrpics, ldrsystem
-    pic = ldrpics.boxed(ldrsystem.PLACE, view.size, screen.layout.scale)
+    pic = ldrpics.boxed(ldrsystem.PLACE, view.size, screen.layout.scale,
+                        muted=True)
     if pic is None:
         return None
     surface.blit(pic, view.topleft)
@@ -385,7 +391,7 @@ def _view_picture(screen, surface, view, model, state):
         surface, view, model,
         lambda p, centre, side: _planet_picture(screen, surface, p, centre,
                                                 side),
-        at=(s, cx, cy), colours=ldrsystem.VIEW_RING)
+        at=(s, cx, cy), colours=ldrsystem.ring_colours())
     markers(surface, state if state is not None else
             getattr(screen, "_state", None), drawn, s)
     return drawn

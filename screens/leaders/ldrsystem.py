@@ -40,7 +40,7 @@ PLACE = "view"
 VIEW_RING = ((80, 190, 225), None)
 #: The rings' opacity on the Leaders view (Data, work order 286: a little
 #: more discreet on the held-back picture, `ldrpics.mute`); the galaxy
-#: map's system window keeps VIEW_RING opaque.
+#: map's system window draws them the same (work order 289).
 VIEW_RING_ALPHA = 0.60
 #: The colony brackets: the mockup's gold, each arm a quarter of the
 #: planet's side, `BRACKET_GAP` of the side clear of it.

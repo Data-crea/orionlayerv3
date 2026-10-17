@@ -268,8 +268,9 @@ def sun_centre(place, size):
 #: structures; hue kept). The painted star is kept as painted: untouched
 #: within SUN_KEEP of its disc's radius, held back fully from SUN_FADE
 #: (its corona's warm glow reaches about 2.1 radii, measured on Data's
-#: picture of 16 Oct 2026). Only the Leaders view box: the galaxy map's
-#: system window shares the picture and is not part of the order.
+#: picture of 16 Oct 2026). The galaxy map's system window shares the
+#: picture and takes it held back the same (work order 289, Data: the
+#: window like the Leaders star system).
 VIEW_BRIGHTNESS = 0.55
 VIEW_SATURATION = 0.62
 VIEW_HIGHLIGHT_KNEE = 0.22
