@@ -8,6 +8,9 @@ systems on the right; the weapons across the foot — not COMBAT.LBX 5 with
 the game's own lines (cmbtdrw1.cpp:3223-4007). No weapon or special icons
 (Data: the game has none).
 
+HD EXTENSION `scan_transparency`: a slider in the foot lets the battle
+through the window's boxes, 0 to 85 %, the words stay whole; the player's
+setting `scan_transparency` (Data, work order 292).
 HD EXTENSION `scan_modes`: NORMAL shows what the original's scan shows;
 DETAILED, the default (Data), adds the four arcs, the weapons' and the
 special systems' hits, a weapon's original count and the crew's experience.
@@ -33,7 +36,10 @@ BOXES = {
     "ship": (80, 114, 520, 220), "officer": (80, 348, 520, 250),
     "crew": (80, 612, 520, 150),
     "shields": (614, 114, 600, 420), "values": (614, 548, 600, 214),
-    "hull": (1228, 114, 612, 230), "specials": (1228, 358, 612, 404),
+    # a ship has 8 special systems at most (the designer's `special_devices
+    # [8]`, design.cpp:94-101): their box holds 8 rows, the rest is the
+    # hull's (Data, work order 292)
+    "hull": (1228, 114, 612, 310), "specials": (1228, 438, 612, 324),
     "weapons": (80, 774, 1760, 206),
 }
 TITLES = {"ship": "SHIP", "officer": "OFFICER", "crew": "CREW",
@@ -45,6 +51,10 @@ TITLES = {"ship": "SHIP", "officer": "OFFICER", "crew": "CREW",
 STATE_RGB = {cbscan.OK: (80, 210, 110), cbscan.DAMAGED: (240, 170, 60),
              cbscan.DESTROYED: (230, 70, 60)}
 DETAIL_TAG = (200, 120, 255)
+#: The foot's transparency slider, reference px, and its range: 0 is the
+#: boxes as every HD window has them, at most 85 % of the battle through.
+SLIDER = (1260, 1010, 420, 16)
+MAX_TRANSPARENCY = 0.85
 BAR_BACK = (40, 46, 60)
 #: The facing at which a unit's nose points up the screen (`cbart.
 #: stored_facing`: 0 is nose right, the quarter turn is 4 or 12).
@@ -64,9 +74,13 @@ class View:
     def __init__(self):
         self.rects = {}
 
-    def draw(self, surface, style, scale, model, detailed, turn, pics):
+    def draw(self, surface, style, scale, model, detailed, turn, pics,
+             transparency=0.0, under=None):
         """One frame of the scan of `model` (`cbscan.Model`); `pics` hands
-        in the pictures (`ship`, `upright`, `portrait`, `skill_icon`)."""
+        in the pictures (`ship`, `upright`, `portrait`, `skill_icon`).
+        `transparency` 0..`MAX_TRANSPARENCY` lets `under` — the battle as
+        drawn before the window — through the window's boxes, never
+        through its words (HD EXTENSION `scan_transparency`)."""
         self.rects = {}
         k = k_of(surface)
         w, h = surface.get_size()
@@ -89,6 +103,13 @@ class View:
         label, value = hudtext.colour("label"), hudtext.colour("value")
         head = hudtext.colour("sub")
         hud.popup(surface, R(*WINDOW), scale)
+        for key, box in BOXES.items():
+            hud.panel(surface, R(*box), scale, dense=True)
+        if transparency > 0 and under is not None:
+            win = R(*WINDOW).clip(surface.get_rect())
+            see = under.subsurface(win).copy()
+            see.set_alpha(int(255 * min(MAX_TRANSPARENCY, transparency)))
+            surface.blit(see, win)
         text("SHIP SCAN", R(960, 40, 0, 0).topleft, 40, value, "midtop")
         for n, (key, word) in enumerate((("normal", "Normal"),
                                          ("detailed", "Detailed"))):
@@ -106,7 +127,6 @@ class View:
         self.rects["close_x"] = x
         for key, box in BOXES.items():
             r = R(*box)
-            hud.panel(surface, r, scale, dense=True)
             text(TITLES[key], (r.x + px(14), r.y + px(8)), 24, head)
 
         def tag(at):
@@ -291,7 +311,7 @@ class View:
                 frac, rgb)
             text(f"{cur} / {most}" if most is not None else str(cur),
                  (r.right - px(16), y), 22, value, "topright")
-            y += px(34)
+            y += px(48)
         # ── G the special systems ──────────────────────────────
         r = R(*BOXES["specials"])
         rows = m.specials
@@ -361,10 +381,23 @@ class View:
             pygame.draw.circle(surface, rgb, (at[0] + px(6), at[1] + px(11)),
                                px(6))
             text(state, (at[0] + px(22), at[1]), 18, label)
+        # the transparency slider (HD EXTENSION `scan_transparency`)
+        text("Transparency", R(1110, 1004, 0, 0).topleft, 18, label)
+        bar = R(*SLIDER)
+        hud.field(surface, bar, scale)
+        t = max(0.0, min(MAX_TRANSPARENCY, transparency))
+        knob = pygame.Rect(0, 0, max(4, px(10)), bar.h + px(8))
+        knob.center = (bar.x + int(bar.w * t / MAX_TRANSPARENCY), bar.centery)
+        # LOOK EXCEPTION marking: the slider's knob, in the value colour
+        pygame.draw.rect(surface, value[:3], knob, border_radius=px(3))
+        text(f"{round(t * 100)}%", (bar.right + px(14), R(0, 1004, 0, 0).y),
+             18, value)
+        self.rects["transparency"] = bar.inflate(0, px(16))
 
 
 #: The player's setting (`core.usersettings.DEFAULTS["scan_view"]`).
 SETTING, DETAILED, NORMAL = "scan_view", "detailed", "normal"
+TRANSPARENCY = "scan_transparency"
 
 
 class Pictures:
@@ -440,6 +473,21 @@ class Sources:
         import os
         from core import usersettings
         if us.path != os.devnull:          # a tool's or a check's settings
+            usersettings.save(us)
+
+    def transparency(self):
+        us = self._settings()
+        v = us.get(TRANSPARENCY) if us is not None else None
+        return float(v or 0.0)
+
+    def set_transparency(self, value, save=False):
+        us = self._settings()
+        if us is None:
+            return
+        us.set(TRANSPARENCY, round(max(0.0, min(MAX_TRANSPARENCY, value)), 3))
+        import os
+        from core import usersettings
+        if save and us.path != os.devnull:
             usersettings.save(us)
 
     def pictures(self, unit):

@@ -114,6 +114,8 @@ class Popups:
         self._pending = None         # (marines before, time) after an arrow
         self._drag = None            # (low, high, value) while the bar is held
         self.view = cbscanview.View()
+        self._sources = None         # the screen's, for the slider's drag
+        self._slide = False          # the transparency slider is held
 
     def reset(self):
         self.scan_mode, self.local_unit, self._pending = False, None, None
@@ -140,6 +142,12 @@ class Popups:
             kind = None
         if kind is None:
             return
+        self._sources = sources
+        see = sources.transparency() if kind != "board" and \
+            sources is not None else 0.0
+        # the battle as drawn, for the scan's transparency (a copy only
+        # while the slider is above 0)
+        under = surface.copy() if see > 0 else None
         surface.blit(msgbox.dimmed_base(surface, None, msgbox.DIM_ALPHA),
                      (0, 0))
         if kind == "board":
@@ -152,7 +160,7 @@ class Popups:
                 model = cbscan.build_for(i, shown, state, sources.words())
                 self.view.draw(surface, style, scale, model,
                                sources.detailed(), int(shown.get("turn", 0)) + 1,
-                               sources.pictures(unit))
+                               sources.pictures(unit), see, under)
                 self.rects.update(self.view.rects)
 
     @staticmethod
@@ -230,6 +238,12 @@ class Popups:
             if sources is not None:             # HD EXTENSION `scan_modes`
                 sources.set_detailed(mode == "detailed")
             return True
+        bar = self.rects.get("transparency")
+        if kind in ("local", "scan") and bar is not None and \
+                bar.collidepoint(x, y):         # HD EXTENSION `scan_transparency`
+            self._slide = True
+            self.motion(x)
+            return True
         if kind == "local":
             self.local_unit = None          # any click closes it (:221)
             return True
@@ -266,7 +280,13 @@ class Popups:
         return SLIDER[0] + (x - bar.x) * SLIDER[2] / max(1, bar.w)
 
     def motion(self, x):
-        """The bar under the pointer shows the choice its place gives."""
+        """The bar under the pointer shows the choice its place gives; the
+        scan's transparency follows a held slider."""
+        if self._slide and self._sources is not None and \
+                "transparency" in self.rects:
+            bar = self.rects["transparency"]
+            self._sources.set_transparency(
+                cbscanview.MAX_TRANSPARENCY * (x - bar.x) / max(1, bar.w))
         if self._drag and "bar" in self.rects:
             low, high, _v = self._drag
             self._drag = (low, high, slider_value(int(self._native_x(x)),
@@ -275,6 +295,12 @@ class Popups:
     def release(self, state, client):
         """Letting go of the bar clicks the scroll field at the place that
         gives the shown choice; the wire's choice is shown after."""
+        if self._slide:
+            self._slide = False
+            if self._sources is not None:       # kept when let go
+                self._sources.set_transparency(
+                    self._sources.transparency(), save=True)
+            return
         drag, self._drag = self._drag, None
         cp = engine_popup(state)
         if not drag or drag[2] is None or cp is None or \
@@ -290,6 +316,7 @@ class Popups:
         """The bar let go while HD holds its frame or shows the game's
         picture (work order 226 A, D13): the drag ends, nothing is sent."""
         self._drag = None
+        self._slide = False
 
     def key(self, key, state, client):
         """ESC: the board popup's own hotkey; closes HD's scan view."""

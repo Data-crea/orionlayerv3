@@ -139,6 +139,9 @@ DEFAULTS = {
     # The ship scan's mode (work order 290, `screens/combat/cbscanview`):
     # "detailed" (Data's default) or "normal", the original's rows.
     "scan_view": "detailed",
+    # How much of the battle shows through the scan's boxes, 0 .. 0.85
+    # (work order 292): 0 is every HD window's look.
+    "scan_transparency": 0.0,
 }
 
 
