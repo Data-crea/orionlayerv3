@@ -28,11 +28,13 @@ that choice — open fix 3 keeps an injected click's pointer until the game
 has read it — and the choice on the wire is the one shown after.
 
 THE SCAN VIEW (66) — `Detailed_View_Ship_` / `Combat_Draw_View_Ship_`
-(cmbtdrw1.cpp:156-247, :3114-…): one unit, large, its combat bonuses, crew,
-marines, drive, armour, structure, speed, computer and weapons; any click
-closes it. TRANSCRIPTION `scan_contents`: WHAT it shows and when it closes; DEVIATION
-`scan_view` (with `hud_panel`): a HUD popup in OrionLayer's words over the
-battle, not COMBAT.LBX 5. HD's SCAN button opens it LOCALLY and sends
+(cmbtdrw1.cpp:156-247, :3223-4007): one unit, large, its record; any click
+closes it. Since work order 290 `cbscan` says what it shows (TRANSCRIPTION
+`scan_contents` in the Normal mode, HD EXTENSION `scan_detailed` the
+default) and `cbscanview` draws it (DEVIATION `scan_view`); a click on its
+Normal / Detailed switch changes the mode and closes nothing. A unit that
+dies while HD's view of it is open closes it: the original scans only a
+living unit (combat1.cpp:952). HD's SCAN button opens it LOCALLY and sends
 nothing — the original's scan changes nothing in the game (it reads
 `_combat_data[i]` into a copy, cmbtdrw1.cpp:1550) — HD EXTENSION
 `scan_local`; when the ENGINE is in its scan view (only reachable under
@@ -48,6 +50,7 @@ from core import msgbox
 from core import textfit
 from core.hud import blocks as hud
 from core.hud import text as hudtext
+from . import cbscan, cbscanview
 
 #: Board_Popup_'s four buttons, by their native top-left (cmbtdrw1.cpp:1603-1607).
 BOARD_FIELDS = {"less": (0xA4, 0xFD), "more": (0x196, 0xFD),
@@ -110,6 +113,7 @@ class Popups:
         self.rects = {}
         self._pending = None         # (marines before, time) after an arrow
         self._drag = None            # (low, high, value) while the bar is held
+        self.view = cbscanview.View()
 
     def reset(self):
         self.scan_mode, self.local_unit, self._pending = False, None, None
@@ -123,11 +127,17 @@ class Popups:
         return "local" if self.local_unit is not None else None
 
     # ── drawing ────────────────────────────────────────────────────
-    def draw(self, surface, style, scale, state, shown, names):
+    def draw(self, surface, style, scale, state, shown, sources):
         """Over the battle as it is drawn this frame, dimmed as every box
-        (`msgbox.dimmed_base`, work order 196 A: the screen stays visible)."""
+        (`msgbox.dimmed_base`, work order 196 A: the screen stays visible).
+        `sources` is the screen's `cbscanview.Sources`."""
         kind = self.showing(state)
         self.rects = {}
+        if kind == "local" and shown and not (
+                0 <= self.local_unit < len(shown["units"]) and
+                int(shown["units"][self.local_unit]["unit_status"]) == 0):
+            self.local_unit = None              # it died: nothing to scan
+            kind = None
         if kind is None:
             return
         surface.blit(msgbox.dimmed_base(surface, None, msgbox.DIM_ALPHA),
@@ -138,8 +148,12 @@ class Popups:
             cp = engine_popup(state)
             i = cp["unit"] if kind == "scan" else self.local_unit
             if shown and 0 <= i < len(shown["units"]):
-                self._draw_scan(surface, style, scale, shown["units"][i],
-                                names)
+                unit = shown["units"][i]
+                model = cbscan.build_for(i, shown, state, sources.words())
+                self.view.draw(surface, style, scale, model,
+                               sources.detailed(), int(shown.get("turn", 0)) + 1,
+                               sources.pictures(unit))
+                self.rects.update(self.view.rects)
 
     @staticmethod
     def _k(surface):
@@ -203,66 +217,19 @@ class Popups:
                              style_renderer=style)
             self.rects[key] = r
 
-    def _draw_scan(self, surface, style, scale, unit, names):
-        k = self._k(surface)
-        size, small = max(10, int(30 * k)), max(9, int(22 * k))
-        n = max(12, sum(1 for w in unit["weapons"]
-                        if w["count"] > 0 and w["weapon_id"] > 0))
-        inner, k = self._box(surface, scale, 900, size + int(20 * k) +
-                             n * (small + int(10 * k)))
-        name = style.render_text(unit["name"], size,
-                                 hudtext.colour("value")[:3])
-        surface.blit(name, name.get_rect(midtop=(inner.centerx, inner.y)))
-        y = inner.y + size + int(20 * k)
-        sign = lambda v: f"{v:+d}"          # Build_Signed_Bonus_String
-        rows = [("Beam attack", sign(unit["tac_val_attack"])),
-                ("Beam defense", sign(unit["tac_val_defense"])),
-                ("Missile evasion", sign(unit["tac_val_evade"])),
-                ("Crew level", str(unit["crew_quality"])),
-                ("Marines", str(unit["marine_count"])
-                 if unit["marine_count"] != 255 else None),
-                ("Drive", f"{unit['drive_current_hits']} / "
-                          f"{unit['drive_max_hits']}"),
-                ("Computer", f"{unit['computer_current_hits']} / "
-                             f"{unit['computer_max_hits']}"),
-                ("Structure", f"{unit['structure_max'] - unit['structure_damage']}"
-                              f" / {unit['structure_max']}"),
-                ("Armor", str(unit["armor_remaining"])),
-                ("Shields", f"{max(unit['shield_arc_current'])} / "
-                            f"{unit['shield_arc_max']}"),
-                ("Combat speed", str(unit["current_speed"])),
-                ("Captured", "" if unit["is_captured"] == 1 else None)]
-        half = inner.w // 2 - int(20 * k)
-        for label, value in rows:
-            if value is None:
-                continue
-            for x, text, role, align in (
-                    (inner.x, label, "label", "left"),
-                    (inner.x, value, "value", "right")):
-                surf = style.render_text(text, small,
-                                         hudtext.colour(role)[:3])
-                hudtext.blit(surface, surf, pygame.Rect(x, y, half,
-                                                        small + 4),
-                             align=align)
-            y += small + int(10 * k)
-        y = inner.y + size + int(20 * k)
-        wx = inner.x + half + int(40 * k)
-        for w in unit["weapons"]:
-            if w["count"] <= 0 or w["weapon_id"] <= 0:
-                continue
-            word = names(w["weapon_id"]) or f"weapon {w['weapon_id']}"
-            surf = style.render_text(f"{w['count']}  {word}", small,
-                                     hudtext.colour("label")[:3])
-            hudtext.blit(surface, surf, pygame.Rect(wx, y, half, small + 4),
-                         align="left")
-            y += small + int(10 * k)
-
     # ── input ──────────────────────────────────────────────────────
-    def click(self, x, y, state, client):
+    def click(self, x, y, state, client, sources=None):
         """True when a popup took the click."""
         kind = self.showing(state)
         if kind is None:
             return False
+        mode = next((key for key in ("normal", "detailed")
+                     if key in self.rects and self.rects[key].collidepoint(x, y)),
+                    None)
+        if kind in ("local", "scan") and mode is not None:
+            if sources is not None:             # HD EXTENSION `scan_modes`
+                sources.set_detailed(mode == "detailed")
+            return True
         if kind == "local":
             self.local_unit = None          # any click closes it (:221)
             return True

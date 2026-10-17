@@ -141,7 +141,7 @@ class CombatInput:
             return None
         if self._state is None or getattr(self._state, "combat", None) is None \
                 or self._pops.click(screen_x, screen_y, self._state,
-                                    self.app.client) or \
+                                    self.app.client, self._scan) or \
                 self._opts.click(screen_x, screen_y, self._state,
                                  self.app.client):
             return None

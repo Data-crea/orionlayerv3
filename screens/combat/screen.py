@@ -34,7 +34,7 @@ from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
 from . import (cbart, cbcloak, cbdraw, cblog, cbmap, cbopts, cbpanel,
-               cbplay, cbpopups, cbview)
+               cbplay, cbpopups, cbscanview, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -104,6 +104,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._play._art = self._art
         self._fades = cbcloak.Fades()         # work order 210 C1
         self._pops = cbpopups.Popups()
+        self._scan = cbscanview.Sources(self)   # work order 290
         self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
         self._log = cblog.BattleLog()         # LOG and its window (267)
         self._logwin = cblog.LogWindow()
@@ -301,7 +302,7 @@ class CombatScreen(CombatInput, ScreenBase):
         surface.set_clip(clip)
         live = {k for k, _w, hk in cbpanel.BUTTONS
                 if self._own_turn() and (k != "options" or cbopts.options(
-                    self._state)) and (k in ("board", "scan") or field_by_hotkey(
+                    self._state)) and (k == "board" or field_by_hotkey(
                     getattr(self._state, "fields", None), hk))}
         pic = cbdraw.unit_picture(self._art, self._play.colours, unit, 0)
         self._panel_unit = unit
@@ -322,7 +323,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._opts.draw(surface, self.style, self.layout.scale, self._state,
                         band, self._panel.buttons)
         self._pops.draw(surface, self.style, self.layout.scale, self._state,
-                        c, self._weapon_name)
+                        c, self._scan)
         self._logwin.draw(surface, self.style, self.layout.scale, area,
                           self._log, self._play.colours)
         self.render_help(surface)               # `cbhelp`, work order 200

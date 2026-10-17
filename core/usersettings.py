@@ -136,6 +136,9 @@ DEFAULTS = {
     "livery_core": "strong",
     "livery_second": None,
     "livery_strength": 1.0,
+    # The ship scan's mode (work order 290, `screens/combat/cbscanview`):
+    # "detailed" (Data's default) or "normal", the original's rows.
+    "scan_view": "detailed",
 }
 
 

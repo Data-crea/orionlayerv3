@@ -43,7 +43,17 @@ PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
                   # cmbtmis.cpp:1395-1436), work order 259: "Target:" run
                   # into the name, the quantity's words with their space
                   "target": 52, "missile": 53, "torpedo": 54,
-                  "missiles": 107, "torpedoes": 108}
+                  "missiles": 107, "torpedoes": 108,
+                  # the ship scan (`Combat_Draw_View_Ship_`, cmbtdrw1.cpp:
+                  # 3223-4007), work order 290
+                  "no_specials": 7, "bonuses": 8, "beam_attack": 9,
+                  "beam_defense": 10, "missile_evasion": 11, "marines": 12,
+                  "captured": 13, "parsecs": 15, "combat_speed": 17,
+                  "computer_bonus": 22, "no_bonus": 23, "weapons": 25,
+                  "ammo": 26, "mods": 27, "ready": 28, "none": 29,
+                  "specials": 30, "crew_green": 31, "crew_regular": 32,
+                  "crew_veteran": 33, "crew_elite": 34, "crew_ultra": 35,
+                  "structure_of": 0x59, "armor_of": 0x5B}
 
 #: The bits in the order the original tests them, 0x10 last.
 ARC_ORDER = (0x01, 0x02, 0x04, 0x08, 0x10)
