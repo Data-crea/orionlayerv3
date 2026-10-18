@@ -563,6 +563,9 @@ class App:
         if shown or frameguard.suspended(self) is not None or \
                 self._handover.holding or not self.dispatcher.active:
             self._draw_gate.forget()     # another picture: redraw after it
+            # a screen's own pointer (the battle's move arrow, work order
+            # 303) never outlives the frames that screen draws
+            cursor_gfx.clear_override()
         if self._frame_trace is not None:
             frametrace.record_app_frame(self, shown)
         if shown:

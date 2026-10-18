@@ -231,20 +231,24 @@ class CombatScreen(CombatInput, ScreenBase):
         planet (unit 0); with moves left, or with none while a working
         Sub-Space Teleporter or Phase Shifter is unused this turn
         (`Used_Teleporter`, bit 0 of `combat_status_flags`,
-        cmbtfir2.cpp:399-405): then the engine's bitmap holds the
-        teleporter's range (combat1.cpp:2834-2843)."""
+        cmbtfir2.cpp:399-401): then the engine's bitmap holds the
+        teleporter's range (combat1.cpp:2835-2843, :2908-2921) — empty
+        with a Phase Shifter, alone or beside the teleporter, so the gate
+        opens and nothing is drawn, as in the original."""
         if not (self._own_turn() and c["cur_ship"] != 0 and
                 cbopts.flag(self._state, "legal_moves")):
             return False
         if unit["movement_left"] > 0:
             return True
 
+        fitted = unit.get("special_device_flags") or [0] * 5
+        damaged = unit.get("special_device_damage_flags") or [0] * 5
+
         def works(bit):
             mask, byte = 1 << (bit & 7), bit >> 3
-            return bool(unit["special_device_flags"][byte] & mask) and \
-                not unit["special_device_damage_flags"][byte] & mask
+            return bool(fitted[byte] & mask) and not damaged[byte] & mask
         return (works(TELEPORTER) or works(PHASE_SHIFTER)) and \
-            not int(unit["combat_status_flags"]) & 1
+            not int(unit.get("combat_status_flags") or 0) & 1
 
     def _ready(self):
         if self._sent and time.monotonic() - self._sent[1] > ANSWER_WAIT:

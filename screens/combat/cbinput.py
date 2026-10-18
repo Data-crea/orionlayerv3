@@ -117,8 +117,10 @@ class CombatInput:
         if self._opts.up(self._state) or self._pops.showing(self._state):
             return None
         c = self._shown()
-        if self._computer(c):
-            return None
+        if self._computer(c) or not self._ready() or cbdraw.missile_at(
+                self._play.ordnance, self._cam, *self._pointer,
+                self._me()) is not None:
+            return None             # a click there fires, or is not sent
         cell = self._cam.cell_at(*self._pointer)
         if cell is None or not cb.legal(c["legal"], *cell) or \
                 self._unit_at(cell) is not None:

@@ -31,7 +31,7 @@ CELL = cbview.CELL
 #: ship may move to as a light tint the stars show through and a lit edge
 #: round the reachable area, the same in a nebula — readable on HD
 #: graphics; the original fills them solid in 0x81, black in a nebula, under
-#: its near star layers (`Draw_Legal_Boxes`, cmbtdrw1.cpp:326-376, :364),
+#: its mid and near star layers (`Draw_Legal_Boxes`, cmbtdrw1.cpp:326-376, :364),
 #: which on HD's field read as part of the space, not as a marking.
 LEGAL_FILL = (70, 190, 255, 56)
 LEGAL_EDGE = (150, 225, 255, 235)
@@ -229,9 +229,13 @@ def legal_area(combat, unit):
     """The cells the reachable area covers: each legal cell the engine
     marks (CMBT's bitmap, `combat_grid == 2000`) with the unit's footprint
     from it, 1, 2 or 3 cells a side by size class — the original's 20, 40
-    or 60 px box (`Draw_Legal_Boxes`, cmbtdrw1.cpp:346-361)."""
+    or 60 px box (`Draw_Legal_Boxes`, cmbtdrw1.cpp:346-361). Kept while
+    the bitmap and the size stay."""
     from core import combatblocks as cb
     size = max(0, min(5, int(unit["size_class"])))
+    key = (bytes(combat["legal"]), size)
+    if _LEGAL.get("area_key") == key:
+        return _LEGAL["area"]
     side = {0: 1, 1: 2, 2: 2}.get(size, 3)
     out = set()
     for x in range(cb.GRID_W):
@@ -239,52 +243,52 @@ def legal_area(combat, unit):
             if cb.legal(combat["legal"], x, y):
                 out.update((x + i, y + j) for i in range(side)
                            for j in range(side))
+    _LEGAL.update(area_key=key, area=out)
     return out
 
 
 def draw_legal(surface, cam, art, combat, unit):
     """The reachable area (DEVIATION `legal_cells_readable`, work order
-    303): drawn over the space and under the units, as one picture of the
-    field's size — a light tint over every covered cell and a lit edge where
-    a covered cell meets an uncovered one. Kept while the bitmap, the unit's
-    size and the camera stay."""
+    303): drawn over the space and under the units — a light tint over
+    every covered cell and a lit edge where a covered cell meets an
+    uncovered one — as one picture only as large as the covered cells in
+    the window, kept while the bitmap, the unit's size and the camera
+    stay (a pan rebuilds it: its cost follows the area, not the window)."""
     area = pygame.Rect(cam.area)
     key = (bytes(combat["legal"]), int(unit["size_class"]), cam.scale,
            cam.ox, cam.oy, tuple(area))
     if _LEGAL.get("key") != key:
         cells = legal_area(combat, unit)
-        layer = pygame.Surface(area.size, pygame.SRCALPHA)
+        wd = max(1, round(cam.scale * 0.6))
 
         def rect(x, y):
             x0, y0 = cam.to_window(x * CELL, y * CELL)
             x1, y1 = cam.to_window((x + 1) * CELL, (y + 1) * CELL)
-            return pygame.Rect(round(x0) - area.x, round(y0) - area.y,
-                               round(x1) - round(x0), round(y1) - round(y0))
-        wd = max(1, round(cam.scale * 0.6))
-        for x, y in cells:
-            r = rect(x, y)
-            if not r.colliderect(layer.get_rect()):
-                continue
-            # LOOK EXCEPTION data: the reachable cells' tint (work order 303)
-            layer.fill(LEGAL_FILL, r)
-        for x, y in cells:
-            r = rect(x, y)
-            if not r.inflate(2 * wd, 2 * wd).colliderect(layer.get_rect()):
-                continue
-            # LOOK EXCEPTION data: the reachable area's edge (work order 303)
-            for nx, ny, a, b in ((x - 1, y, r.topleft, r.bottomleft),
-                                 (x + 1, y, (r.right - wd, r.y),
-                                  (r.right - wd, r.bottom)),
-                                 (x, y - 1, r.topleft, r.topright),
-                                 (x, y + 1, (r.x, r.bottom - wd),
-                                  (r.right, r.bottom - wd))):
-                if (nx, ny) not in cells:
-                    edge = pygame.Rect(a, (max(wd, b[0] - a[0]),
-                                           max(wd, b[1] - a[1])))
-                    layer.fill(LEGAL_EDGE, edge)
-        _LEGAL.clear()
-        _LEGAL.update(key=key, layer=layer)
-    surface.blit(_LEGAL["layer"], area.topleft)
+            return pygame.Rect(round(x0), round(y0), round(x1) - round(x0),
+                               round(y1) - round(y0))
+        shown = [(c, rect(*c)) for c in cells]
+        shown = [(c, r) for c, r in shown if r.colliderect(area)]
+        layer, at = None, area.topleft
+        if shown:
+            box = shown[0][1].unionall([r for _c, r in shown[1:]]).clip(area)
+            layer, at = pygame.Surface(box.size, pygame.SRCALPHA), box.topleft
+            for (x, y), r in shown:
+                r = r.move(-box.x, -box.y)
+                # LOOK EXCEPTION data: the reachable cells' tint (303)
+                layer.fill(LEGAL_FILL, r)
+                # LOOK EXCEPTION data: the reachable area's edge (303)
+                for nx, ny, a, b in ((x - 1, y, r.topleft, r.bottomleft),
+                                     (x + 1, y, (r.right - wd, r.y),
+                                      (r.right - wd, r.bottom)),
+                                     (x, y - 1, r.topleft, r.topright),
+                                     (x, y + 1, (r.x, r.bottom - wd),
+                                      (r.right, r.bottom - wd))):
+                    if (nx, ny) not in cells:
+                        layer.fill(LEGAL_EDGE, pygame.Rect(
+                            a, (max(wd, b[0] - a[0]), max(wd, b[1] - a[1]))))
+        _LEGAL.update(key=key, layer=layer, at=at)
+    if _LEGAL["layer"] is not None:
+        surface.blit(_LEGAL["layer"], _LEGAL["at"])
 
 
 def draw_units(surface, cam, art, combat, colours, glow_clock, cache,

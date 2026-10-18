@@ -141,11 +141,13 @@ def clear_override(res=None, win_h=None, settings=None):
     if _override is None:
         return
     _override = None
-    if _source is None or _last is None:
-        return
-    scaled = (_source if _last == _source.get_size()
-              else pygame.transform.smoothscale(_source, _last))
     try:
+        if _source is None or _last is None:
+            # the HD pointer is off or missing: what `apply` set then
+            pygame.mouse.set_cursor(pygame.cursors.arrow)
+            return
+        scaled = (_source if _last == _source.get_size()
+                  else pygame.transform.smoothscale(_source, _last))
         pygame.mouse.set_cursor(pygame.cursors.Cursor((0, 0), scaled))
     except pygame.error as exc:
         log.debug("Cursor not settable on this driver: %s", exc)
