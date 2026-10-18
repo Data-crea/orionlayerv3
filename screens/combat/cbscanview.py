@@ -28,13 +28,14 @@ import math
 
 import pygame
 
+from core import lang
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from . import cbart, cbscan, cbscancard
 
 #: The window and its boxes, reference px. Work order 297 (Data, from the
 #: analysis of 18 Oct 2026): each box as high as what it holds needs —
-#: SHIELDS gives up height, WEAPONS (8 rows of 22 px), OFFICER (every
+#: SHIELDS gives up height, WEAPONS (8 rows of 22 px text), OFFICER (every
 #: combat skill) and COMBAT VALUES gain; measured by check 090znb at three
 #: window sizes, every text inside its box.
 WINDOW = (60, 30, 1800, 1020)
@@ -97,18 +98,21 @@ def k_of(surface):
 def fitted(style, text, size, room):
     """THE CELL RULE (work order 297): a text wider than its cell is cut
     with an ellipsis, never drawn past it. Kept per (text, size, room)."""
-    key = (text, size, room)
+    # cut what is drawn: OrionLayer's own words in the player's language,
+    # then kept from being translated again (`core.lang.Stored`)
+    text = lang.tr(text)
+    key = (text, size, room, id(style))
     hit = _FITTED.get(key)
     if hit is None:
         if len(_FITTED) > 2048:
             _FITTED.clear()
         width = lambda t: style.render_text(t, size, (255, 255, 255)).get_width()
-        hit = text
+        hit = lang.Stored(text)
         if room > 0 and width(text) > room:
             cut = text
             while cut and width(cut.rstrip(", ·") + ELLIPSIS) > room:
                 cut = cut[:-1]
-            hit = cut.rstrip(", ·") + ELLIPSIS
+            hit = lang.Stored(cut.rstrip(", ·") + ELLIPSIS)
         _FITTED[key] = hit
     return hit
 
@@ -156,7 +160,7 @@ class View:
         def text(t, at, size, rgb, anchor="topleft", room=None):
             """`room` (device px): the cell's width — cut to fit it."""
             t = str(t)
-            whole = t
+            whole = lang.tr(t)          # what is drawn when nothing is cut
             if room is not None:
                 t = fitted(style, t, px(size), room)
             img = style.render_text(t, px(size), rgb[:3])
@@ -649,13 +653,16 @@ class View:
                             {"label": label, "value": value,
                              "state": STATE_RGB}, R(80, 0, 520, 0))
 
-    def card_at(self, x, y, model=None):
-        """What has a card at (x, y) in the frame drawn last: a value row
-        (when the values have their parts) or a cut cell."""
+    def card_at(self, x, y):
+        """A card drawn in the frame drawn last for what is at (x, y): a
+        value row or a cut cell (the click rule, DEVIATION
+        `scan_card_click`) — never a row whose card found no place."""
+        if self.card is None:
+            return False
         rows = self.rects.get("values") or {}
-        if self._cards and any(r.collidepoint(x, y) for r in rows.values()):
-            return True
-        return any(r.collidepoint(x, y) for r, _w in self.cut)
+        hit = rows.get(self.card[0]) if self.card[0] != "cell" else \
+            self.card[2]
+        return hit is not None and hit.collidepoint(x, y)
 
     _cards = None
 
@@ -707,6 +714,7 @@ class Sources:
     def __init__(self, screen):
         self._screen = screen
         self._words = None
+        self._round = None
         self._leader_art = None
         self._pictures = {}
         self._backdrop = None
@@ -722,6 +730,23 @@ class Sources:
                 s._ken, s._names, estrings.EStrings(s._language),
                 hestrings.for_app(s.app), unit))
         return self._words[1]
+
+    def note_round(self, shown):
+        """Keep the battle's units as the first frame of each combat round
+        shows them: what the engine added the combat values up from (its
+        round loop, combinit.cpp:1053-1061) — the card's parts are counted
+        from it (`cbscanparts.breakdown`). A new battle, or a frame from
+        before the one kept, starts over."""
+        turn, units = int(shown.get("turn", 0)), shown.get("units") or []
+        r = self._round
+        if r is None or r[0] != turn or len(r[1]) != len(units):
+            self._round = (turn, [dict(u) for u in units])
+
+    def round_start(self, shown):
+        r = self._round
+        if r is None or r[0] != int(shown.get("turn", 0)):
+            return None
+        return r[1]
 
     def _settings(self):
         return getattr(self._screen.app, "user_settings", None)

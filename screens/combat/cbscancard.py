@@ -22,12 +22,11 @@ from core.hud import blocks as hud
 from core.hud import text as hudtext
 from . import cbscan, cbscanparts as cp
 
-WIDTH, ROW, SUB, PAD, GAP = 520, 28, 22, 16, 10
+ROW, SUB, PAD = 28, 22, 16
 #: what another unit gives, in its own tint (Data: "a distinct tint")
 FLEET_TINT = (120, 190, 235)
 GREY = (130, 136, 150)
 GROUND = (10, 13, 20)
-TEXT_WIDTH = 700                     # a cut cell's card at most
 NOT_AVAILABLE = "Breakdown not available"
 
 
@@ -246,17 +245,21 @@ def show(view, surface, style, scale, k, m, pointer, rgb, column):
     for r, whole in view.cut:
         if not r.collidepoint(pointer):
             continue
-        room = int(TEXT_WIDTH * k) - 2 * int(
-            PAD * k)
+        # as wide as the left column at most, so it can stand there, clear
+        # of the boxes that list the systems (rule 13)
+        room = column.w - 2 * int(PAD * k)
         lines = wrap(style, whole, max(9, int(20 * k)), room)
+        if not lines:
+            return
         rows = text_rows(whole)
         wide = max(style.render_text(t, max(9, int(20 * k)),
                                      (255, 255, 255)).get_width()
                    for t in lines)
-        size = (wide + 2 * int(PAD * k),
+        size = (min(column.w, wide + 2 * int(PAD * k)),
                 int((24 + len(lines) * ROW) * k))
-        at = place(size, r, view.window, [])
+        at = place(size, r, view.window, avoid,
+                   column=(column.x, column.right))
         if at is not None:
             draw(surface, style, scale, k, at, rows, rgb)
-            view.card = ("cell", at)
+            view.card = ("cell", at, r)
         return

@@ -24,7 +24,7 @@ it agrees, and v2 is named where it does not:
   Missile Evasion the speed (5 a point, -20 at a standstill; none against
   (`…, 1`)        missiles, where the crew counts half), the race's ship
                   defence (ships only), the ship's devices
-                  (`Ship_Specials_Defensive_Bonus_` :730-787; v2 names the
+                  (`Ship_Specials_Defensive_Bonus_` :730-779; v2 names the
                   cloak behind each 80) and the fleet's best Helmsman (half
                   against missiles) with, against missiles, a Wide Area
                   Jammer anywhere in the side (`Fleet_Defensive_Bonus_`
@@ -35,12 +35,15 @@ it agrees, and v2 is named where it does not:
 
 The engine adds them up at the start of every combat round
 (combinit.cpp:1053-1061: the round loop) — unless orion2re's
-`interactive_combat_stats` is on, a 1.50 option, off by default. A system
-destroyed during a round still counts until the next one; a part whose
-present state gives 0 is tried at its full value, and when exactly one
-choice of such parts makes the sum, those are shown with "counts until end
-of round". The bonuses are orion2re's defaults; a mod that changes one
-makes the sum differ, and the card says the breakdown is not available.
+`interactive_combat_stats` is on, a 1.50 option, off by default. So the
+parts are counted from the battle as it stood when the round began (HD
+keeps that snapshot, `cbscanview.Sources.round_start`) and told against
+the battle now: a system destroyed since still counts, "counts until end of
+round", and so does a unit of the side that has fallen out since. Nothing
+is guessed: without the round's start the parts are counted from now and
+shown only when they make the sum exactly. The bonuses are orion2re's
+defaults; a mod that changes one makes the sum differ, and the card says
+the breakdown is not available.
 
 Nothing here imports pygame; the smoke suite reads it without a window.
 """
@@ -63,11 +66,11 @@ STABILIZER_BEAM, STABILIZER_MISSILE = 50, 25
 NULLIFIER_BEAM, NULLIFIER_MISSILE = 100, 50
 #: v2: while cloaked, the best of the cloaks fitted (stealth field 0);
 #: against missiles `cloaking_device_missile_defense`, 0.
-CLOAK_BEAM = ((cbscan.PHASING_CLOAK, 80), (cbscan.CLOAKING_DEVICE, 80),
-              (cbscan.STEALTH_FIELD, 0))
+CLOAK_BEAM = ((cbscan.STEALTH_FIELD, 0), (cbscan.CLOAKING_DEVICE, 80),
+              (cbscan.PHASING_CLOAK, 80))
 CLOAK_MISSILE = 0
 FLEET_WIDE_AREA_JAMMER = 70
-#: `LEADER_SHIP_SKILL_*` (orion2_consts.h:303-320): plain, starred.
+#: `LEADER_SHIP_SKILL_*` (orion2_consts.h:272-289): plain, starred.
 WEAPONRY, HELMSMAN, GALACTIC_LORE = (0x4000, 0x8000), (0x40, 0x80), \
     (0x10, 0x20)
 #: `_tractors_to_stop` (combat1.h:11): how many tractor beams stop a size.
@@ -85,14 +88,15 @@ def cdiv(a, b):
 
 class Part:
     """One line of a card: what, how much, whose. `value` None is a
-    formula line (combat speed); `sources` the grey sub-line of a Base."""
+    formula line (combat speed); `sources` the grey sub-line of a Base;
+    `bit` the special system (or "computer") a SYSTEM line is, `src` the
+    unit a FLEET line comes from."""
 
     def __init__(self, kind, label, value, state=cbscan.OK, sources=(),
-                 note=None, intact=None):
+                 note=None, bit=None, src=None):
         self.kind, self.label, self.value = kind, label, value
         self.state, self.sources, self.note = state, list(sources), note
-        #: what the part gives while it works — tried when it gives 0 now
-        self.intact = intact
+        self.bit, self.src = bit, src
 
     def __repr__(self):
         return f"Part({self.kind}, {self.label!r}, {self.value}, {self.state})"
@@ -125,13 +129,20 @@ def officer_level(rec, idx, traits_of):
     return ls.owned_level(rec, idx, bool(t is not None and t[TRAIT_WARLORD]))
 
 
+def station_bonus(tier):
+    """v2's choice (`Fleet_Offensive_Bonus`): tier 0 a star base, 1 a
+    battlestation, anything else a star fortress."""
+    return STATION_BONUS[0 if tier == 0 else 1 if tier == 1 else 2]
+
+
 class Side:
     """What a side's living units give every one of them (the fleet
     bonuses): the best officer per skill with the unit it sits on, the
-    station, the Scout Lab, a Wide Area Jammer."""
+    station, the Scout Lab, a Wide Area Jammer. `known` False when an
+    officer's record is not in the snapshot."""
 
     def __init__(self, owner, units, leader, traits_of, ancient):
-        self.best = {}
+        self.best, self.known = {}, True
         self.station = self.lab = self.jammer = None
         for i, u in enumerate(units):
             if int(u["owner"]) != owner or int(u["is_captured"]) != 0 or \
@@ -139,12 +150,14 @@ class Side:
                 continue
             still = stasis(u)
             if i and cbscan.satellite(u) and not still:
-                tier = cbscan.hull_class(u) - HULL_STAR_BASE
-                bonus = STATION_BONUS[min(max(tier, 0), 2)]
-                self.station = (i, bonus)        # the last one counts
+                self.station = (i, station_bonus(
+                    cbscan.hull_class(u) - HULL_STAR_BASE))   # the last
             oi = int(u["officer_idx"])
             if oi > -1:
-                rec = leader(oi)
+                rec = leader(oi) if leader is not None else None
+                if rec is None:
+                    self.known = False
+                    continue
                 level = officer_level(rec, oi, traits_of)
                 for key, skill in (("weaponry", WEAPONRY),
                                    ("helmsman", HELMSMAN),
@@ -171,6 +184,12 @@ def stasis(u):
     return ref(u, "stasis_source_idx") is not None
 
 
+def functional(u):
+    """`Combat_Ship_Is_Functional`: alive, not captured, not held."""
+    return int(u["unit_status"]) == 0 and int(u["is_captured"]) == 0 and \
+        not stasis(u)
+
+
 def fitted(u, b):
     return cbscan.bit(u["special_device_flags"], b)
 
@@ -181,38 +200,39 @@ def has(u, b):
                                            b)
 
 
-def device(u, b, value, names, specials_state):
-    """A device of this ship as a part: its bonus now, the bonus it gives
-    while it works, and its state."""
-    state = specials_state.get(b, cbscan.OK)
-    now = value if has(u, b) else 0
-    return Part(SYSTEM, names(b), now, state, intact=value)
+def device(u, b, value, names):
+    """A device of this ship as a part: its bonus if it worked."""
+    return Part(SYSTEM, names(b), value if has(u, b) else 0, bit=b)
 
 
 def breakdown(index, units, players, leader, attacker, defender, names,
-              crew_word, computer_name=None):
+              crew_word, computer_name=None, start=None):
     """{"attack", "defense", "evasion", "speed": Card} for unit `index`, or
     None when the side's records are not there. `players`: each player's
     traits; `leader(i)`: leader i's record (special_skills, xp,
-    player_index, name), or None when the snapshot has none."""
-    u = units[index]
+    player_index, name) or None. `start`: the battle's units as they stood
+    at the round's start — what the engine added up (the round loop,
+    combinit.cpp:1053-1061); the parts are counted from it, the notes from
+    `units` (now). Without it the parts are counted from now, and only a
+    sum the parts make exactly is shown: nothing is guessed."""
+    if start is None or len(start) != len(units):
+        start = units
+    u = start[index]
     owner = int(u["owner"])
-    # the fleet's officers are read from the side's own units only
-    if players is None or (leader is None and any(
-            int(v["officer_idx"]) > -1 and int(v["owner"]) == owner
-            for v in units)):
+    if players is None:
         return None
 
     def traits_of(p):
         return players[p] if 0 <= p < len(players) else None
 
     ancient = attacker > MAX_PLAYERS or defender > MAX_PLAYERS
-    side = Side(owner, units, leader, traits_of, ancient)
+    side = Side(owner, start, leader, traits_of, ancient)
+    if not side.known:
+        return None
     traits = traits_of(owner) if owner < MAX_PLAYERS else None
     q = max(0, min(4, int(u["crew_quality"])))
-    states = {b: st for b, _n, _c, _m, st in
-              cbscan.special_rows(u, None)}
     crew = crew_word or cbscan.CREW_ENGLISH[q]
+    now = units[index]
 
     def base(value_parts):
         """The fixed bonuses as one line, its sources under it."""
@@ -223,13 +243,20 @@ def breakdown(index, units, players, leader, attacker, defender, names,
     def fleet_officer(key, label, value=None):
         best = side.best.get(key)
         if best is None:
-            return None, 0
+            return None
         b, i, oi, rec = best
         b = b if value is None else value(b)
         who = f"{label} ({str(rec.name)})"
         if i == index:
-            return (who, b), b
-        return Part(FLEET, f"Fleet: {who} aboard {units[i]['name']}", b), b
+            return who, b
+        return Part(FLEET, f"Fleet: {who} aboard {units[i]['name']}", b,
+                    src=i)
+
+    def take(got, parts, fixed):
+        if isinstance(got, Part):
+            parts.append(got)
+        elif got:
+            fixed.append(got)
 
     # ── Beam Attack ─────────────────────────────────────────
     parts, fixed = [], [(crew, CREW_ATTACK[q])]
@@ -239,98 +266,79 @@ def breakdown(index, units, players, leader, attacker, defender, names,
     if ctype > 0:
         full = cbscan.COMPUTER_BONUS[ctype] if ctype < len(
             cbscan.COMPUTER_BONUS) else 0
-        cur = int(u["computer_current_hits"])
         parts.append(Part(SYSTEM, computer_name or "Computer",
-                          full if cur >= 1 else 0,
-                          cbscan.part_state(cur, int(u["computer_max_hits"])),
-                          intact=full))
+                          full if int(u["computer_current_hits"]) >= 1 else 0,
+                          bit="computer"))
     if fitted(u, cbscan.BATTLE_SCANNER):
         parts.append(device(u, cbscan.BATTLE_SCANNER, BATTLE_SCANNER_BONUS,
-                            names, states))
+                            names))
     for key, label in (("weaponry", "Weaponry"), ("lore", "Galactic Lore")):
-        got, _b = fleet_officer(key, label)
-        if isinstance(got, Part):
-            parts.append(got)
-        elif got:
-            fixed.append(got)
+        take(fleet_officer(key, label), parts, fixed)
     if side.station is not None:
         i, b = side.station
-        if i == index:
-            fixed.append(("Station", b))
-        else:
-            parts.append(Part(FLEET, f"Fleet: station {units[i]['name']}", b))
+        take(("Station", b) if i == index else
+             Part(FLEET, f"Fleet: station {units[i]['name']}", b, src=i),
+             parts, fixed)
     if side.lab is not None:
         i, b = side.lab
         label = names(SCOUT_LAB)
-        parts.append(Part(SYSTEM, label, b) if i == index else
-                     Part(FLEET, f"Fleet: {label} aboard {units[i]['name']}",
-                          b))
-    attack = settle("attack", int(u["tac_val_attack"]),
-                    [base(fixed)] + parts)
+        parts.append(Part(SYSTEM, label, b, bit=SCOUT_LAB) if i == index
+                     else Part(FLEET, f"Fleet: {label} aboard "
+                               f"{units[i]['name']}", b, src=i))
+    cards = {"attack": settle("attack", int(now["tac_val_attack"]),
+                              [base(fixed)] + parts, now, units)}
 
     # ── Beam Defense and Missile Evasion ───────────────────
     cloaked = int(u.get("special_status_flag", 0)) == cbscan.CLOAKED
-    cards = {"attack": attack}
     for key, missiles in (("defense", False), ("evasion", True)):
         parts = []
         crew_v = CREW_DEFENCE[q] // 2 if missiles else CREW_DEFENCE[q]
         fixed = [(crew, crew_v)]
         if traits is not None and int(u["ship_idx"]) != -1:
             fixed.append(("Race", int(traits[TRAIT_SHIP_DEFENSE])))
-        speeds = [None]
         if not missiles:
-            sp = int(u["current_speed"])
-            parts.append(speed_part(sp))
-            speeds = [None] + list(range(sp + 1, max_speed_of(
-                u, traits_of) + 1))
-        if cloaked:
-            if missiles:
-                pass                        # CLOAK_MISSILE: 0, not shown
-            else:
-                best = next(((b, v) for b, v in CLOAK_BEAM if has(u, b)),
-                            None)
+            parts.append(speed_part(int(u["current_speed"])))
+            if cloaked:
+                # v2: the stealth field first, a cloak only when it gives
+                # more (:822-831) — at 80 and 80 the Cloaking Device
+                best = None
+                for b, v in CLOAK_BEAM:
+                    if has(u, b) and (best is None or v > best[1]):
+                        best = (b, v)
                 if best is not None and best[1]:
-                    parts.append(device(u, best[0], best[1], names, states))
-        own_jam = 0
+                    parts.append(device(u, best[0], best[1], names))
+        own_jam = jam = None
         if missiles:
             jam = next(((b, v) for b, v in cbscan.JAMMERS if has(u, b)), None)
-            lost = [b for b, _v in cbscan.JAMMERS if fitted(u, b) and
-                    not has(u, b)]
-            if jam is not None:
-                own_jam = jam[1]
+            own_jam = jam[1] if jam else 0
         for b, beam, missile in ((cbscan.INERTIAL_NULLIFIER, NULLIFIER_BEAM,
                                   NULLIFIER_MISSILE),
                                  (cbscan.INERTIAL_STABILIZER,
                                   STABILIZER_BEAM, STABILIZER_MISSILE)):
             if fitted(u, b):
                 parts.append(device(u, b, missile if missiles else beam,
-                                    names, states))
-        half = (lambda b: b // 2) if missiles else None
-        got, _b = fleet_officer("helmsman", "Helmsman", half)
-        if isinstance(got, Part):
-            parts.append(got)
-        elif got:
-            fixed.append(got)
+                                    names))
+        take(fleet_officer("helmsman", "Helmsman",
+                           (lambda b: b // 2) if missiles else None),
+             parts, fixed)
         if missiles:
             fleet_jam = side.jammer[1] if side.jammer else 0
             # of the ship's own jammer and the side's, the larger (:197-201)
             if fleet_jam > own_jam:
                 i = side.jammer[0]
                 label = names(cbscan.WIDE_AREA_JAMMER)
-                parts.append(Part(SYSTEM, label, fleet_jam) if i == index else
-                             Part(FLEET, f"Fleet: {label} aboard "
-                                  f"{units[i]['name']}", fleet_jam))
+                parts.append(Part(SYSTEM, label, fleet_jam,
+                                  bit=cbscan.WIDE_AREA_JAMMER) if i == index
+                             else Part(FLEET, f"Fleet: {label} aboard "
+                                       f"{units[i]['name']}", fleet_jam,
+                                       src=i))
             elif jam is not None:
-                parts.append(device(u, jam[0], jam[1], names, states))
-            for b in lost:
-                # a lost jammer is not tried at its full value: only one
-                # jammer counts, so which one did at the round's start is
-                # not decidable from the sum — the card then says so
-                if jam is None or b != jam[0]:
-                    parts.append(Part(SYSTEM, names(b), 0, states.get(
-                        b, cbscan.DESTROYED)))
-        total = int(u["tac_val_evade" if missiles else "tac_val_defense"])
-        cards[key] = settle(key, total, [base(fixed)] + parts, speeds)
+                parts.append(device(u, jam[0], jam[1], names))
+            for b, _v in cbscan.JAMMERS:
+                if fitted(u, b) and not has(u, b):
+                    parts.append(Part(SYSTEM, names(b), 0, bit=b))
+        total = int(now["tac_val_evade" if missiles else "tac_val_defense"])
+        cards[key] = settle(key, total, [base(fixed)] + parts, now, units)
     cards["speed"] = speed_card(index, units, traits_of, names)
     return cards
 
@@ -341,40 +349,31 @@ def speed_part(speed):
     return Part(FORMULA, f"Combat speed {speed} × 5", speed * 5)
 
 
-def max_speed_of(u, traits_of):
-    return cbscan.max_speed(u, traits_of)
-
-
-def settle(key, total, parts, speeds=(None,)):
-    """The card, after the round-start rule: the parts as they stand; if
-    they miss the engine's sum, every choice of this ship's destroyed
-    systems at their full value (and, for the beam defence, a speed the
-    unit had at the round's start) — exactly one choice that makes the sum
-    is shown, with its notes; none or several: not available."""
-    lost = [p for p in parts if p.kind == SYSTEM and p.value == 0 and
-            p.intact]
-    found = []
-    for mask in range(1 << len(lost)):
-        on = [p for n, p in enumerate(lost) if mask >> n & 1]
-        for s0 in speeds:
-            got = sum(p.value for p in parts) + sum(p.intact for p in on)
-            if s0 is not None:
-                sp = next(p for p in parts if p.kind == FORMULA)
-                got += speed_part(s0).value - sp.value
-            if got == total:
-                found.append((on, s0))
-        if found and not mask:
-            break                       # the parts as they stand: done
-    if len(found) != 1:
+def settle(key, total, parts, now, units):
+    """The card: the parts as counted, checked against the engine's sum,
+    then told against the unit as it stands now — a system that gave its
+    bonus and is destroyed since counts until the round's end, so does
+    another unit that has fallen out since, and a speed that has changed."""
+    if sum(p.value for p in parts) != total:
         return Card(key, total, parts, False)
-    on, s0 = found[0]
-    for p in on:
-        p.value, p.note = p.intact, "counts until end of round"
-        p.state = cbscan.DESTROYED
-    if s0 is not None:
-        sp = next(n for n, p in enumerate(parts) if p.kind == FORMULA)
-        parts[sp] = speed_part(s0)
-        parts[sp].note = "the speed at the round's start"
+    rows = {b: st for b, _n, _c, _m, st in cbscan.special_rows(now, None)}
+    for p in parts:
+        if p.kind == SYSTEM and p.bit is not None:
+            if p.bit == "computer":
+                cur = int(now["computer_current_hits"])
+                p.state = cbscan.part_state(cur, int(now["computer_max_hits"]))
+                works = cur >= 1
+            else:
+                p.state = rows.get(p.bit, cbscan.OK)
+                works = has(now, p.bit)
+            if p.value and not works:
+                p.state, p.note = cbscan.DESTROYED, "counts until end of round"
+        elif p.kind == FLEET and p.src is not None and \
+                not functional(units[p.src]):
+            p.note = "counts until end of round"
+        elif p.kind == FORMULA and p.value is not None and \
+                speed_part(int(now["current_speed"])).value != p.value:
+            p.note = f"at the round's start; now {int(now['current_speed'])}"
     shown = [p for p in parts if p.value or p.kind == BASE and p.sources or
              (p.kind == SYSTEM and p.state != cbscan.OK)]
     return Card(key, total, shown, True)

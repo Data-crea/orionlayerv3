@@ -49,7 +49,7 @@ from core.structs import leader as leader_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 
-#: `TECHDATA::computers[i].bonus` (techdata.cpp:447-453).
+#: `TECHDATA::_computers[i].bonus` (techdata.cpp:429-436).
 COMPUTER_BONUS = (0, 25, 50, 75, 100, 125)
 #: `TECHDATA::drives[i].warp_speed` (techdata.cpp:417-424).
 DRIVE_WARP = (0, 2, 3, 4, 5, 6, 7)
@@ -73,7 +73,7 @@ NO_HITS = frozenset((4, 11, 14, 24, 27))
 INTERNAL_BITS, REGENERATION = 39, 39
 
 #: The officer skills a battle reads (cmbtfir2.cpp:94-180, :475-485,
-#: :1866-1910): `LEADER_SHIP_SKILL_*` (orion2_consts.h:303-320) and the
+#: :1866-1910): `LEADER_SHIP_SKILL_*` (orion2_consts.h:272-289) and the
 #: general `LEADER_GENERAL_SKILL_COMMANDO` (:283-284) — Engineer, Fighter
 #: Pilot, Galactic Lore, Helmsman, Ordnance, Security, Weaponry, Commando,
 #: each with its starred form. Navigator moves the fleet between stars, not
@@ -606,8 +606,11 @@ SHIELD_UPGRADES = (13, 30, 20)          # Hard Shields, Shield Capacitor,
 DAMPER_FIELD = 7                        # Multi-Phased Shields
 
 
-def build_for(unit_index, shown, state, words):
-    """`build` from the battle as drawn (`shown`) and the snapshot."""
+def build_for(unit_index, shown, state, words, start=None):
+    """`build` from the battle as drawn (`shown`) and the snapshot;
+    `start`: the battle's units at the round's start
+    (`cbscanview.Sources.round_start`), what the combat values' parts are
+    counted from."""
     unit = dict(shown["units"][unit_index])
     unit["_index"] = unit_index
     ship_rec = None
@@ -627,9 +630,9 @@ def build_for(unit_index, shown, state, words):
     m.cards = cbscanparts.breakdown(
         unit_index, shown["units"],
         [player_struct.traits(p) for p in players] if players else None,
-        (lambda oi: leader_struct.SPEC.parse(leaders[oi])) if leaders
-        else None,
+        (lambda oi: leader_struct.SPEC.parse(leaders[oi])
+         if 0 <= oi < len(leaders) else None) if leaders else None,
         int(shown.get("attacker", 0)), int(shown.get("defender", 0)),
         lambda b: words.part("specials", b, f"special {b}"),
-        crew_word(words, unit["crew_quality"]), m.computer_name)
+        crew_word(words, unit["crew_quality"]), m.computer_name, start)
     return m

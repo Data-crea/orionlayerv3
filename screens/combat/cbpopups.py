@@ -136,6 +136,8 @@ class Popups:
         `sources` is the screen's `cbscanview.Sources`."""
         kind = self.showing(state)
         self.rects = {}
+        if sources is not None and shown:
+            sources.note_round(shown)       # every frame, the scan up or not
         if kind == "local" and shown and not (
                 0 <= self.local_unit < len(shown["units"]) and
                 int(shown["units"][self.local_unit]["unit_status"]) == 0):
@@ -158,7 +160,8 @@ class Popups:
             i = cp["unit"] if kind == "scan" else self.local_unit
             if shown and 0 <= i < len(shown["units"]):
                 unit = shown["units"][i]
-                model = cbscan.build_for(i, shown, state, sources.words())
+                model = cbscan.build_for(i, shown, state, sources.words(),
+                                         sources.round_start(shown))
                 self.view.draw(surface, style, scale, model,
                                sources.detailed(), int(shown.get("turn", 0)) + 1,
                                sources.pictures(unit), see, under,
