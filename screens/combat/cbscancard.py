@@ -13,9 +13,11 @@ not have the glyph); no hint text.
 
 Placement (Data, work order 298, replacing 297's rule 13 for these
 cards): a combat value's card stands right of COMBAT VALUES, a small gap
-off it, its top on the box's top — ONE rectangle for all four rows, so
-moving from row to row does not move the card; only the notch on its left
-edge follows the hovered row's centre. It may cover the right column and
+off it, its top on the box's top — its top and left edge the same for all
+four rows, so moving from row to row does not move the card sideways or up;
+its height follows its own rows (Data, work order 299, P3 of 298: no empty
+half under a short card) and reaches at least the hovered row, and the
+notch on its left edge follows that row's centre. It may cover the right column and
 part of WEAPONS: it is there only while hovered and says the state of
 every system it names. Inside the scan window. A cut cell's card keeps
 rule 13 (297): beside its cell, inside the window, never over COMBAT
@@ -26,7 +28,10 @@ stronger than a box's, with a soft glow round it; a ground darker than the
 boxes (the fill family's header, opaque: the transparency slider never
 reaches it); the title in the HUD's accent word colour (`text.title`), the total large on the
 right, a separator under the head; the total line a size larger, a
-separator over it.
+separator over it. A damaged or destroyed system of this ship says its
+state in the state's colour between its name and its number (Data, work
+order 299: "Damaged", "Destroyed", the scan's own state words); an
+operational one says none.
 
 Geometry in reference px, scaled by the window's `k` as the scan.
 """
@@ -162,18 +167,22 @@ def margin(k):
     return max(1, round(GLOW * k)) + max(1, round(4 * k))
 
 
-def value_rect(window, values, height, k):
-    """The value card's one rectangle (Data, work order 298): right of
-    COMBAT VALUES by the gap, its top on the box's top, as high as its rows
-    and never lower than the box (the notch always meets a row), inside
-    the window with its glow. Its top moves up only for a card too tall for
-    the room below the box's top, and a card taller than the window is cut
-    to it — never centred out of it (`Rect.clamp_ip` would)."""
+def value_rect(window, values, height, k, tallest=None, row=None):
+    """The value card's rectangle (Data, work orders 298 and 299): right of
+    COMBAT VALUES by the gap, its top on the box's top, as high as its own
+    rows (`height`) and at least down to the hovered `row`'s foot, so the
+    notch always meets it; inside the window with its glow. The top and
+    the left edge are the same for every row: the top moves up only when
+    the `tallest` of the four cards is too tall for the room below the
+    box's top, and then for all four alike; a card taller than the window
+    is cut to it — never centred out of it (`Rect.clamp_ip` would)."""
     inner = window.inflate(-2 * margin(k), -2 * margin(k))
     w = min(round(VALUE_W * k), inner.w)
-    h = min(max(height, values.h), inner.h)
+    top = min(max(height if tallest is None else tallest, height), inner.h)
     x = min(values.right + round(GAP * k), inner.right - w)
-    y = max(inner.y, min(values.y, inner.bottom - h))
+    y = max(inner.y, min(values.y, inner.bottom - top))
+    reach = row.bottom - y if row is not None else 0
+    h = min(max(height, reach), inner.bottom - y)
     return pygame.Rect(max(inner.x, x), y, w, h)
 
 
@@ -281,25 +290,14 @@ def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
             lab_ink, val_ink = ink
             vr = put(right_t or "", (right, y), size, val_ink, "topright")
             if state is not None:
-                s = max(1, round(12 * k))
-                box = pygame.Rect(vr.x - s - px(6) // 2, vr.centery - s // 2,
-                                  s, s)
-                mark(surface, box, rgb["state"][state], state, k)
-                vr = vr.union(box)
+                # the state word, the scan's own, in the state's colour
+                # (work order 299); the label gives way to it
+                gap = px(12) if right_t else 0
+                vr = vr.union(put(state, (vr.x - gap, y), size,
+                                  rgb["state"][state], "topright"))
             put(fit(style, left, px(size), vr.x - px(10) - x), (x, y), size,
                 lab_ink)
             y += px(ROW)
-
-
-def mark(surface, box, rgb, state, k):
-    # LOOK EXCEPTION marking: the state's sign beside a number (297)
-    if state == cbscan.DAMAGED:
-        pygame.draw.polygon(surface, rgb, (box.midtop, box.bottomright,
-                                           box.bottomleft))
-    else:
-        wd = max(1, round(3 * k))
-        pygame.draw.line(surface, rgb, box.topleft, box.bottomright, wd)
-        pygame.draw.line(surface, rgb, box.topright, box.bottomleft, wd)
 
 
 def fit(style, t, size, room):
@@ -347,9 +345,11 @@ def show(view, surface, style, scale, k, m, pointer, rgb, column):
         if not (m.cards and r.collidepoint(pointer)):
             continue
         cards = {kk: value_card(m, kk, rgb) for kk in values}
-        # one rectangle for every row: as high as the highest card
+        # one top and one left edge for every row, the height the card's
+        # own (work order 299)
         at = value_rect(view.window, view.boxes["values"],
-                        int(max(c.height() for c in cards.values()) * k), k)
+                        int(cards[key].height() * k), k,
+                        int(max(c.height() for c in cards.values()) * k), r)
         tip = notch(at, r, k)
         draw(surface, style, scale, k, at, cards[key], rgb, tip,
              bounds=view.window)

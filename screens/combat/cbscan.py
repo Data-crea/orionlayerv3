@@ -258,9 +258,19 @@ CREW_ENGLISH = ("Green Crew", "Regular Crew", "Veteran Crew", "Elite Crew",
 
 def crew_word(words, quality):
     """`Copy_Crew_Quality_Without_Parenthetical` (cmbtdrw1.cpp:3182-3188):
-    KENTEXT 31-35 cut at the "(".  Ultra Elite only from 4."""
+    KENTEXT 31-35 cut at the "(".  Ultra Elite only from 4.
+
+    DEVIATION `scan_crew_level_5` (work order 299, Data's P5 of 298): a
+    level above the table's last row (`Calc_Ship_Level_` caps at 5 after
+    the Warlord's +1, ericnet.cpp:217-236; `_crew_data` has rows 0-4,
+    mox.cpp:780-786) has no word in the original — `Crew_Quality_String_`'s
+    switch falls to its default and prints nothing (cmbtdrw1.cpp:3850-3851)
+    — HD names the highest known level instead of an empty word. Open fix
+    100 registers the level (an observation)."""
     q = int(quality)
-    if not 0 <= q < len(CREW_KEYS):
+    if q >= len(CREW_KEYS):
+        q = len(CREW_KEYS) - 1
+    if q < 0:
         return ""
     w = words.ken_word(CREW_KEYS[q], CREW_ENGLISH[q])
     return w.split("(")[0].rstrip()
@@ -342,14 +352,22 @@ def mods_cell(w, words):
 
 
 def arc_cell(w, words):
-    """The arc word (:3815-3840): F, Fx, B, Bx, 360 — the scan leaves it
-    out for a forward mount; HD's column shows it for every mount."""
+    """The arc word (v2 :3821-3845, 1.60 :3668-3693): F, Fx, B, Bx, 360 —
+    the scan leaves it out for a forward mount; HD's column shows it for
+    every mount. An arc with no word is "-", as an empty ammunition cell
+    (work order 299, Data's P9 of 298): the original's switch adds no
+    word for it (its default) and prints empty brackets, " ()"
+    (1.60 :3668-3699). Seen on the Diablo test saves, whose
+    Doom Star `battle_saves` gave firing arc 0 on purpose (work order 296,
+    Data: Diablo never fires): combat copies the design's arc
+    (combinit.cpp:303) and a weapon whose arc meets no sector never has a
+    target in arc (cmbtfire.cpp:1246)."""
     arc = int(w["arc"])
     if arc == ARC_ALL:
         return "360"
     if words.ken is not None and arc in (1, 2, 4, 8):
-        return words.ken.arc(arc) or ""
-    return {1: "F", 2: "Fx", 4: "Bx", 8: "B"}.get(arc, "")
+        return words.ken.arc(arc) or "-"
+    return {1: "F", 2: "Fx", 4: "Bx", 8: "B"}.get(arc, "-")
 
 
 def weapon_rows(unit, words, unit_hits=None, hits_per_unit=None):

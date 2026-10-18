@@ -17,6 +17,11 @@ the game's picture. A release whose press did reach the screen but which
 arrives while the frame is held or the game's picture is up ends the
 gesture WITHOUT its effect (`handle_left_cancel`): a drag left armed
 would send its click on the next release, after the hold.
+
+The right button has its own gate since work order 299 (Data's P2 of
+298): a right press the screen got whose release an overlay takes ends
+with `handle_right_cancel`, so the battle's camera never pans with no
+button held.
 """
 
 DELIVER, CANCEL, DROP = "deliver", "cancel", "drop"
@@ -27,17 +32,26 @@ class PointerGate:
 
     def __init__(self):
         self.armed = False
+        self.spoilt = False
 
     def press(self, delivered):
-        self.armed = bool(delivered)
+        self.armed, self.spoilt = bool(delivered), False
+
+    def watch(self, open_):
+        """Every frame: a hold or F12 that comes while a press is armed
+        spoils it, even when it is gone again by the release (a box answered
+        with the other hand under a held button, work order 299's review)."""
+        if self.armed and not open_:
+            self.spoilt = True
 
     def release(self, open_):
-        """What a left release does: DELIVER to the screen, CANCEL the
-        gesture its press began, or DROP it (its press never arrived)."""
-        armed, self.armed = self.armed, False
+        """What a release does: DELIVER to the screen, CANCEL the gesture
+        its press began, or DROP it (its press never arrived)."""
+        armed, spoilt = self.armed, self.spoilt
+        self.armed = self.spoilt = False
         if not armed:
             return DROP
-        return DELIVER if open_ else CANCEL
+        return DELIVER if open_ and not spoilt else CANCEL
 
     @staticmethod
     def passes(open_):

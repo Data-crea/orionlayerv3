@@ -271,6 +271,16 @@ class CombatInput:
             return
         if owner is not None or cbhelp.right(self, screen_x, screen_y):
             return
+        if self._opts.up(self._state):
+            # TRANSCRIPTION `options_right_click` (work order 299, Data's P1
+            # of 298): while OPTIONS is up the original adds no space field
+            # (`_space_field = -100`, combat1.cpp:155, against :111-114), so
+            # its right click never reaches Turn_To_Face_ (:702); HD sends
+            # no FACE. Under the panel's own list `_ready` is False already
+            # (no space field, `battle_list`); COPT and the list are two
+            # messages, and this holds the moment between them. The drag
+            # stays HD's camera (`free_camera`).
+            return
         if self._ready() and self._cam is not None:
             cell = self._cam.cell_at(screen_x, screen_y)
             if cell is not None:
@@ -282,6 +292,14 @@ class CombatInput:
 
     def handle_left_cancel(self):
         self._pops.cancel()
+
+    def handle_right_cancel(self):
+        """The right press ends without its effect (work order 299, Data's
+        P2 of 298): its release went to a game box or a turn popup over the
+        battle (`main.App`'s right gate, as `handle_left_cancel` for the left
+        button), so no later motion pans with no button held and no FACE
+        follows."""
+        self._press = None
 
     def handle_mouse_motion(self, screen_x, screen_y):
         self._pointer = (screen_x, screen_y)    # the rows' hover (`_hover`)
@@ -298,6 +316,12 @@ class CombatInput:
 
     def handle_mousewheel(self, dy, screen_x, screen_y):
         if self._logwin.wheel(dy):
+            return
+        if self._pops.showing(self._state) in ("local", "scan"):
+            # TRANSCRIPTION `scan_wheel` (work order 299, Data's P7 of 298):
+            # the original's scan is its own input loop with no zoom
+            # (`Detailed_View_Ship_` cmbtdrw1.cpp:156-247); the wheel is the
+            # scan's while it is up and never zooms the battle under it
             return
         if self._cam is not None:
             self._cam.zoom(dy, (screen_x, screen_y))

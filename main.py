@@ -201,6 +201,7 @@ class App:
         self._overlays = overlays.Overlays(self)
         #: Motion, wheel and release ask the hold and F12 too (226 A, D13).
         self._pointer_gate = pointergate.PointerGate()
+        self._right_gate = pointergate.PointerGate()    # the right button's
         self._note_labels = self.res.load_json(
             "assets/shared/fallback/labels.json", {}) or {}
 
@@ -282,6 +283,9 @@ class App:
         # stops: from here on a debug click IS a click (decision 5).
         if self._debug_input is not None:
             self._debug_input.pump()
+        # a hold or F12 under a held right button spoils its press, even
+        # when it is gone again by the release (work order 299)
+        self._right_gate.watch(self._pointer_open())
         for event in coalesce_motion(pygame.event.get()):
             self._input_at = time.monotonic()
             # Adjust mouse positions for fullscreen offset
@@ -382,9 +386,20 @@ class App:
                 # others simply do not answer.
                 top = self.dispatcher.top
                 down = event.type == pygame.MOUSEBUTTONDOWN
-                if self._handover.holding:     # a box's / popup's (200 B)
+                answers = bool(top) and hasattr(top, "handle_right_button")
+                # a press the screen got whose release an overlay takes ends
+                # unsent (work order 299, P2 of 298), as the left button's
+                verdict = None if down else \
+                    self._right_gate.release(self._pointer_open())
+                if down:
+                    self._right_gate.press(answers and
+                                           not self._handover.holding)
+                if verdict == pointergate.CANCEL and \
+                        hasattr(top, "handle_right_cancel"):
+                    top.handle_right_cancel()
+                elif self._handover.holding:   # a box's / popup's (200 B)
                     self._overlays.right(down, *event.pos)
-                elif top and hasattr(top, "handle_right_button"):
+                elif answers:
                     top.handle_right_button(down, *event.pos)
             elif event.type == pygame.MOUSEMOTION:
                 if pointergate.PointerGate.passes(self._pointer_open()):

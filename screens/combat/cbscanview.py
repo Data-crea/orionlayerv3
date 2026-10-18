@@ -167,6 +167,17 @@ class View:
                 self.cut.append((r, whole))
             return r
 
+        def button(rect, word):
+            """A HUD small button whose word reaches the tables' floor
+            (Data, work order 299, P8 of 298): the HUD sizes a button's word
+            by its height (9-10 device px at 1280 x 720 against the floor's
+            12); the word, its colour and its centring stay the HUD's."""
+            hud.small_button(surface, rect, scale, "normal")
+            size = max(hudtext.size_for(style, "button", rect.h), px(FLOOR))
+            img = style.render_text(word.upper(), size,
+                                    hudtext.colour("button")[:3])
+            hudtext.blit(surface, img, rect)
+
         label, value = hudtext.colour("label"), hudtext.colour("value")
         head = hudtext.colour("sub")
         dim = tuple((a + b) // 2 for a, b in zip(label[:3], BAR_BACK))
@@ -187,8 +198,7 @@ class View:
             text(f"Combat turn  {turn}", R(1790, 52, 0, 0).topleft, 28,
                  value, "topright")
         x = R(1804, 44, 40, 40)
-        hud.small_button(surface, x, scale, "normal", "X",
-                         style_renderer=style)
+        button(x, "X")
         self.rects["close_x"] = x
         for key, box in BOXES.items():
             r = R(*box)
@@ -569,8 +579,7 @@ class View:
             text(m.words["none"], (r.x + px(210), r.y + px(40)), 22, label)
         # ── the foot ───────────────────────────────────────────
         cr = R(840, 996, 240, 42)
-        hud.small_button(surface, cr, scale, "normal", "CLOSE",
-                         style_renderer=style)
+        button(cr, "CLOSE")
         self.rects["close"] = cr
         x0 = R(100, 1004, 0, 0)
         for n, (state, rgb) in enumerate(STATE_RGB.items()):
