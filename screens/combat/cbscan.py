@@ -11,13 +11,19 @@ Detailed and every layout had to hold twice):
              (:3465-3472), marines (:3474-3482), drive hits and parsecs a
              turn (:3505-3566), structure (:3568-3576), combat speed
              (:3601-3610), armour with the scan's own total (:3612-3647),
-             computer hits and its beam attack bonus (:3655-3757), the
+             computer hits (:3655-3757), the
              shield's name and hits (:3738-3758, its weakest arc shown as
              all four arcs), every weapon slot with a weapon — count, name,
              arc, ammunition, mods (:3801-3918) — and the special systems,
              a damaged one in the damage colour (:3939-3963). The game's
              words, where the player's KENTEXT.LBX has them
              (`core.kentext`, the scan's messages).
+  DEVIATION `scan_computer_line` (Data, work order 301): the original's
+             "^ +n beam attack" / "no bonus" line under the computer
+             (cmbtdrw1.cpp:3593-3606) is not in the view; the computer's
+             bonus stands as its line in Beam Attack's card (HD EXTENSION
+             `scan_breakdown`), so it shows only under the pointer and only
+             when the parts make the engine's sum.
   HD EXTENSION `scan_detailed` (Data, work order 290, for every unit, own
              and enemy, attacker and defender): the same record, finer —
              the four shield arcs, a weapon's original count and its hits,
@@ -25,11 +31,14 @@ Detailed and every layout had to hold twice):
              Rocco asked (work order 294): the arcs without the weakest-arc
              and shield-name lines, a weapon slot as "count/original" and
              the HP of the weapon in front; and as Data decided from the
-             analysis of 18 Oct 2026 (work order 297): the computer as Beam
-             Attack's part, combat speed as current / maximum
+             analysis of 18 Oct 2026 (work order 297): combat speed as
+             current / maximum
              (`max_speed`), a value's number coloured by THIS ship's
              systems behind it (`contributors`), the shield generator and
-             its upgrades in the shields' head. The original's scan shows
+             its upgrades in the shields' head; COMBAT VALUES four values
+             and nothing under them (Data, work order 301: the card shows
+             every part, one sub-line under Beam Attack showed only the
+             computer as if it were the only one). The original's scan shows
              any living unit's record to anyone (combat1.cpp:952, no owner
              test, `Tactical_Combat_View_Subject` cmbtdrw1.cpp:18-29),
              stores nothing and costs nothing; the computer reads every
@@ -456,12 +465,6 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         owner_name = str(players[owner].race_name)
     hits = lambda cur, most: (int(unit[cur]), int(unit[most]))
     computer = int(unit["computer_type"])
-    bonus = COMPUTER_BONUS[computer] if 0 <= computer < len(
-        COMPUTER_BONUS) else 0
-    comp_line = c_printf(strip(words.ken_word("computer_bonus",
-                                              "^ %+d beam attack")), bonus) \
-        if int(unit["computer_current_hits"]) > 0 else \
-        strip(words.ken_word("no_bonus", "no bonus"))
     shield_most = int(unit["shield_arc_max"])
     armour = armour_total(unit)
     structure_left = int(unit["structure_max"]) - int(unit["structure_damage"])
@@ -488,9 +491,6 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         parsecs=ftl_speed(unit, traits_of),
         speed=(int(unit["current_speed"]), int(unit["combat_speed_base"])),
         speed_max=max_speed(unit, traits_of),
-        computer_state=part_state(int(unit["computer_current_hits"]),
-                                  int(unit["computer_max_hits"]))
-        if computer > 0 else None,
         value_states={k: worst([s for _n, s in v]) for k, v in parts.items()},
         shield_tags=[(n, s) for b, n, _c, _m, s in specials
                      if b in SHIELD_UPGRADES or
@@ -503,8 +503,6 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         armour_name=words.part("armor", int(unit["armor_type"])),
         computer=hits("computer_current_hits", "computer_max_hits"),
         computer_name=words.part("computers", computer),
-        computer_bonus=signed(bonus)
-        if int(unit["computer_current_hits"]) > 0 else comp_line,
         shield_name=words.part("shields", int(unit["shield_type"]))
         if 0 <= int(unit["shield_type"]) < 10 else None,
         shield_system=hits("shield_current_hits", "shield_max_hits")
@@ -638,5 +636,6 @@ def build_for(unit_index, shown, state, words, start=None):
          if 0 <= oi < len(leaders) else None) if leaders else None,
         int(shown.get("attacker", 0)), int(shown.get("defender", 0)),
         lambda b: words.part("specials", b, f"special {b}"),
-        crew_word(words, unit["crew_quality"]), m.computer_name, start)
+        crew_word(words, unit["crew_quality"]), m.computer_name, start,
+        m.owner_name)
     return m

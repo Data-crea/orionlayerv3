@@ -4,7 +4,9 @@ HD EXTENSION `scan_breakdown` (its rules: `cbscanparts`): in the scan
 (one view since work order 298) a combat value under the pointer shows its
 parts in a card — this
 ship's systems one by one, the fixed bonuses as one Base line with its
-sources under it in grey, what other units give in their own tint and
+sources as indented child lines under it — each with its own value,
+smaller, dimmer, on a thin tree line (Data, work order 301; one grey line
+before) —, what other units give in their own tint and
 named, a total at the end; a value whose parts do not make the engine's
 sum shows the sum and "Breakdown not available" alone. The same card
 shows a cell's whole text where the cell rule cut it, and what a "+n more"
@@ -52,6 +54,8 @@ GLOW, GLOW_ALPHA = 14, 90
 #: what another unit gives, in its own tint (Data: "a distinct tint")
 FLEET_TINT = (120, 190, 235)
 GREY = (130, 136, 150)
+#: the tree line of a Base's child lines: dimmer than their words
+TREE = (88, 94, 108)
 NOT_AVAILABLE = "Breakdown not available"
 
 
@@ -72,7 +76,7 @@ class Rows:
     def height(self):
         h = HEAD + 8
         for kind, *_r in self.lines:
-            h += {"sub": SUB, "note": SUB, "rule": 12}.get(kind, ROW)
+            h += {"note": SUB, "child": SUB, "rule": 12}.get(kind, ROW)
         return h + PAD // 2
 
 
@@ -92,9 +96,10 @@ def value_rows(title, card, rgb, percent=False):
         rows.add("line", p.label, right,
                  (FLEET_TINT if fleet else rgb["label"], ink), 20,
                  st if st != cbscan.OK else None)
-        if p.sources:
-            rows.add("sub", " · ".join(f"{n} {signed(v)}"
-                                       for n, v in p.sources), rgb=GREY)
+        for n, (name, v) in enumerate(p.sources):
+            # the last child closes the tree line (`state` carries it)
+            rows.add("child", name, signed(v), GREY, 18,
+                     n == len(p.sources) - 1)
         if p.note and p.value is not None:
             rows.add("note", p.note, rgb=rgb["state"][cbscan.DESTROYED]
                      if p.note.startswith("counts") else GREY)
@@ -282,7 +287,19 @@ def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
             for line in wrap(style, left, px(20), right - x):
                 put(line, (x, y), 20, rgb["value"])
                 y += px(ROW)
-        elif kind in ("sub", "note"):
+        elif kind == "child":
+            # ├ / └ drawn, so no font need have the glyphs: the stem from
+            # the line above to this row's middle, on through a middle
+            # child, and the tick to the words
+            tx, cy, lw = x + px(10), y + px(SUB) // 2, thin(1)
+            pygame.draw.line(surface, TREE, (tx, y - px(4)),
+                             (tx, cy if state else y + px(SUB)), lw)
+            pygame.draw.line(surface, TREE, (tx, cy), (tx + px(12), cy), lw)
+            vr = put(right_t, (right, y), size, ink, "topright")
+            put(fit(style, left, px(size), vr.x - px(10) - (tx + px(18))),
+                (tx + px(18), y), size, ink)
+            y += px(SUB)
+        elif kind == "note":
             put(fit(style, left, px(18), right - x - px(8)),
                 (x + px(8), y), 18, ink)
             y += px(SUB)

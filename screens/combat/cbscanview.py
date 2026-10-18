@@ -83,6 +83,15 @@ SPECIAL_ROW, SPECIAL_ROWS = 30, 8
 #: edge: the state marker and the breakdown's info sign stand right of it.
 VALUE_PAD = 64
 SKILL_ROW = 26
+#: a table's column head under a box's title: its top from the box's top,
+#: its text size and the gap to the first row — SPECIAL SYSTEMS' and, since
+#: work order 301, HULL AND SYSTEMS' "HP" alike
+HEAD_Y, HEAD_TEXT, HEAD_GAP = 44, 18, 28
+#: COMBAT VALUES' four rows share the box under its title: from this far
+#: below the box's top to this far above its foot (work order 301)
+VALUES_TOP, VALUES_FOOT = 40, 6
+#: the state marker's square and stroke, reference px (work orders 297, 301)
+MARKER, MARKER_STROKE = 12, 3
 ELLIPSIS = "…"
 _FITTED = {}
 
@@ -112,6 +121,51 @@ def fitted(style, text, size, room):
             hit = lang.Stored(cut.rstrip(", ·") + ELLIPSIS)
         _FITTED[key] = hit
     return hit
+
+
+def value_bands(box, k):
+    """COMBAT VALUES' four hover bands, top down: the box under its title
+    in four equal parts that meet (work order 301)."""
+    x, w = box.x + max(1, round(4 * k)), box.w - 2 * max(1, round(4 * k))
+    top = box.y + max(9, int(VALUES_TOP * k))
+    step = (box.bottom - max(1, round(VALUES_FOOT * k)) - top) / 4
+    edges = [top + round(n * step) for n in range(5)]
+    return [pygame.Rect(x, a, w, b - a) for a, b in zip(edges, edges[1:])]
+
+
+def marker_box(right, cy, k):
+    """The marker's square, its right edge at `right`, centred on `cy`."""
+    s = max(1, round(MARKER * k))
+    return pygame.Rect(right - s, cy - s // 2, s, s)
+
+
+def marker_shapes(box, state, k):
+    """The marker as filled polygons inside `box`, one stroke width for
+    both: the "!" a stem and a square dot centred upright, the cross two
+    bars corner to corner — their ends cut so neither leaves the box, so
+    the drawn signs are the box's height alike."""
+    wd = max(1, round(MARKER_STROKE * k))
+    if state == cbscan.DAMAGED:
+        x0 = box.centerx - wd // 2
+        gap = max(1, round(wd * 0.6))
+        return ([(x0, box.y), (x0 + wd - 1, box.y),
+                 (x0 + wd - 1, box.bottom - 1 - wd - gap),
+                 (x0, box.bottom - 1 - wd - gap)],
+                [(x0, box.bottom - wd), (x0 + wd - 1, box.bottom - wd),
+                 (x0 + wd - 1, box.bottom - 1), (x0, box.bottom - 1)])
+    # a bar of perpendicular width `wd`: the fill takes both edges' pixels,
+    # so the outline is one px narrower and the drawn bar is as heavy as the
+    # stem; its ends inset by half that width along each axis, so its
+    # corners touch the box's edges and never pass them
+    h = (wd - 1) / 2 / math.sqrt(2)
+    l, t = box.x, box.y
+    r, b = box.right - 1, box.bottom - 1
+    # one bar's corners rounded, the other its mirror about the box's
+    # middle: the fill truncates fractional corners, which drew the two
+    # bars' ends unlike
+    c = math.ceil(2 * h)            # whole px, up: the stem's weight
+    one = [(l + c, t), (r, b - c), (r - c, b), (l, t + c)]
+    return one, [(l + r - x, y) for x, y in one]
 
 
 class View:
@@ -180,7 +234,6 @@ class View:
 
         label, value = hudtext.colour("label"), hudtext.colour("value")
         head = hudtext.colour("sub")
-        dim = tuple((a + b) // 2 for a, b in zip(label[:3], BAR_BACK))
         hud.popup(surface, R(*WINDOW), scale)
         for key, box in BOXES.items():
             hud.panel(surface, R(*box), scale, dense=True)
@@ -206,26 +259,19 @@ class View:
 
         def marker(right, cy, state):
             """The state beside a coloured number, so it never rests on the
-            colour alone (work order 297): an "!" for damaged (Data, work
-            order 300; a triangle before), a cross for destroyed. Drawn, so
-            no font need have the glyph. Returns its left edge."""
+            colour alone (work order 297): an "!" for damaged, a cross for
+            destroyed. Drawn, so no font need have the glyph — and both as
+            filled shapes on one square box with one stroke width, so the
+            "!" stands upright and straight with the cross's height and
+            weight (Data, work orders 300 and 301). Returns its left
+            edge."""
             if state not in (cbscan.DAMAGED, cbscan.DESTROYED):
                 return right
-            s = thin(12)
-            box = pygame.Rect(right - s, cy - s // 2, s, s)
+            box = marker_box(right, cy, k)
             rgb = STATE_RGB[state]
             # LOOK EXCEPTION marking: the state's sign beside a number (297)
-            if state == cbscan.DAMAGED:
-                wd = thin(3)
-                pygame.draw.line(surface, rgb, box.midtop,
-                                 (box.centerx, box.y + s * 0.62), wd)
-                pygame.draw.circle(surface, rgb,
-                                   (box.centerx, box.bottom - wd // 2 - 1),
-                                   max(1, (wd + 1) // 2))
-            else:
-                wd = thin(3)
-                pygame.draw.line(surface, rgb, box.topleft, box.bottomright, wd)
-                pygame.draw.line(surface, rgb, box.topright, box.bottomleft, wd)
+            for shape in marker_shapes(box, state, k):
+                pygame.draw.polygon(surface, rgb, shape)
             return box.x
 
         def bar(r, frac, rgb):
@@ -415,28 +461,25 @@ class View:
             lr = text(names[arc], at, 22, label, "midtop")
             text(f"{m.arcs[arc]} / {m.shield_max}",
                  (lr.centerx, lr.bottom), 24, rgb, "midtop")
-        # ── E the combat values ────────────────────────────────
-        r = R(*BOXES["values"])
-        y = r.y + px(44)
-        self.rects["values"] = {}
-        # four rows; the computer as Beam Attack's part (work order 297);
+        # ── E the combat values: four rows spread evenly over the box,
+        # nothing under them (Data, work order 301: the card shows every
+        # part; the computer's sub-line of 297 showed one as the only one);
         # the number coloured by THIS ship's systems behind it, the label
         # never
+        r = R(*BOXES["values"])
+        self.rects["values"] = {}
         vs = m.value_states
         rows = ((m.words["beam_attack"], cbscan.signed(m.attack), "attack"),
                 (m.words["beam_defense"], cbscan.signed(m.defense),
                  "defense"),
                 (m.words["missile_evasion"], f"{m.evasion}%", "evasion"),
                 ("Combat speed", f"{m.speed[0]} / {m.speed_max}", "speed"))
-        for lab, val, key in rows:
+        for band in value_bands(r, k):
+            lab, val, key = rows[len(self.rects["values"])]
             st = vs.get(key, cbscan.OK)
-            vx = r.right - px(VALUE_PAD)
-            # the bands tile: each reaches the next row's band, the
-            # computer's line inside Beam Attack's — no gap where the card
+            vx, cy = r.right - px(VALUE_PAD), band.centery
+            # the bands tile the box under its title: no gap where the card
             # would go away for a frame or a click would close the scan
-            step = px(38) + (px(32) if key == "attack" and
-                             m.computer_state is not None else 0)
-            band = pygame.Rect(r.x + px(4), y - px(4), r.w - px(8), step)
             lit = bool(m.cards) and pointer is not None and \
                 band.collidepoint(pointer)
             if lit:
@@ -445,41 +488,29 @@ class View:
                 hud.table_row(surface, band, scale, 0, selected=True)
             if key == "speed":
                 # the current speed follows the drive, the maximum not
-                mr = text(f" / {m.speed_max}", (vx, y), 24, value,
-                          "topright")
-                vr = text(f"{m.speed[0]}", (mr.x, y), 24, ink(st),
-                          "topright").union(mr)
+                mr = text(f" / {m.speed_max}", (vx, cy), 24, value,
+                          "midright")
+                vr = text(f"{m.speed[0]}", (mr.x, cy), 24, ink(st),
+                          "midright").union(mr)
             else:
-                vr = text(val, (vx, y), 24, ink(st), "topright")
+                vr = text(val, (vx, cy), 24, ink(st), "midright")
             marker(r.right - px(40), vr.centery, st)
             if m.cards:
                 cbscancard.info_sign(surface, (r.right - px(25),
                                                vr.centery), thin(8),
                                      value if lit else head)
-            text(lab, (r.x + px(16), y), 24, label,
+            text(lab, (r.x + px(16), cy), 24, label, "midleft",
                  room=vr.x - px(12) - (r.x + px(16)))
             self.rects["values"][key] = band
-            y += px(38)
-            if key == "attack" and m.computer_state is not None:
-                # the computer, Beam Attack's part: smaller, dimmer, a thin
-                # tree line (Data, work order 297)
-                cx = r.x + px(28)
-                lw = thin(2)
-                pygame.draw.line(surface, dim, (cx, y - px(12)),
-                                 (cx, y + px(11)), lw)
-                pygame.draw.line(surface, dim, (cx, y + px(11)),
-                                 (cx + px(14), y + px(11)), lw)
-                cst = m.computer_state
-                cv = text(m.computer_bonus, (vx, y), 20,
-                          ink(cst) if cst != cbscan.OK else dim, "topright")
-                marker(r.right - px(40), cv.centery, cst)
-                text(m.computer_name or m.words["computer"],
-                     (cx + px(20), y), 20, dim,
-                     room=cv.x - px(12) - (cx + px(20)))
-                y += px(32)
         # ── F hull and systems ─────────────────────────────────
         r = R(*BOXES["hull"])
-        y = r.y + px(44)
+        # the hits' column head, as SPECIAL SYSTEMS' "System · HP · State"
+        # head: its size, colour and place under the title, so both boxes
+        # look alike; no State — the bar's colour says it (Data, work
+        # order 301)
+        head_y = r.y + px(HEAD_Y)
+        text("HP", (r.right - px(16), head_y), HEAD_TEXT, label, "topright")
+        y = head_y + px(HEAD_GAP)
         wd = m.words
         # the part's own name ("Xentronium Armor") stands for the word
         lines = [(wd["structure"], None, m.structure),
@@ -512,7 +543,7 @@ class View:
             text(m.words["no_specials"], (r.x + px(16), r.y + px(48)), 22,
                  label)
         else:
-            head_y = r.y + px(44)
+            head_y = r.y + px(HEAD_Y)
             two = len(rows) > SPECIAL_ROWS
             cols = 2 if two else 1
             cw = (r.w - px(32)) // cols
@@ -522,12 +553,12 @@ class View:
             for col in range(cols):
                 x0 = r.x + px(16) + col * cw
                 x1 = x0 + cw - (px(28) if two and col == 0 else 0)
-                text("System", (x0, head_y), 18, label)
-                text("HP", (x1 - (px(154) if not two else 0), head_y), 18,
-                     label, "topright")
+                text("System", (x0, head_y), HEAD_TEXT, label)
+                text("HP", (x1 - (px(154) if not two else 0), head_y),
+                     HEAD_TEXT, label, "topright")
                 if not two:
-                    text("State", (x1, head_y), 18, label, "topright")
-            y0 = head_y + px(28)
+                    text("State", (x1, head_y), HEAD_TEXT, label, "topright")
+            y0 = head_y + px(HEAD_GAP)
             for n, (_b, name, cur, most, state) in enumerate(cells):
                 col, line = divmod(n, SPECIAL_ROWS)
                 x0 = r.x + px(16) + col * cw

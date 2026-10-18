@@ -47,6 +47,7 @@ the breakdown is not available.
 
 Nothing here imports pygame; the smoke suite reads it without a window.
 """
+from core import lang
 from core import leaderskills as ls
 
 from . import cbscan
@@ -88,7 +89,7 @@ def cdiv(a, b):
 
 class Part:
     """One line of a card: what, how much, whose. `value` None is a
-    formula line (combat speed); `sources` the grey sub-line of a Base;
+    formula line (combat speed); `sources` a Base's child lines (work order 301);
     `bit` the special system (or "computer") a SYSTEM line is, `src` the
     unit a FLEET line comes from."""
 
@@ -206,7 +207,7 @@ def device(u, b, value, names):
 
 
 def breakdown(index, units, players, leader, attacker, defender, names,
-              crew_word, computer_name=None, start=None):
+              crew_word, computer_name=None, start=None, race=None):
     """{"attack", "defense", "evasion", "speed": Card} for unit `index`, or
     None when the side's records are not there. `players`: each player's
     traits; `leader(i)`: leader i's record (special_skills, xp,
@@ -214,7 +215,8 @@ def breakdown(index, units, players, leader, attacker, defender, names,
     at the round's start — what the engine added up (the round loop,
     combinit.cpp:1053-1061); the parts are counted from it, the notes from
     `units` (now). Without it the parts are counted from now, and only a
-    sum the parts make exactly is shown: nothing is guessed."""
+    sum the parts make exactly is shown: nothing is guessed. `race`: the
+    owner's race name, the Base's Race line names it (work order 301)."""
     if start is None or len(start) != len(units):
         start = units
     u = start[index]
@@ -232,6 +234,10 @@ def breakdown(index, units, players, leader, attacker, defender, names,
     traits = traits_of(owner) if owner < MAX_PLAYERS else None
     q = max(0, min(4, int(u["crew_quality"])))
     crew = crew_word or cbscan.CREW_ENGLISH[q]
+    # the word translated, the race's name as the game stores it — kept
+    # from being translated again as a whole (`core.lang.Stored`)
+    race_line = lang.Stored(f"{lang.tr('Race')} ({race})") if race \
+        else "Race"
     now = units[index]
 
     def base(value_parts):
@@ -261,7 +267,7 @@ def breakdown(index, units, players, leader, attacker, defender, names,
     # ── Beam Attack ─────────────────────────────────────────
     parts, fixed = [], [(crew, CREW_ATTACK[q])]
     if traits is not None:
-        fixed.append(("Race", int(traits[TRAIT_SHIP_ATTACK])))
+        fixed.append((race_line, int(traits[TRAIT_SHIP_ATTACK])))
     ctype = int(u["computer_type"])
     if ctype > 0:
         full = cbscan.COMPUTER_BONUS[ctype] if ctype < len(
@@ -295,7 +301,7 @@ def breakdown(index, units, players, leader, attacker, defender, names,
         crew_v = CREW_DEFENCE[q] // 2 if missiles else CREW_DEFENCE[q]
         fixed = [(crew, crew_v)]
         if traits is not None and int(u["ship_idx"]) != -1:
-            fixed.append(("Race", int(traits[TRAIT_SHIP_DEFENSE])))
+            fixed.append((race_line, int(traits[TRAIT_SHIP_DEFENSE])))
         if not missiles:
             parts.append(speed_part(int(u["current_speed"])))
             if cloaked:
