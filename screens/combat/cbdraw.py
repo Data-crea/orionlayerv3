@@ -27,10 +27,15 @@ import pygame
 from . import cbart, cbview
 
 CELL = cbview.CELL
-#: The legal cells' colour: 0x81, black (0) in a nebula
-#: (`Draw_Legal_Boxes_`, cmbtdrw1.cpp:287).
-LEGAL_INDEX = 0x81
-LEGAL_INDEX_NEBULA = 0
+#: DEVIATION `legal_cells_readable` (Data, work order 303): the cells a
+#: ship may move to as a light tint the stars show through and a lit edge
+#: round the reachable area, the same in a nebula — readable on HD
+#: graphics; the original fills them solid in 0x81, black in a nebula, under
+#: its near star layers (`Draw_Legal_Boxes`, cmbtdrw1.cpp:326-376, :364),
+#: which on HD's field read as part of the space, not as a marking.
+LEGAL_FILL = (70, 190, 255, 56)
+LEGAL_EDGE = (150, 225, 255, 235)
+_LEGAL = {}
 CENTRE = {0: 10, 1: 20, 2: 20, 3: 30, 4: 30, 5: 30}
 BASE_OFF = {0: -16, 1: -6, 2: 4}          # by (size + 1) // 2
 PLANET_CENTRE = {0: 30, 1: 40, 2: 60, 3: 70, 4: 80}
@@ -188,22 +193,19 @@ def scaled(surf, scale, cache):
     return cache[key]
 
 
-def draw_background(surface, cam, art, nebula, cache, under_stars=None):
-    """The battle field's space. `under_stars()` draws between the far
-    layer and the two star layers, where the original fills the legal cells
-    (`Full_Draw_Combat_Screen_`, cmbtdrw1.cpp:466-485: far star, legal boxes,
-    then 47 and 48), so the stars stand over them (work order 248, F5)."""
+def draw_background(surface, cam, art, nebula, cache):
+    """The battle field's space: the far star layer (a nebula's in one)
+    and the two near ones. The legal cells, which the original fills
+    between the far layer and the near ones (`Full_Draw_Combat_Screen`,
+    cmbtdrw1.cpp:547-577), HD draws over all three (`draw_legal`, work
+    order 303)."""
     # LOOK EXCEPTION picture: the battle field's space (006f's named area)
     surface.fill((0, 0, 0), cam.area)
     if not art.available:
-        if under_stars is not None:
-            under_stars()
         return
     clip = surface.get_clip()
     surface.set_clip(pygame.Rect(cam.area))
-    for layer, (entry, factor) in enumerate(STAR_LAYERS):
-        if layer == 1 and under_stars is not None:
-            under_stars()
+    for entry, factor in STAR_LAYERS:
         if nebula and entry == 46:
             entry = 35
         layer = art.surface("combat", entry)
@@ -223,24 +225,66 @@ def draw_background(surface, cam, art, nebula, cache, under_stars=None):
     surface.set_clip(clip)
 
 
-def draw_legal(surface, cam, art, combat, unit):
-    """TRANSCRIPTION `Draw_Legal_Boxes_` (cmbtdrw1.cpp:249-300): each legal
-    cell filled solid with a box of the unit's size class, in 0x81 or, in a
-    nebula, black (:287); drawn under the star layers (`draw_background`'s
-    `under_stars`). Until work order 248 HD laid a 150-alpha shade over all
-    three layers, which hid the stars wherever a unit could move (245's F5)."""
-    size = max(0, min(5, int(unit["size_class"])))
-    box = {0: 20, 1: 40, 2: 40}.get(size, 60)
-    index = LEGAL_INDEX_NEBULA if combat.get("in_nebula") else LEGAL_INDEX
-    rgb = (art.palette_with().get(index, (40, 40, 90))
-           if art.available else (40, 40, 90))
+def legal_area(combat, unit):
+    """The cells the reachable area covers: each legal cell the engine
+    marks (CMBT's bitmap, `combat_grid == 2000`) with the unit's footprint
+    from it, 1, 2 or 3 cells a side by size class — the original's 20, 40
+    or 60 px box (`Draw_Legal_Boxes`, cmbtdrw1.cpp:346-361)."""
     from core import combatblocks as cb
-    shade = pygame.Surface((max(1, round(box * cam.scale)),) * 2)
-    shade.fill(rgb)
+    size = max(0, min(5, int(unit["size_class"])))
+    side = {0: 1, 1: 2, 2: 2}.get(size, 3)
+    out = set()
     for x in range(cb.GRID_W):
         for y in range(cb.GRID_H):
             if cb.legal(combat["legal"], x, y):
-                surface.blit(shade, cam.to_window(x * CELL, y * CELL))
+                out.update((x + i, y + j) for i in range(side)
+                           for j in range(side))
+    return out
+
+
+def draw_legal(surface, cam, art, combat, unit):
+    """The reachable area (DEVIATION `legal_cells_readable`, work order
+    303): drawn over the space and under the units, as one picture of the
+    field's size — a light tint over every covered cell and a lit edge where
+    a covered cell meets an uncovered one. Kept while the bitmap, the unit's
+    size and the camera stay."""
+    area = pygame.Rect(cam.area)
+    key = (bytes(combat["legal"]), int(unit["size_class"]), cam.scale,
+           cam.ox, cam.oy, tuple(area))
+    if _LEGAL.get("key") != key:
+        cells = legal_area(combat, unit)
+        layer = pygame.Surface(area.size, pygame.SRCALPHA)
+
+        def rect(x, y):
+            x0, y0 = cam.to_window(x * CELL, y * CELL)
+            x1, y1 = cam.to_window((x + 1) * CELL, (y + 1) * CELL)
+            return pygame.Rect(round(x0) - area.x, round(y0) - area.y,
+                               round(x1) - round(x0), round(y1) - round(y0))
+        wd = max(1, round(cam.scale * 0.6))
+        for x, y in cells:
+            r = rect(x, y)
+            if not r.colliderect(layer.get_rect()):
+                continue
+            # LOOK EXCEPTION data: the reachable cells' tint (work order 303)
+            layer.fill(LEGAL_FILL, r)
+        for x, y in cells:
+            r = rect(x, y)
+            if not r.inflate(2 * wd, 2 * wd).colliderect(layer.get_rect()):
+                continue
+            # LOOK EXCEPTION data: the reachable area's edge (work order 303)
+            for nx, ny, a, b in ((x - 1, y, r.topleft, r.bottomleft),
+                                 (x + 1, y, (r.right - wd, r.y),
+                                  (r.right - wd, r.bottom)),
+                                 (x, y - 1, r.topleft, r.topright),
+                                 (x, y + 1, (r.x, r.bottom - wd),
+                                  (r.right, r.bottom - wd))):
+                if (nx, ny) not in cells:
+                    edge = pygame.Rect(a, (max(wd, b[0] - a[0]),
+                                           max(wd, b[1] - a[1])))
+                    layer.fill(LEGAL_EDGE, edge)
+        _LEGAL.clear()
+        _LEGAL.update(key=key, layer=layer)
+    surface.blit(_LEGAL["layer"], area.topleft)
 
 
 def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
