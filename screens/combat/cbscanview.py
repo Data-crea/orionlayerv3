@@ -206,8 +206,9 @@ class View:
 
         def marker(right, cy, state):
             """The state beside a coloured number, so it never rests on the
-            colour alone (work order 297): a triangle for damaged, a cross
-            for destroyed. Returns its left edge."""
+            colour alone (work order 297): an "!" for damaged (Data, work
+            order 300; a triangle before), a cross for destroyed. Drawn, so
+            no font need have the glyph. Returns its left edge."""
             if state not in (cbscan.DAMAGED, cbscan.DESTROYED):
                 return right
             s = thin(12)
@@ -215,8 +216,12 @@ class View:
             rgb = STATE_RGB[state]
             # LOOK EXCEPTION marking: the state's sign beside a number (297)
             if state == cbscan.DAMAGED:
-                pygame.draw.polygon(surface, rgb, (box.midtop, box.bottomright,
-                                                   box.bottomleft))
+                wd = thin(3)
+                pygame.draw.line(surface, rgb, box.midtop,
+                                 (box.centerx, box.y + s * 0.62), wd)
+                pygame.draw.circle(surface, rgb,
+                                   (box.centerx, box.bottom - wd // 2 - 1),
+                                   max(1, (wd + 1) // 2))
             else:
                 wd = thin(3)
                 pygame.draw.line(surface, rgb, box.topleft, box.bottomright, wd)
