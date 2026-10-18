@@ -32,17 +32,21 @@ from core.hud import blocks as hud
 from core.hud import text as hudtext
 from . import cbart, cbscan
 
-#: The window and its boxes, reference px (the sketch's).
+#: The window and its boxes, reference px. Work order 297 (Data, from the
+#: analysis of 18 Oct 2026): each box as high as what it holds needs —
+#: SHIELDS gives up height, WEAPONS (8 rows of 22 px), OFFICER (every
+#: combat skill) and COMBAT VALUES gain; measured by check 090znb at three
+#: window sizes, every text inside its box.
 WINDOW = (60, 30, 1800, 1020)
 BOXES = {
-    "ship": (80, 114, 520, 220), "officer": (80, 348, 520, 250),
-    "crew": (80, 612, 520, 150),
-    "shields": (614, 114, 600, 420), "values": (614, 548, 600, 214),
-    # a ship has 8 special systems at most (the designer's `special_devices
-    # [8]`, design.cpp:94-101): their box holds 8 rows, the rest is the
-    # hull's (Data, work order 292)
-    "hull": (1228, 114, 612, 310), "specials": (1228, 438, 612, 324),
-    "weapons": (80, 774, 1760, 206),
+    "ship": (80, 114, 520, 200), "officer": (80, 328, 520, 250),
+    "crew": (80, 592, 520, 126),
+    "shields": (614, 114, 600, 350), "values": (614, 478, 600, 240),
+    # a designed ship has 8 special systems at most (the designer's
+    # `special_devices[8]`, design.cpp:94-101): 8 rows in one column; 9-16
+    # in two, beyond 16 the 16th cell says how many more (work order 297)
+    "hull": (1228, 114, 612, 250), "specials": (1228, 378, 612, 340),
+    "weapons": (80, 732, 1760, 248),
 }
 TITLES = {"ship": "SHIP", "officer": "OFFICER", "crew": "CREW",
           "shields": "SHIELDS", "values": "COMBAT VALUES",
@@ -63,10 +67,26 @@ BAR_BACK = (40, 46, 60)
 #: down (`cbart.stored_facing`; rendered, work order 296 — 12 had stood
 #: here since work order 290 and drew the engines under "Front").
 NOSE_UP = 4
-#: The weapons table's columns, reference px from the box's left.
-WEAPON_COLUMNS = (("#", 176), ("Weapon", 210), ("Count", 560),
-                  ("Arc", 700), ("Ammo", 820), ("Mods", 950),
-                  ("HP", 1260), ("State", 1560))
+#: The weapons table, (column, left edge from the box's left, width),
+#: reference px. Detailed (work order 297): what a weapon is and how well
+#: it is — Count, HP, State side by side — then how it fires, the mods last
+#: and widest. Normal keeps the original's order (cmbtdrw1.cpp:3801-3918).
+WEAPON_COLUMNS = (("#", 176, 30), ("Weapon", 210, 300), ("Count", 520, 90),
+                  ("HP", 620, 90), ("State", 720, 160), ("Arc", 890, 60),
+                  ("Ammo", 960, 110), ("Mods", 1080, 664))
+NORMAL_WEAPON_COLUMNS = (("#", 176, 30), ("Weapon", 210, 340),
+                         ("Count", 560, 130), ("Arc", 700, 110),
+                         ("Ammo", 820, 120), ("Mods", 950, 794))
+#: A table row, reference px, and the smallest text a crowded box may draw
+#: (the analysis' floor: 18 reference px, 12 device px at 1280 x 720).
+ROW, WEAPON_TEXT, FLOOR = 26, 22, 18
+SPECIAL_ROW, SPECIAL_ROWS = 30, 8
+#: The combat values' number column ends this far from the box's right
+#: edge: the state marker and the breakdown's info sign stand right of it.
+VALUE_PAD = 64
+SKILL_ROW = 26
+ELLIPSIS = "…"
+_FITTED = {}
 
 
 def k_of(surface):
@@ -74,9 +94,33 @@ def k_of(surface):
     return min(w / 1920, h / 1080)
 
 
+def fitted(style, text, size, room):
+    """THE CELL RULE (work order 297): a text wider than its cell is cut
+    with an ellipsis, never drawn past it. Kept per (text, size, room)."""
+    key = (text, size, room)
+    hit = _FITTED.get(key)
+    if hit is None:
+        if len(_FITTED) > 2048:
+            _FITTED.clear()
+        width = lambda t: style.render_text(t, size, (255, 255, 255)).get_width()
+        hit = text
+        if room > 0 and width(text) > room:
+            cut = text
+            while cut and width(cut.rstrip(", ·") + ELLIPSIS) > room:
+                cut = cut[:-1]
+            hit = cut.rstrip(", ·") + ELLIPSIS
+        _FITTED[key] = hit
+    return hit
+
+
 class View:
     def __init__(self):
         self.rects = {}
+        self.ring = self.window = None
+        self.boxes = {}
+        #: the cells drawn cut this frame: [(rect, the whole text)] — what
+        #: the card shows under the pointer (work order 297 part B)
+        self.cut = []
 
     def draw(self, surface, style, scale, model, detailed, turn, pics,
              transparency=0.0, under=None):
@@ -86,7 +130,7 @@ class View:
         space, `Sources.backdrop` — through the window's and the boxes'
         fills, never through their edges or words (HD EXTENSION
         `scan_transparency`)."""
-        self.rects = {}
+        self.rects, self.cut = {}, []
         k = k_of(surface)
         w, h = surface.get_size()
         ox = (w - WINDOW[2] * k) / 2 - WINDOW[0] * k
@@ -99,14 +143,29 @@ class View:
         def px(n):
             return max(9, int(n * k))
 
-        def text(t, at, size, rgb, anchor="topleft"):
-            img = style.render_text(str(t), px(size), rgb[:3])
+        def thin(n):
+            """A line's width or a gap below `px`'s 9 device px."""
+            return max(1, round(n * k))
+
+        def width(t, size):
+            return style.render_text(str(t), px(size), value[:3]).get_width()
+
+        def text(t, at, size, rgb, anchor="topleft", room=None):
+            """`room` (device px): the cell's width — cut to fit it."""
+            t = str(t)
+            whole = t
+            if room is not None:
+                t = fitted(style, t, px(size), room)
+            img = style.render_text(t, px(size), rgb[:3])
             r = img.get_rect(**{anchor: at})
             surface.blit(img, r)
+            if t != whole:
+                self.cut.append((r, whole))
             return r
 
         label, value = hudtext.colour("label"), hudtext.colour("value")
         head = hudtext.colour("sub")
+        dim = tuple((a + b) // 2 for a, b in zip(label[:3], BAR_BACK))
         hud.popup(surface, R(*WINDOW), scale)
         for key, box in BOXES.items():
             hud.panel(surface, R(*box), scale, dense=True)
@@ -146,9 +205,30 @@ class View:
             pygame.draw.rect(surface, DETAIL_TAG, r, border_radius=px(3))
             surface.blit(img, img.get_rect(center=r.center))
 
-        def row(r, y, lab, val, rgb=value, size=24):
-            text(lab, (r.x + px(16), y), size, label)
-            text(val, (r.right - px(16), y), size, rgb, "topright")
+        def marker(right, cy, state):
+            """The state beside a coloured number, so it never rests on the
+            colour alone (work order 297): a triangle for damaged, a cross
+            for destroyed. Returns its left edge."""
+            if state not in (cbscan.DAMAGED, cbscan.DESTROYED):
+                return right
+            s = thin(12)
+            box = pygame.Rect(right - s, cy - s // 2, s, s)
+            rgb = STATE_RGB[state]
+            # LOOK EXCEPTION marking: the state's sign beside a number (297)
+            if state == cbscan.DAMAGED:
+                pygame.draw.polygon(surface, rgb, (box.midtop, box.bottomright,
+                                                   box.bottomleft))
+            else:
+                wd = thin(3)
+                pygame.draw.line(surface, rgb, box.topleft, box.bottomright, wd)
+                pygame.draw.line(surface, rgb, box.topright, box.bottomleft, wd)
+            return box.x
+
+        def row(r, y, lab, val, rgb=value, size=24, room=None):
+            vr = text(val, (r.right - px(16), y), size, rgb, "topright")
+            text(lab, (r.x + px(16), y), size, label,
+                 room=(vr.x - px(12) - (r.x + px(16))) if room is None
+                 else room)
 
         def bar(r, frac, rgb):
             # LOOK EXCEPTION data: a part's hits as a bar (work order 290)
@@ -158,7 +238,7 @@ class View:
                 pygame.draw.rect(surface, rgb, (r.x, r.y, int(r.w * min(1, frac)),
                                                 r.h))
 
-        def fit(img, box):
+        def fit_img(img, box):
             if img is None:
                 return None
             # the drawing's own pixels, not its canvas
@@ -172,27 +252,27 @@ class View:
             return how(img, size)
 
         m = model
+        ink = lambda state: STATE_RGB[state] if state in (
+            cbscan.DAMAGED, cbscan.DESTROYED) else value
         # ── A the ship ─────────────────────────────────────────
         r = R(*BOXES["ship"])
-        pic_box = R(BOXES["ship"][0] + 16, BOXES["ship"][1] + 44, 150, 150)
-        img = fit(pics.ship, pic_box)
+        pic_box = R(BOXES["ship"][0] + 16, BOXES["ship"][1] + 40, 140, 140)
+        img = fit_img(pics.ship, pic_box)
         if img is not None:
             surface.blit(img, img.get_rect(center=pic_box.center))
-        y = r.y + px(44)
-        tx = r.x + px(184)
-        text(m.name, (tx, y), 32, value)
-        y += px(42)
-        if m.hull:
-            text(m.hull, (tx, y), 24, value)
-            y += px(32)
-        if m.owner_name:
-            text(m.owner_name, (tx, y), 24, label)
-            y += px(32)
-        if m.design_date:
-            text(f"Design date {m.design_date}", (tx, y), 22, label)
-            y += px(30)
-        if m.captured:
-            text(m.words["captured"], (tx, y), 24, STATE_RGB[cbscan.DESTROYED])
+        tx = r.x + px(172)
+        room = r.right - px(16) - tx
+        y = r.y + px(42)
+        text(m.name, (tx, y), 32, value, room=room)
+        y += px(40)
+        for line, size, rgb in ((m.hull, 24, value), (m.owner_name, 24, label),
+                                (m.design_date and
+                                 f"Design date {m.design_date}", 22, label),
+                                (m.captured and m.words["captured"], 22,
+                                 STATE_RGB[cbscan.DESTROYED])):
+            if line:
+                text(line, (tx, y), size, rgb, room=room)
+                y += px(28)
         # ── B the officer ──────────────────────────────────────
         r = R(*BOXES["officer"])
         o = m.officer
@@ -201,37 +281,51 @@ class View:
         else:
             # the whole figure, as every place draws it (`leaderportraits`)
             port = R(BOXES["officer"][0] + 12, BOXES["officer"][1] + 38,
-                     150, 206)
+                     150, 200)
             pic = pics.portrait(o, port.size)
             if pic is not None:
                 surface.blit(pic, pic.get_rect(center=port.center))
             else:
                 hud.field(surface, port, scale)
             tx = port.right + px(16)
-            text(o["name"], (tx, r.y + px(42)), 30, value)
-            if o["title"]:
-                text(o["title"], (tx, r.y + px(78)), 22, label)
+            room = r.right - px(16) - tx
+            text(o["name"], (tx, r.y + px(42)), 30, value, room=room)
+            # the level on the title's line (work order 297)
             lw = o["level_word"] or f"Level {o['level']}"
-            text(f"{lw}  {m.officer_mark}", (tx, r.y + px(104)), 22, value)
-            y = r.y + px(136)
-            for sid, name, val in o["skills"][:4]:
+            # the level first: a long title is what the cell rule cuts
+            what = " · ".join(p for p in (f"{lw} {m.officer_mark}",
+                                          o["title"]) if p)
+            text(what, (tx, r.y + px(78)), 20, label, room=room)
+            y = r.y + px(110)
+            fit = (r.bottom - px(6) - y) // px(SKILL_ROW)
+            skills = o["skills"]
+            shown = skills if len(skills) <= fit else skills[:fit - 1]
+            for sid, name, val in shown:
                 icon = pics.skill_icon(sid, px(22))
                 if icon is not None:
                     surface.blit(icon, (tx, y))
-                text(name, (tx + px(30), y), 22, label)
-                text(val, (r.right - px(16), y), 22, STATE_RGB[cbscan.OK],
-                     "topright")
-                y += px(26)
-            if not o["skills"]:
-                text("no skill that acts in battle", (tx, y), 20, label)
-        # ── C the crew ─────────────────────────────────────────
+                vr = text(val, (r.right - px(16), y), 22,
+                          STATE_RGB[cbscan.OK], "topright")
+                text(name, (tx + px(30), y), 22, label,
+                     room=vr.x - px(8) - (tx + px(30)))
+                y += px(SKILL_ROW)
+            if len(shown) < len(skills):
+                more = text(f"+{len(skills) - len(shown)} more",
+                            (tx + px(30), y), 20, label)
+                self.cut.append((more, ", ".join(
+                    f"{n} {v}" for _s, n, v in skills[len(shown):])))
+            if not skills:
+                text("no skill that acts in battle", (tx, y), 20, label,
+                     room=room)
+        # ── C the crew: the stars on the level's line, experience and
+        # marines on one (work order 297) ───────────────────────
         r = R(*BOXES["crew"])
         y = r.y + px(44)
         if m.crew is not None:
-            row(r, y, "Crew level", m.crew)
             stars = max(0, min(5, m.crew_quality))
+            left = r.right - px(16 + 5 * 26)
             for n in range(5):
-                c = (r.right - px(27 + (4 - n) * 26), y + px(44))
+                c = (left + px(13 + n * 26), y + px(12))
                 rgb = (240, 170, 60) if n < stars else (60, 66, 80)
                 pts = [(c[0] + px(11) * math.sin(a * math.pi / 5) *
                         (1 if a % 2 == 0 else 0.45),
@@ -239,24 +333,78 @@ class View:
                         (1 if a % 2 == 0 else 0.45)) for a in range(10)]
                 # LOOK EXCEPTION data: the crew stars, one a level (cmbtdrw1.cpp:1222-1245)
                 pygame.draw.polygon(surface, rgb, pts)
-            if detailed and m.experience is not None:
-                er = text(f"Experience {m.experience}",
-                          (r.x + px(16), y + px(32)), 22, label)
-                tag((er.right + px(10), er.centery))
+            cr = text(m.crew, (left - px(12), y), 22, value, "topright")
+            text("Crew level", (r.x + px(16), y), 22, label,
+                 room=cr.x - px(12) - (r.x + px(16)))
+        y2 = y + px(36)
+        mx = r.x + px(16)
+        if detailed and m.experience is not None:
+            er = text("Experience", (mx, y2), 22, label)
+            vr = text(str(m.experience), (er.right + px(10), y2), 22, value)
+            tag((vr.right + px(10), vr.centery))
         if m.marines is not None:
-            row(r, y + px(68), m.words["marines"], str(m.marines))
+            if detailed:
+                vr = text(str(m.marines), (r.right - px(16), y2), 22, value,
+                          "topright")
+                text(m.words["marines"], (vr.x - px(10), y2), 22, label,
+                     "topright")
+            else:
+                row(r, y2, m.words["marines"], str(m.marines), size=22)
         # ── D the shields ──────────────────────────────────────
         r = R(*BOXES["shields"])
-        # Detailed has no lines under the ring (work order 294): the ring
-        # and its four arcs stand in the middle of the box below its title
-        c = (r.centerx, r.y + px(226 if detailed else 186))
-        img = fit(pics.upright, pygame.Rect(0, 0, px(130), px(130)))
+        if detailed:
+            # the generator and its state in the title's line, the upgrades
+            # and a damper field under it (work order 297, ACGIFT)
+            hx = r.right - px(16)
+            if m.shield_system is not None:
+                cur, most = m.shield_system
+                st = cbscan.part_state(cur, most)
+                vr = text(f"{cur} / {most}", (hx, r.y + px(10)), 22, ink(st),
+                          "topright")
+                mx = marker(vr.x - px(6), vr.centery, st)
+                text(m.shield_name or "Shield", (mx - px(10), r.y + px(10)),
+                     22, label, "topright")
+            elif m.damper is not None:
+                name, st = m.damper
+                vr = text(st, (hx, r.y + px(10)), 22, STATE_RGB[st],
+                          "topright")
+                text(name, (vr.x - px(10), r.y + px(10)), 22, label,
+                     "topright")
+            elif m.shield_name:
+                text(m.shield_name, (hx, r.y + px(10)), 22, label, "topright")
+            x0, ty = r.x + px(16), r.y + px(40)
+            tags = m.shield_tags
+            for n, (name, st) in enumerate(tags):
+                sep = px(26) if n else 0
+                need = width(name, 20) + (px(18) if st != cbscan.OK else 0)
+                rest = len(tags) - n - 1
+                end = r.right - px(16) - (px(48) if rest else 0)
+                if x0 + sep + need > end:
+                    # the rest by number; the card names them
+                    more = text(f"+{len(tags) - n}", (x0 + sep, ty), 20,
+                                label)
+                    self.cut.append((more, ", ".join(t for t, _s in
+                                                     tags[n:])))
+                    break
+                if n:
+                    text("·", (x0 + px(9), ty), 20, label)
+                tr = text(name, (x0 + sep, ty), 20,
+                          ink(st) if st != cbscan.OK else label)
+                x0 = tr.right
+                if st != cbscan.OK:
+                    x0 = tr.right + px(18)
+                    marker(x0, tr.centery, st)
+        # Detailed: the ring and its four arcs below the head; Normal: the
+        # ring higher, its two lines under it (the box shrank, work order 297)
+        c = (r.centerx, r.y + px(198 if detailed else 150))
+        img = fit_img(pics.upright, pygame.Rect(0, 0, px(104), px(104)))
         if img is not None:
             surface.blit(img, img.get_rect(center=c))
         most = max(1, m.shield_max)
-        rad = px(100)
+        rad = px(80)
         box = pygame.Rect(0, 0, 2 * rad, 2 * rad)
         box.center = c
+        self.ring = box.copy()                  # held by check 090znb
         names = ("Front", "Right", "Rear", "Left")
         # arc centres on the screen, counter-clockwise from right (pygame):
         # front up, right right, rear down, left left
@@ -271,8 +419,8 @@ class View:
             if detailed:
                 at = {0: (c[0], c[1] - rad - px(54)),
                       2: (c[0], c[1] + rad + px(8)),
-                      3: (c[0] - rad - px(78), c[1] - px(24)),
-                      1: (c[0] + rad + px(78), c[1] - px(24))}[arc]
+                      3: (c[0] - rad - px(80), c[1] - px(24)),
+                      1: (c[0] + rad + px(80), c[1] - px(24))}[arc]
                 lr = text(names[arc], at, 22, label, "midtop")
                 text(f"{m.arcs[arc]} / {m.shield_max}",
                      (lr.centerx, lr.bottom), 24, rgb, "midtop")
@@ -286,19 +434,62 @@ class View:
         # ── E the combat values ────────────────────────────────
         r = R(*BOXES["values"])
         y = r.y + px(44)
-        evade = f"{m.evasion}%"
-        values = [(m.words["beam_attack"], cbscan.signed(m.attack)),
-                  (m.words["beam_defense"], cbscan.signed(m.defense)),
-                  (m.words["missile_evasion"], evade),
-                  ("Combat speed", f"{m.speed[0]} / {m.speed[1]}")]
-        if detailed:        # the computer by its name, first (work order 294)
-            values.insert(0, (m.computer_name or m.words["computer"],
-                              m.computer_bonus))
+        self.rects["values"] = {}
+        if detailed:
+            # four rows; the computer as Beam Attack's part (work order 297);
+            # the number coloured by THIS ship's systems behind it, the
+            # label never
+            vs = m.value_states
+            rows = ((m.words["beam_attack"], cbscan.signed(m.attack),
+                     "attack"),
+                    (m.words["beam_defense"], cbscan.signed(m.defense),
+                     "defense"),
+                    (m.words["missile_evasion"], f"{m.evasion}%", "evasion"),
+                    ("Combat speed", f"{m.speed[0]} / {m.speed_max}", "speed"))
+            for lab, val, key in rows:
+                st = vs.get(key, cbscan.OK)
+                vx = r.right - px(VALUE_PAD)
+                if key == "speed":
+                    # the current speed follows the drive, the maximum not
+                    mr = text(f" / {m.speed_max}", (vx, y), 24, value,
+                              "topright")
+                    vr = text(f"{m.speed[0]}", (mr.x, y), 24, ink(st),
+                              "topright").union(mr)
+                else:
+                    vr = text(val, (vx, y), 24, ink(st), "topright")
+                marker(r.right - px(40), vr.centery, st)
+                text(lab, (r.x + px(16), y), 24, label,
+                     room=vr.x - px(12) - (r.x + px(16)))
+                self.rects["values"][key] = pygame.Rect(
+                    r.x + px(4), y - px(4), r.w - px(8), px(34))
+                y += px(38)
+                if key == "attack" and m.computer_state is not None:
+                    # the computer, Beam Attack's part: smaller, dimmer, a
+                    # thin tree line (Data, work order 297)
+                    cx = r.x + px(28)
+                    lw = thin(2)
+                    pygame.draw.line(surface, dim, (cx, y - px(12)),
+                                     (cx, y + px(11)), lw)
+                    pygame.draw.line(surface, dim, (cx, y + px(11)),
+                                     (cx + px(14), y + px(11)), lw)
+                    cst = m.computer_state
+                    cv = text(m.computer_bonus, (vx, y), 20,
+                              ink(cst) if cst != cbscan.OK else dim,
+                              "topright")
+                    marker(r.right - px(40), cv.centery, cst)
+                    text(m.computer_name or m.words["computer"],
+                         (cx + px(20), y), 20, dim,
+                         room=cv.x - px(12) - (cx + px(20)))
+                    y += px(32)
         else:
-            values.append((m.words["computer"], m.computer_line))
-        for lab, val in values:
-            row(r, y, lab, val)
-            y += px(32)
+            values = [(m.words["beam_attack"], cbscan.signed(m.attack)),
+                      (m.words["beam_defense"], cbscan.signed(m.defense)),
+                      (m.words["missile_evasion"], f"{m.evasion}%"),
+                      ("Combat speed", f"{m.speed[0]} / {m.speed[1]}"),
+                      (m.words["computer"], m.computer_line)]
+            for lab, val in values:
+                row(r, y, lab, val)
+                y += px(32)
         # ── F hull and systems ─────────────────────────────────
         r = R(*BOXES["hull"])
         y = r.y + px(44)
@@ -310,23 +501,27 @@ class View:
             lines.append((wd["drive"], f"{m.parsecs}{wd['parsecs']}",
                           m.drive))
         lines.append((m.computer_name or wd["computer"], None, m.computer))
-        if m.shield_system is not None:
+        if m.shield_system is not None and not detailed:
+            # Detailed has the generator in the SHIELDS head (work order 297)
             lines.append((m.shield_name or "Shield", None, m.shield_system))
+        bar_x = r.right - px(270)
         for lab, small, pair in lines:
             cur, most = pair
             frac = cur / most if most else 0
             rgb = STATE_RGB[cbscan.OK] if most and cur >= most else \
                 STATE_RGB[cbscan.DAMAGED] if cur > 0 else \
                 STATE_RGB[cbscan.DESTROYED]
-            lr = text(lab, (r.x + px(16), y), 22, label)
+            lr = text(lab, (r.x + px(16), y), 22, label,
+                      room=bar_x - px(10) - (r.x + px(16)))
             if small:
-                text(small, (lr.right + px(10), y + px(3)), 18, value)
-            bar(pygame.Rect(r.right - px(270), y + px(4), px(110), px(16)),
-                frac, rgb)
+                text(small, (lr.right + px(10), y + px(3)), 18, value,
+                     room=bar_x - px(10) - (lr.right + px(10)))
+            bar(pygame.Rect(bar_x, y + px(4), px(110), px(16)), frac, rgb)
             text(f"{cur} / {most}" if most is not None else str(cur),
                  (r.right - px(16), y), 22, value, "topright")
-            y += px(48)
-        # ── G the special systems ──────────────────────────────
+            y += px(44)
+        # ── G the special systems: 8 rows; 9-16 in two columns; beyond
+        # 16 the last cell says how many more (work order 297) ───────
         r = R(*BOXES["specials"])
         rows = m.specials
         if not rows:
@@ -334,37 +529,69 @@ class View:
                  label)
         else:
             head_y = r.y + px(44)
-            text("System", (r.x + px(16), head_y), 18, label)
-            if detailed:
-                text("HP", (r.right - px(170), head_y), 18, label, "topright")
-                tag((r.right - px(160), head_y + px(10)))
-                text("State", (r.right - px(16), head_y), 18, label,
-                     "topright")
-            room = r.bottom - px(10) - (head_y + px(28))
-            step = max(px(16), min(px(30), room // max(1, len(rows))))
-            size = max(14, min(22, int(step / k * 0.75)))
-            y = head_y + px(28)
-            for _b, name, cur, most, state in rows:
-                rgb = STATE_RGB[state] if state != cbscan.OK else value
-                text(name, (r.x + px(16), y), size, rgb)
+            two = len(rows) > SPECIAL_ROWS
+            cols = 2 if two else 1
+            cw = (r.w - px(32)) // cols
+            cells = rows if len(rows) <= 2 * SPECIAL_ROWS else \
+                rows[:2 * SPECIAL_ROWS - 1]
+            size = 22 if not two else 20
+            for col in range(cols):
+                x0 = r.x + px(16) + col * cw
+                x1 = x0 + cw - (px(28) if two and col == 0 else 0)
+                text("System", (x0, head_y), 18, label)
                 if detailed:
-                    text("—" if most is None else f"{cur} / {most}",
-                         (r.right - px(170), y), size, value, "topright")
-                    text(state, (r.right - px(16), y), size,
-                         STATE_RGB[state], "topright")
-                y += step
+                    hx = x1 - (px(154) if not two else 0)
+                    hr = text("HP", (hx, head_y), 18, label, "topright")
+                    if col == 0:        # in two columns: left of the HP
+                        tag((hx + px(10), hr.centery) if not two else
+                            (hr.x - px(28), hr.centery))
+                    if not two:
+                        text("State", (x1, head_y), 18, label, "topright")
+            y0 = head_y + px(28)
+            for n, (_b, name, cur, most, state) in enumerate(cells):
+                col, line = divmod(n, SPECIAL_ROWS)
+                x0 = r.x + px(16) + col * cw
+                x1 = x0 + cw - (px(28) if two and col == 0 else 0)
+                y = y0 + line * px(SPECIAL_ROW)
+                rgb = STATE_RGB[state] if state != cbscan.OK else value
+                right = x1
+                if detailed:
+                    hp = "—" if most is None else f"{cur} / {most}"
+                    if two:
+                        mk = marker(x1, y + px(11), state)
+                        hr = text(hp, (mk - px(6), y), size, value,
+                                  "topright")
+                    else:
+                        sr = text(state, (x1, y), size, STATE_RGB[state],
+                                  "topright")
+                        hr = text(hp, (x1 - px(154), y), size, value,
+                                  "topright")
+                        right = min(hr.x, sr.x)
+                    right = min(right, hr.x)
+                elif two:
+                    right = marker(x1, y + px(11), state)
+                text(name, (x0, y), size, rgb, room=right - px(10) - x0)
+            if len(cells) < len(rows):
+                col, line = divmod(len(cells), SPECIAL_ROWS)
+                at = (r.x + px(16) + col * cw,
+                      y0 + line * px(SPECIAL_ROW))
+                more = text(f"+{len(rows) - len(cells)} more", at, size,
+                            label)
+                self.cut.append((more, ", ".join(
+                    name for _b, name, _c, _m, _s in rows[len(cells):])))
         # ── W the weapons ──────────────────────────────────────
         r = R(*BOXES["weapons"])
-        cols = [(name, x) for name, x in WEAPON_COLUMNS
-                if detailed or name not in ("HP", "State")]
-        for name, x in cols:
+        cols = WEAPON_COLUMNS if detailed else NORMAL_WEAPON_COLUMNS
+        for name, x, _w in cols:
             text(name, (r.x + px(x), r.y + px(10)), 18, label)
         if detailed:
-            tag((r.x + px(1300), r.y + px(20)))
+            hp_x = dict((n, x) for n, x, _w in cols)["HP"]
+            tag((r.x + px(hp_x + 40), r.y + px(20)))
         rows = m.weapons
-        step = max(px(16), min(px(23), (r.h - px(40)) // max(1, len(rows))))
-        size = max(14, min(22, int(step / k * 0.9)))
-        y = r.y + px(36)
+        room = r.h - px(40)
+        step = max(px(FLOOR + 2), min(px(ROW), room // max(1, len(rows))))
+        size = max(FLOOR, min(WEAPON_TEXT, int(step / k * 0.85)))
+        y = r.y + px(38)
         for n, wr in enumerate(rows):
             rgb = STATE_RGB[wr["state"]] if wr["state"] != cbscan.OK \
                 else value
@@ -375,13 +602,14 @@ class View:
                      "Arc": wr["arc"], "Ammo": wr["ammo"],
                      "Mods": wr["mods"], "HP": wr["hp"],
                      "State": wr["state"]}
-            for name, x in cols:
-                ink = STATE_RGB[wr["state"]] if name in ("HP", "State") \
+            for name, x, cw in cols:
+                tint = STATE_RGB[wr["state"]] if name in ("HP", "State") \
                     else rgb if name == "Count" else value
-                text(cells[name], (r.x + px(x), y), size, ink)
+                text(cells[name], (r.x + px(x), y), size, tint,
+                     room=px(cw) - px(8))
             y += step
         if not rows:
-            text(m.words["none"], (r.x + px(190), r.y + px(40)), 22, label)
+            text(m.words["none"], (r.x + px(210), r.y + px(40)), 22, label)
         # ── the foot ───────────────────────────────────────────
         cr = R(840, 996, 240, 42)
         hud.small_button(surface, cr, scale, "normal", "CLOSE",
@@ -408,6 +636,8 @@ class View:
         text(f"{round(t * 100)}%", (bar.right + px(14), R(0, 1004, 0, 0).y),
              18, value)
         self.rects["transparency"] = bar.inflate(0, px(16))
+        self.boxes = {key: R(*b) for key, b in BOXES.items()}
+        self.window = R(*WINDOW)
 
 
 #: The player's setting (`core.usersettings.DEFAULTS["scan_view"]`).

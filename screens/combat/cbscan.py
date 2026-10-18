@@ -21,9 +21,14 @@ scan view (`cbscanview` draws them), in two modes the player switches:
              the same record, finer — the four shield arcs, a weapon's
              original count and its hits, a special system's hits, the
              crew's experience. Laid out as Rocco asked (work order 294):
-             the arcs without the weakest-arc and shield-name lines, the
-             computer's name and bonus above the beam attack, a weapon
-             slot as "count/original" and the HP of the weapon in front. The original's scan shows any living unit's
+             the arcs without the weakest-arc and shield-name lines, a
+             weapon slot as "count/original" and the HP of the weapon in
+             front; and as Data decided from the analysis of 18 Oct 2026
+             (work order 297): the computer as Beam Attack's part, combat
+             speed as current / maximum (`max_speed`), a value's number
+             coloured by THIS ship's systems behind it (`contributors`),
+             the shield generator and its upgrades in the shields' head.
+             The original's scan shows any living unit's
              record to anyone (combat1.cpp:952, no owner test,
              `Tactical_Combat_View_Subject` cmbtdrw1.cpp:18-29), stores
              nothing and costs nothing; the computer reads every record
@@ -456,6 +461,9 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
     armour = armour_total(unit)
     structure_left = int(unit["structure_max"]) - int(unit["structure_damage"])
     date = int(ship_rec.date_of_design) if ship_rec is not None else None
+    specials = special_rows(unit, list(ship_rec.special_device_damage_flags)
+                            if ship_rec is not None else None, words)
+    parts = contributors(unit, specials)
     return Model(
         name=str(unit["name"]), owner=owner, owner_name=owner_name,
         hull=words.part("hulls", hull_class(unit)),
@@ -474,6 +482,17 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         if int(unit["ftl_type"]) > 0 and int(unit["ship_idx"]) >= 0 else None,
         parsecs=ftl_speed(unit, traits_of),
         speed=(int(unit["current_speed"]), int(unit["combat_speed_base"])),
+        speed_max=max_speed(unit, traits_of),
+        computer_state=part_state(int(unit["computer_current_hits"]),
+                                  int(unit["computer_max_hits"]))
+        if computer > 0 else None,
+        value_states={k: worst([s for _n, s in v]) for k, v in parts.items()},
+        shield_tags=[(n, s) for b, n, _c, _m, s in specials
+                     if b in SHIELD_UPGRADES or
+                     (b == DAMPER_FIELD and int(unit["shield_type"]) > 0)],
+        damper=next(((n, s) for b, n, _c, _m, s in specials
+                     if b == DAMPER_FIELD), None)
+        if int(unit["shield_type"]) <= 0 else None,
         structure=(structure_left, int(unit["structure_max"])),
         armour=(int(unit["armor_remaining"]), armour),
         armour_name=words.part("armor", int(unit["armor_type"])),
@@ -489,13 +508,101 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         arcs=[int(v) for v in unit["shield_arc_current"]],
         shield_max=shield_most, weakest=weakest, shield_line=shield_line,
         weapons=weapon_rows(unit, words),
-        specials=special_rows(unit, list(ship_rec.special_device_damage_flags)
-                              if ship_rec is not None else None, words),
+        specials=specials,
         words=labels(words),
         officer=officer(unit, leaders_raw, words, warlord_of),
         officer_mark=words.ken_word("officer", "(L)"),
         alive=int(unit["unit_status"]) == 0,
     )
+
+
+#: `Maximum_Combat_Speed_` (combat1.cpp:12-26): the design's speed, Augmented
+#: Engines' bonus while the device is fitted (damaged or not: the flag
+#: alone), Trans-Dimensional's for an owner that is a player. The bonuses
+#: are the defaults (`_augmented_engines_speed_bonus`, design_config.h:34;
+#: `_td_combat_speed_bonus`, combat1.h:8) — orion2re v2 lets a mod change
+#: them, and HD does not see that.
+AUGMENTED_ENGINES, AUGMENTED_SPEED = 2, 5
+TD_COMBAT_SPEED = 4
+
+
+def max_speed(unit, traits_of):
+    speed = int(unit["combat_speed_base"]) & 0xFF
+    if bit(unit["special_device_flags"], AUGMENTED_ENGINES):
+        speed += AUGMENTED_SPEED
+    owner = int(unit["owner"])
+    traits = traits_of(owner) if 0 <= owner < MAX_PLAYERS else None
+    if traits is not None and traits[TRAIT_TRANS_DIMENSIONAL]:
+        speed += TD_COMBAT_SPEED
+    return speed
+
+
+def part_state(cur, most):
+    if most and cur >= most:
+        return OK
+    return DAMAGED if cur > 0 else DESTROYED
+
+
+#: The specials that give a combat value a bonus — which device is THIS
+#: ship's contribution to which value (`Ship_Specials_Offensive_Bonus_`
+#: cmbtfir2.cpp:222-230, `Ship_Specials_Defensive_Bonus_` :730-787; v2
+#: names the cloak each 80 belongs to). Only the best jammer counts.
+BATTLE_SCANNER, INERTIAL_NULLIFIER, INERTIAL_STABILIZER = 5, 17, 18
+CLOAKING_DEVICE, PHASING_CLOAK, STEALTH_FIELD = 6, 23, 31
+ECM_JAMMER, MULTI_WAVE_JAMMER, WIDE_AREA_JAMMER = 9, 21, 38
+JAMMERS = ((WIDE_AREA_JAMMER, 130), (MULTI_WAVE_JAMMER, 100),
+           (ECM_JAMMER, 70))
+#: `special_status_flag` 1: cloaked — the cloak's beam defence counts only
+#: then (:735; v2's phasing-cloak variant needs a config switch).
+CLOAKED = 1
+
+
+def contributors(unit, specials):
+    """{value: [(name, state)]}: THIS ship's systems that give each combat
+    value its bonus — what colours the value (Data, work order 297: a
+    damaged one orange, a destroyed one red; another ship's never)."""
+    by_bit = {b: (name, state) for b, name, _c, _m, state in specials}
+    has = lambda b: b in by_bit
+    out = {"attack": [], "defense": [], "evasion": [], "speed": []}
+    if int(unit["computer_type"]) > 0:
+        out["attack"].append(("computer", part_state(
+            int(unit["computer_current_hits"]),
+            int(unit["computer_max_hits"]))))
+    if has(BATTLE_SCANNER):
+        out["attack"].append(by_bit[BATTLE_SCANNER])
+    for b in (INERTIAL_STABILIZER, INERTIAL_NULLIFIER):
+        if has(b):
+            out["defense"].append(by_bit[b])
+            out["evasion"].append(by_bit[b])
+    if int(unit.get("special_status_flag", 0)) == CLOAKED:
+        for b in (CLOAKING_DEVICE, PHASING_CLOAK):
+            if has(b):
+                out["defense"].append(by_bit[b])
+    jam = next((b for b, _v in JAMMERS if has(b)), None)
+    if jam is not None:
+        out["evasion"].append(by_bit[jam])
+    if int(unit["ftl_type"]) > 0 and int(unit["drive_max_hits"]) > 0:
+        drive = ("drive", part_state(int(unit["drive_current_hits"]),
+                                     int(unit["drive_max_hits"])))
+        out["speed"].append(drive)
+        out["defense"].append(drive)       # its speed times 5 (:182-187)
+    if has(AUGMENTED_ENGINES):
+        out["speed"].append(by_bit[AUGMENTED_ENGINES])
+        out["defense"].append(by_bit[AUGMENTED_ENGINES])
+    return out
+
+
+def worst(states):
+    for s in (DESTROYED, DAMAGED):
+        if s in states:
+            return s
+    return OK
+
+
+#: The shield's upgrades ACGIFT asked for in the SHIELDS box (work order
+#: 297), and the Damper Field that stands where a shield would.
+SHIELD_UPGRADES = (13, 30, 20)          # Hard Shields, Shield Capacitor,
+DAMPER_FIELD = 7                        # Multi-Phased Shields
 
 
 def build_for(unit_index, shown, state, words):
