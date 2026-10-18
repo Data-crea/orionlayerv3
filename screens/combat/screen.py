@@ -34,7 +34,7 @@ from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
 from . import (cbart, cbcloak, cbdraw, cblog, cbmap, cbopts, cbpanel,
-               cbplay, cbpopups, cbscanview, cbview)
+               cbplay, cbpopups, cbscansources, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -104,7 +104,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._play._art = self._art
         self._fades = cbcloak.Fades()         # work order 210 C1
         self._pops = cbpopups.Popups()
-        self._scan = cbscanview.Sources(self)   # work order 290
+        self._scan = cbscansources.Sources(self)   # work order 290
         self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
         self._log = cblog.BattleLog()         # LOG and its window (267)
         self._logwin = cblog.LogWindow()

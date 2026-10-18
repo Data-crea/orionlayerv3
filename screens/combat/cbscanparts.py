@@ -37,7 +37,7 @@ The engine adds them up at the start of every combat round
 (combinit.cpp:1053-1061: the round loop) — unless orion2re's
 `interactive_combat_stats` is on, a 1.50 option, off by default. So the
 parts are counted from the battle as it stood when the round began (HD
-keeps that snapshot, `cbscanview.Sources.round_start`) and told against
+keeps that snapshot, `cbscansources.Sources.round_start`) and told against
 the battle now: a system destroyed since still counts, "counts until end of
 round", and so does a unit of the side that has fallen out since. Nothing
 is guessed: without the round's start the parts are counted from now and

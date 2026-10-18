@@ -709,7 +709,7 @@ DAMPER_FIELD = 7                        # Multi-Phased Shields
 def build_for(unit_index, shown, state, words, start=None):
     """`build` from the battle as drawn (`shown`) and the snapshot;
     `start`: the battle's units at the round's start
-    (`cbscanview.Sources.round_start`), what the combat values' parts are
+    (`cbscansources.Sources.round_start`), what the combat values' parts are
     counted from."""
     unit = dict(shown["units"][unit_index])
     unit["_index"] = unit_index

@@ -132,7 +132,7 @@ class Popups:
     def draw(self, surface, style, scale, state, shown, sources):
         """Over the battle as it is drawn this frame, dimmed as every box
         (`msgbox.dimmed_base`, work order 196 A: the screen stays visible).
-        `sources` is the screen's `cbscanview.Sources`."""
+        `sources` is the screen's `cbscansources.Sources`."""
         kind = self.showing(state)
         self.rects = {}
         if sources is not None and shown:
