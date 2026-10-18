@@ -80,7 +80,8 @@ def apply(res, win_h, settings=None):
     fullscreen change, so the cursor cannot end up sized for a
     window that no longer exists.
     """
-    global _source, _last
+    global _source, _last, _override
+    _override = None            # a screen's own pointer is set again
     cfg = (settings or {}).get("cursor", {})
     if not cfg.get("enabled", True):
         try:
@@ -113,6 +114,45 @@ def apply(res, win_h, settings=None):
     except pygame.error as exc:
         log.debug("Cursor not settable on this driver: %s", exc)
     return size
+
+
+_override = None
+
+
+def set_override(surface, hotspot):
+    """A screen's own pointer picture over the HD one (work order 303: the
+    battle's move pointer), set only when it changes; `clear_override`
+    gives the HD pointer back."""
+    global _override
+    key = (id(surface), tuple(hotspot))
+    if _override == key:
+        return
+    _override = key
+    try:
+        pygame.mouse.set_cursor(pygame.cursors.Cursor(tuple(hotspot),
+                                                      surface))
+    except pygame.error as exc:
+        log.debug("Cursor not settable on this driver: %s", exc)
+
+
+def clear_override(res=None, win_h=None, settings=None):
+    """The HD pointer again (after `set_override`)."""
+    global _override
+    if _override is None:
+        return
+    _override = None
+    if _source is None or _last is None:
+        return
+    scaled = (_source if _last == _source.get_size()
+              else pygame.transform.smoothscale(_source, _last))
+    try:
+        pygame.mouse.set_cursor(pygame.cursors.Cursor((0, 0), scaled))
+    except pygame.error as exc:
+        log.debug("Cursor not settable on this driver: %s", exc)
+
+
+def overridden():
+    return _override is not None
 
 
 def reset():

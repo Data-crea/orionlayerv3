@@ -102,6 +102,29 @@ class CombatInput:
         return ("unit", u, self._status_of(dict(c, cur_ship=unit), u),
                 cbdraw.unit_picture(self._art, self._play.colours, u, 0))
 
+    def _move_cell(self):
+        """The reachable cell under the pointer while the move pointer
+        shows (TRANSCRIPTION `move_pointer`, `cbcursor`): the player's own
+        turn and orders (the original's arrows are only there,
+        combat1.cpp:2213-2296), outside BOARD and SCAN, nothing over the
+        field — the OPTIONS panel, a popup, the log, the help —, a cell the
+        engine marks legal that HD's click moves to (`handle_click`)."""
+        if self._pointer is None or self._cam is None or self._board or \
+                self._pops.scan_mode or self._tail or self._logwin.open or \
+                self.help.visible or not self._own_turn() or \
+                not self._cam.on_field(*self._pointer):
+            return None
+        if self._opts.up(self._state) or self._pops.showing(self._state):
+            return None
+        c = self._shown()
+        if self._computer(c):
+            return None
+        cell = self._cam.cell_at(*self._pointer)
+        if cell is None or not cb.legal(c["legal"], *cell) or \
+                self._unit_at(cell) is not None:
+            return None
+        return cell
+
     def _computer(self, c):
         """`Ship_Controlled_By_Computer_` (combat1.cpp:217-227): another
         player's unit, a monster's, or the side under AUTO (`_auto_combat`

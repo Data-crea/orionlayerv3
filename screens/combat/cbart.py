@@ -272,6 +272,35 @@ class CombatArt:
         except lbx.LbxError:
             return 0
 
+    def cursor_shape(self, icon):
+        """The battle's pointer picture `icon` (1-20) as a 24 x 24 RGBA
+        surface, index 0 clear, in the battle palette; None when the
+        extraction has no pointer shapes (an older one: the HD pointer
+        stays). The shapes follow the palette in FONTS.LBX entry 4
+        (`fonts::Load_Palette`, fonts.cpp:73-87; shape = icon - 1,
+        platform.cpp:1806-1812) — work order 303."""
+        cache = self.__dict__.setdefault("_cursors", {})
+        if icon in cache:
+            return cache[icon]
+        surf = None
+        try:
+            with open(self._path("cursors.bin"), "rb") as fh:
+                raw = fh.read()
+            side = 24
+            start = (int(icon) - 1) * side * side
+            pix = raw[start:start + side * side]
+            if self.available and 1 <= int(icon) and len(pix) == side * side:
+                surf = pygame.Surface((side, side), pygame.SRCALPHA)
+                pal = self._palette
+                for n, v in enumerate(pix):
+                    if v:
+                        surf.set_at((n % side, n // side),
+                                    (*pal.get(v, (255, 0, 255)), 255))
+        except (OSError, TypeError):
+            surf = None
+        cache[icon] = surf
+        return surf
+
     def palette_with(self, extra=None):
         pal = dict(self._palette or {})
         if extra:

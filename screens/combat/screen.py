@@ -33,8 +33,8 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import (cbart, cbcloak, cbdraw, cblog, cbmap, cbopts, cbpanel,
-               cbplay, cbpopups, cbscansources, cbview)
+from . import (cbart, cbcloak, cbcursor, cbdraw, cblog, cbmap, cbopts,
+               cbpanel, cbplay, cbpopups, cbscansources, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -42,6 +42,8 @@ from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
 log = logging.getLogger("combat")
 
 GAME_SCREEN_ID = 65
+#: SPECIAL_SUB_SPACE_TELEPORTER, SPECIAL_PHASE_SHIFTER (orion2_consts.h)
+TELEPORTER, PHASE_SHIFTER = 33, 22
 GRID_TYPE, MAP_RECT = 12, (0, 0, 639, 359)
 ANSWER_WAIT = 3.0                  # s: a command the engine never answers
 TICK = 0.055                       # s: `Release_Time_(1)`, timer.cpp:14-24
@@ -105,6 +107,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._fades = cbcloak.Fades()         # work order 210 C1
         self._pops = cbpopups.Popups()
         self._scan = cbscansources.Sources(self)   # work order 290
+        self._move_ptr = cbcursor.Pointer()         # work order 303
         self._opts = cbopts.Options()         # the OPTIONS panel (work order 200)
         self._log = cblog.BattleLog()         # LOG and its window (267)
         self._logwin = cblog.LogWindow()
@@ -222,10 +225,26 @@ class CombatScreen(CombatInput, ScreenBase):
 
     def _legal_shown(self, c, unit):
         """The reachable cells are drawn on the player's own turn while the
-        battle's SHOW LEGAL MOVES is on and the unit has moves left
-        (`Draw_Legal_Boxes`' gate, cmbtdrw1.cpp:327-343, :553-559)."""
-        return self._own_turn() and unit["movement_left"] > 0 and \
-            cbopts.flag(self._state, "legal_moves")
+        battle's SHOW LEGAL MOVES is on (cmbtdrw1.cpp:553-559).
+        TRANSCRIPTION `legal_gate` (work order 303, Data's P3 of 302):
+        `Draw_Legal_Boxes`' own gate (cmbtdrw1.cpp:327-343) — never for the
+        planet (unit 0); with moves left, or with none while a working
+        Sub-Space Teleporter or Phase Shifter is unused this turn
+        (`Used_Teleporter`, bit 0 of `combat_status_flags`,
+        cmbtfir2.cpp:399-405): then the engine's bitmap holds the
+        teleporter's range (combat1.cpp:2834-2843)."""
+        if not (self._own_turn() and c["cur_ship"] != 0 and
+                cbopts.flag(self._state, "legal_moves")):
+            return False
+        if unit["movement_left"] > 0:
+            return True
+
+        def works(bit):
+            mask, byte = 1 << (bit & 7), bit >> 3
+            return bool(unit["special_device_flags"][byte] & mask) and \
+                not unit["special_device_damage_flags"][byte] & mask
+        return (works(TELEPORTER) or works(PHASE_SHIFTER)) and \
+            not int(unit["combat_status_flags"]) & 1
 
     def _ready(self):
         if self._sent and time.monotonic() - self._sent[1] > ANSWER_WAIT:
@@ -268,6 +287,7 @@ class CombatScreen(CombatInput, ScreenBase):
         cbdraw.draw_background(surface, cam, art,
                                bool(c and c.get("in_nebula")), self._cache)
         if c is None:
+            self._move_ptr.clear()
             return
         clip = surface.get_clip()
         surface.set_clip(pygame.Rect(area))
@@ -330,6 +350,14 @@ class CombatScreen(CombatInput, ScreenBase):
         self._logwin.draw(surface, self.style, self.layout.scale, area,
                           self._log, self._play.colours)
         self.render_help(surface)               # `cbhelp`, work order 200
+        # TRANSCRIPTION `move_pointer` (work order 303): the arrow over a
+        # reachable cell, the HD pointer elsewhere — each frame, as the
+        # cells change with every move
+        self._move_ptr.update(self._art, unit, self._move_cell(), win_h)
+
+    def exit(self):
+        self._move_ptr.clear()          # the HD pointer back off the battle
+        super().exit()
 
     def _follow(self, c):
         """The original centres its view on each acting unit at its turn

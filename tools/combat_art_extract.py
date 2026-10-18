@@ -56,6 +56,11 @@ FILES = ("CMBTSHP.LBX", "MONSTER.LBX", "CMBTPLNT.LBX", "CMBTMISL.LBX",
          "CMBTFGTR.LBX", "CMBTSFX.LBX", "BEAMS.LBX", "SPHERSFX.LBX",
          "COMBAT.LBX", "SOUND.LBX")
 PALETTE_FILE, PALETTE_ENTRY, PALETTE_BYTES = "FONTS.LBX", 4, 256 * 4
+#: The battle's pointer shapes follow its palette in the same entry: 20 of
+#: 24 x 24, one byte a pixel, 0 transparent (`fonts::Load_Palette` sets
+#: `mouse_palette` behind the palette, fonts.cpp:73-87; shape = icon - 1,
+#: platform.cpp:1806-1812) — work order 303, the move pointer.
+CURSOR_SHAPES, CURSOR_SIDE = 20, 24
 
 
 def find_lbx(folder, filename):
@@ -96,6 +101,12 @@ def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
         "palette": {"file": PALETTE_FILE, "entry": PALETTE_ENTRY,
                     "bytes": PALETTE_BYTES},
     }
+    shapes = CURSOR_SHAPES * CURSOR_SIDE * CURSOR_SIDE
+    cursors = fonts[PALETTE_ENTRY][PALETTE_BYTES:PALETTE_BYTES + shapes]
+    if len(cursors) == shapes:
+        manifest["cursors"] = {"file": PALETTE_FILE, "entry": PALETTE_ENTRY,
+                               "offset": PALETTE_BYTES,
+                               "shapes": CURSOR_SHAPES, "side": CURSOR_SIDE}
     if dry_run:
         return manifest
     for name in FILES:
@@ -106,6 +117,9 @@ def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
                 fh.write(blob)
     with open(os.path.join(out, "palette.bin"), "wb") as fh:
         fh.write(fonts[PALETTE_ENTRY][:PALETTE_BYTES])
+    if "cursors" in manifest:
+        with open(os.path.join(out, "cursors.bin"), "wb") as fh:
+            fh.write(cursors)
     with open(os.path.join(out, "manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
         fh.write("\n")

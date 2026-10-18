@@ -547,8 +547,11 @@ class View:
             text(lab, (r.x + px(16), y), 22, label,
                  room=bar_x - px(10) - (r.x + px(16)))
             bar(pygame.Rect(bar_x, y + px(4), px(100), px(16)), frac, rgb)
+            # a part at 0 HP says so in its number, the empty bar stays
+            # (Data, work order 303, P5 of 302)
             nr = text(f"{cur} / {most}" if most is not None else str(cur),
-                      (nx, y), 22, value, "topright")
+                      (nx, y), 22, STATE_RGB[cbscan.DESTROYED]
+                      if most and cur <= 0 else value, "topright")
             if key in cards:
                 cbscancard.info_sign(surface, (r.right - px(25),
                                                nr.centery), thin(8),
