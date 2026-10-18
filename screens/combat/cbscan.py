@@ -513,6 +513,7 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         officer=officer(unit, leaders_raw, words, warlord_of),
         officer_mark=words.ken_word("officer", "(L)"),
         alive=int(unit["unit_status"]) == 0,
+        cards=None,
     )
 
 
@@ -616,6 +617,19 @@ def build_for(unit_index, shown, state, words):
         ship_rec = ship_struct.SPEC.parse(ships[idx])
     players = [player_struct.SPEC.parse(raw)
                for raw in getattr(state, "player_raw", None) or []]
-    return build(unit, words, ship_rec,
-                 getattr(state, "leaders_raw", None), players,
-                 getattr(state, "num_players", 0))
+    leaders = getattr(state, "leaders_raw", None)
+    m = build(unit, words, ship_rec, leaders, players,
+              getattr(state, "num_players", 0))
+    # the combat values' parts (HD EXTENSION `scan_breakdown`, work order
+    # 297): from every unit of the battle as drawn, the players' traits
+    # and the officers' records
+    from . import cbscanparts
+    m.cards = cbscanparts.breakdown(
+        unit_index, shown["units"],
+        [player_struct.traits(p) for p in players] if players else None,
+        (lambda oi: leader_struct.SPEC.parse(leaders[oi])) if leaders
+        else None,
+        int(shown.get("attacker", 0)), int(shown.get("defender", 0)),
+        lambda b: words.part("specials", b, f"special {b}"),
+        crew_word(words, unit["crew_quality"]), m.computer_name)
+    return m

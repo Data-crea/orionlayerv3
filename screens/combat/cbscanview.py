@@ -30,7 +30,7 @@ import pygame
 
 from core.hud import blocks as hud
 from core.hud import text as hudtext
-from . import cbart, cbscan
+from . import cbart, cbscan, cbscancard
 
 #: The window and its boxes, reference px. Work order 297 (Data, from the
 #: analysis of 18 Oct 2026): each box as high as what it holds needs —
@@ -123,14 +123,17 @@ class View:
         self.cut = []
 
     def draw(self, surface, style, scale, model, detailed, turn, pics,
-             transparency=0.0, under=None):
+             transparency=0.0, under=None, pointer=None):
         """One frame of the scan of `model` (`cbscan.Model`); `pics` hands
         in the pictures (`ship`, `upright`, `portrait`, `skill_icon`).
         `transparency` 0..`MAX_TRANSPARENCY` lets `under` — the battle's
         space, `Sources.backdrop` — through the window's and the boxes'
         fills, never through their edges or words (HD EXTENSION
-        `scan_transparency`)."""
+        `scan_transparency`). `pointer`: where the pointer is — the card of
+        what is under it (Detailed only, HD EXTENSION `scan_breakdown`)."""
         self.rects, self.cut = {}, []
+        self.card = None
+        self._cards = model.cards if detailed else None
         k = k_of(surface)
         w, h = surface.get_size()
         ox = (w - WINDOW[2] * k) / 2 - WINDOW[0] * k
@@ -458,6 +461,9 @@ class View:
                 else:
                     vr = text(val, (vx, y), 24, ink(st), "topright")
                 marker(r.right - px(40), vr.centery, st)
+                if m.cards:
+                    cbscancard.info_sign(surface, (r.right - px(25),
+                                                   vr.centery), thin(8), head)
                 text(lab, (r.x + px(16), y), 24, label,
                      room=vr.x - px(12) - (r.x + px(16)))
                 self.rects["values"][key] = pygame.Rect(
@@ -638,6 +644,20 @@ class View:
         self.rects["transparency"] = bar.inflate(0, px(16))
         self.boxes = {key: R(*b) for key, b in BOXES.items()}
         self.window = R(*WINDOW)
+        if detailed and pointer is not None:
+            cbscancard.show(self, surface, style, scale, k, model, pointer,
+                            {"label": label, "value": value,
+                             "state": STATE_RGB}, R(80, 0, 520, 0))
+
+    def card_at(self, x, y, model=None):
+        """What has a card at (x, y) in the frame drawn last: a value row
+        (when the values have their parts) or a cut cell."""
+        rows = self.rects.get("values") or {}
+        if self._cards and any(r.collidepoint(x, y) for r in rows.values()):
+            return True
+        return any(r.collidepoint(x, y) for r, _w in self.cut)
+
+    _cards = None
 
 
 #: The player's setting (`core.usersettings.DEFAULTS["scan_view"]`).

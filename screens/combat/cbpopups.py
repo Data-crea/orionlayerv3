@@ -46,6 +46,7 @@ import time
 import pygame
 
 from core import combatpopup
+from core import mouse
 from core import msgbox
 from core import textfit
 from core.hud import blocks as hud
@@ -160,7 +161,8 @@ class Popups:
                 model = cbscan.build_for(i, shown, state, sources.words())
                 self.view.draw(surface, style, scale, model,
                                sources.detailed(), int(shown.get("turn", 0)) + 1,
-                               sources.pictures(unit), see, under)
+                               sources.pictures(unit), see, under,
+                               pointer=mouse.pos())
                 self.rects.update(self.view.rects)
 
     @staticmethod
@@ -243,6 +245,13 @@ class Popups:
                 bar.collidepoint(x, y):         # HD EXTENSION `scan_transparency`
             self._slide = True
             self.motion(x)
+            return True
+        if kind in ("local", "scan") and sources is not None and \
+                sources.detailed() and self.view.card_at(x, y):
+            # DEVIATION `scan_card_click` (Data, work order 297): in the
+            # Detailed scan a click on a row with a card keeps the view open
+            # — the original's view closes on any click (cmbtdrw1.cpp:156-247);
+            # every other click still closes it
             return True
         if kind == "local":
             self.local_unit = None          # any click closes it (:221)
