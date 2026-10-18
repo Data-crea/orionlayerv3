@@ -215,18 +215,61 @@ class CombatInput:
             self.app.client.activate_field(f.index)
         return None
 
+    def _right_owner(self):
+        """Who a right press belongs to instead of the battle (work order
+        298, Data): the scan view (HD's or the engine's, 'local' / 'scan'),
+        the board popup ('board'), the battle log ('log'), an open help
+        panel ('help') — or None, the battle's.
+
+        TRANSCRIPTION `modal_right_click`: the original's scan and its
+        board popup are their own input loops
+        (`Detailed_View_Ship_` cmbtdrw1.cpp:156-247, `Board_Popup_`
+        :1581-1666). `Get_Input_`'s cancel is off since the main screen
+        (`Disable_Cancel_`, fields.cpp:112-114, mainscr_main.cpp:281), so
+        a right click returns the field under it negative (fields.cpp:1375,
+        :1526-1528), which neither loop answers — both compare positive
+        ids — and the battle under them never turns a ship.
+        DEVIATION `scan_right_click`: both keep the battle's help list —
+        the scan saves it and does not clear it (`Save_Help_List_`,
+        evanhelp.cpp:356-360), the board popup never touches it
+        (`Clear_Fields_` fields.cpp:212-223 leaves it) — and
+        `Check_Help_List_` runs before the fields (fields.cpp:1255, :1379),
+        so by the source a right click over a battle help region opens
+        that help over either (read, not seen live); HD's scan and board
+        popup consume every right click and right drag — no help, no FACE,
+        no pan, no pin (Data, 298, P1 of 297). The camera drag is HD's own
+        (HD EXTENSION `free_camera`); a window over the battle stops it
+        the same way."""
+        kind = self._pops.showing(self._state)
+        if kind is not None:
+            return kind
+        if self._logwin.open:
+            return "log"
+        if self.help.visible:
+            return "help"
+        return None
+
     def handle_right_button(self, down, screen_x, screen_y):
         """A right DRAG pans (the galaxy map's gesture, HD EXTENSION
         `free_camera`); a right CLICK is FACE toward the cell, as the
-        original's right click on its map (combat1.cpp:696-710)."""
+        original's right click on its map (combat1.cpp:696-710). A press
+        that starts or ends while a window is over the battle is that
+        window's (`_right_owner`): the press, its motion and its release."""
         if down:
-            self._press = [(screen_x, screen_y), (screen_x, screen_y), False]
+            # [start, last, moved, owner]: an owner keeps it off the battle
+            # to its release, even when the window closes on the way
+            self._press = [(screen_x, screen_y), (screen_x, screen_y), False,
+                           self._right_owner()]
             return
         press, self._press = self._press, None
-        if self._tail or self._logwin.open:
+        owner = (press[3] if press is not None else None) or \
+            self._right_owner()
+        if self._tail or press is None or press[2]:
             return
-        if press is None or press[2] or cbhelp.right(self, screen_x,
-                                                     screen_y):
+        if owner == "help":
+            cbhelp.right(self, screen_x, screen_y)   # a click closes it
+            return
+        if owner is not None or cbhelp.right(self, screen_x, screen_y):
             return
         if self._ready() and self._cam is not None:
             cell = self._cam.cell_at(screen_x, screen_y)
@@ -244,10 +287,13 @@ class CombatInput:
         self._pointer = (screen_x, screen_y)    # the rows' hover (`_hover`)
         self._pops.motion(screen_x)
         if self._press is not None and self._cam is not None:
-            (x0, y0), (lx, ly), moved = self._press
+            (x0, y0), (lx, ly), moved, owner = self._press
+            # a window opened under a held drag takes the rest of it
+            owner = owner or self._right_owner()
             if moved or abs(screen_x - x0) + abs(screen_y - y0) > DRAG_SLOP:
-                self._cam.pan(screen_x - lx, screen_y - ly)
-                self._press = [(x0, y0), (screen_x, screen_y), True]
+                if owner is None:
+                    self._cam.pan(screen_x - lx, screen_y - ly)
+                self._press = [(x0, y0), (screen_x, screen_y), True, owner]
         return super().handle_mouse_motion(screen_x, screen_y)
 
     def handle_mousewheel(self, dy, screen_x, screen_y):

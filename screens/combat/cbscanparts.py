@@ -2,7 +2,7 @@
 
 The engine sends each unit's three sums (`tac_val_attack`, `tac_val_defense`,
 `tac_val_evade`) and its `current_speed`, never their parts.
-HD EXTENSION `scan_breakdown`: the Detailed scan's card names the parts, computed here
+HD EXTENSION `scan_breakdown`: the scan's card names the parts, computed here
 the way the engine adds them, and shows them only when they add up to the
 engine's own sum — otherwise the sum alone and "Breakdown not available",
 never a part that might be wrong.

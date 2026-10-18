@@ -30,7 +30,8 @@ property of the player's display and eyes, not of the game.
   load; the first save moves it aside to `user_settings.json.corrupt`
   so the player's broken file is kept for them to look at;
 - ok: the values, with any key this build does not know KEPT and written
-  back on save, so an older build cannot eat a newer build's settings.
+  back on save, so an older build cannot eat a newer build's settings;
+  a key this build retired (`RETIRED`) is dropped on load.
 
 **ORDER AT STARTUP IS WRITTEN HERE, not left to happen.** The
 player-colour preset is read when the palette is initialised
@@ -136,12 +137,19 @@ DEFAULTS = {
     "livery_core": "strong",
     "livery_second": None,
     "livery_strength": 1.0,
-    # The ship scan's mode (work order 290, `screens/combat/cbscanview`):
-    # "detailed" (Data's default) or "normal", the original's rows.
-    "scan_view": "detailed",
     # How much of the battle shows through the scan's boxes, 0 .. 0.85
     # (work order 292): 0 is every HD window's look.
     "scan_transparency": 0.0,
+}
+
+#: Keys a build retired, by the work order that did: read and dropped, so
+#: the next save leaves them out. Not "a key this build does not know"
+#: (those are kept for a newer build): an older build reading the file
+#: without one takes its own default, which is what the key said.
+RETIRED = {
+    # the scan's Normal / Detailed switch (work order 290), gone with
+    # Normal in work order 298; its default was "detailed", the one view
+    "scan_view": 298,
 }
 
 
@@ -178,6 +186,8 @@ def load(path=None):
                   "defaults; the file is kept and moved aside on the "
                   "next save", path, err)
         return UserSettings(state="corrupt", path=path)
+    for key in RETIRED:
+        data.pop(key, None)
     return UserSettings(data, "ok", path)
 
 

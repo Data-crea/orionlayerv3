@@ -30,9 +30,8 @@ has read it — and the choice on the wire is the one shown after.
 THE SCAN VIEW (66) — `Detailed_View_Ship_` / `Combat_Draw_View_Ship_`
 (cmbtdrw1.cpp:156-247, :3223-4007): one unit, large, its record; any click
 closes it. Since work order 290 `cbscan` says what it shows (TRANSCRIPTION
-`scan_contents` in the Normal mode, HD EXTENSION `scan_detailed` the
-default) and `cbscanview` draws it (DEVIATION `scan_view`); a click on its
-Normal / Detailed switch changes the mode and closes nothing. A unit that
+`scan_contents`, HD EXTENSION `scan_detailed`; one view since work order
+298) and `cbscanview` draws it (DEVIATION `scan_view`). A unit that
 dies while HD's view of it is open closes it: the original scans only a
 living unit (combat1.cpp:952). HD's SCAN button opens it LOCALLY and sends
 nothing — the original's scan changes nothing in the game (it reads
@@ -163,7 +162,7 @@ class Popups:
                 model = cbscan.build_for(i, shown, state, sources.words(),
                                          sources.round_start(shown))
                 self.view.draw(surface, style, scale, model,
-                               sources.detailed(), int(shown.get("turn", 0)) + 1,
+                               int(shown.get("turn", 0)) + 1,
                                sources.pictures(unit), see, under,
                                pointer=mouse.pos())
                 self.rects.update(self.view.rects)
@@ -236,23 +235,15 @@ class Popups:
         kind = self.showing(state)
         if kind is None:
             return False
-        mode = next((key for key in ("normal", "detailed")
-                     if key in self.rects and self.rects[key].collidepoint(x, y)),
-                    None)
-        if kind in ("local", "scan") and mode is not None:
-            if sources is not None:             # HD EXTENSION `scan_modes`
-                sources.set_detailed(mode == "detailed")
-            return True
         bar = self.rects.get("transparency")
         if kind in ("local", "scan") and bar is not None and \
                 bar.collidepoint(x, y):         # HD EXTENSION `scan_transparency`
             self._slide = True
             self.motion(x)
             return True
-        if kind in ("local", "scan") and sources is not None and \
-                sources.detailed() and self.view.card_at(x, y):
-            # DEVIATION `scan_card_click` (Data, work order 297): in the
-            # Detailed scan a click on a row with a card keeps the view open
+        if kind in ("local", "scan") and self.view.card_at(x, y):
+            # DEVIATION `scan_card_click` (Data, work order 297): a click
+            # on a row with a card keeps the scan open
             # — the original's view closes on any click (cmbtdrw1.cpp:156-247);
             # every other click still closes it
             return True

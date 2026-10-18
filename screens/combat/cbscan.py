@@ -2,39 +2,41 @@
 
 `CMBTDRW1::Combat_Draw_View_Ship_` (cmbtdrw1.cpp:3223-4007) draws one
 unit's combat record. `build` turns the same record into the rows of HD's
-scan view (`cbscanview` draws them), in two modes the player switches:
+scan view (`cbscanview` draws them) — ONE view since work order 298 (Data:
+the Normal / Detailed switch of 290-297 is gone, Normal was a subset of
+Detailed and every layout had to hold twice):
 
-  Normal     TRANSCRIPTION `scan_contents`: what the original prints —
-             the combat bonuses (:3439-3463), the crew word (:3465-3472),
-             marines (:3474-3482), drive hits and parsecs a turn
-             (:3505-3566), structure "%d of %d" (:3568-3576), combat speed
-             (:3601-3610), armour "%d of %d" with the scan's own total
-             (:3612-3647), computer hits and its beam attack bonus
-             (:3655-3757), the shield's name, hits and its WEAKEST arc
-             (`Weakest_Shield_Arc`, :3190-3198, :3738-3758), every weapon
-             slot with a weapon — count, name, arc, ammunition, mods
-             (:3801-3918) — and the special systems, a damaged one in the
-             damage colour (:3939-3963). The game's words, where the player's
-             KENTEXT.LBX has them (`core.kentext`, the scan's messages).
-  Detailed   HD EXTENSION `scan_detailed` (Data, work order 290: the
-             DEFAULT, for every unit, own and enemy, attacker and defender):
-             the same record, finer — the four shield arcs, a weapon's
-             original count and its hits, a special system's hits, the
-             crew's experience. Laid out as Rocco asked (work order 294):
-             the arcs without the weakest-arc and shield-name lines, a
-             weapon slot as "count/original" and the HP of the weapon in
-             front; and as Data decided from the analysis of 18 Oct 2026
-             (work order 297): the computer as Beam Attack's part, combat
-             speed as current / maximum (`max_speed`), a value's number
-             coloured by THIS ship's systems behind it (`contributors`),
-             the shield generator and its upgrades in the shields' head.
-             The original's scan shows any living unit's
-             record to anyone (combat1.cpp:952, no owner test,
-             `Tactical_Combat_View_Subject` cmbtdrw1.cpp:18-29), stores
-             nothing and costs nothing; the computer reads every record
-             anyway. Nothing here is knowledge the scan does not give.
+  TRANSCRIPTION `scan_contents`: everything the original prints is in the
+             one view — the combat bonuses (:3439-3463), the crew word
+             (:3465-3472), marines (:3474-3482), drive hits and parsecs a
+             turn (:3505-3566), structure (:3568-3576), combat speed
+             (:3601-3610), armour with the scan's own total (:3612-3647),
+             computer hits and its beam attack bonus (:3655-3757), the
+             shield's name and hits (:3738-3758, its weakest arc shown as
+             all four arcs), every weapon slot with a weapon — count, name,
+             arc, ammunition, mods (:3801-3918) — and the special systems,
+             a damaged one in the damage colour (:3939-3963). The game's
+             words, where the player's KENTEXT.LBX has them
+             (`core.kentext`, the scan's messages).
+  HD EXTENSION `scan_detailed` (Data, work order 290, for every unit, own
+             and enemy, attacker and defender): the same record, finer —
+             the four shield arcs, a weapon's original count and its hits,
+             a special system's hits, the crew's experience. Laid out as
+             Rocco asked (work order 294): the arcs without the weakest-arc
+             and shield-name lines, a weapon slot as "count/original" and
+             the HP of the weapon in front; and as Data decided from the
+             analysis of 18 Oct 2026 (work order 297): the computer as Beam
+             Attack's part, combat speed as current / maximum
+             (`max_speed`), a value's number coloured by THIS ship's
+             systems behind it (`contributors`), the shield generator and
+             its upgrades in the shields' head. The original's scan shows
+             any living unit's record to anyone (combat1.cpp:952, no owner
+             test, `Tactical_Combat_View_Subject` cmbtdrw1.cpp:18-29),
+             stores nothing and costs nothing; the computer reads every
+             record anyway. Nothing here is knowledge the scan does not
+             give.
 
-Beside both: HD EXTENSION `scan_officer` — the officer aboard, his portrait,
+Beside them: HD EXTENSION `scan_officer` — the officer aboard, his portrait,
 level and the skills that act in a battle (the original's scan only greys
 the fleet icon, :3313-3326); HD EXTENSION `scan_identity` — the hull class,
 the owner and the design's date from the ship record. OMISSION
@@ -151,11 +153,6 @@ def bit(flags, b):
     return bool(int(flags[b >> 3]) >> (b & 7) & 1)
 
 
-def weakest_arc(unit):
-    """`Weakest_Shield_Arc` (cmbtdrw1.cpp:3190-3198)."""
-    return min(int(v) for v in unit["shield_arc_current"])
-
-
 def satellite(unit):
     from .cbstatus import satellite as sat
     return sat(unit)
@@ -257,9 +254,6 @@ CREW_KEYS = ("crew_green", "crew_regular", "crew_veteran", "crew_elite",
              "crew_ultra")
 CREW_ENGLISH = ("Green Crew", "Regular Crew", "Veteran Crew", "Elite Crew",
                 "Ultra Elite Crew")
-#: HESTR_059_D_STRENGTH (orion2_str.h:896), "^ %d strength": the scan puts
-#: "%d of %d" into it (`Build_Shield_Strength_Text`, :3200-3221).
-H_STRENGTH = 0x59
 
 
 def crew_word(words, quality):
@@ -450,14 +444,7 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
                                               "^ %+d beam attack")), bonus) \
         if int(unit["computer_current_hits"]) > 0 else \
         strip(words.ken_word("no_bonus", "no bonus"))
-    weakest = weakest_arc(unit)
     shield_most = int(unit["shield_arc_max"])
-    strength = words.hstring(H_STRENGTH)
-    if strength and "%d" in strength:
-        a, b = strength.split("%d", 1)
-        shield_line = strip(f"{a}{weakest} of {shield_most}{b}")
-    else:
-        shield_line = f"{weakest} of {shield_most}"
     armour = armour_total(unit)
     structure_left = int(unit["structure_max"]) - int(unit["structure_damage"])
     date = int(ship_rec.date_of_design) if ship_rec is not None else None
@@ -498,7 +485,6 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         armour_name=words.part("armor", int(unit["armor_type"])),
         computer=hits("computer_current_hits", "computer_max_hits"),
         computer_name=words.part("computers", computer),
-        computer_line=comp_line,
         computer_bonus=signed(bonus)
         if int(unit["computer_current_hits"]) > 0 else comp_line,
         shield_name=words.part("shields", int(unit["shield_type"]))
@@ -506,7 +492,7 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         shield_system=hits("shield_current_hits", "shield_max_hits")
         if int(unit["shield_type"]) > 0 else None,
         arcs=[int(v) for v in unit["shield_arc_current"]],
-        shield_max=shield_most, weakest=weakest, shield_line=shield_line,
+        shield_max=shield_most,
         weapons=weapon_rows(unit, words),
         specials=specials,
         words=labels(words),
