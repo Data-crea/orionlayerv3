@@ -15,13 +15,55 @@ from . import cbdraw, cbhelp, cbmap, cbpanel, cbtarget
 
 log = logging.getLogger("combat")
 
-FOOT = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 3}
+FOOT = cbdraw.FOOT
+#: TRANSCRIPTION `move_target` (work order 304, Data's P1 of 303): how far
+#: the original takes the pointer's point back before it picks the cell a
+#: ship's corner goes to, by size class — its frame's `ship_draw_size`
+#: (cmbtdrw1.cpp:706-717) and its click's arithmetic (combat1.cpp:850-862)
+SHIFT = {0: 0, 1: 10, 2: 10, 3: 20, 4: 20, 5: 20}
 DRAG_SLOP = 6                      # px before a press is a pan
 
 
 #: The one field AUTO leaves: `Clear_Fields_` and a hidden field over the
 #: whole screen as `_auto_button` (combat1.cpp:569-570).
 FULL_SCREEN = (0, 0, 639, 479)
+
+
+def move_target(cam, x, y, size_class):
+    """TRANSCRIPTION `move_target`: the cell a click at window point (x, y)
+    moves the acting ship's corner to, the same cell its frame is drawn on
+    — the ship's middle under the pointer. The original's frame takes
+    `(pointer - s + 12) / 20` (12: the pointer picture's point,
+    cmbtdrw1.cpp:716-717) and its click with an arrow pointer
+    `xpos / 2 - 1` or `(xpos + 1) / 2 - 1` of the 10 px grid's `xpos`
+    (combat1.cpp:851-861, fields.cpp:2813): both floor((point - s) / 20)
+    with s 0, 10 or 20 px by size class. So a ship of size class 3-5
+    goes one cell up and left of the pointer's cell, one of 1-2 only
+    while the point is in its cell's left or top half; the arrow areas are
+    shifted to match (`Assign_Mouse_Images`, combat1.cpp:2321-2373). HD's
+    point is the window pointer mapped into the world, the same number.
+    DEVIATION `footprint_view_edge`: the original clamps its frame's cell
+    to its 32 x 18 cell view while its click goes one cell further (at
+    the view's left or top edge with s > 0); HD's view is no grid of
+    cells, so frame and click take the same cell everywhere (at the
+    right and bottom edge the original's two agree; its frame is also cut
+    at y 350, cmbtdrw1.cpp:702-703).
+    DEVIATION `footprint_arrow_areas`: the original moves its arrow areas
+    by s px and, for size class 1-2, empties the neighbours that hold no
+    arrow (combat1.cpp:2321-2373); in the few pixels left with no area its
+    pointer has no shape and offset 0, and its click takes the unshifted
+    cell (a rim cell of the reachable area, or a reachable cell beside an
+    enemy). HD takes `move_target`'s cell for every point, so the frame
+    and the click never part. None off the field or outside the world's
+    cells."""
+    if not cam.on_field(x, y):
+        return None
+    wx, wy = cam.to_world(x, y)
+    s = SHIFT.get(int(size_class), 20)
+    cx, cy = int((wx - s) // cbdraw.CELL), int((wy - s) // cbdraw.CELL)
+    if not (0 <= cx < cb.GRID_W and 0 <= cy < cb.GRID_H):
+        return None
+    return cx, cy
 
 
 def auto_off_field(state, me):
@@ -102,29 +144,54 @@ class CombatInput:
         return ("unit", u, self._status_of(dict(c, cur_ship=unit), u),
                 cbdraw.unit_picture(self._art, self._play.colours, u, 0))
 
-    def _move_cell(self):
-        """The reachable cell under the pointer while the move pointer
-        shows (TRANSCRIPTION `move_pointer`, `cbcursor`): the player's own
-        turn and orders (the original's arrows are only there,
-        combat1.cpp:2213-2296), outside BOARD and SCAN, nothing over the
-        field — the OPTIONS panel, a popup, the log, the help —, a cell the
-        engine marks legal that HD's click moves to (`handle_click`)."""
-        if self._pointer is None or self._cam is None or self._board or \
-                self._pops.scan_mode or self._tail or self._logwin.open or \
-                self.help.visible or not self._own_turn() or \
-                not self._cam.on_field(*self._pointer):
+    def _frame_cell(self, point=None):
+        """TRANSCRIPTION `footprint_frame` (work order 304): the cell the
+        red frame stands on — `move_target` of the pointer when the engine
+        marks it legal (2000), outside SCAN, on the player's own turn with
+        the orders up, not the OPTIONS panel (cmbtdrw1.cpp:699, :702,
+        :730-733). Not gated, as the original's is not: BOARD, a missile
+        under the pointer, a command in flight, SHOW LEGAL MOVES.
+        Nothing over the field either — a popup, the log, the help — where
+        the original's field is not its input.
+        DEVIATION `footprint_playback`: none while HD plays the battle's
+        events, nor under AUTO (its own turn, `_own_turn`, as the reachable
+        cells and the arrow: AUTO's list is one full-screen field, not the
+        battle's); the original draws it in its animation loops from the
+        cells it had before the move, HD's snapshot already holds the next
+        ones, and under AUTO from the cells of the ship the computer moves
+        (cmbtai.cpp:896)."""
+        point = point or self._pointer
+        if point is None or self._cam is None or self._pops.scan_mode or \
+                self._logwin.open or self.help.visible or \
+                not self._own_turn():
             return None
         if self._opts.up(self._state) or self._pops.showing(self._state):
             return None
         c = self._shown()
-        if self._computer(c) or not self._ready() or cbdraw.missile_at(
-                self._play.ordnance, self._cam, *self._pointer,
-                self._me()) is not None:
-            return None             # a click there fires, or is not sent
-        cell = self._cam.cell_at(*self._pointer)
-        if cell is None or not cb.legal(c["legal"], *cell) or \
-                self._unit_at(cell) is not None:
+        cell = move_target(self._cam, point[0], point[1],
+                           c["units"][c["cur_ship"]]["size_class"])
+        if cell is None or not cb.legal(c["legal"], *cell):
             return None
+        return cell
+
+    def _move_cell(self, point=None):
+        """The cell a click moves the acting ship's corner to while the
+        move pointer shows (TRANSCRIPTION `move_pointer`, `cbcursor`;
+        TRANSCRIPTION `move_target`): the frame's cell (`_frame_cell`), in
+        the player's orders (the original's arrows are only there,
+        combat1.cpp:2213-2296), outside BOARD (:2275-2283, and its click
+        moves nothing, :872), no missile under the pointer, no command in
+        flight. The footprint of a legal cell is free but for the ship
+        itself (`Set_Legal_Moves`, combat1.cpp:2877, :2890), so over a short
+        move the pointer may stand on the acting ship and still move it."""
+        point = point or self._pointer
+        cell = self._frame_cell(point)
+        if cell is None or self._board:
+            return None
+        if self._computer(self._shown()) or not self._ready() or \
+                cbdraw.missile_at(self._play.ordnance, self._cam, *point,
+                                  self._me()) is not None:
+            return None             # a click there fires, or is not sent
         return cell
 
     def _computer(self, c):
@@ -200,12 +267,15 @@ class CombatInput:
         me, cur = self._me(), c["cur_ship"]
         missile = cbdraw.missile_at(self._play.ordnance, self._cam, screen_x,
                                     screen_y, me)
+        move = self._move_cell((screen_x, screen_y))
         target = self._unit_at(cell)
         if self._pops.scan_mode:             # SCAN, then a unit: HD's own view
             self._pops.scan_mode, self._pops.local_unit = False, target
             return None
         if missile is not None:
             self._send("fire_missile", missile)
+        elif move is not None:               # TRANSCRIPTION `move_target`
+            self._send("move", *move)
         elif target is not None and target != cur and \
                 c["units"][target]["owner"] != me:
             if self._board:
@@ -224,8 +294,6 @@ class CombatInput:
                 self._send("fire", target, self._mask(cur, c["units"][cur]))
         elif target is not None and target != cur:
             self._send("select", target)
-        elif cb.legal(c["legal"], *cell):
-            self._send("move", *cell)
         return None
 
     def _button(self, key):

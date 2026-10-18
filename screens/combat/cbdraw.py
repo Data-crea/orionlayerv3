@@ -10,6 +10,9 @@ noted); what HD does otherwise is marked.
               HD moves the layers at 1, 1/2 and 1/8 of the camera
   legal cells the acting human unit's legal cells filled with palette 0x81,
               box 20 / 40 / 60 px by size (cmbtdrw1.cpp:249-299)
+  the frame   the acting ship's footprint at the cell a click moves it to,
+              a 1 px box in palette 177 (cmbtdrw1.cpp:698-757; work order
+              304, `draw_footprint`)
   a unit      its picture at the cell's centre offset (10 / 20 / 30 by size,
               combinit.cpp:3019-3075) less 28 px, the facing's quadrant
               tweak and (2, 3) (`Get_Draw_Ship_Offsets_`,
@@ -36,6 +39,13 @@ CELL = cbview.CELL
 LEGAL_FILL = (70, 190, 255, 56)
 LEGAL_EDGE = (150, 225, 255, 235)
 _LEGAL = {}
+#: a unit's footprint, cells a side by size class: the original's
+#: `footprint = (size_class + 1) / 2` capped at 2, plus one
+#: (`Set_Legal_Moves`, combat1.cpp:2846-2849)
+FOOT = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 3}
+#: TRANSCRIPTION `footprint_frame` (work order 304): the red frame's colour,
+#: battle palette 177 (`graphics::Box(..., 1, 177)`, cmbtdrw1.cpp:752)
+FRAME_INDEX = 177
 CENTRE = {0: 10, 1: 20, 2: 20, 3: 30, 4: 30, 5: 30}
 BASE_OFF = {0: -16, 1: -6, 2: 4}          # by (size + 1) // 2
 PLANET_CENTRE = {0: 30, 1: 40, 2: 60, 3: 70, 4: 80}
@@ -236,7 +246,7 @@ def legal_area(combat, unit):
     key = (bytes(combat["legal"]), size)
     if _LEGAL.get("area_key") == key:
         return _LEGAL["area"]
-    side = {0: 1, 1: 2, 2: 2}.get(size, 3)
+    side = FOOT[size]
     out = set()
     for x in range(cb.GRID_W):
         for y in range(cb.GRID_H):
@@ -289,6 +299,35 @@ def draw_legal(surface, cam, art, combat, unit):
         _LEGAL.update(key=key, layer=layer, at=at)
     if _LEGAL["layer"] is not None:
         surface.blit(_LEGAL["layer"], _LEGAL["at"])
+
+
+def footprint_rect(cam, cell, size_class):
+    """The window rect of a unit's footprint with its corner on `cell`, or
+    None for a size class the original has no box for (cmbtdrw1.cpp:734-750,
+    `default: goto skip_box`)."""
+    side = FOOT.get(int(size_class))
+    if side is None:
+        return None
+    x0, y0 = cam.to_window(cell[0] * CELL, cell[1] * CELL)
+    x1, y1 = cam.to_window((cell[0] + side) * CELL, (cell[1] + side) * CELL)
+    return pygame.Rect(round(x0), round(y0), round(x1) - round(x0),
+                       round(y1) - round(y0))
+
+
+def draw_footprint(surface, cam, art, cell, size_class):
+    """TRANSCRIPTION `footprint_frame` (work order 304): the acting ship's
+    footprint at the cell a click would move it to, a hollow box one
+    native pixel wide in palette 177 — 20, 40 or 60 px a side by size class
+    (`Draw_Main_Combat_Screen`, cmbtdrw1.cpp:698-757; `graphics::Box`,
+    graphics.cpp:144-161) — over the space, the reachable cells and the
+    grid, under the shield arcs and the units, as the original draws it
+    before them. The pixel scaled with the field, as the grid's."""
+    r = footprint_rect(cam, cell, size_class)
+    if r is None:
+        return
+    col = art.palette_with().get(FRAME_INDEX, (104, 12, 0))
+    # LOOK EXCEPTION data: the original's footprint frame, palette 177 (304)
+    pygame.draw.rect(surface, col, r, max(1, round(cam.scale)))
 
 
 def draw_units(surface, cam, art, combat, colours, glow_clock, cache,

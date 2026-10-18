@@ -8,13 +8,14 @@ Get_Facing(ship, cell) / 2 + 4`, icons 4-11 counter-clockwise from east
 cmbtmov1.cpp:573-592), its shapes the battle palette's entry's (FONTS.LBX
 4, `cbart.cursor_shape`), its point the picture's middle, frame 12
 (`Check_Mouse_Shape`, mouse.cpp:80-101). Elsewhere HD keeps its own
-pointer. The direction is from the ship's corner cell, as the original's.
-DEVIATION `move_pointer_cell`: the arrow stands over the cell HD's click
-moves the ship's corner to (`cbinput`); for a ship of size class 1 and up
-the original's click and arrow areas sit one cell (about half a cell for
-size class 1-2) up and left of the pointer, so its ship's middle lands
-under it (combat1.cpp:850-862, :2321-2373) — the arrow and the move agree
-in HD, pending Data's answer (303 P1).
+pointer. The direction is from the ship's corner cell to the cell the
+click moves that corner to, as the original's.
+TRANSCRIPTION `move_target` (work order 304, Data's P1 of 303): that cell
+is `cbinput.move_target`'s — for a ship of size class 1 and up one cell
+(size class 1-2: in the cell's left or top half) up and left of the
+pointer, so the ship's middle lands under it, the arrow areas shifted to
+match (combat1.cpp:850-862, :2321-2373); the red frame stands on the same
+cell (`cbdraw.draw_footprint`).
 """
 from core import cursor
 from .cbbeamfx import get_angle

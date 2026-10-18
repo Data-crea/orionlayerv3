@@ -299,8 +299,16 @@ class CombatScreen(CombatInput, ScreenBase):
             # over the space, under the units (DEVIATION
             # `legal_cells_readable`, work order 303)
             cbdraw.draw_legal(surface, cam, art, c, unit)
+        # the tractor beams before the grid and the frame, as the original's
+        # back page (cmbtdrw1.cpp:583-591, :605) under the frame
+        # `Draw_Main_Combat_Screen` draws on it
+        cbdraw.draw_tractors(surface, cam, art, c, self._cache)
         if cbopts.flag(self._state, "grid"):
             cbopts.draw_grid(surface, cam, art)
+        frame = self._frame_cell()
+        if frame is not None:           # TRANSCRIPTION `footprint_frame`
+            cbdraw.draw_footprint(surface, cam, art, frame,
+                                  unit["size_class"])
         if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"]:
             cbopts.draw_shield_arcs(surface, cam, art, unit, cbdraw.centre(
                 unit), self.style, self._language)
@@ -308,7 +316,6 @@ class CombatScreen(CombatInput, ScreenBase):
         self._play.planet = self._planet_picture(c)
         now = time.monotonic()
         self._fades.update(c["units"], now)
-        cbdraw.draw_tractors(surface, cam, art, c, self._cache)
         cbdraw.draw_units(surface, cam, art, c, self._play.colours, clock,
                           self._cache, self._play.planet,
                           phased_shown=unit["owner"] == self._me(),
