@@ -472,7 +472,7 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
     specials = special_rows(unit, list(ship_rec.special_device_damage_flags)
                             if ship_rec is not None else None, words)
     parts = contributors(unit, specials)
-    return Model(
+    m = Model(
         name=str(unit["name"]), owner=owner, owner_name=owner_name,
         hull=words.part("hulls", hull_class(unit)),
         design_date=f"{date // 10}.{date % 10}" if date else None,
@@ -517,6 +517,8 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
         alive=int(unit["unit_status"]) == 0,
         cards=None,
     )
+    m.hull_cards = hull_cards(unit, m, traits_of)
+    return m
 
 
 #: `Maximum_Combat_Speed_` (combat1.cpp:12-26): the design's speed, Augmented
@@ -538,6 +540,102 @@ def max_speed(unit, traits_of):
     if traits is not None and traits[TRAIT_TRANS_DIMENSIONAL]:
         speed += TD_COMBAT_SPEED
     return speed
+
+
+def drive_speed(unit):
+    """The speed the drive's hits scale (`Calc_Current_Speed`,
+    combat1.cpp:1355-1386): the design's, Augmented Engines' bonus while
+    they work — before the trans-dimensional bonus, tractors and a black
+    hole."""
+    speed = int(unit["combat_speed_base"]) & 0xFF
+    if bit(unit["special_device_flags"], AUGMENTED_ENGINES) and \
+            not bit(unit["special_device_damage_flags"], AUGMENTED_ENGINES):
+        speed += AUGMENTED_SPEED
+    return speed
+
+
+def drive_zero(most, speed):
+    """The most drive hits that still give speed 0 to an owner 0-9: the
+    engine's whole-number `(hits - most/2) * speed / (most - most/2)`
+    (combat1.cpp:1376-1379) is 0 below `most/2 + ceil(range / speed)`."""
+    half, rng = most // 2, most - most // 2
+    if speed <= 0 or rng <= 0:
+        return most
+    return half + -(-rng // speed) - 1
+
+
+def hull_cards(unit, m, traits_of):
+    """HD EXTENSION `scan_hull_cards` (Data, work order 302, P7 of 301):
+    what damage to each HULL AND SYSTEMS row does, as the engine's rules
+    say it (the texts of 301-report.md Q6, its numbers this unit's):
+    {"structure" | "armor" | "drive" | "computer": (title, the row's
+    "cur / max", [sentences])}. The planet's scan (unit 0) has none: its
+    rows are the colony's, not a ship's (OMISSION `scan_planet`)."""
+    if m.planet:
+        return {}
+    out = {}
+    cur, most = m.structure
+    out["structure"] = ("Structure", f"{cur} / {most}", [
+        "The hull's own hit points; at 0 the ship is destroyed.",
+        "Hit when the armor is gone or skipped: armor piercing (not "
+        "against Heavy or Xentronium Armor), Achilles Targeting. A "
+        "Graviton Beam adds damage here through the armor; a hit past a "
+        "broken drive lands here too.",
+        "The less structure is left, the likelier a hit goes inside to a "
+        "system."])
+    cur, most = m.armour
+    out["armor"] = (m.armour_name or m.words["armor"],
+                    f"{cur} / {most}" if most is not None else str(cur), [
+        "Takes every hit first, before the structure or any system.",
+        "Losing armor changes none of this ship's values.",
+        "Skipped by armor piercing (not against Heavy or Xentronium Armor) "
+        "and by Achilles Targeting; the Ion Pulse Cannon skips armor and "
+        "structure and hits the systems."])
+    if m.drive is not None:
+        cur, most = m.drive
+        speed = drive_speed(unit)
+        owner = int(unit["owner"])
+        player = owner <= 9         # the engine's own test (combat1.cpp:1376)
+        if speed <= 0:
+            first = "This design has no combat speed to lose."
+        elif player:
+            first = (f"Combat speed falls over the drive's upper half: "
+                     f"{most} hits give the full {speed}, "
+                     f"{drive_zero(most, speed)} hits or fewer give 0. "
+                     f"Now {cur}: speed {m.speed[0]}.")
+        else:
+            # monsters: linear to 0 in whole numbers (:1381)
+            first = (f"Combat speed falls with the drive's hits: {most} "
+                     f"hits give the full {speed}, {(most - 1) // speed} "
+                     f"or fewer give 0. Now {cur}: speed {m.speed[0]}.")
+        traits = traits_of(owner) if 0 <= owner < MAX_PLAYERS else None
+        lines = [first]
+        if traits is not None and traits[TRAIT_TRANS_DIMENSIONAL]:
+            lines.append(f"The trans-dimensional race adds "
+                         f"{TD_COMBAT_SPEED} after that.")
+        lines += [
+            "At speed 0 the ship cannot retreat and can be boarded "
+            "without transporters.",
+            "Beam Defense +5 a point of speed, -20 at speed 0."]
+        if player:
+            # `Is_Combat_Ship_Dead` tests owner <= 9 (cmbtfire.cpp:320-323)
+            lines.append("At 0 hits the drive explodes and destroys the "
+                         "ship.")
+        lines.append("The speed changes at once, the ship's moves from its "
+                     "next turn, the combat values at the next round "
+                     "(standard rules).")
+        out["drive"] = (m.words["drive"], f"{cur} / {most}", lines)
+    cur, most = m.computer
+    ctype = int(unit["computer_type"])
+    bonus = COMPUTER_BONUS[ctype] if 0 <= ctype < len(COMPUTER_BONUS) \
+        else 0
+    out["computer"] = (m.computer_name or m.words["computer"],
+                       f"{cur} / {most}", [
+        f"Gives its whole bonus, Beam Attack {signed(bonus)}, while one hit "
+        f"is left; a damaged computer loses nothing.",
+        "At 0 hits: no bonus, from the next round on (standard rules)."]
+        if ctype > 0 else ["No computer: no beam attack bonus from one."])
+    return out
 
 
 def part_state(cur, most):

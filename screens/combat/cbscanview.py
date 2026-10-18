@@ -87,6 +87,10 @@ SKILL_ROW = 26
 #: its text size and the gap to the first row — SPECIAL SYSTEMS' and, since
 #: work order 301, HULL AND SYSTEMS' "HP" alike
 HEAD_Y, HEAD_TEXT, HEAD_GAP = 44, 18, 28
+#: HULL AND SYSTEMS: a row's height (its hover band) and how far its hits
+#: end from the box's right edge — the ⓘ stands right of them (work order
+#: 302)
+HULL_ROW, HULL_PAD = 44, 40
 #: COMBAT VALUES' four rows share the box under its title: from this far
 #: below the box's top to this far above its foot (work order 301)
 VALUES_TOP, VALUES_FOOT = 40, 6
@@ -502,39 +506,55 @@ class View:
             text(lab, (r.x + px(16), cy), 24, label, "midleft",
                  room=vr.x - px(12) - (r.x + px(16)))
             self.rects["values"][key] = band
-        # ── F hull and systems ─────────────────────────────────
+        # ── F hull and systems: a card for each row (HD EXTENSION
+        # `scan_hull_cards`, Data, work order 302) — its ⓘ right of the
+        # hits, the row under the pointer in the selected look ──────
         r = R(*BOXES["hull"])
         # the hits' column head, as SPECIAL SYSTEMS' "System · HP · State"
         # head: its size, colour and place under the title, so both boxes
         # look alike; no State — the bar's colour says it (Data, work
-        # order 301)
+        # orders 301 and 302)
         head_y = r.y + px(HEAD_Y)
-        text("HP", (r.right - px(16), head_y), HEAD_TEXT, label, "topright")
+        nx = r.right - px(HULL_PAD)
+        text("HP", (nx, head_y), HEAD_TEXT, label, "topright")
         y = head_y + px(HEAD_GAP)
         wd = m.words
-        # the part's own name ("Xentronium Armor") stands for the word
-        lines = [(wd["structure"], None, m.structure),
-                 (m.armour_name or wd["armor"], None, m.armour)]
+        cards = getattr(m, "hull_cards", None) or {}
+        # the part's own name ("Xentronium Armor") stands for the word; the
+        # drive's galaxy speed is in Combat speed's card (Data, work order
+        # 302, P1 of 301: nothing in a battle reads it)
+        lines = [("structure", wd["structure"], m.structure),
+                 ("armor", m.armour_name or wd["armor"], m.armour)]
         if m.drive is not None:
-            lines.append((wd["drive"], f"{m.parsecs}{wd['parsecs']}",
-                          m.drive))
-        lines.append((m.computer_name or wd["computer"], None, m.computer))
-        bar_x = r.right - px(270)
-        for lab, small, pair in lines:
+            lines.append(("drive", wd["drive"], m.drive))
+        lines.append(("computer", m.computer_name or wd["computer"],
+                      m.computer))
+        # the computer's longest name (299 px at 22) keeps its room
+        bar_x = r.right - px(HULL_PAD + 242)
+        self.rects["hull"] = {}
+        for key, lab, pair in lines:
             cur, most = pair
+            band = pygame.Rect(r.x + px(4), y - px(10), r.w - px(8),
+                               px(HULL_ROW))
+            lit = key in cards and pointer is not None and \
+                band.collidepoint(pointer)
+            if lit:
+                hud.table_row(surface, band, scale, 0, selected=True)
             frac = cur / most if most else 0
             rgb = STATE_RGB[cbscan.OK] if most and cur >= most else \
                 STATE_RGB[cbscan.DAMAGED] if cur > 0 else \
                 STATE_RGB[cbscan.DESTROYED]
-            lr = text(lab, (r.x + px(16), y), 22, label,
-                      room=bar_x - px(10) - (r.x + px(16)))
-            if small:
-                text(small, (lr.right + px(10), y + px(3)), 18, value,
-                     room=bar_x - px(10) - (lr.right + px(10)))
-            bar(pygame.Rect(bar_x, y + px(4), px(110), px(16)), frac, rgb)
-            text(f"{cur} / {most}" if most is not None else str(cur),
-                 (r.right - px(16), y), 22, value, "topright")
-            y += px(44)
+            text(lab, (r.x + px(16), y), 22, label,
+                 room=bar_x - px(10) - (r.x + px(16)))
+            bar(pygame.Rect(bar_x, y + px(4), px(100), px(16)), frac, rgb)
+            nr = text(f"{cur} / {most}" if most is not None else str(cur),
+                      (nx, y), 22, value, "topright")
+            if key in cards:
+                cbscancard.info_sign(surface, (r.right - px(25),
+                                               nr.centery), thin(8),
+                                     value if lit else head)
+                self.rects["hull"][key] = band
+            y += px(HULL_ROW)
         # ── G the special systems: 8 rows; 9-16 in two columns; beyond
         # 16 the last cell says how many more (work order 297) ───────
         r = R(*BOXES["specials"])
@@ -644,13 +664,13 @@ class View:
 
     def card_at(self, x, y):
         """A card drawn in the frame drawn last for what is at (x, y): a
-        value row or a cut cell (the click rule, DEVIATION
+        value row, a HULL AND SYSTEMS row (work order 302) or a cut cell (the click rule, DEVIATION
         `scan_card_click`) — never a row whose card found no place."""
         if self.card is None:
             return False
         rows = self.rects.get("values") or {}
-        hit = rows.get(self.card[0]) if self.card[0] != "cell" else \
-            self.card[2]
+        hit = self.card[2] if self.card[0] in ("cell", "hull") else \
+            rows.get(self.card[0])
         return hit is not None and hit.collidepoint(x, y)
 
 

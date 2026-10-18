@@ -39,11 +39,14 @@ Geometry in reference px, scaled by the window's `k` as the scan.
 """
 import pygame
 
+from core import lang
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from . import cbscan, cbscanparts as cp
 
 ROW, SUB, PAD = 28, 22, 16
+#: the space between two sentences of a HULL AND SYSTEMS card (302)
+GAP_LINE = 6
 #: the value card, reference px: its width, its gap off COMBAT VALUES and
 #: the notch's depth into that gap and half its height (work order 298)
 VALUE_W, GAP, NOTCH, NOTCH_H = 600, 16, 14, 14
@@ -76,8 +79,21 @@ class Rows:
     def height(self):
         h = HEAD + 8
         for kind, *_r in self.lines:
-            h += {"note": SUB, "child": SUB, "rule": 12}.get(kind, ROW)
+            h += {"note": SUB, "child": SUB, "rule": 12,
+                  "gap": GAP_LINE}.get(kind, ROW)
         return h + PAD // 2
+
+    def drawn_height(self, k):
+        """The height `draw` takes in device px, step by step as it steps:
+        each step at least 9 px (its `px`), so at 1280 x 720 more than
+        `height() * k` (work order 302's review: a card's last lines ran
+        past its edge)."""
+        px = lambda n: max(9, int(n * k))
+        h = px(HEAD) + px(8) if self.title else px(12)
+        for kind, *_r in self.lines:
+            h += px({"sub": SUB, "note": SUB, "child": SUB, "rule": 12,
+                     "gap": GAP_LINE}.get(kind, ROW))
+        return h + px(PAD // 2)
 
 
 def value_rows(title, card, rgb, percent=False):
@@ -108,10 +124,19 @@ def value_rows(title, card, rgb, percent=False):
     return rows
 
 
-def speed_rows(title, card, top, rgb):
+def speed_rows(title, card, top, rgb, galaxy=None):
+    """Combat speed's card; `galaxy` the drive's parsecs a turn, its last
+    line under its own separator — not part of the speed.
+    DEVIATION `scan_galaxy_speed` (Data, work order 302): the original
+    printed it under the drive's hits, above the combat speed, always in
+    view (v2 cmbtdrw1.cpp:3548-3567)."""
     rows = Rows(title, f"{card.total} / {top}")
     if not card.ok:
         rows.add("note", NOT_AVAILABLE, rgb=GREY)
+        if galaxy:
+            rows.add("rule", "")
+            rows.add("line", "Galaxy speed", galaxy,
+                     (rgb["label"], rgb["label"]), 20)
         return rows
     for p in card.parts:
         st = p.state if p.kind == cp.SYSTEM and p.state != cbscan.OK \
@@ -125,6 +150,10 @@ def speed_rows(title, card, top, rgb):
     rows.add("line", "Current speed", str(card.total),
              (rgb["label"], rgb["value"]), 22)
     rows.add("line", "Maximum", str(top), (rgb["label"], rgb["value"]), 22)
+    if galaxy:
+        rows.add("rule", "")
+        rows.add("line", "Galaxy speed", galaxy,
+                 (rgb["label"], rgb["label"]), 20)
     return rows
 
 
@@ -191,13 +220,56 @@ def value_rect(window, values, height, k, tallest=None, row=None):
     return pygame.Rect(max(inner.x, x), y, w, h)
 
 
-def notch(rect, row, k):
+def notch(rect, row, k, right=False):
     """The notch's three points: its tip in the gap, toward the hovered
-    row's vertical centre, held to the card's edge."""
+    row's vertical centre, held to the card's edge — the left edge for a
+    value's card, the right for a HULL AND SYSTEMS row's (302)."""
     h = max(3, round(NOTCH_H * k))
     cy = max(rect.y + h + 2, min(rect.bottom - h - 2, row.centery))
+    if right:
+        return ((rect.right - 2, cy - h),
+                (rect.right - 1 + max(3, round(NOTCH * k)), cy),
+                (rect.right - 2, cy + h))
     return ((rect.x + 1, cy - h), (rect.x - max(3, round(NOTCH * k)), cy),
             (rect.x + 1, cy + h))
+
+
+def hull_rows(style, k, card):
+    """A HULL AND SYSTEMS row's card (HD EXTENSION `scan_hull_cards`, work
+    order 302): its title, the row's hits large on the right, each sentence
+    word-wrapped to the card's width, a small gap between sentences."""
+    title, total, sentences = card
+    rows = Rows(str(title).upper(), total)
+    size = max(9, int(20 * k))
+    room = round(VALUE_W * k) - 2 * max(9, int(PAD * k))
+    # a name the head would cut stands whole as the first line: the card is
+    # also what a cut name in the row shows (rule 13, work order 297)
+    width = lambda t, n: style.render_text(t, n, (255, 255, 255)).get_width()
+    head = room - width(total, max(9, int(TOTAL * k))) - max(9, int(12 * k))
+    if width(rows.title, max(9, int(TITLE * k))) > head:
+        for line in wrap(style, str(title), size, room):
+            rows.add("wrap", line)
+        rows.add("gap", "")
+    for n, sentence in enumerate(sentences):
+        if n:
+            rows.add("gap", "")
+        # the sentence translated whole, then cut into lines
+        for line in wrap(style, lang.tr(sentence), size, room):
+            rows.add("wrap", line)
+    return rows
+
+
+def hull_rect(window, hull, height, k, row):
+    """The card of a HULL AND SYSTEMS row (Data, work order 302): left of
+    the box by the gap, so it never covers the row it explains; its top on
+    the box's top, at least down to the row; inside the window with its
+    glow, moved up when too tall, never centred out of it."""
+    inner = window.inflate(-2 * margin(k), -2 * margin(k))
+    w = min(round(VALUE_W * k), inner.w)
+    x = max(inner.x, hull.x - round(GAP * k) - w)
+    h = min(max(height, row.bottom - hull.y), inner.h)
+    y = max(inner.y, min(hull.y, inner.bottom - h))
+    return pygame.Rect(x, y, w, h)
 
 
 def ground():
@@ -283,6 +355,8 @@ def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
         if kind == "rule":
             hud.separator(surface, x, right, y + px(4), scale)
             y += px(12)
+        elif kind == "gap":
+            y += px(GAP_LINE)
         elif kind == "wrap":
             for line in wrap(style, left, px(20), right - x):
                 put(line, (x, y), 20, rgb["value"])
@@ -323,17 +397,28 @@ def fit(style, t, size, room):
 
 
 def wrap(style, text, size, room):
-    """Words onto lines of `room` device px (a cut cell's whole text): a
-    list cut after its commas, anything else between words."""
+    """Words onto lines of `room` device px. A list (a cut cell's whole
+    text: ", " between its items, no full stop) breaks after its commas
+    where it can; anything else, and a list item wider than the room,
+    breaks at its spaces (work order 302: a card's sentences)."""
     text = str(text)
-    sep = ", " if ", " in text else " "
-    words = text.split(sep)
+    width = lambda t: style.render_text(t, size, (255, 255, 255)).get_width()
+    listed = ", " in text and not text.rstrip().endswith(".")
+    words = []
+    if listed:
+        items = text.split(", ")
+        for n, item in enumerate(items):
+            item += "," if n + 1 < len(items) else ""
+            # an item that fits stays whole: one word to the breaking
+            words.append(item if width(item) <= room else None)
+            if words[-1] is None:
+                words[-1:] = item.split(" ")
+    else:
+        words = text.split(" ")
     out, line = [], ""
-    for n, word in enumerate(words):
-        word += sep.rstrip() if sep == ", " and n + 1 < len(words) else ""
+    for word in words:
         cand = f"{line} {word}" if line else word
-        if line and style.render_text(cand, size, (255, 255, 255)
-                                      ).get_width() > room:
+        if line and width(cand) > room:
             out.append(line)
             cand = word
         line = cand
@@ -349,8 +434,11 @@ def value_card(m, key, rgb):
              "evasion": m.words["missile_evasion"],
              "speed": "Combat speed"}[key].upper()
     card = m.cards[key]
-    return speed_rows(title, card, m.speed_max, rgb) if key == "speed" \
-        else value_rows(title, card, rgb, percent=key == "evasion")
+    galaxy = f"{m.parsecs}{m.words['parsecs']}" if m.drive is not None \
+        else None
+    return speed_rows(title, card, m.speed_max, rgb, galaxy) \
+        if key == "speed" else value_rows(title, card, rgb,
+                                          percent=key == "evasion")
 
 
 def show(view, surface, style, scale, k, m, pointer, rgb, column):
@@ -371,6 +459,18 @@ def show(view, surface, style, scale, k, m, pointer, rgb, column):
         draw(surface, style, scale, k, at, cards[key], rgb, tip,
              bounds=view.window)
         view.card = (key, at, tip)
+        return
+    for key, r in (view.rects.get("hull") or {}).items():
+        cards = getattr(m, "hull_cards", None) or {}
+        if key not in cards or not r.collidepoint(pointer):
+            continue
+        rows = hull_rows(style, k, cards[key])
+        at = hull_rect(view.window, view.boxes["hull"],
+                       rows.drawn_height(k), k, r)
+        tip = notch(at, r, k, right=True)
+        draw(surface, style, scale, k, at, rows, rgb, tip,
+             bounds=view.window)
+        view.card = ("hull", at, r, tip)
         return
     avoid = [view.boxes[b] for b in ("values", "specials", "hull")]
     for r, whole in view.cut:
