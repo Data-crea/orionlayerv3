@@ -61,7 +61,11 @@ FIELD_FROM, FIELD_TO = 16, 8
 
 def missile_under(ordnance, cam, x, y):
     """The missile whose original hidden field is under window point
-    (x, y) — any owner's (`Add_Missile_Fields_`) — or None."""
+    (x, y) — any owner's (`Add_Missile_Fields_`) — or None.
+    TRANSCRIPTION `missile_field` (work order 305): the battle's ONE hit
+    area of a missile — the click, the move arrow's gate, the CTGT hover
+    and this box all ask it (`cbinput`); until 305 the click and the arrow
+    took a 28 px square round the missile, the enemy's only."""
     for m in (ordnance or {}).get("missiles", []):
         x0, y0 = cam.to_window(m["x"] - FIELD_FROM, m["y"] - FIELD_FROM)
         x1, y1 = cam.to_window(m["x"] - FIELD_TO, m["y"] - FIELD_TO)

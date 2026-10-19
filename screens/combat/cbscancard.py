@@ -63,7 +63,12 @@ NOT_AVAILABLE = "Breakdown not available"
 
 
 def signed(v):
-    return f"{int(v):+d}"
+    """A card's number as the scan's own rows print theirs: the original's
+    Build_Signed_Bonus_String, "+n" above 0, "0" at 0 (cmbtdrw1.cpp:
+    3098-3104; v2 :3174-3180). A card's total stands for its row's number,
+    so both say the same (audit 26, work order 305: the card said "+0"
+    where the row said "0")."""
+    return cbscan.signed(v)
 
 
 class Rows:

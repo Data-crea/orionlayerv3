@@ -26,8 +26,13 @@ each from its place in the group's stack pattern
 beam's frames run out (`Draw_Fighter_Beam_`, beams.cpp:737-773), then the
 damage numbers rise until done (:946-967).
 """
-from . import cbbeam
+from . import cbbeam, cbdraw
 from .cbbeamfx import get_angle
+
+#: the events of a missile phase (`Seeking_Missiles_`): the flight comes
+#: before the first of them
+MISSILE_PHASE = ("missile_hit", "fighter_pass", "missile_gone", "lightning",
+                 "fighter_beam")
 
 #: `CMBTMIS::_missile_group_offset[16][16]` (cmbtmis.cpp:9-26): per facing,
 #: eight (x, y) places of a stack's members.
@@ -101,6 +106,55 @@ def plan(before, after, gone):
     if not moves:
         return None
     return {"moves": moves, "frames": max(mv["passes"] for mv in moves)}
+
+
+def place(events, before, after, unit, fast, last_seq):
+    """A snapshot's `events` with its flights (moved out of `cbplay` by
+    work order 305): each launch flies from its ship right after its event
+    (TRANSCRIPTION `launch_flight`); the missiles and fighters the snapshot
+    moved fly from where the one `before` left them, before its first hit —
+    or at its end when nothing struck (HD STATE `flight_batch`). `unit(i)`:
+    the shown unit; `last_seq`: the last event queued or played."""
+    gone = {e["missile"]: (e["x"], e["y"]) for e in events
+            if e["kind"] == "missile_gone"}
+    events = _with_launches(events, after, gone, unit, fast)
+    f = plan(before, after, gone)
+    if f is None:
+        return events
+    at = next((i for i, e in enumerate(events)
+               if e["kind"] in MISSILE_PHASE), len(events))
+    seq = events[at]["seq"] - 0.25 if at < len(events) else \
+        (events[-1]["seq"] if events else last_seq) + 0.5
+    return events[:at] + [{"kind": "flight", "seq": seq,
+                           "serial": None, "_flight": f}] + events[at:]
+
+
+def _with_launches(events, ordnance, gone, unit, fast):
+    """Each launch flies from its ship (`launch`) right after its event: to
+    where this snapshot puts the missile, or where it ended (a Proton
+    Torpedo strikes in its launch)."""
+    after = {m["index"]: m for m in (ordnance or {}).get("missiles", [])}
+    out = []
+    for e in events:
+        out.append(e)
+        if e["kind"] != "missile_launch":
+            continue
+        src = unit(e.get("source", -1))
+        idx = e.get("missile")
+        end = (after[idx]["x"], after[idx]["y"]) if idx in after else \
+            gone.get(idx)
+        if src is None or end is None:
+            continue
+        rec = after.get(idx) or {
+            "index": idx, "type": e.get("type", 0),
+            "quantity": e.get("quantity", 1), "facing_dir": 0,
+            "speed": e.get("speed", 0),
+            "target_unit_idx": e.get("target", -1),
+            "is_anti_missile_rocket": e.get("anti_missile", 0)}
+        out.append({"kind": "flight", "seq": e["seq"] + 0.1,
+                    "serial": None, "_flight": launch(
+                        rec, cbdraw.centre(src), end, fast)})
+    return out
 
 
 def launch(record, start, end, fast=False):

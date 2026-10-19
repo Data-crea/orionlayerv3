@@ -50,8 +50,11 @@ level and the skills that act in a battle (the original's scan only greys
 the fleet icon, :3313-3326); HD EXTENSION `scan_identity` — the hull class,
 the owner and the design's date from the ship record. OMISSION
 `scan_planet`: the planet's scan (unit 0) shows its record's values, not
-the original's ground-defence line and building shield names
-(cmbtdrw1.cpp:3578-3593, :3720-3726).
+the original's ground-defence structure line and the colony's shield
+strength (v2 cmbtdrw1.cpp:3571-3593, :3762-3772; 1.60 :3442-3466,
+:3609-3620). TRANSCRIPTION `scan_planet_hull`: the planet is no
+satellite and no hull — no hull class under its name, no armour row
+(`build`).
 
 Nothing here imports pygame; the smoke suite reads it without a window.
 """
@@ -62,11 +65,12 @@ from core.structs import ship as ship_struct
 
 #: `TECHDATA::_computers[i].bonus` (techdata.cpp:429-436).
 COMPUTER_BONUS = (0, 25, 50, 75, 100, 125)
-#: `TECHDATA::drives[i].warp_speed` (techdata.cpp:417-424).
+#: `TECHDATA::drives[i].warp_speed` (techdata.cpp:405-412; v2 :417-424).
 DRIVE_WARP = (0, 2, 3, 4, 5, 6, 7)
-#: `INITSHIP::Get_FTL_Speed` (initship.cpp:430-444): the trans-dimensional
-#: trait adds `td_ftl_bonus` (initship_config.cpp:6); an owner that is no
-#: player moves 1 with any drive.
+#: `INITSHIP::Get_FTL_Speed_` (initship.cpp:252-266; v2 :430-444): the
+#: trans-dimensional trait adds `td_ftl_bonus` (v2 initship_config.cpp:6);
+#: an owner that is no player moves 1 with any drive — but the scan does
+#: not ask it for such an owner (`ftl_speed`).
 TRAIT_TRANS_DIMENSIONAL, TD_FTL_BONUS = 29, 2
 MAX_PLAYERS = 8
 #: `TECHDATA::weapons[i].type` 2 with `ammo` > 0 (techdata.cpp:516-518,
@@ -134,7 +138,9 @@ def c_printf(fmt, *values):
 
 
 def signed(value):
-    """`Build_Signed_Bonus_String` (cmbtdrw1.cpp:3174-3180): "+n" above 0."""
+    """`Build_Signed_Bonus_String` (cmbtdrw1.cpp:3098-3104; v2 :3174-3180):
+    "+n" above 0, "0" at 0 — the cards print their numbers the same way
+    (`cbscancard.signed`)."""
     return f"+{int(value)}" if int(value) > 0 else str(int(value))
 
 
@@ -162,21 +168,32 @@ def bit(flags, b):
     return bool(int(flags[b >> 3]) >> (b & 7) & 1)
 
 
-def satellite(unit):
+def satellite(unit, index=None):
+    """`Is_Combat_Satellite_` (combinit.h:19-24; v2 :115-121). Its
+    `ship != combat_data` keeps unit 0, the planet, out: the planet has no
+    ship record and no drive either, and read as a satellite it took hull
+    class size + 4, past the hull table (audit 23, work order 305).
+    `index`: the unit's place in the battle, else the `_index` `build_for`
+    puts on it; the status box's rule (`cbstatus.satellite`) is asked
+    only for the other units."""
     from .cbstatus import satellite as sat
+    if (unit.get("_index") if index is None else index) == 0:
+        return False
     return sat(unit)
 
 
 def hull_class(unit):
-    """`Combat_Satellite_Hull_Class` for a satellite, else the size."""
+    """`Combat_Satellite_Hull_Class_` (combinit.h:26-29; v2 :123-126) for
+    a satellite, else the size."""
     size = int(unit["size_class"])
     return size + 4 if satellite(unit) else size
 
 
 def armour_total(unit):
-    """The scan's armour total (cmbtdrw1.cpp:3618-3637): the hull's armour
-    scaled by the armour's ships bonus, tripled by Heavy Armor as the flag
-    stands — damaged or not, unlike the status box (`cbstatus._View`)."""
+    """The scan's armour total (v2 cmbtdrw1.cpp:3619-3640; 1.60 :3483-3507
+    picks the hull by owner and drive instead): the hull's armour scaled by
+    the armour's ships bonus, tripled by Heavy Armor as the flag stands —
+    damaged or not, unlike the status box (`cbstatus._View`)."""
     from core import monsterhull
 
     class View:
@@ -187,15 +204,20 @@ def armour_total(unit):
 
 
 def ftl_speed(unit, traits_of):
-    """Parsecs a turn (`Get_FTL_Speed`, initship.cpp:430-444); `traits_of`
-    (player) -> the player's traits or None."""
+    """Parsecs a turn as the scan prints them, TRANSCRIPTION `scan_ftl_speed`
+    (v2 cmbtdrw1.cpp:3548-3560; 1.60 :3430-3440 prints the drive's warp
+    speed alone): 0 without a ship record or a drive, else the drive's warp
+    speed, and only for an owner 0-7 the galaxy's own rule, Get_FTL_Speed
+    (the trans-dimensional bonus). A monster or Antaran with a drive keeps
+    the warp speed — Get_FTL_Speed's 1 for a non-player is never asked
+    (audit 25, work order 305). `traits_of` (player) -> traits or None."""
     drive = int(unit["ftl_type"])
-    if drive <= 0:
+    if drive <= 0 or int(unit["ship_idx"]) < 0:
         return 0
-    owner = int(unit["owner"])
-    if owner >= MAX_PLAYERS:
-        return 1
     speed = DRIVE_WARP[drive] if drive < len(DRIVE_WARP) else 0
+    owner = int(unit["owner"])
+    if not 0 <= owner < MAX_PLAYERS:
+        return speed
     traits = traits_of(owner)
     if traits is not None and traits[TRAIT_TRANS_DIMENSIONAL]:
         speed += TD_FTL_BONUS
@@ -474,7 +496,7 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
     parts = contributors(unit, specials)
     m = Model(
         name=str(unit["name"]), owner=owner, owner_name=owner_name,
-        hull=words.part("hulls", hull_class(unit)),
+        hull=None if planet else words.part("hulls", hull_class(unit)),
         design_date=f"{date // 10}.{date % 10}" if date else None,
         planet=planet, captured=int(unit["is_captured"]) == 1,
         attack=int(unit["tac_val_attack"]),
@@ -499,7 +521,9 @@ def build(unit, words, ship_rec=None, leaders_raw=None, players=None,
                      if b == DAMPER_FIELD), None)
         if int(unit["shield_type"]) <= 0 else None,
         structure=(structure_left, int(unit["structure_max"])),
-        armour=(int(unit["armor_remaining"]), armour),
+        # the planet's armour line is KENTEXT 0x14 under the ground
+        # defence, no figure (v2 cmbtdrw1.cpp:3613-3618; 1.60 :3517-3523)
+        armour=None if planet else (int(unit["armor_remaining"]), armour),
         armour_name=words.part("armor", int(unit["armor_type"])),
         computer=hits("computer_current_hits", "computer_max_hits"),
         computer_name=words.part("computers", computer),

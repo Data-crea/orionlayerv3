@@ -37,8 +37,6 @@ logging.basicConfig(level=logging.INFO,
 log = logging.getLogger("orionlayer")
 
 
-
-
 def coalesce_motion(events):
     """The events of one frame, with every pointer motion dropped that
     another motion follows before any other event — work order 226 C.
@@ -404,6 +402,8 @@ class App:
             elif event.type == pygame.MOUSEMOTION:
                 if pointergate.PointerGate.passes(self._pointer_open()):
                     self.dispatcher.route_motion(*event.pos)
+            elif event.type == pygame.WINDOWLEAVE:
+                self.dispatcher.route_leave()
             elif event.type == pygame.MOUSEWHEEL:
                 if not pointergate.PointerGate.passes(self._pointer_open()):
                     pass                 # a held frame / F12 (D13)

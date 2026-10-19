@@ -19,9 +19,48 @@ FOOT = cbdraw.FOOT
 #: TRANSCRIPTION `move_target` (work order 304, Data's P1 of 303): how far
 #: the original takes the pointer's point back before it picks the cell a
 #: ship's corner goes to, by size class — its frame's `ship_draw_size`
-#: (cmbtdrw1.cpp:706-717) and its click's arithmetic (combat1.cpp:850-862)
+#: (v2 cmbtdrw1.cpp:706-717) and its click's arithmetic (v2 combat1.cpp:
+#: 850-862; combat1.cpp:724-733)
 SHIFT = {0: 0, 1: 10, 2: 10, 3: 20, 4: 20, 5: 20}
 DRAG_SLOP = 6                      # px before a press is a pan
+#: TRANSCRIPTION `planet_footprint` (work order 305): the planet's cells a
+#: side by its size, tiny 3 .. huge 8, and 6 for a battle without a colony
+#: or a size the switch does not name (`Assign_Combat_Grids_`,
+#: combat1.cpp:1970-1990; v2 :2451-2468). HD reads the size where the
+#: planet's picture is read (`cbart.planet_picture`): the colony record
+#: CMBT names and its planet record; neither on the wire is the original's
+#: no-colony case, 6.
+PLANET_SIDE = {0: 3, 1: 4, 2: 6, 3: 7, 4: 8}
+NO_COLONY_SIDE = 6
+#: the battle's buttons by the key that presses them (combat1.cpp:126-131,
+#: :178): HD's own path for each, the click's (`CombatInput._button`)
+KEY_BUTTON = {ord(chr(hk).lower()): k for k, _w, hk in cbpanel.BUTTONS}
+#: the missile warning's hidden field, in the reduced map's place while the
+#: warning is up (combat1.cpp:116-118)
+WARNING_FIELD = (505, 370, 622, 464)
+
+
+def planet_side(state, c):
+    """The battle planet's footprint side in cells (`planet_footprint`)."""
+    col = c.get("colony", -1)
+    if col is None or col < 0:
+        return NO_COLONY_SIDE
+    try:
+        from core.structs import colony as colony_struct
+        from core.structs import planet as planet_struct
+        colony = colony_struct.SPEC.parse(state.colonies_raw[col])
+        size = int(planet_struct.parse(state.planets_raw[colony.planet]).size)
+    except (IndexError, TypeError, AttributeError, ValueError):
+        return NO_COLONY_SIDE
+    return PLANET_SIDE.get(size, NO_COLONY_SIDE)
+
+
+def missile_warning(fields):
+    """True while the battle's list holds the missile warning's field in
+    the reduced map's place — the one place HD learns the warning is up
+    (the flag itself is not on the wire)."""
+    return any((f.x, f.y, f.x_end, f.y_end) == WARNING_FIELD and f.index
+               for f in fields or [])
 
 
 #: The one field AUTO leaves: `Clear_Fields_` and a hidden field over the
@@ -34,23 +73,23 @@ def move_target(cam, x, y, size_class):
     moves the acting ship's corner to, the same cell its frame is drawn on
     — the ship's middle under the pointer. The original's frame takes
     `(pointer - s + 12) / 20` (12: the pointer picture's point,
-    cmbtdrw1.cpp:716-717) and its click with an arrow pointer
+    v2 cmbtdrw1.cpp:716-717) and its click with an arrow pointer
     `xpos / 2 - 1` or `(xpos + 1) / 2 - 1` of the 10 px grid's `xpos`
-    (combat1.cpp:851-861, fields.cpp:2813): both floor((point - s) / 20)
-    with s 0, 10 or 20 px by size class. So a ship of size class 3-5
+    (v2 combat1.cpp:851-861, v2 fields.cpp:2813): both floor((point - s) /
+    20) with s 0, 10 or 20 px by size class. So a ship of size class 3-5
     goes one cell up and left of the pointer's cell, one of 1-2 only
     while the point is in its cell's left or top half; the arrow areas are
-    shifted to match (`Assign_Mouse_Images`, combat1.cpp:2321-2373). HD's
+    shifted to match (`Assign_Mouse_Images`, v2 combat1.cpp:2321-2373). HD's
     point is the window pointer mapped into the world, the same number.
     DEVIATION `footprint_view_edge`: the original clamps its frame's cell
     to its 32 x 18 cell view while its click goes one cell further (at
     the view's left or top edge with s > 0); HD's view is no grid of
     cells, so frame and click take the same cell everywhere (at the
     right and bottom edge the original's two agree; its frame is also cut
-    at y 350, cmbtdrw1.cpp:702-703).
+    at y 350, v2 cmbtdrw1.cpp:702-703).
     DEVIATION `footprint_arrow_areas`: the original moves its arrow areas
     by s px and, for size class 1-2, empties the neighbours that hold no
-    arrow (combat1.cpp:2321-2373); in the few pixels left with no area its
+    arrow (v2 combat1.cpp:2321-2373); in the few pixels left with no area its
     pointer has no shape and offset 0, and its click takes the unshifted
     cell (a rim cell of the reachable area, or a reachable cell beside an
     enemy). HD takes `move_target`'s cell for every point, so the frame
@@ -93,6 +132,9 @@ def field_by_hotkey(fields, hotkey, types=(0, 1)):
 
 class CombatInput:
     _pointer = None
+    _held = None                # (`_moment`, time) of a field just activated
+    _round = None               # (serial, turn) the modes were lit in
+    _engine_board = False       # the engine's BOARD flag as last seen
 
     def _hover(self, c):
         """The CTGT mask of the unit or missile under the pointer — what
@@ -100,16 +142,18 @@ class CombatInput:
         another unit or a missile (cmbtdrw1.cpp:690-724; the pointer
         pictures 12 and 1, combat1.cpp:1818-1834) — or None. CTGT is the
         engine's own arc, range and legality verdict for the acting unit
-        (open fix 54), the original's three tests."""
+        (open fix 54), the original's three tests. A missile is the one
+        hit area of `cbtarget.missile_under` (TRANSCRIPTION
+        `missile_field`), any owner's."""
         targets = getattr(self._state, "targets", None)
         if self._pointer is None or self._cam is None or not targets or \
                 targets.get("unit") != c["cur_ship"] or \
                 not self._cam.on_field(*self._pointer):
             return None
-        missile = cbdraw.missile_at(self._play.ordnance, self._cam,
-                                    *self._pointer, self._me())
+        missile = cbtarget.missile_under(self._play.ordnance, self._cam,
+                                         *self._pointer)
         if missile is not None:
-            return targets["missiles"].get(missile, 0)
+            return targets["missiles"].get(missile["index"], 0)
         cell = self._cam.cell_at(*self._pointer)
         unit = self._unit_at(cell) if cell is not None else None
         if unit is None or unit == c["cur_ship"]:
@@ -148,18 +192,25 @@ class CombatInput:
         """TRANSCRIPTION `footprint_frame` (work order 304): the cell the
         red frame stands on — `move_target` of the pointer when the engine
         marks it legal (2000), outside SCAN, on the player's own turn with
-        the orders up, not the OPTIONS panel (cmbtdrw1.cpp:699, :702,
+        the orders up, not the OPTIONS panel (v2 cmbtdrw1.cpp:699, :702,
         :730-733). Not gated, as the original's is not: BOARD, a missile
         under the pointer, a command in flight, SHOW LEGAL MOVES.
         Nothing over the field either — a popup, the log, the help — where
         the original's field is not its input.
+        TRANSCRIPTION `board_own_cells` (work order 305): in BOARD the
+        acting ship's own footprint holds its index, not -1, so
+        `Set_Legal_Moves_` marks none of those cells 2000
+        (`Assign_Combat_Grids_`, combat1.cpp:1970 and :1991-2005,
+        `Set_Legal_Moves_` :2329; v2 :2451). HD's bitmap is the engine's,
+        which never sees HD's local BOARD: the frame leaves those cells.
         DEVIATION `footprint_playback`: none while HD plays the battle's
         events, nor under AUTO (its own turn, `_own_turn`, as the reachable
         cells and the arrow: AUTO's list is one full-screen field, not the
         battle's); the original draws it in its animation loops from the
         cells it had before the move, HD's snapshot already holds the next
         ones, and under AUTO from the cells of the ship the computer moves
-        (cmbtai.cpp:896)."""
+        (v2 cmbtai.cpp:896). None once the pointer has left the window
+        (`handle_pointer_leave`)."""
         point = point or self._pointer
         if point is None or self._cam is None or self._pops.scan_mode or \
                 self._logwin.open or self.help.visible or \
@@ -168,9 +219,13 @@ class CombatInput:
         if self._opts.up(self._state) or self._pops.showing(self._state):
             return None
         c = self._shown()
-        cell = move_target(self._cam, point[0], point[1],
-                           c["units"][c["cur_ship"]]["size_class"])
+        u = c["units"][c["cur_ship"]]
+        cell = move_target(self._cam, point[0], point[1], u["size_class"])
         if cell is None or not cb.legal(c["legal"], *cell):
+            return None
+        n = FOOT.get(int(u["size_class"]), 1)
+        if self._board and u["x"] <= cell[0] < u["x"] + n and \
+                u["y"] <= cell[1] < u["y"] + n:
             return None
         return cell
 
@@ -179,18 +234,20 @@ class CombatInput:
         move pointer shows (TRANSCRIPTION `move_pointer`, `cbcursor`;
         TRANSCRIPTION `move_target`): the frame's cell (`_frame_cell`), in
         the player's orders (the original's arrows are only there,
-        combat1.cpp:2213-2296), outside BOARD (:2275-2283, and its click
-        moves nothing, :872), no missile under the pointer, no command in
-        flight. The footprint of a legal cell is free but for the ship
-        itself (`Set_Legal_Moves`, combat1.cpp:2877, :2890), so over a short
-        move the pointer may stand on the acting ship and still move it."""
+        v2 combat1.cpp:2213-2296), outside BOARD (v2 :2275-2283, and its
+        click moves nothing, v2 :872), no missile under the pointer — any
+        owner's, its field comes first (`missile_field`) — and no command
+        in flight. The footprint of a legal cell is free but for the ship
+        itself (`Set_Legal_Moves`, v2 combat1.cpp:2877, :2890), so over a
+        short move the pointer may stand on the acting ship and still move
+        it."""
         point = point or self._pointer
         cell = self._frame_cell(point)
         if cell is None or self._board:
             return None
         if self._computer(self._shown()) or not self._ready() or \
-                cbdraw.missile_at(self._play.ordnance, self._cam, *point,
-                                  self._me()) is not None:
+                cbtarget.missile_under(self._play.ordnance, self._cam,
+                                       *point) is not None:
             return None             # a click there fires, or is not sent
         return cell
 
@@ -205,11 +262,14 @@ class CombatInput:
         return unit["owner"] != self._me() or bool(c.get(side))
 
     def _unit_at(self, cell):
+        """The live unit whose footprint holds `cell`: a ship's by its size
+        class, the planet's by its size (TRANSCRIPTION `planet_footprint`)."""
         c = self._shown()
         for i, u in enumerate(c["units"]):
             if u["unit_status"] != 0 or (i and u["structure_max"] <= 0):
                 continue
-            n = FOOT.get(int(u["size_class"]), 1) if i else 5
+            n = FOOT.get(int(u["size_class"]), 1) if i else \
+                planet_side(self._state, c)
             if u["x"] <= cell[0] < u["x"] + n and u["y"] <= cell[1] < u["y"] + n:
                 return i
         return None
@@ -265,24 +325,41 @@ class CombatInput:
             return None
         c = self._shown()
         me, cur = self._me(), c["cur_ship"]
-        missile = cbdraw.missile_at(self._play.ordnance, self._cam, screen_x,
-                                    screen_y, me)
+        missile = cbtarget.missile_under(self._play.ordnance, self._cam,
+                                         screen_x, screen_y)
         move = self._move_cell((screen_x, screen_y))
         target = self._unit_at(cell)
+        if missile is not None:
+            # TRANSCRIPTION `missile_field` (work order 305): a missile's
+            # hidden field comes before the map's in the list, in every
+            # mode, and fires only at another owner's; a click on the
+            # player's own missile is taken and does nothing — no move, no
+            # fire (combat1.cpp:442-465, `Add_Missile_Fields_` :1658-1677;
+            # v2 :557-582, :2150-2156)
+            if int(missile.get("owner", -1)) != c["units"][cur]["owner"]:
+                self._send("fire_missile", missile["index"])
+            return None
         if self._pops.scan_mode:             # SCAN, then a unit: HD's own view
             self._pops.scan_mode, self._pops.local_unit = False, target
             return None
-        if missile is not None:
-            self._send("fire_missile", missile)
-        elif move is not None:               # TRANSCRIPTION `move_target`
+        if move is not None:                 # TRANSCRIPTION `move_target`
             self._send("move", *move)
+        elif self._board:
+            # BOARD, then any live unit: the original boards whatever it is
+            # (`Initiate_Boarding_Action_`, combat1.cpp:825-826) and refuses
+            # its own side's in a box (KENTEXT 64 / 65, :2035-2037); the
+            # light stays on until a boarding is carried out (:2149). An
+            # enemy (the planet too) is open fix 58's BOARD.
+            # DEVIATION `board_own_unit`: on the player's own unit HD sends
+            # nothing and shows no box — the engine refuses BOARD there
+            # (ext_api.cpp v2 :3265) and its box would say only that it
+            # cannot be done
+            if target is not None and c["units"][target]["owner"] != me:
+                self._send("board", target)
         elif target is not None and target != cur and \
                 c["units"][target]["owner"] != me:
-            if self._board:
-                self._board = False
-                self._send("board", target)
-            elif cbdraw.unit_ref(c["units"][target],
-                                   "stasis_source_idx") is not None:
+            if cbdraw.unit_ref(c["units"][target],
+                               "stasis_source_idx") is not None:
                 # TRANSCRIPTION `release_stasis` (work order 214): a click
                 # on an enemy held in a stasis field asks to release it
                 # (KENTEXT 61) and releases it on YES, as the original's
@@ -297,16 +374,85 @@ class CombatInput:
         return None
 
     def _button(self, key):
-        if key in ("board", "scan"):         # modes HD holds locally
-            self._board = key == "board" and not self._board
-            self._pops.scan_mode = key == "scan" and not self._pops.scan_mode
+        """A battle button, clicked or by its key (`KEY_BUTTON`): one path,
+        one set of guards. SCAN and BOARD are modes HD holds locally, lit
+        only in the player's own orders (the original's radio fields are
+        only there, combat1.cpp:127-128) and each putting the other out
+        (:627-628, :670); the rest are the original's own fields by
+        activation, on the player's own turn with no command in flight
+        (`_ready`) — a field activated under a pending command could be
+        swallowed by it — and the next only once the engine has moved on
+        (`_hold_input`)."""
+        if key in ("board", "scan"):
+            if not self._own_turn():
+                return None
+            if key == "board" and not self._board:
+                self._board, self._pops.scan_mode = True, False
+            elif key == "board":
+                self._board_off()
+            else:
+                if not self._pops.scan_mode:
+                    self._board_off()
+                self._pops.scan_mode = not self._pops.scan_mode
             return None
         hotkey = dict((k, hk) for k, _w, hk in cbpanel.BUTTONS)[key]
         f = field_by_hotkey(getattr(self._state, "fields", None), hotkey)
-        if f is not None and self._own_turn() and self.app.connected:
+        if f is not None and self._ready() and self.app.connected:
             log.info("combat: %s -> field %d", key, f.index)
             self.app.client.activate_field(f.index)
+            self._hold_input()
         return None
+
+    def _moment(self):
+        """What a battle field's effect changes on the wire: the round, the
+        acting unit and its place in the order, the AUTO and super-fast
+        flags, the engine's BOARD flag, and whether the battle's own list
+        stands (a box or the OPTIONS panel replaces it)."""
+        live = getattr(self._state, "combat", None)
+        if live is None:
+            return None
+        return (live["serial"], live["turn"], live["cur_ship"],
+                live["cur_ptr"], live.get("auto_attacker"),
+                live.get("auto_defender"), live.get("super_fast"),
+                live.get("board_flag"),
+                tuple((f.index, f.field_type, f.x, f.y, f.hotkey) for f in
+                      getattr(self._state, "fields", None) or []))
+
+    def _board_off(self):
+        """BOARD out. The engine's own flag is set by a BOARD command and
+        stays on when the boarding is refused or cancelled (combat1.cpp:
+        2084-2091, :2149); while it is on the engine refuses every MOVE,
+        FIRE and SELECT (ext_api.cpp v2 :3216). So HD puts it out the
+        original's way, its radio key B (fields.cpp:1033-1039), once,
+        only where the battle's list has that field. While the key cannot
+        be sent (a command in flight, a field held) BOARD stays lit: an
+        HD light off over the engine's flag on is the silent lock-up
+        itself (the audit's item 1)."""
+        live = getattr(self._state, "combat", None)
+        if not (live and live.get("board_flag")):
+            self._board = False
+        elif self._ready() and self.app.connected and field_by_hotkey(
+                getattr(self._state, "fields", None), ord("B")):
+            log.info("combat: the engine's BOARD off (its key)")
+            self.app.client.inject_key(ord("b"))
+            self._board = False
+            self._hold_input()
+
+    def _follow_modes(self, combat):
+        """TRANSCRIPTION `modes_per_round` (work order 305): SCAN and BOARD
+        go out at each new round (`Do_Combat_Turn_`, combat1.cpp:384-385;
+        v2 :499-500). TRANSCRIPTION `board_mode_kept`: BOARD is lit while
+        the engine's flag is — a BOARD command sets it, a carried-out
+        boarding clears it (:2149), a refused or cancelled one leaves it
+        on, as the original's light (:2084-2091): HD follows each change
+        of the engine's flag."""
+        rnd = (combat["serial"], combat["turn"])
+        if rnd != getattr(self, "_round", None):
+            self._round = rnd
+            self._board = self._pops.scan_mode = False
+        flag = bool(combat.get("board_flag"))
+        if flag != getattr(self, "_engine_board", False):
+            self._engine_board = self._board = flag
 
     def _right_owner(self):
         """Who a right press belongs to instead of the battle (work order
@@ -407,32 +553,63 @@ class CombatInput:
                 self._press = [(x0, y0), (screen_x, screen_y), True, owner]
         return super().handle_mouse_motion(screen_x, screen_y)
 
+    def handle_pointer_leave(self):
+        """The pointer left the window (`main.App`, pygame's WINDOWLEAVE):
+        nothing is under it, so no frame, no move arrow, no target box —
+        HD drew the last ones until the pointer came back (work order
+        305)."""
+        self._pointer = None
+
     def handle_mousewheel(self, dy, screen_x, screen_y):
-        if self._logwin.wheel(dy):
-            return
-        if self._pops.showing(self._state) in ("local", "scan"):
+        if self.help_consumes_wheel(dy) or self._logwin.wheel(dy):
+            return                  # an open help entry scrolls first
+        if self._pops.showing(self._state) in ("local", "scan", "board"):
             # TRANSCRIPTION `scan_wheel` (work order 299, Data's P7 of 298):
             # the original's scan is its own input loop with no zoom
             # (`Detailed_View_Ship_` cmbtdrw1.cpp:156-247); the wheel is the
-            # scan's while it is up and never zooms the battle under it
+            # scan's while it is up and never zooms the battle under it —
+            # nor under the board popup, its own loop as well
+            # (`Board_Popup_` cmbtdrw1.cpp:1581-1666; work order 305)
             return
         if self._cam is not None:
             self._cam.zoom(dy, (screen_x, screen_y))
 
     def handle_key(self, key):
-        if self._logwin.key(key):
+        # an open help closes first, ESC included, as on every screen
+        # (`ScreenHelp.help_consumes_key`; work order 305); the log is
+        # modal for keys as for clicks (`cblog`): ESC closes it, the rest
+        # never reach the battle under it
+        if self.help_consumes_key(key) or self._logwin.key(key) or \
+                self._logwin.open:
             return
         if self._tail:
             return
         if self._pops.key(key, self._state, self.app.client) or \
                 self._opts.key(key, self._state, self.app.client):
             return
+        ev = getattr(self, "_key_event", None)     # Alt+letter: the game's
+        alt = ev is not None and getattr(ev, "key", None) == key and \
+            getattr(ev, "mod", 0) & pygame.KMOD_ALT
         if key == pygame.K_c and self._cam is not None and self._shown():
             u = self._acting()
             self._cam.centre_on(*cbdraw.centre(u))    # the original's C
         elif key == pygame.K_ESCAPE:
-            self._board = self._pops.scan_mode = False
-        else:
-            # A S B R W D T Z O — the battle's buttons' hotkeys (combat1.cpp:
-            # 109-187): the one rule every screen shares (work order 230 E)
+            self._board_off()
+            self._pops.scan_mode = False
+        elif key in KEY_BUTTON and not alt:
+            # A S B R W D O press the button they name, its own path and
+            # guards (combat1.cpp:126-131, :178): S and B light HD's own
+            # SCAN and BOARD, never the engine's flags behind them
+            self._button(KEY_BUTTON[key])
+        elif self._ready():
+            # T Z [ and the rest — the one rule every screen shares (work
+            # order 230 E), under the buttons' guards: the player's own
+            # orders, nothing playing, no command in flight
             super().handle_key(key)
+            # held only where `_moment` sees the effect: T ends the turn
+            # (`_end_of_turn_button`, combat1.cpp:132), Z the super-fast
+            # flag (:145); '[' (:113) has no handler and changes nothing
+            if key in (pygame.K_t, pygame.K_z) and field_by_hotkey(
+                    getattr(self._state, "fields", None),
+                    ord(chr(key).upper()), types=range(256)):
+                self._hold_input()

@@ -10,9 +10,10 @@ walked in its order, the first entry with an id winning
                           RETREAT 626, WAIT 627, DONE 628, and OPTIONS 617
   OPTIONS panel up        SELF DESTRUCT 695, the five lights 696-700
   then                    the current ship display 618 (HD's picture with
-                          its shields), the reduced map 620 (621 is the
-                          missile warning picture in its place, which HD
-                          does not draw, `cbmap`'s OMISSION), the internals / target display 622 (HD's lines of
+                          its shields), the reduced map 620 — 621 while
+                          the missile warning stands in its place
+                          (TRANSCRIPTION `map_help_warning`, below) — the
+                          internals / target display 622 (HD's lines of
                           the unit's systems, which the original prints
                           there: drive, shields, computer, structure,
                           armour, speed, remaining), then the eight
@@ -43,6 +44,19 @@ OPTION_HELP = {"self_destruct": 695, "missile_warning": 696, "fast": 697,
                "legal_moves": 698, "shield_arcs": 699, "grid": 700}
 SHIP_DISPLAY, SYSTEMS_DISPLAY, WEAPONS_DISPLAY = 618, 622, 629
 REDUCED_MAP = 620                   # 0x26C, combat1.cpp:2494-2501
+#: TRANSCRIPTION `map_help_warning` (work order 305): the same region says
+#: 0x26D while `_missile_warning` is 1 (combat1.cpp:2498-2501; v2 :3029-3032)
+#: — the warning's picture stands in the map's place then. HD does not draw
+#: that picture (`cbmap`, OMISSION `missile_warning_picture`) but reads the
+#: state off the list: the warning's hidden field instead of the map's grid
+#: field (combat1.cpp:116-118, `cbinput.missile_warning`).
+MISSILE_WARNING = 621
+
+
+def map_help(fields):
+    """The reduced map's help id (`map_help_warning`)."""
+    from .cbinput import missile_warning
+    return MISSILE_WARNING if missile_warning(fields) else REDUCED_MAP
 
 
 def row_ids(unit, specials):
@@ -61,8 +75,8 @@ def row_ids(unit, specials):
     return out + [-1] * (8 - len(out))
 
 
-def help_at(panel, opts, options_up, unit, specials, x, y):
-    """The help id under (x, y), or None."""
+def help_at(panel, opts, options_up, unit, specials, x, y, fields=None):
+    """The help id under (x, y), or None; `fields` the battle's live list."""
     if options_up:
         for key, r in opts.rects.items():
             if key in OPTION_HELP and r.collidepoint(x, y):
@@ -77,7 +91,7 @@ def help_at(panel, opts, options_up, unit, specials, x, y):
     if panel.left is not None and panel.left.collidepoint(x, y):
         return SHIP_DISPLAY
     if panel.map is not None and panel.map.collidepoint(x, y):
-        return REDUCED_MAP
+        return map_help(fields)
     if unit is not None:
         ids = row_ids(unit, specials)
         for r, k in panel.help_rows:
@@ -95,7 +109,8 @@ def right(screen, x, y):
         screen.help.close()
         return True
     hid = help_at(screen._panel, screen._opts, screen._opts.up(screen._state),
-                  getattr(screen, "_panel_unit", None), screen._specials, x, y)
+                  getattr(screen, "_panel_unit", None), screen._specials, x, y,
+                  getattr(screen._state, "fields", None))
     if hid is None:
         return False
     entry = screen.helptext.entry(hid) or screen.helptext.missing_entry(hid)

@@ -16,11 +16,15 @@ after the engine has answered the last (CMEV's event 18):
 
     a legal cell              MOVE (open fix 65 keeps the original's view)
     an enemy unit             FIRE with the switched weapon rows as the mask
-    an enemy unit, BOARD lit  BOARD (the board popup is answered CAPTURE)
-    an own unit               SELECT
-    an enemy missile          FIRE_MISSILE
+    an enemy unit, BOARD lit  BOARD; the board popup that follows is the
+                              game's own, drawn and answered in HD (RAID,
+                              CAPTURE, ESC — `cbpopups`)
+    an own unit               SELECT (in BOARD nothing, `cbinput`)
+    an enemy missile          FIRE_MISSILE (the player's own: nothing)
     a right click             FACE toward the cell
-    AUTO, WAIT, DONE, RETREAT the original's own fields, by activation
+    AUTO, WAIT, DONE, RETREAT the original's own fields, by activation, as
+    OPTIONS and their keys    their keys; S and B light HD's own SCAN and
+                              BOARD, as their buttons do
 
 and nothing of the camera: zoom and pan are HD's (`cbview`).
 """
@@ -33,8 +37,8 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import (cbart, cbcloak, cbcursor, cbdraw, cblog, cbmap, cbopts,
-               cbpanel, cbplay, cbpopups, cbscansources, cbview)
+from . import (cbart, cbcloak, cbcursor, cbdraw, cbfeed, cblog, cbmap,
+               cbopts, cbpanel, cbplay, cbpopups, cbscansources, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
 from .cbinput import FOOT, CombatInput, field_by_hotkey  # noqa: F401
@@ -121,6 +125,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._cache = cbdraw.SpriteCache()     # bounded by bytes (202 B)
         self._turn_seen, self._home = None, False
         self._tail = False                   # the battle's end playing (202 D)
+        self._next = cbfeed.NextBattle()     # the next one meanwhile (305)
 
     # ── state ──────────────────────────────────────────────────────
     def claims(self, game_state):
@@ -178,6 +183,9 @@ class CombatScreen(CombatInput, ScreenBase):
             # is not taken — the screen draws its own last state meanwhile
             self._play.feed(None, [e for e in events
                                    if e.get("serial") == self._serial], None)
+            # the next battle's snapshots meanwhile are kept (`cbfeed`)
+            self._next.keep(self._serial, combat, events,
+                            getattr(game_state, "ordnance", None))
             self._play.tick()
             return
         self._state = game_state
@@ -185,12 +193,15 @@ class CombatScreen(CombatInput, ScreenBase):
             return
         if combat["serial"] != self._serial:
             self._serial = combat["serial"]
-            self._cam, self._board = None, False
+            self._cam, self._board, self._held = None, False, None
             self._logwin.open = False
             self._play.reset()
             self._fades.reset()
             self._pops.reset()
+            # what it brought while the last battle's tail played (`cbfeed`)
+            events = self._next.start(self._play, combat, events) + events
         self._pops.update(game_state)
+        self._follow_modes(combat)
         self._play.fast = cbopts.flag(game_state, "fast")
         self._play.sounds.set_level(sound_level(game_state))
         self._play.feed(combat, events, getattr(game_state, "ordnance", None))
@@ -214,28 +225,49 @@ class CombatScreen(CombatInput, ScreenBase):
         c = self._shown()
         return c["units"][c["cur_ship"]] if c else None
 
-    def _own_turn(self):
+    def _human_acting(self):
+        """The battle on its own screen, nothing playing, the live acting
+        unit the player's — whatever list stands (the orders, OPTIONS,
+        AUTO's one field)."""
         c = self._shown()
         live = getattr(self._state, "combat", None)
         return (c is not None and live is not None and not self._tail and
                 not self._play.busy()
                 and live["units"][live["cur_ship"]]["owner"] == self._me()
-                and self._state.current_screen == GAME_SCREEN_ID
-                and battle_list(getattr(self._state, "fields", None)))
+                and self._state.current_screen == GAME_SCREEN_ID)
+
+    def _own_turn(self):
+        """The player's own orders: `_human_acting` with the battle's own
+        list up (its map's grid field, `battle_list`)."""
+        return self._human_acting() and \
+            battle_list(getattr(self._state, "fields", None))
 
     def _legal_shown(self, c, unit):
-        """The reachable cells are drawn on the player's own turn while the
-        battle's SHOW LEGAL MOVES is on (cmbtdrw1.cpp:553-559).
+        """The reachable cells are drawn while the battle's SHOW LEGAL
+        MOVES is on and the acting unit is the human player's
+        (cmbtdrw1.cpp:477-482; v2 :553-559) — the OPTIONS panel up too:
+        TRANSCRIPTION `legal_options` (work order 305), the original's
+        gate asks nothing of its orders, and with the panel up its grid
+        holds no unit, so every cell in reach is 2000 (`Move_Options_
+        Background_` cmbtdrw1.cpp:1543-1544, `Assign_Combat_Grids_`
+        combat1.cpp:1962); the engine's bitmap on the wire is that grid.
+        DEVIATION `legal_cells_auto`: none under AUTO — the original draws
+        them from the cells of the ship the computer moves, between its
+        moves; HD plays those moves from the events, and its snapshot
+        already holds the cells after them (as `footprint_playback`).
         TRANSCRIPTION `legal_gate` (work order 303, Data's P3 of 302):
-        `Draw_Legal_Boxes`' own gate (cmbtdrw1.cpp:327-343) — never for the
-        planet (unit 0); with moves left, or with none while a working
-        Sub-Space Teleporter or Phase Shifter is unused this turn
-        (`Used_Teleporter`, bit 0 of `combat_status_flags`,
-        cmbtfir2.cpp:399-401): then the engine's bitmap holds the
-        teleporter's range (combat1.cpp:2835-2843, :2908-2921) — empty
-        with a Phase Shifter, alone or beside the teleporter, so the gate
-        opens and nothing is drawn, as in the original."""
-        if not (self._own_turn() and c["cur_ship"] != 0 and
+        `Draw_Legal_Boxes`' own gate (v2 cmbtdrw1.cpp:327-343;
+        cmbtdrw1.cpp:249-268) — never for the planet (unit 0); with moves
+        left, or with none while a working Sub-Space Teleporter or Phase
+        Shifter is unused this turn (`Used_Teleporter`, bit 0 of
+        `combat_status_flags`, v2 cmbtfir2.cpp:399-401): then the engine's
+        bitmap holds the teleporter's range (v2 combat1.cpp:2835-2843,
+        :2908-2921) — empty with a Phase Shifter, alone or beside the
+        teleporter, so the gate opens and nothing is drawn, as in the
+        original."""
+        live = getattr(self._state, "combat", None)
+        if not (self._human_acting() and not self._computer(live) and
+                c["cur_ship"] != 0 and
                 cbopts.flag(self._state, "legal_moves")):
             return False
         if unit["movement_left"] > 0:
@@ -251,9 +283,26 @@ class CombatScreen(CombatInput, ScreenBase):
             not int(unit.get("combat_status_flags") or 0) & 1
 
     def _ready(self):
-        if self._sent and time.monotonic() - self._sent[1] > ANSWER_WAIT:
+        """The player's own orders with no command in flight and no field
+        just activated whose effect is not on the wire yet
+        (`_hold_input`)."""
+        now = time.monotonic()
+        if self._sent and now - self._sent[1] > ANSWER_WAIT:
             self._sent = None
-        return self._own_turn() and self._sent is None
+        if self._held and (now - self._held[1] > ANSWER_WAIT or
+                           self._held[0] != self._moment()):
+            self._held = None
+        return self._own_turn() and self._sent is None and self._held is None
+
+    def _hold_input(self):
+        """TRANSCRIPTION `done_delay` (work order 305): after DONE the
+        original drops the input of its next three calls and clears the
+        pointer's buffer (`Set_Input_Delay_(3)`, combat1.cpp:859,
+        fields.cpp:143-147, :167-170), so a double click ends one ship, not
+        two. HD holds every battle field it activates, a key's too, until
+        the engine's state has moved on (`_moment`) or `ANSWER_WAIT` has
+        passed; what comes in meanwhile is dropped, not queued."""
+        self._held = (self._moment(), time.monotonic())
 
     def _mask(self, unit_idx, unit):
         """The rows at 1 as the battle holds them (`cbpanel.on_mask`)."""
@@ -300,7 +349,7 @@ class CombatScreen(CombatInput, ScreenBase):
             # `legal_cells_readable`, work order 303)
             cbdraw.draw_legal(surface, cam, art, c, unit)
         # the tractor beams before the grid and the frame, as the original's
-        # back page (cmbtdrw1.cpp:583-591, :605) under the frame
+        # back page (v2 cmbtdrw1.cpp:583-591, :605) under the frame
         # `Draw_Main_Combat_Screen` draws on it
         cbdraw.draw_tractors(surface, cam, art, c, self._cache)
         if cbopts.flag(self._state, "grid"):

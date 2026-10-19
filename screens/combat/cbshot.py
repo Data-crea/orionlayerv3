@@ -91,9 +91,12 @@ def schedule(frames, fast=False, repeat=None):
     return rows
 
 
-def plan_firing(shots, target, fast=False, total=10):
+def plan_firing(shots, target, fast=False, total=10, cut=False):
     """One FIRE's loop. `shots`: [(event, b)] in the engine's order, `b`
-    each shot's `Player._beam`; `target` (unit, shield size) or None.
+    each shot's `Player._beam`; `target` (unit, shield size) or None;
+    `cut`: a reflection follows, which the loop fires as soon as the
+    channels are done, its flare cleared (v2 beams.cpp:1428-1436,
+    `cbqueue.split_at_reflection`) — no wait for the flare or the numbers.
     Returns {"entries": [(event, b, shots)], "rows": per pass [(entry,
     frame)], "flare": per pass (status, counter), "hits": the pass each
     entry runs out on, "b": the flare's drawing fields} — every list as long
@@ -140,8 +143,9 @@ def plan_firing(shots, target, fast=False, total=10):
     # channels moved and before the flare and the numbers do — both channels
     # done, the flare off since the pass before, every number risen
     p = len(rows) - 1
-    while not ((p == 0 or p - 1 >= len(states) or states[p - 1][0] == 0) and
-               all(h + NUMBER_TICKS <= p for h in numbers)):
+    while not cut and not (
+            (p == 0 or p - 1 >= len(states) or states[p - 1][0] == 0) and
+            all(h + NUMBER_TICKS <= p for h in numbers)):
         p += 1
     n = p + 1
     rows += [[]] * (n - len(rows))

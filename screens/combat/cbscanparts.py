@@ -91,13 +91,14 @@ class Part:
     """One line of a card: what, how much, whose. `value` None is a
     formula line (combat speed); `sources` a Base's child lines (work order 301);
     `bit` the special system (or "computer") a SYSTEM line is, `src` the
-    unit a FLEET line comes from."""
+    unit a FLEET line comes from, `held` whether that unit's stasis takes
+    the line away (`counts`)."""
 
     def __init__(self, kind, label, value, state=cbscan.OK, sources=(),
-                 note=None, bit=None, src=None):
+                 note=None, bit=None, src=None, held=True):
         self.kind, self.label, self.value = kind, label, value
         self.state, self.sources, self.note = state, list(sources), note
-        self.bit, self.src = bit, src
+        self.bit, self.src, self.held = bit, src, held
 
     def __repr__(self):
         return f"Part({self.kind}, {self.label!r}, {self.value}, {self.state})"
@@ -150,7 +151,7 @@ class Side:
                     int(u["unit_status"]) != 0:
                 continue
             still = stasis(u)
-            if i and cbscan.satellite(u) and not still:
+            if cbscan.satellite(u, i) and not still:
                 self.station = (i, station_bonus(
                     cbscan.hull_class(u) - HULL_STAR_BASE))   # the last
             oi = int(u["officer_idx"])
@@ -185,10 +186,17 @@ def stasis(u):
     return ref(u, "stasis_source_idx") is not None
 
 
-def functional(u):
-    """`Combat_Ship_Is_Functional`: alive, not captured, not held."""
-    return int(u["unit_status"]) == 0 and int(u["is_captured"]) == 0 and \
-        not stasis(u)
+def counts(u, held=True):
+    """Whether a unit still gives its fleet bonus, by the source's own
+    rule — TRANSCRIPTION `scan_fleet_note`. Both fleet sums walk the side's
+    living, uncaptured units (`Fleet_Offensive_Bonus_` cmbtfir2.cpp:232-279,
+    v2 :299-354; `Fleet_Defensive_Bonus_` :133-173, v2 :198-238); stasis
+    stops only the station, the Scout Lab and the Wide Area Jammer (:248,
+    :270, :140; v2 :319, :345, :205), an officer counts aboard a ship
+    held in stasis (audit 24, work order 305). `held`: the line is one of
+    those three."""
+    alive = int(u["unit_status"]) == 0 and int(u["is_captured"]) == 0
+    return alive and not (held and stasis(u))
 
 
 def fitted(u, b):
@@ -255,8 +263,9 @@ def breakdown(index, units, players, leader, attacker, defender, names,
         who = f"{label} ({str(rec.name)})"
         if i == index:
             return who, b
+        # an officer is counted on a ship in stasis too (`counts`)
         return Part(FLEET, f"Fleet: {who} aboard {units[i]['name']}", b,
-                    src=i)
+                    src=i, held=False)
 
     def take(got, parts, fixed):
         if isinstance(got, Part):
@@ -375,7 +384,7 @@ def settle(key, total, parts, now, units):
             if p.value and not works:
                 p.state, p.note = cbscan.DESTROYED, "counts until end of round"
         elif p.kind == FLEET and p.src is not None and \
-                not functional(units[p.src]):
+                not counts(units[p.src], p.held):
             p.note = "counts until end of round"
         elif p.kind == FORMULA and p.value is not None and \
                 speed_part(int(now["current_speed"])).value != p.value:

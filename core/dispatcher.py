@@ -192,6 +192,13 @@ class Dispatcher:
         if self.top:
             self.top.handle_mouse_motion(x, y)
 
+    def route_leave(self):
+        """The pointer left the window: a screen that draws something under
+        it drops that (duck-typed, `handle_pointer_leave`; work order 305)."""
+        leave = getattr(self.top, "handle_pointer_leave", None)
+        if leave is not None:
+            leave()
+
     def route_key_event(self, event):
         """Full KEYDOWN event (unicode included) to the top screen."""
         if self.top:

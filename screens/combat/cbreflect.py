@@ -2,8 +2,11 @@
 CMEV's `reflect` (its word mark looked for a key the event does not have).
 
 TRANSCRIPTION `reflection` — a Reflection Field sends part of a beam back
-(`Fire_Beam_Weapon_`, cmbtfire.cpp:1743-1748; the event at :1340-1342) and
-the shot loop plays it after the shots (`Beam_SFX_`, beams.cpp:1480-1530):
+(`Fire_Beam_Weapon_`, cmbtfire.cpp:1743-1748; the event at v2
+cmbtfire.cpp:1474, before the shot's own at :1497) and the shot loop plays
+it after its slot's entry, as that slot's damage entry (v2
+cmbtfire.cpp:1565-1576; `Beam_SFX_`, v2 beams.cpp:1417-1452; HD:
+`cbqueue.split_at_reflection`, TRANSCRIPTION `reflection_order`):
 the same weapon fired back from the reflector at the shooter
 (`reflected_fx`), its tail a third of the reflection field's diameter out
 (`Fire_Weapon_`, :2388-2395) and its strands starting there (:2421-2424),
@@ -14,8 +17,10 @@ out (`Adjust_Reflection_Field_Display_Status_`, :1797-1837;
 `Draw_Reflection_Field_Hit_`, :1724-1794) — and the reflected damage over
 the shooter.
 
-The weapon is the shooter's last shot at the reflector, as the event comes
-right after it; without one HD fires the thin bolt.
+The weapon is the slot's, which the damage entry copies (v2
+cmbtfire.cpp:1566-1570), set on the event by the FIRE it belongs to; a
+reflection that came without its shot takes the shooter's last shot at the
+reflector, else the thin bolt.
 """
 from . import cbbeam, cbdraw, cbflare, cbshot
 
@@ -27,8 +32,9 @@ def plan(player, ev):
     if ref is None or shooter is None:
         return None
     last = player.last_beam or {}
-    weapon = last.get("weapon", 3) if last.get("source") == ev["shooter"] \
-        and last.get("target") == ev["reflector"] else 3
+    weapon = ev["weapon"] if "weapon" in ev else last.get("weapon", 3) \
+        if last.get("source") == ev["shooter"] and \
+        last.get("target") == ev["reflector"] else 3
     b = player._beam({"source": ev["reflector"], "target": ev["shooter"],
                       "weapon": weapon, "slot": -1, "result": 2})
     if b is None:

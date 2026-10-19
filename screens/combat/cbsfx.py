@@ -170,7 +170,7 @@ def anti_missile(a, b, destroyed, art, fast=False):
     (`Draw_Anti_Missile_Rockets_`, `Absolute_Interpolate_Line_`,
     cmbtspec.cpp:686-730, 1395-1408); then, when it destroyed any, CMBTSFX 7
     at the missile less 12, a tick a frame (:766-797). `destroyed` is HD's
-    reading (HD STATE `anti_missile_count`, `cbplay`)."""
+    reading (HD STATE `anti_missile_count`, `anti_missile_for`)."""
     speed = 30 if fast else 20
     major = max(abs(b[0] - a[0]), abs(b[1] - a[1]))
     fly = max(1, -(-int(major) // speed))
@@ -195,6 +195,33 @@ def anti_missile(a, b, destroyed, art, fast=False):
                      b[0] - 12, b[1] - 12)
     # FAST steps the flight, not the blast: `_draw_event`'s step is 1 here
     return {"frames": fly + m, "draw": draw, "step": 1, "fly": fly}
+
+
+def _missile(index, ordnance):
+    return next((m for m in (ordnance or {}).get("missiles", [])
+                 if m.get("index") == index), None)
+
+
+def anti_missile_for(ev, src, ordnance, later, queue, art, fast=False):
+    """The rocket of special `ev` from unit `src` (`anti_missile`), or
+    None (moved out of `cbplay` by work order 305). HD STATE
+    `anti_missile_count`: the engine does not say how many it destroyed
+    (proposed open fix 75); HD reads it as the missile's quantity in
+    `ordnance` less its quantity in `later`, the next state queued, or the
+    whole stack when a `missile_gone` for it is in `queue`. The count and
+    where it shows go on `ev` (`_destroyed`, `_at`)."""
+    m = _missile(ev.get("target", -1), ordnance)
+    if src is None or m is None or not ev.get("at_missile", 1):
+        return None
+    after = _missile(ev["target"], later)
+    gone = any(e["kind"] == "missile_gone" and e.get("missile") ==
+               ev["target"] for e in queue)
+    destroyed = m.get("quantity", 0) if gone else max(
+        0, m.get("quantity", 0) - (after or {}).get("quantity",
+                                                   m.get("quantity", 0)))
+    ev["_destroyed"], ev["_at"] = destroyed, (m["x"], m["y"])
+    return anti_missile(cbdraw.centre(src), (m["x"], m["y"]), destroyed, art,
+                        fast)
 
 
 def plan(ev, unit, art, previous=None):

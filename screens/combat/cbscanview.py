@@ -523,8 +523,11 @@ class View:
         # the part's own name ("Xentronium Armor") stands for the word; the
         # drive's galaxy speed is in Combat speed's card (Data, work order
         # 302, P1 of 301: nothing in a battle reads it)
-        lines = [("structure", wd["structure"], m.structure),
-                 ("armor", m.armour_name or wd["armor"], m.armour)]
+        lines = [("structure", wd["structure"], m.structure)]
+        # the planet has no armour row: the original prints no figure for
+        # it (TRANSCRIPTION `scan_planet_hull`, cbscan.build)
+        if m.armour is not None:
+            lines.append(("armor", m.armour_name or wd["armor"], m.armour))
         if m.drive is not None:
             lines.append(("drive", wd["drive"], m.drive))
         lines.append(("computer", m.computer_name or wd["computer"],
