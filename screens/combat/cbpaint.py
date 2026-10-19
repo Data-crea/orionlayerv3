@@ -354,17 +354,27 @@ def turned(surf, degrees):
     return cbart.painted_as(out, cbart.hd_factor(surf))
 
 
-def ship(art, colour, picture, facing, glow=0):
-    """The colour-free painted picture of a player's ship in `colour`, or
-    None: the colour has its own file for this frame, or there is no
-    colour-free picture for it."""
+def has_own(art, colour, picture, facing, glow=0):
+    """True when `colour` has its own painted file for this ship's frame
+    or its facing's frame 0 (`cmbtshp/<colour * 45 + picture>_<frame>`)."""
     stored, _m, _f = cbart.stored_facing(facing)
     frame = 4 * stored + max(0, min(3, int(glow)))
     own = int(colour) * 45 + int(picture)
+    return art._painted("cmbtshp", own, frame) is not None or \
+        art._painted("cmbtshp", own, 4 * stored) is not None
+
+
+def ship(art, colour, picture, facing, glow=0, own_first=True):
+    """The colour-free painted picture of a player's ship in `colour`, or
+    None: the colour has its own file for this frame, or there is no
+    colour-free picture for it. `own_first` False: the colour-free one even
+    where the colour has its own — the galaxy map's captured ship, whose
+    shape is its builder's and whose colour its owner's (`shippics`)."""
+    stored, _m, _f = cbart.stored_facing(facing)
+    frame = 4 * stored + max(0, min(3, int(glow)))
     # the colour's own file wins for its colour: its frame 0 makes the
     # facing's missing glow frames too (`cbpulse.own`), never this picture
-    if art._painted("cmbtshp", own, frame) is not None or \
-            art._painted("cmbtshp", own, 4 * stored) is not None:
+    if own_first and has_own(art, colour, picture, facing, glow):
         return None
     liv = getattr(art, "livery", livery.DEFAULT)
     key = ("plating", int(colour), int(picture), int(facing) & 15, frame,

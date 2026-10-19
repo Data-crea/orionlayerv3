@@ -86,8 +86,15 @@ FRAME_TREE = "screens/{screen}/assets/frame.png"
 #: number, so a picture under another name after the number is a picture,
 #: not a typo — and a leader the pack has no picture for can get one; and the Leaders screen's seven picture
 #: places (work order 237, `screens/leaders/ldrpics.NAMES`, held equal by
-#: the leaders' smoke group), by exact name, so a misspelt one says so.
+#: the leaders' smoke group), by exact name, so a misspelt one says so; and
+#: the galaxy map's ship pictures (work order 311,
+#: `screens/galaxy_map/shippics.SLOT`), which the base pack may fill too —
+#: the transport, colony and outpost ships have no picture of their own —
+#: by exact name, `all_<picture>.png` or `<colour 0-7>_<picture>.png` for
+#: picture_num 0-47 (`SHIP_PICTURE_NAMES`), so a misspelt one says so.
 #: Globs relative to the tree.
+SHIP_PICTURE_DIR = "screens/galaxy_map/assets/ship_pictures/"
+SHIP_PICTURE_NAMES = "all_<0-47>.png or <0-7>_<0-47>.png"
 SLOTS = ("screens/*/assets/frame.png",
          "screens/*/assets/gamedata/*.png",
          "assets/shared/figures/*.png",
@@ -97,7 +104,10 @@ SLOTS = ("screens/*/assets/frame.png",
          "screens/leaders/assets/pictures/slot_[1234]_background.png",
          "screens/leaders/assets/pictures/slot_empty_background.png",
          "screens/leaders/assets/pictures/minimap_background.png",
-         "screens/leaders/assets/pictures/view_background.png")
+         "screens/leaders/assets/pictures/view_background.png",
+         ) + tuple(f"{SHIP_PICTURE_DIR}{c}_{n}.png"
+                   for c in ("all", "[0-7]")
+                   for n in ("[0-9]", "[1-3][0-9]", "4[0-7]"))
 #: The galaxy map's ship masters (work order 243, Data's decision): a whole
 #: master `files/<SHIP_MASTERS>/<kind>.png` replaces every icon cut from it
 #: (`core.shipcut`: the four steps and the Planets panel's picture), cut
@@ -227,7 +237,10 @@ def init(enabled=True, root=None):
                     and not _in_base_pack(target) \
                     and not target.startswith(SHIP_MASTERS + "/"):
                 log.warning("mod: %s replaces nothing (no %s in OrionLayer) "
-                            "— ignored", name, target)
+                            "— ignored%s", name, target,
+                            f"; the map's ship pictures are named "
+                            f"{SHIP_PICTURE_NAMES}"
+                            if target.startswith(SHIP_PICTURE_DIR) else "")
                 continue
             _state["index"][target] = full
     log.info("mod folder %s: %d file(s) in use", root, len(_state["index"]))

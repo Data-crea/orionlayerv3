@@ -303,6 +303,11 @@
         "on": "On",
         "off": "Off"
       },
+      "map_ships": "Map ship pictures",
+      "map_ships_steps": {
+        "on": "On",
+        "off": "Off"
+      },
       "frame": "Frame colour",
       "reset": "Reset",
       "tone": "Frame tone",
@@ -470,6 +475,10 @@
     "orionlayer.monsters": {
       "title": "MONSTER VALUES",
       "body": "On: the Planets screen shows a guarding monster's values in its picture window \u2014 its stage, size, structure, armour, shields, weapons and specials, as the game holds them. Off: only its type, as the original shows it. Applied at once."
+    },
+    "orionlayer.map_ships": {
+      "title": "MAP SHIP PICTURES",
+      "body": "On: each of your stacks on the galaxy map shows its strongest ship \u2014 the Avenger first, then the largest hull, then the dearest design \u2014 in your colour, and every other empire's stack the ship the game puts at its head. A colony, outpost or transport stack shows its picture from the map's ship picture slot (MODDING.md); without one, and for a ship without a picture, the ship icon. Off: the ship icon for every stack, as the original draws it. Applied at once."
     },
     "orionlayer.frame": {
       "title": "FRAME COLOUR",

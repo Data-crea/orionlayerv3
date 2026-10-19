@@ -7,7 +7,8 @@ folder (decision 72), the language (HD EXTENSION `language_switch`, 200
 C), the frame rate (HD EXTENSION `frame_rate`, decision 79), the painted
 detail (HD EXTENSION `painted_detail`, `core/paintdetail.py`, 219), the
 livery window (HD EXTENSION `livery`, 220), the box fill (HD EXTENSION,
-decision 94, `gmfill`). MOO2 has none of them; the game knows nothing
+decision 94, `gmfill`), the map's ship pictures (HD EXTENSION
+`strongest_ship_icon`, 311, `galaxy_map/shippics`). MOO2 has none of them; the game knows nothing
 about them.
 
 **WHERE THEY ARE (work order 251, Data).** Until then rows below the
@@ -50,8 +51,8 @@ from . import gmfill, gmlang
 #: Every row, in Data's order of the tabs (`olwin.TABS`): what the right-
 #: click help regions name (help.json `orionlayer_band`).
 BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone", "floor",
-         "monsters", "frame_rate", "idle_rate", "painted", "livery", "mods", "mod_files",
-         "mod_open", "language")
+         "monsters", "map_ships", "frame_rate", "idle_rate", "painted",
+         "livery", "mods", "mod_files", "mod_open", "language")
 
 #: the heading colour of the rows until work order 251, the livery
 #: window's labels since 220
@@ -64,6 +65,10 @@ FLOOR_STEPS = ("off", "light", "haze")
 
 #: The monster values switch (screens/planets/monsterpanel), default on.
 MONSTER_STEPS = ("on", "off")
+
+#: The galaxy map's ship pictures (work order 311, `galaxy_map/shippics`),
+#: default on; the map reads it at every draw.
+MAP_SHIP_STEPS = ("on", "off")
 
 #: The mod folder switch (work order 173, decision 72), default off since
 #: work order 197 (`core.usersettings`). Switching it ON starts the
@@ -303,6 +308,7 @@ def render(screen, surface):
     labels = {"colours": ("colours", "Player colours"),
               "floor": ("floor", "Map floor"),
               "monsters": ("monsters", "Monster values"),
+              "map_ships": ("map_ships", "Map ship pictures"),
               "frame_rate": ("frame_rate", "Frame rate"),
               "idle_rate": ("idle_rate", "When idle"),
               "painted": ("painted", "Painted detail"),

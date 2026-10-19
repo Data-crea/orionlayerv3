@@ -796,7 +796,8 @@ def render_star_names(surface, ctx, stars, heights, render_label,
 
 
 def render_fleets(surface, ctx, icons, players, cache, tints,
-                  cfg=None, ships=None, anchor=None, nodes=None):
+                  cfg=None, ships=None, anchor=None, nodes=None, me=None,
+                  settings=None):
     """Fleet and monster icons from s_ship_icon.
 
     Everything about sprite choice, footprint and player tinting lives
@@ -805,4 +806,5 @@ def render_fleets(surface, ctx, icons, players, cache, tints,
     """
     from screens.galaxy_map import ships as ship_icons
     ship_icons.render(surface, ctx, icons, players, cache, tints,
-                      cfg=cfg, ships=ships, anchor=anchor, nodes=nodes)
+                      cfg=cfg, ships=ships, anchor=anchor, nodes=nodes,
+                      me=me, settings=settings)

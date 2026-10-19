@@ -86,6 +86,9 @@ DEFAULTS = {
     "floor_lift": "off",
     "player_colors": "original",
     "monster_values": "on",
+    # The galaxy map's stacks as their strongest ship's picture (work order
+    # 311, `screens/galaxy_map/shippics`), on or off; applied at once.
+    "map_ship_pictures": "on",
     # The HUD frame colour, a hue in degrees; None is the measured blue
     # (work order 170, `core.hud.tint`).
     "hud_hue": None,

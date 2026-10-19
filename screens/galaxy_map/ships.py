@@ -384,6 +384,10 @@ class TintCache:
 
     def __init__(self):
         self._tinted = {}
+        # the stacks' ship pictures are made at the box's size too, so they
+        # go with the tinted sprites (HD EXTENSION `strongest_ship_icon`)
+        from screens.galaxy_map import shippics
+        self.pictures = shippics.ShipPictures()
 
     def get(self, base, cache_key, color_idx):
         key = (cache_key, base.get_width(), base.get_height(), color_idx)
@@ -400,6 +404,7 @@ class TintCache:
 
     def clear(self):
         self._tinted.clear()
+        self.pictures.clear()
 
 
 # ── Rendering ────────────────────────────────────────────
@@ -718,24 +723,33 @@ class IconAnchor:
         self._ships = ships or []
 
     def resolve(self, icon):
-        ship = None
-        node = getattr(icon, "node_idx", -1)
-        if 0 <= node < len(self._nodes) \
-                and 0 <= self._nodes[node] < len(self._ships):
-            candidate = self._ships[self._nodes[node]]
-            if candidate.location == getattr(icon, "star_idx", None):
-                ship = candidate       # same validation as the owners
-        return self.game_state, self.stars, ship, self.game_zoom
+        return (self.game_state, self.stars,
+                head_ship(icon, self._nodes, self._ships), self.game_zoom)
+
+
+def head_ship(icon, nodes, ships):
+    """The ship at the icon's node (the head of its stack), or None; the
+    same validation as the owners: its location is the icon's."""
+    node = getattr(icon, "node_idx", -1)
+    if nodes and ships and 0 <= node < len(nodes) \
+            and 0 <= nodes[node] < len(ships):
+        candidate = ships[nodes[node]]
+        if candidate.location == getattr(icon, "star_idx", None):
+            return candidate
+    return None
 
 
 def render(surface, ctx, icons, players, cache, tints,
-           cfg=None, ships=None, anchor=None, nodes=None):
+           cfg=None, ships=None, anchor=None, nodes=None, me=None,
+           settings=None):
     """Draw every placed ship icon.
 
     `players` supplies the `color` field per player index; the tint
     keys on that, not on the player index, so two players can never
     end up sharing a colour just because they sit next to each other
-    in the array. `nodes` is `wire_nodes(state)`.
+    in the array. `nodes` is `wire_nodes(state)`; `me` the player's
+    index and `settings` the user settings, for the stack's ship picture
+    (`shippics`).
     """
     if not icons:
         return
@@ -760,6 +774,14 @@ def render(surface, ctx, icons, players, cache, tints,
         cx = left + box_w / 2.0
         cy = top + box_h / 2.0
 
+        if kind == PLAYER_KIND:
+            pic = _stack_picture(icon, owner, players, tints, ships, nodes,
+                                 me, settings, box_w, box_h)
+            if pic is not None:
+                surface.blit(pic, (int(round(cx - pic.get_width() / 2.0)),
+                                   int(round(cy - pic.get_height() / 2.0))))
+                continue
+
         key = _resolve_sprite(cache, kind or PLAYER_KIND, ctx.zoom)
         if key is None:
             _draw_fallback(surface, cx, cy, box_w, box_h, owner)
@@ -781,6 +803,25 @@ def render(surface, ctx, icons, players, cache, tints,
 
         surface.blit(sprite, (int(round(cx - sprite.get_width() / 2.0)),
                               int(round(cy - sprite.get_height() / 2.0))))
+
+
+def _stack_picture(icon, owner, players, tints, ships, nodes, me,
+                   settings, box_w, box_h):
+    """HD EXTENSION `strongest_ship_icon` (`shippics`): the picture of the
+    stack's representative ship in the box `icon_box` gave, or None for
+    the tinted master. The head is the node table's ship (`head_ship`),
+    never a guess."""
+    pictures = getattr(tints, "pictures", None)
+    if pictures is None:
+        return None
+    head = head_ship(icon, nodes, ships)
+    ship = pictures.representative(head, ships, me)
+    if ship is None:
+        return None
+    builder = int(ship.previous_owner)
+    shape = _player_color(players, builder if 0 <= builder < 8 else owner)
+    return pictures.icon(ship, _player_color(players, owner), shape, box_w,
+                         box_h, settings, _player_color(players, me))
 
 
 def _player_color(players, owner):

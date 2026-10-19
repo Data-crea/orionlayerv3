@@ -587,7 +587,9 @@ class GalaxyMapScreen(ScreenBase):
                           cfg=self._data.get("ship_icons") or {},
                           ships=self._ships,
                           anchor=self._icon_anchor(),
-                          nodes=ship_icons.wire_nodes(self._state))
+                          nodes=ship_icons.wire_nodes(self._state),
+                          me=player_num,
+                          settings=getattr(self.app, "user_settings", None))
 
         # Home-system ping, above the icons so it cannot be hidden by
         # a fleet parked on the star. Resolved per frame rather than

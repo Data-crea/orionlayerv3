@@ -698,6 +698,33 @@ files/screens/galaxy_map/assets/ships/_src/<kind>.png   a WHOLE master
   cut fills the rest. A master under a name that is not a kind is skipped
   with one line in the log.
 
+**A stack shows its strongest ship** (setting *Map ship pictures*, on by
+default): your own stack the Avenger first, then the largest hull, then
+the dearest design; another empire's the ship the game puts at its head.
+It is the battle's picture, facing right, fitted into the icon's box.
+The map's own slot comes first, by the ship's picture number (45 colony
+ship, 46 outpost ship, 47 transport, which have no battle picture; 0-44
+a warship's):
+
+```
+files/screens/galaxy_map/assets/ship_pictures/all_<picture>.png
+files/screens/galaxy_map/assets/ship_pictures/<colour>_<picture>.png
+```
+
+`all_47.png` is the transport for every player: paint the hull neutral
+grey, as for the battle's `all_` pictures, and it takes the owner's
+colour. `<colour>_47.png` (colour 0-7) is one colour's, drawn as
+painted. Facing right, any size; only the visible pixels count. Without
+a file a stack with no warship keeps the tinted icon. Restart after
+adding one.
+
+Which file wins: the builder's `<colour>_<picture>.png` before
+`all_<picture>.png` (a captured ship keeps its builder's shape and never
+takes its owner's own file), each looked up in your folder, then the
+base pack (so the pack's `3_47.png` beats your `all_47.png`); then the battle's painted picture, coloured on the map at
+full strength, whatever the livery's strength. Another name is reported
+in the log and skipped.
+
 **Aspect ratio matters more than it looks.** The original sprites and
 your artwork will not share proportions, and which edge you match
 decides whether an icon reads as the right size. `layout.json`

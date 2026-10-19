@@ -245,6 +245,14 @@ def names_txt(hud_sizes):
               "  stretched, the overflow cut off evenly (the empty slot's "
               "on the right). Sizes are the box at 3840 x 2160:"]
     lines += leaders_pictures()
+    lines += ["", "  the galaxy map's ship pictures (work order 311), by the "
+              "ship's picture number (45 colony ship,",
+              "  46 outpost ship, 47 transport; 0-44 a warship's), facing "
+              "right, any size; grey takes the owner's colour:",
+              "  files/screens/galaxy_map/assets/ship_pictures/"
+              "all_<picture>.png  every player",
+              "  files/screens/galaxy_map/assets/ship_pictures/"
+              "<colour>_<picture>.png  one colour (0-7), as painted"]
     lines += ["", "texts/<screen>/<key>.txt  a text by its key, UTF-8. "
               "OrionLayer's own (a copy is in originals/texts/):"]
     keys = text_keys()
