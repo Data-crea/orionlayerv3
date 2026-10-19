@@ -68,10 +68,23 @@ GALAXY_MAX_SCALE = {
 #: Six entries cover zoom 0..3 combined with size 0..2.
 STAR_FIELDS_DIM = (33, 29, 25, 23, 21, 17)
 
-#: MAINSCR::Draw_Black_Holes_ zoom_dist[4]. Black holes use their
-#: own table and ignore star.size entirely — and zoom 1 and 2 are
-#: deliberately the same value in the original.
+#: MAINSCR::Draw_Black_Holes_ zoom_dist[4] (mainscr.cpp:706, v2
+#: mainscr.cpp:873). NOT THE DRAWN SIZE: `Draw_Scaled_Star_Picture_`
+#: takes it only to CENTRE the sprite, top-left = centre - zoom_dist / 2
+#: (mainscr.cpp:20-28, :740). Black holes ignore star.size entirely, and
+#: zoom 1 and 2 are the same value in the original.
 BLACK_HOLE_DIM = (39, 33, 33, 24)
+
+#: The black hole's drawn size: the header of BUFFER0.LBX entry
+#: 148 + 6 * 6 + zoom (`Get_Star_Picture_Seg_`, mainscr.cpp:368-387, the
+#: black hole skipping `+ size`), 184..187. DERIVED (decision 27: a size
+#: read off the LBX is derived, not transcribed), two sources (work order
+#: 310): the headers read with core/lbx.py (40 x 40, 34 x 34, 34 x 34,
+#: 25 x 25, square) and zoom_dist above, which is the header less one at
+#: every zoom — the centring the original wrote for this sprite. The
+#: placement by zoom_dist / 2 (`black_hole_origin`) is the transcription,
+#: `black_hole_draw` in renderer.render_stars.
+BLACK_HOLE_HEADER_DIM = (40, 34, 34, 25)
 
 #: Nebula footprint in native pixels, [type][zoom_level] -> (w, h).
 #:
@@ -119,22 +132,32 @@ NEBULA_DIM = (
     ((209, 206), (130, 132), ( 94,  93), ( 64,  64)),   # 11
 )
 
+#: TRANSCRIPTION `nebula_zoom3_hold`: the original draws the variant of
+#: its zoom level unchanged (Draw_Nebulae_ never scales), so past the
+#: scale that variant is drawn for the nebula keeps its size while the
+#: map shrinks. On an ordinary map Map_Scale_To_Zoom_Level_ answers 3 for
+#: every scale beyond 20 (harold.cpp:1086-1110), so the hold is at 30; on
+#: an extended one (over 72 stars) the level comes from
+#: Extended_Zoom_Level_For_Scale_ (map_scale.h:25-32): zoom 2 runs up to
+#: max_map_scale - 1 and zoom 3 is only the maximum itself.
+NEBULA_HOLD_SCALE = 30
+
+#: The scale each zoom level's variant is drawn for on an ordinary map
+#: (the vanilla ladder, `scale_rungs`): the zoom-z variant is the
+#: footprint x 10 / NEBULA_RUNG_SCALE[z], within the variants' own
+#: 12 to 25 % wander (nebula_native_dimension).
+NEBULA_RUNG_SCALE = (10, 15, 20, NEBULA_HOLD_SCALE)
+
 #: Number of nebula shapes; savegame.cpp and netmox.cpp both reject a
 #: savegame with type outside 0..11, and Draw_Nebulae_ indexes with
 #: type % 12.
 NEBULA_TYPE_COUNT = len(NEBULA_DIM)
 
 #: Whether an extended galaxy (> 72 stars, map_scale > 30) shrinks
-#: nebulas the way it shrinks stars.
-#:
-#: UNCONFIRMED, and deliberately False. Star_Scale_Percent_ is only
-#: consulted by Map_Scale_Star_Size_To_Zoom_Level_; ship icons have no
-#: scaling path at all and keep their size out there. Nebulas swap
-#: pre-rendered variants exactly like ship icons do, so they are
-#: treated the same until MAINSCR::Draw_Nebulae_ says otherwise.
-#: To settle it: grep Draw_Nebulae_ for Star_Scale_Percent_ or
-#: Scale_Bitmap_. If it scales, flip this to True — the code path is
-#: already here.
+#: nebulas the way it shrinks stars. SETTLED False (work order 310):
+#: Draw_Nebulae_ draws `_nebula_pict_seg[type % 12][zoom_level]` with
+#: animate::Draw_ and never consults Star_Scale_Percent_ or scales
+#: (mainscr.cpp:941-963), like the ship icons.
 NEBULA_EXTENDED_SHRINK = False
 
 #: HAROLD::Zoom_Level_Font_Style_ — the original picks a font
@@ -231,47 +254,53 @@ SHIP_ICON_HEADER_DIM_BY_COLOUR = (
 ETA_FONT_STYLE_BY_ZOOM = (1, 1, 0, 0)
 ETA_DIGIT_INK_ROWS = (5, 7)
 
-#: Monster icon footprints at zoom 0, measured the same way. Each
-#: type has its OWN sprite set in the original (BUFFER0.LBX
-#: 241 + (type - 9) * 4 + zoom), so the sizes genuinely differ per
-#: type — a guardian is not a ship-sized dot.
+#: Monster icons, per kind and zoom level — TRANSCRIPTION `monster_icon_dim`
+#: of the sprite the original picks; the sizes themselves are DERIVED
+#: (decision 27): read back off BUFFER0.LBX, as the game reads them at
+#: runtime (work order 310, replacing the zoom-0 screenshot table and its
+#: "one pixel less a step"). Which sprite the original draws is
+#: `SHIPS::Get_Ship_Icon_Pict_Seg_` (ships.cpp:337-397, v2 the same):
+#: owner 8 (Antaran) BUFFER0.LBX 237 + (3 - zoom), backwards like the
+#: player; owners 9..14 241 + (owner - 9) * 4 + zoom, forwards.
 #:
-#: The guardian was 17 x 16 here until 29 August, and it was wrong:
-#: at a low threshold a faint pixel bridge merged the sprite with
-#: nearby background stars. It measures 12 x 11. The number reached
-#: production because it was never sanity-checked against the others,
-#: and it showed on screen as a monster half again too large.
+#: TWO SIZES PER SPRITE, AND THEY ARE NOT THE SAME THING.
 #:
-#: THE AMOEBA IS MEASURED, 14 September 2026, and not off a screenshot:
-#: off its own sprite. BUFFER0.LBX entry 245 (241 + (10 - 9) * 4 + zoom
-#: 0, SHIPS::Get_Ship_Icon_Pict_Seg_, ships.cpp:383-397), all eight
-#: frames decoded through the main screen's palette as the game sent it
-#: (VISUAL_FRAME, screen 0), bounding box of the pixels above a
-#: brightness threshold:
+#: MONSTER_ICON_HEADER_DIM is the entry's header (w, h): the box the
+#: game anchors at s_ship_icon.x/y and whose width
+#: `Get_XYs_For_Orbiting_Ships_` halves (ships.cpp:290-291). Read with
+#: core/lbx.py off the player's BUFFER0.LBX; the second source is the
+#: entries' own frame streams, which decode inside exactly these bounds
+#: (core/lbx.decode_packed refuses a run past them).
 #:
-#:     t0 13x14   t25 13x13   t40 13x13   t60 13x13   t80 11x12
-#:
-#: stable at 13 x 13 from t25 to t60; t0 adds one dark edge pixel.
-#: The second source is that the entry IS what the game draws: at zoom
-#: 3 both live amoebas on the `natives` fixture matched entry 248
-#: pixel for pixel (29 of 29 opaque pixels), and every other monster
-#: matched its own entry the same way.
-#:
-#: THE SAME METHOD DOES NOT REPRODUCE THE OTHER FIVE, and that is
-#: recorded rather than repaired here: guardian 13x11, crystal 15x12,
-#: dragon 13x13, hydra 13x12 and eel 15x5 at t40, against the table's
-#: screenshot numbers below. Out of this brief's scope; reported to
-#: Data (dev:doc/ship_icon_measurement.md, "The sprites disagree").
-#:
-#: UNVERIFIED for antaran still: it borrows the player footprint.
-MONSTER_ICON_DIM_ZOOM0 = {
-    "guardian": (12, 11),
-    "crystal":  (13, 13),
-    "dragon":   (13, 10),
-    "hydra":    (11, 12),
-    "eel":      ( 9,  9),
-    "amoeba":   (13, 13),     # BUFFER0.LBX 245, threshold-swept
-    "antaran":  (11, 10),     # UNVERIFIED — copy of the player ship
+#: MONSTER_ICON_DIM is (x0, y0, w, h), the box of the pixels the game
+#: actually draws (index != 0, all eight frames, composed): the HD
+#: icon's size and, from (x0, y0), its place inside the header box. The
+#: headers carry up to nine pixels of empty margin — the crystal is
+#: 15 x 13 at every zoom and draws 6 x 6 at zoom 3 — and the HD masters
+#: are cropped to their content, so a header-sized box would draw the
+#: crystal two and a half times the original's. Two sources: the
+#: decode of work order 310, and dev:doc/ship_icon_measurement.md's
+#: 14 September sweep, whose t0 column (another decoder, through the
+#: game's palette) gives the same zoom-0 boxes for all six it measured,
+#: while its live framebuffer at zoom 3 matched each monster's entry
+#: pixel for pixel.
+MONSTER_ICON_HEADER_DIM = {
+    "antaran":  ((18, 15), (14, 12), (12, 10), (11, 10)),   # 240..237
+    "guardian": ((16, 13), (14, 11), ( 9,  9), ( 7,  7)),   # 241..244
+    "amoeba":   ((15, 15), (12, 13), (10, 11), ( 9,  9)),   # 245..248
+    "crystal":  ((15, 13), (15, 13), (15, 13), (15, 13)),   # 249..252
+    "dragon":   ((15, 15), (12, 14), ( 9,  9), ( 9,  9)),   # 253..256
+    "eel":      ((17,  7), (13,  7), (11,  7), ( 8,  6)),   # 257..260
+    "hydra":    ((15, 14), (12, 11), ( 8,  9), ( 7,  8)),   # 261..264
+}
+MONSTER_ICON_DIM = {
+    "antaran":  ((2, 2, 13, 11), (2, 2, 10, 8), (2, 2, 7, 6), (3, 3, 5, 4)),
+    "guardian": ((2, 1, 13, 11), (2, 1, 11, 9), (0, 1, 8, 7), (1, 1, 5, 5)),
+    "amoeba":   ((1, 1, 13, 14), (1, 2, 10, 10), (2, 2, 6, 8), (2, 1, 5, 6)),
+    "crystal":  ((0, 1, 15, 12), (2, 2, 12, 10), (4, 4, 8, 6), (5, 3, 6, 6)),
+    "dragon":   ((1, 0, 13, 15), (1, 1, 10, 13), (2, 0, 7, 9), (2, 2, 6, 5)),
+    "eel":      ((1, 1, 15, 5), (1, 1, 12, 4), (2, 1, 7, 4), (2, 1, 5, 4)),
+    "hydra":    ((1, 1, 13, 13), (1, 1, 10, 9), (1, 1, 6, 7), (1, 1, 5, 6)),
 }
 
 #: The monster sprite export for the Planets panel, longest edge in px.
@@ -623,10 +652,17 @@ def hd_zoom_level(map_scale, max_zoom_count=3, num_stars=0,
     exactly as before. The deviation is confined to the in-between
     values the original never produces.
     """
+    return zoom_level(hd_rung(map_scale, max_zoom_count, num_stars,
+                              max_map_scale),
+                      max_zoom_count, num_stars, max_map_scale)
+
+
+def hd_rung(map_scale, max_zoom_count=3, num_stars=0, max_map_scale=None):
+    """The rung hd_zoom_level snaps a continuous scale to — what stands in
+    for `MOX::_cur_map_scale` where the original compares the scale itself
+    (`Get_Ship_Icon_Coords_`, ships.cpp:231). HD EXTENSION, as above."""
     rungs = scale_rungs(max_zoom_count, num_stars, max_map_scale)
-    nearest = min(rungs, key=lambda r: (abs(map_scale - r), r))
-    return zoom_level(nearest, max_zoom_count, num_stars,
-                      max_map_scale)
+    return min(rungs, key=lambda r: (abs(map_scale - r), r))
 
 
 def zoom_level(map_scale, max_zoom_count=3, num_stars=0,
@@ -715,10 +751,23 @@ def star_dimension(star_size, zoom, num_stars=0, map_scale=10):
 
 
 def black_hole_dimension(zoom, num_stars=0, map_scale=10):
-    """Native pixel size of a black hole (ignores star.size)."""
-    zoom = max(0, min(len(BLACK_HOLE_DIM) - 1, zoom))
+    """Native pixel size a black hole is DRAWN at (ignores star.size):
+    its sprite header, shrunk as `Draw_Scaled_Star_Picture_` shrinks it
+    on an extended map (mainscr.cpp:20-46, :43)."""
+    zoom = max(0, min(len(BLACK_HOLE_HEADER_DIM) - 1, zoom))
     return scale_star_dimension(
-        BLACK_HOLE_DIM[zoom], star_scale_percent(num_stars, map_scale))
+        BLACK_HOLE_HEADER_DIM[zoom], star_scale_percent(num_stars, map_scale))
+
+
+def black_hole_origin(zoom, num_stars=0, map_scale=10):
+    """Native distance from the black hole's draw point to its sprite's
+    top-left. At full size `centre - zoom_dist / 2` (mainscr.cpp:28, :740),
+    one pixel less than half the sprite; shrunk, the scaled picture's own
+    half width (:43)."""
+    zoom = max(0, min(len(BLACK_HOLE_DIM) - 1, zoom))
+    if star_scale_percent(num_stars, map_scale) >= 100:
+        return BLACK_HOLE_DIM[zoom] // 2
+    return black_hole_dimension(zoom, num_stars, map_scale) // 2
 
 
 def black_hole_animates(num_stars, map_scale):
@@ -775,18 +824,36 @@ def ship_icon_header_dimension(index):
 
 
 def monster_icon_dimension(kind, zoom):
-    """(width, height) of a monster icon in native pixels.
-
-    Same one-pixel-per-step shrink as the player ship, applied to the
-    per-type zoom-0 footprint. Unknown types fall back to the player
-    ship so a new monster never renders at a nonsense size.
+    """(width, height) of a monster icon in native pixels: what the
+    original's sprite for this kind and zoom draws (MONSTER_ICON_DIM).
+    Unknown types fall back to the player ship so a new monster never
+    renders at a nonsense size.
     """
-    base = MONSTER_ICON_DIM_ZOOM0.get(kind)
-    if base is None:
+    rows = MONSTER_ICON_DIM.get(kind)
+    if rows is None:
         return ship_icon_dimension(zoom)
-    zoom = max(0, min(len(SHIP_ICON_DIM) - 1, int(zoom)))
-    return (max(MIN_ICON_DIM, base[0] - zoom),
-            max(MIN_ICON_DIM, base[1] - zoom))
+    zoom = max(0, min(len(rows) - 1, int(zoom)))
+    return rows[zoom][2:]
+
+
+def monster_icon_inset(kind, zoom):
+    """(x0, y0) of the drawn pixels inside the sprite's header box, native
+    px — where the original's monster shows, from s_ship_icon.x/y. (0, 0)
+    for an unknown type, as the player ship's icon sits at its corner."""
+    rows = MONSTER_ICON_DIM.get(kind)
+    if rows is None:
+        return (0, 0)
+    zoom = max(0, min(len(rows) - 1, int(zoom)))
+    return rows[zoom][:2]
+
+
+def monster_icon_header_dimension(kind, zoom):
+    """(width, height) of the header of the sprite the original picks for
+    this kind at `zoom` (MONSTER_ICON_HEADER_DIM), or None if unknown."""
+    rows = MONSTER_ICON_HEADER_DIM.get(kind)
+    if rows is None:
+        return None
+    return rows[max(0, min(len(rows) - 1, int(zoom)))]
 
 
 def nebula_dimension(neb_type, zoom, num_stars=0, map_scale=10):
@@ -820,7 +887,8 @@ def nebula_world_dimension(neb_type):
     return NEBULA_DIM[int(neb_type) % NEBULA_TYPE_COUNT][0]
 
 
-def nebula_native_dimension(neb_type, map_scale, num_stars=0):
+def nebula_native_dimension(neb_type, map_scale, num_stars=0,
+                            max_map_scale=None, max_zoom=3):
     """(width, height) in native pixels for a CONTINUOUS map scale.
 
     HD EXTENSION, NOT TRANSCRIBED — same class as hd_zoom_level().
@@ -856,11 +924,23 @@ def nebula_native_dimension(neb_type, map_scale, num_stars=0):
     this returns the transcribed value exactly. The deviation is
     confined to scales at which the original's own answer is
     self-inconsistent.
+
+    Past the scale of the original's own rung the size HOLDS
+    (TRANSCRIPTION `nebula_zoom3_hold`): the original keeps the variant
+    of its zoom level there (`zoom_level`, the transcription, with
+    `num_stars`, `max_map_scale` and `max_zoom`). What is held is HD's
+    own size at that rung's ordinary scale (NEBULA_RUNG_SCALE), the
+    footprint x 10 / rung, not the sprite's header. On an ordinary map
+    that is a hold past 30 (zoom 3); on an extended one the footprint / 2
+    of zoom 2 from max_map_scale / 2 up to max_map_scale - 1 and the
+    footprint / 3 only at the maximum, as the original steps there.
     """
     w, h = nebula_world_dimension(neb_type)
     if not map_scale:
         map_scale = 10
-    factor = 10.0 / float(map_scale)
+    zoom = zoom_level(map_scale, max_zoom, num_stars, max_map_scale)
+    rung = NEBULA_RUNG_SCALE[max(0, min(len(NEBULA_RUNG_SCALE) - 1, zoom))]
+    factor = 10.0 / min(float(map_scale), float(rung))
     w, h = w * factor, h * factor
     if NEBULA_EXTENDED_SHRINK:
         percent = star_scale_percent(num_stars, map_scale)

@@ -29,6 +29,18 @@ _COLORS = {}
 
 _ACTIVE_PRESET = "original"
 
+#: Every colour `col` / `require` has handed out since the last `init`,
+#: `(section, key) -> (value, default)`. A module that binds a colour at
+#: import keeps it for good (decision 18), so a later `init` that changes
+#: such a colour leaves that module on the old one while modules imported
+#: afterwards get the new one: a picture mixing both tables, decided by
+#: import order. Work order 310 found it: a live driver imported a map
+#: module between livedrive's palette (no preset) and `main.App`'s (the
+#: player's), and Altair's name came out in the original's purple in one
+#: run and the preset's sky blue in another. `init` names the first such
+#: colour instead of letting the mix pass silently.
+_SERVED = {}
+
 
 def init(colors, preset="original", base=None):
     """Set the active skin's colour dict, with a player-colour preset.
@@ -47,6 +59,30 @@ def init(colors, preset="original", base=None):
     global _COLORS, _ACTIVE_PRESET
     from core import playercolors
     _COLORS, _ACTIVE_PRESET = playercolors.apply(colors or {}, preset, base)
+    stale = stale_bindings()
+    if stale:
+        import logging
+        section_, key = stale[0]
+        logging.getLogger(__name__).warning(
+            "palette: %d colour(s) were bound before this palette.init and "
+            "keep their old value, first %s.%s — a module was imported "
+            "before the palette it should have read (decision 18)",
+            len(stale), section_, key)
+    _SERVED.clear()
+
+
+def stale_bindings():
+    """The colours handed out before the current `init` that it changed,
+    sorted `(section, key)` — empty when every binding still holds."""
+    out = []
+    for (section_, key), (value, default) in _SERVED.items():
+        now = _COLORS.get(section_, {}).get(key)
+        now = tuple(default) if now is None and default is not None else now
+        if now is not None:
+            now = tuple(now)
+        if now != value:
+            out.append((section_, key))
+    return sorted(out)
 
 
 def active_preset():
@@ -60,9 +96,9 @@ def col(section, key, default):
     Returns a tuple (RGB or RGBA, matching whatever is stored).
     """
     value = _COLORS.get(section, {}).get(key)
-    if value is None:
-        return tuple(default)
-    return tuple(value)
+    value = tuple(default) if value is None else tuple(value)
+    _SERVED[(section, key)] = (value, default)
+    return value
 
 
 def require(section, key):
@@ -80,6 +116,7 @@ def require(section, key):
         raise KeyError(
             f"colors.json [{section}] has no {key!r}. This colour has no "
             f"code default (decision 14) — add it to the skin")
+    _SERVED[(section, key)] = (tuple(value), None)
     return tuple(value)
 
 

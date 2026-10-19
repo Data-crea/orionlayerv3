@@ -1,0 +1,48 @@
+From f93344f66d13c68b36aa7552b76e95a6e192729c Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Mon, 19 Oct 2026 12:49:35 +0200
+Subject: [PATCH] OrionLayer Open Fix 102: the galaxy map's merge-relocation
+ mode on the wire ("MREL" on SCREEN_MAIN after PLSM's place: a version byte
+ and MAINSCR::merging_relocations, which F4 sets; FLTS carries only the Fleets
+ screen's FLT1 flag of the same name)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 24 ++++++++++++++++++++++++
+ 1 file changed, 24 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 11945b85..c1c63c1c 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2350,6 +2350,30 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         Write8(buf, (uint8_t)MOX::g_ship_move_info.blackhole_blocks);
+         Write8(buf, (uint8_t)MOX::g_ship_move_info.insufficient_fuel);
+     }
++
++    // 34. The galaxy map's merge-relocation mode: "MREL", written ONLY on
++    //     SCREEN_MAIN, after PLSM's place. OrionLayer, open fix 102.
++    //
++    //     F4 (Check_Function_Keys, mainscr.cpp:3326-3343) turns
++    //     MAINSCR::merging_relocations on and swaps the pointer to the
++    //     relocation cursor over the map (mouse_list_relocation,
++    //     mainscr.cpp:192-195); the next star click then sets every
++    //     relocation to that star (mainscr_main.cpp:473-481), and any
++    //     negative input - a right click on the map, an F key, F4 itself,
++    //     whose case then sets it again - clears it first (:417-420). The
++    //     flag was on the wire nowhere: FLTS
++    //     carries the Fleets screen's own FLT1::merging_relocations, a
++    //     different variable, so a client could not show the mode. A
++    //     version byte, then the flag. Read only; nothing here changes the
++    //     game.
++    if (current_screen == SCREEN_MAIN) {
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'R');
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'L');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, MAINSCR::merging_relocations != 0 ? (uint8_t)1 : (uint8_t)0);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────

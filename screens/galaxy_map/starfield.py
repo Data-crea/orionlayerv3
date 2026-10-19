@@ -5,13 +5,25 @@ map (see the reference screenshot and `dev:doc/starfield_measurement.md`).
 The HD background image carries the gas clouds but no points, so the
 map reads as empty next to the original.
 
-Everything in here is a transcription of numbers measured off a
-native screenshot, not a taste decision:
+The field itself is GENERATED, not the original's picture: the counts
+and grey levels are measured off a native screenshot, the layout is a
+seeded RNG. What it transcribes is listed beside each number:
 
-* density   1 grey point star per 33 native pixels of map area
+* density   1 grey point star per 33 native pixels of map area (MEASURED)
 * tiers     twenty discrete grey levels, 90 % of them at or below 44
-* colour    neutral grey with a constant +8 on blue
-* motion    none
+            (MEASURED)
+* colour    neutral grey with a constant +8 on blue (MEASURED)
+* motion    the parallax, TRANSCRIPTION `parallax`: the original draws
+            three STARBG.LBX layers, entries 0, 1 and 2, each a 640 x 480
+            tile drawn four times so it wraps (Draw_Paralax_,
+            mainscr.cpp:650-680), and moves them by 1x, 2x and 4x the
+            map's scroll in world units (Get_New_Paralax_XYs_,
+            mainscr.cpp:2012-2059), back to 0 when the map stands at its
+            widest scale (Get_Map_Scale_, harold.cpp:1170-1178). HD splits
+            its own field into the same three layers by the original's
+            shares (LAYER_SHARES) and moves them the same way, with the
+            DEVIATION `parallax_from_view` written at `parallax_offsets`.
+            Nothing moves while the map stands still.
 
 That last one is the reason this looks calm at a density of 3 %
 of all pixels: almost the entire field sits between 6 % and 17 % of
@@ -19,7 +31,7 @@ full white. Brightness, not count, is what makes a star field noisy.
 
 **No twinkle, ever.** MOO2 draws palette-indexed into a static
 backdrop; it cannot fade or animate a background pixel. Anything
-moving here would be an invention (see `dev:doc/v3_fundament.md`, "an effect
+moving here other than the parallax would be an invention (see `dev:doc/v3_fundament.md`, "an effect
 the original is technically incapable of").
 
 Additive compositing, like the nebulas: the original paints these
@@ -68,6 +80,22 @@ STAR_TIERS = (
 #: Blue channel offset. Every grey star measured came out as
 #: (v, v, v + 8) — the ramp itself is tinted, not the stars.
 BLUE_BIAS = 8
+
+#: The parallax layers: (speed, share of the stars). Speed is the
+#: multiplier on the map's scroll, 1 / 2 / 4 for STARBG entries 0 / 1 / 2
+#: (mainscr.cpp:2024-2026, :2039-2041). The shares are MEASURED off the
+#: player's STARBG.LBX entries 0-2 with core/lbx.py (work order 310): lit
+#: pixels 20401 / 1796 / 59 of 640 x 480 each, the far layer all palette
+#: indices 2-8 and 35, the mid and near layers 7-21 and 34 and 10-13.
+#: The far layer is the dim one, so HD puts its tiers at or below grey
+#: 44 there (89.9 % of the measured stars against the original's 91.7 %)
+#: and splits the brighter rest between mid and near as 1796 : 59.
+PARALLAX_SPEEDS = (1, 2, 4)
+LAYER_SHARES = (20401, 1796, 59)
+FAR_TIER_MAX = 44
+
+#: The original's tile, native px (mainscr.cpp:662-678, :2045-2056).
+PARALLAX_TILE = (640, 480)
 
 #: Supersampling for the dot stamps. A star wider than one HD pixel
 #: has to be drawn round and soft, or the field turns into a grid of
@@ -154,6 +182,7 @@ class StarfieldLayer:
         self._cfg = dict(DEFAULTS)
         self._key = None
         self._layer = None
+        self._layers = []
         self._count = 0
         if config:
             self.configure(config)
@@ -190,6 +219,7 @@ class StarfieldLayer:
     def clear(self):
         self._key = None
         self._layer = None
+        self._layers = []
         self._count = 0
 
     # ── generation ──────────────────────────────────────
@@ -206,17 +236,28 @@ class StarfieldLayer:
         return top * (1 - ty) + bot * ty
 
     def _build(self, width, height, native_px):
+        """Three layers, each a tile the window's size that wraps: a stamp
+        crossing an edge is stamped again on the opposite side, so a layer
+        drawn at any offset (`render`) shows no seam."""
         cfg = self._cfg
-        layer = pygame.Surface((width, height))
-        layer.fill((0, 0, 0))
+        layers = []
+        for _ in PARALLAX_SPEEDS:
+            layer = pygame.Surface((width, height))
+            layer.fill((0, 0, 0))
+            layers.append(layer)
 
         native_area = NATIVE_MAP_W * NATIVE_MAP_H
         count = int(native_area / DENSITY_NATIVE * float(cfg["count_scale"]))
         diameter = max(1.0, float(cfg["dot_native"]) * native_px)
 
         table, total = _tier_table(float(cfg["brightness"]))
+        far_max = FAR_TIER_MAX * float(cfg["brightness"])
+        mid, near = LAYER_SHARES[1], LAYER_SHARES[2]
         stamps = {}
         rng = random.Random(cfg["seed"])
+        # A second stream picks mid or near, so the first one — positions
+        # and greys — is the same sky as before the split.
+        pick_layer = random.Random(cfg["seed"] + 1)
 
         clumping = max(0.0, min(1.0, float(cfg["clumping"])))
         cells = max(2, int(cfg["clump_cells"]))
@@ -239,22 +280,35 @@ class StarfieldLayer:
             if stamp is None:
                 stamp = _stamp(diameter, colour)
                 stamps[colour] = stamp
-            x = int(u * width) - stamp.get_width() // 2
-            y = int(v * height) - stamp.get_height() // 2
-            layer.blit(stamp, (x, y), special_flags=pygame.BLEND_RGB_ADD)
+            if colour[0] <= far_max:
+                depth = 0
+            else:
+                depth = 1 if pick_layer.random() * (mid + near) < mid else 2
+            sw, sh = stamp.get_size()
+            x = int(u * width) - sw // 2
+            y = int(v * height) - sh // 2
+            for dx in ((0, -width) if x + sw > width else (0, width)
+                       if x < 0 else (0,)):
+                for dy in ((0, -height) if y + sh > height else
+                           (0, height) if y < 0 else (0,)):
+                    layers[depth].blit(stamp, (x + dx, y + dy),
+                                       special_flags=pygame.BLEND_RGB_ADD)
             placed += 1
 
-        self._layer = layer
+        self._layers = layers
+        self._layer = layers[0]
         self._count = placed
 
     # ── drawing ─────────────────────────────────────────
 
-    def render(self, surface, box, native_px=None):
+    def render(self, surface, box, native_px=None, offsets=None):
         """Add the field to `surface` inside `box` = (x, y, w, h).
 
         `native_px` is HD pixels per native pixel — `MapContext.px`.
         It only sizes the dots; the count comes from the native map
         area and is therefore the same at every HD resolution.
+        `offsets` is one (dx, dy) in HD px per layer (`parallax_offsets`);
+        None stands every layer at 0.
         """
         if not self._cfg.get("enabled", True):
             return
@@ -270,6 +324,69 @@ class StarfieldLayer:
         if key != self._key:
             self._key = key
             self._build(w, h, float(native_px))
-        if self._layer is not None:
-            surface.blit(self._layer, (x, y),
-                         special_flags=pygame.BLEND_RGB_ADD)
+        if not self._layers:
+            return
+        offsets = offsets or ((0, 0),) * len(self._layers)
+        clip = surface.get_clip()
+        surface.set_clip(pygame.Rect(x, y, w, h).clip(clip))
+        # Draw_Paralax_ draws each tile four times, at (x, y), (x - 640, y),
+        # (x - 640, y - 480) and (x, y - 480), the offset kept in [0, 640)
+        # x [0, 480) (mainscr.cpp:662-678, :2045-2056): the same here with
+        # the window as the tile.
+        for layer, (dx, dy) in zip(self._layers, offsets):
+            ox, oy = int(round(dx)) % w, int(round(dy)) % h
+            for tx in (ox, ox - w):
+                for ty in (oy, oy - h):
+                    if tx > -w and ty > -h:
+                        surface.blit(layer, (x + tx, y + ty),
+                                     special_flags=pygame.BLEND_RGB_ADD)
+        surface.set_clip(clip)
+
+
+def parallax_offsets(ctx):
+    """Each layer's offset in HD px for the map context `ctx`, or None.
+
+    TRANSCRIPTION `parallax`: the layers move by 1x, 2x and 4x the map's
+    scroll in WORLD units, not screen pixels (Get_New_Paralax_XYs_,
+    mainscr.cpp:2012-2059: `(target - _cur_map_x) / scale` with scale 1,
+    or the step count of a smooth scroll, mainscr.cpp:2634), so one world
+    unit of scroll moves the far layer one native pixel at every zoom —
+    pushed to HD px by `ctx.px`. At the map's widest scale they stand at
+    0 (Get_Map_Scale_, harold.cpp:1170-1178).
+
+    DEVIATION `parallax_from_view`: the original ADDS each scroll step's
+    size, `-abs(dx)` through `sign_x` (mainscr.cpp:2020-2027, v2
+    mainscr.cpp:2242-2249 the same), so its layers drift right and down
+    whichever way the map scrolls, and a view's sky depends on the path
+    that led to it. HD reads the offset off the view's own origin,
+    -k x map_x, so the layers move against the scroll — the original's
+    direction for a scroll left or up — and the same view always shows
+    the same sky; HD's view moves continuously, where an added absolute
+    value would make a held drag shake the sky. The tile is the window,
+    not 640 x 480 native px, because HD's field is generated to the
+    window (a 640-px tile would repeat inside a 1920-px window).
+
+    A ZOOM moves the layers too, by the same -k x map_x: HD's wheel zoom
+    at the pointer moves map_x, so the sky slides with it. The original
+    does not hold its layers on a zoom either, but jumps them: a zoom-out
+    calls Get_New_Paralax_XYs_ with `_cur_map_x - old_x` as the TARGET
+    (mainscr_main.cpp:838), a step of the old origin's size, and leaving
+    the engine's zoom mode sets all six to 0x16 (:853-854); only a scroll
+    (mainscr.cpp:2521, :2634) moves them by the scroll. Neither jump has a
+    meaning HD's continuous zoom could carry, so HD keeps one rule, the
+    view's origin, part of this deviation.
+    """
+    if ctx is None:
+        return None
+    view = getattr(ctx, "view", None)
+    state = getattr(view, "state", None)
+    if state is None:
+        return None
+    scale = getattr(ctx, "map_scale", 0) or 0
+    top = getattr(ctx, "max_map_scale", 0) or 0
+    if top and scale >= top:
+        return None
+    mx = float(getattr(state, "map_x", 0) or 0)
+    my = float(getattr(state, "map_y", 0) or 0)
+    px = float(getattr(ctx, "px", 1.0) or 1.0)
+    return tuple((-k * mx * px, -k * my * px) for k in PARALLAX_SPEEDS)

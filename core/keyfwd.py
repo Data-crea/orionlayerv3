@@ -25,7 +25,9 @@ key exactly as on the player's own:
   TRANSCRIPTION  Alt+letter: passed (open fix 89's raw code, scan << 8)
                  when the live list has a multi-hotkey field — the engine's
                  own rule, multi-hotkeys answer only Alt+letters (:2593-
-                 2600): Alt+Q, Alt+V, the cheats, the hall of fame's Alt+C
+                 2600): Alt+Q, Alt+V, the cheats, the hall of fame's Alt+C;
+                 never one `WITHHELD_ALT` names for the screen (the galaxy
+                 map's Alt+V, OMISSION influence_overlay)
   TRANSCRIPTION  F1-F10 and Alt+F1-F10: passed (open fix 89) only where
                  `ENGINE_FKEYS` names them for the screen; the rest are
                  HD's own (F3, F7, F8, F11, F12 — `core/hdkeys.py`, the App
@@ -74,8 +76,11 @@ ENGINE_FKEYS = {
         "F9": "the distance between stars (:3076-3080): screen 28, "
               "`MAINSCR2::Distance_Between_Stars_Screen_` (mainscr2.cpp:"
               "193-262) — HD's view of it, `distance.py`",
-        "F4": "merge-relocations on or off, or the engine's box when there "
-              "is one relocation (mainscr.cpp:3112-3129) — HD's message box",
+        "F4": "merge-relocations on — never off: any negative input clears "
+              "the flag first and F4's own case sets it again "
+              "(mainscr_main.cpp:396-399, :599) — or the engine's box when "
+              "there is one relocation (mainscr.cpp:3112-3129), HD's message "
+              "box; the mode shows as `mergemark` (open fix 102)",
         "F10": "saves into SAVE10.GAM (slot index 9) and says so in a box "
                "(:3065-3074) — HD's message box; the player's own save",
         "Alt+F1": "a game option on or off; the engine says so in its "
@@ -103,6 +108,19 @@ ENGINE_FKEYS = {
         "F5": "merge-relocations on or off (:602-611): the next star click "
               "sets every relocation there, with the engine's box "
               "(:655-664) — HD's star click sends it (`fltmove.refusal`)",
+    },
+}
+#: Alt+letters HD does NOT pass on a screen, though a multi-hotkey field for
+#: them stands: (letter, why). A key that silently changes engine state HD
+#: does not draw is worse than a key that does nothing.
+WITHHELD_ALT = {
+    "galaxy_map": {
+        # OMISSION influence_overlay (work order 310, 309's finding 6):
+        # orion2re v2's influence view, Alt+V cycling `influence_view_mode`
+        # through three states (v2 mainscr.cpp:1589, :1665-1666;
+        # `Draw_Influence_Overlay`, :275-471) — not in 1.60, and HD draws no
+        # overlay and has no wire block for the mode.
+        "V": "OMISSION influence_overlay: HD draws no influence view",
     },
 }
 #: The F keys parked for Data: (key name, the original's meaning, HD's).
@@ -164,6 +182,9 @@ def decide(screen_name, fields, state, event):
     if alt:
         letter = pygame.key.name(event.key).upper() if \
             pygame.K_a <= event.key <= pygame.K_z else ""
+        withheld = WITHHELD_ALT.get(screen_name, {}).get(letter)
+        if withheld:
+            return None, None, withheld
         if letter in ALT_SCAN and any(
                 getattr(f, "field_type", None) == TYPE_MULTI_HOTKEY
                 for f in fields):

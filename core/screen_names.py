@@ -64,6 +64,11 @@ SCREENS = {
     29: ("OFFICERS",        "leaders"),
     30: ("COLONIZATION_IN_MAIN", None),
     32: ("PLANET_SUMMARY",  "planets"),
+    #: 35 and 43, the galaxy map's Freighters and Command windows
+    #: (mainscr_main.cpp:714-732, work order 310): no HD view, so the F12
+    #: notice names them (decision 22); before 310 they had no entry and the
+    #: notice said "#35" / "#43".
+    35: ("SCRAP_FREIGHTERS", None),
     #: 36 is the engine's own SCREEN_TECH_CHANGE, and the slug named
     #: a folder that never existed: HD had select mode only, so
     #: "research" resolved to nothing and 36 fell through to the
@@ -72,6 +77,7 @@ SCREENS = {
     36: ("TECH_CHANGE",     "research_change"),
     39: ("REPORTS",         "reports"),
     40: ("TURN_SUMMARY",    "turn_summary"),
+    43: ("SHOW_COMMAND_POINTS", None),
     #: orion2re v2 added the credits (orion2_consts.h SCREEN_CREDITS);
     #: HD has no screen for it (work order 243).
     44: ("CREDITS",         None),

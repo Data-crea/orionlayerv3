@@ -86,7 +86,7 @@ def _lifted(scaled, lift, app):
     return copy
 
 
-def render_floor(screen, surface, px=None):
+def render_floor(screen, surface, px=None, ctx=None):
     """The map's floor over the whole window (work order 170): the
     artwork, the OLED floor lift (HD EXTENSION, one point, both floor
     paths) and the background point stars — additive, so the value a
@@ -106,4 +106,8 @@ def render_floor(screen, surface, px=None):
         surface.fill(MAP_BG[:3], whole)
         apply(surface, whole, screen.app)
     if px is not None:
-        screen._starfield.render(surface, tuple(whole), px)
+        # The star field's parallax follows the map's view (`ctx`,
+        # TRANSCRIPTION `parallax` in starfield.py).
+        from screens.galaxy_map.starfield import parallax_offsets
+        screen._starfield.render(surface, tuple(whole), px,
+                                 offsets=parallax_offsets(ctx))

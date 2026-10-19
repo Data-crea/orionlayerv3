@@ -58,9 +58,11 @@ from core.structs import ship as ship_struct
 from screens.galaxy_map import boxdraw
 from screens.galaxy_map import distance
 from screens.galaxy_map import mapboxes
+from screens.galaxy_map import mapclick
 from screens.galaxy_map import mapeta
 from screens.galaxy_map import mapinput
 from screens.galaxy_map import maplines
+from screens.galaxy_map import mergemark
 from screens.galaxy_map import ping as home_ping
 from screens.galaxy_map import renderer as rnd
 from screens.galaxy_map import ships as ship_icons
@@ -72,11 +74,8 @@ from screens.galaxy_map import hudview
 
 log = logging.getLogger("galaxy_map")
 
-#: Click tolerance around a star, relative to its drawn icon width.
-#: Slightly over half so the whole visible sprite is clickable.
-STAR_HIT_SCALE = 0.60
-#: Floor in HD pixels, so a tiny star stays reachable on a small
-#: window or at maximum zoom-out.
+#: Floor in HD pixels of the hover ring (drawing only; the click radius is
+#: the original's, `_star_at`).
 MIN_STAR_HIT_PX = 10
 
 #: Box-name prefix for the per-element sidebar boxes. Each row owns
@@ -145,6 +144,7 @@ class GalaxyMapScreen(ScreenBase):
         self._viewctl.reset()
         self._state_gate.reset()
         self._pan_from = None
+        mapinput.left_release(self)          # no paint outlives its press
         self.update(game_state)
 
     def _sprite_key(self):
@@ -421,7 +421,8 @@ class GalaxyMapScreen(ScreenBase):
         if not self._viewctl.active or self._state is None:
             return None
         return ship_icons.IconAnchor(self._state, self._stars,
-                                     self._ships, self._game_zoom())
+                                     self._ships, self._game_zoom(),
+                                     self._players)
 
     @property
     def _omniscient(self):
@@ -435,27 +436,38 @@ class GalaxyMapScreen(ScreenBase):
         return getattr(self._state, "stars", None) or []
 
     def _star_at(self, screen_x, screen_y):
-        """Nearest star within its own icon radius, or None.
+        """The star a click at this HD point is about, or None.
 
-        The tolerance follows the drawn icon rather than a fixed
-        fraction: zoomed out, a small star is only a few pixels
-        across and a generous radius would swallow its neighbours;
-        zoomed in, a fixed radius would be smaller than the sprite
-        and clicks on the visible star would miss.
-        """
+        TRANSCRIPTION star_click_radius (`Check_Stars_XY_`, mainscr.cpp:
+        1697-1740): the FIRST star in index order whose centre lies within
+        `Scaled_Star_Map_Dimension_({12, 10, 8}[star.size])` native pixels
+        (`mapclick.STAR_CLICK_RADIUS`, the same star-scale percent), here in
+        HD pixels of the view (`ctx.px` per native pixel) — not the nearest
+        star, and not the drawn sprite's width (until work order 310: 0.6 x
+        the sprite, up to 1.9 x the original's radius, 309's finding 4).
+
+        While the view mirrors the game, a click outside the original's map
+        window (the side bands) hits no star: the game's slice ends there
+        (`_render_map`'s clip, 309's finding 11). Inside it every star is
+        tested, as `Check_Stars_XY_` tests every star: one centred up to
+        its radius past the window's edge is still hit."""
         ctx = self._map_context()
         if ctx is None:
             return None
         view = ctx.view
-        best, best_d = None, None
+        window = None if self._viewctl.active else pygame.Rect(
+            *view.native_window())
+        if window is not None and not window.collidepoint(screen_x, screen_y):
+            return None
+        percent = zt.star_scale_percent(ctx.num_stars, ctx.map_scale)
+        radii = mapclick.STAR_CLICK_RADIUS
         for s in self._stars:
             sx, sy = view.to_screen(s.x, s.y)
-            d = ((sx - screen_x) ** 2 + (sy - screen_y) ** 2) ** 0.5
-            limit = max(MIN_STAR_HIT_PX,
-                        rnd.star_icon_width(ctx, s) * STAR_HIT_SCALE)
-            if d <= limit and (best_d is None or d < best_d):
-                best, best_d = s, d
-        return best
+            size = max(0, min(len(radii) - 1, int(s.size)))
+            limit = zt.scale_star_dimension(radii[size], percent) * ctx.px
+            if (sx - screen_x) ** 2 + (sy - screen_y) ** 2 <= limit * limit:
+                return s
+        return None
 
     # ── Rendering ─────────────────────────────────────────
 
@@ -490,19 +502,30 @@ class GalaxyMapScreen(ScreenBase):
     def _render_title(self, surface):
         hudview.render_title(self, surface)
 
-    def _render_floor(self, surface, px=None):
+    def _render_floor(self, surface, px=None, ctx=None):
         """The floor over the whole window, with the OLED floor lift
-        (HD EXTENSION) — `floorlift.render_floor`."""
-        floorlift.render_floor(self, surface, px)
+        (HD EXTENSION) — `floorlift.render_floor`; `ctx` moves the star
+        field's parallax."""
+        floorlift.render_floor(self, surface, px, ctx)
 
     def _render_map(self, surface):
         ctx = self._map_context()
-        self._render_floor(surface, ctx.px if ctx is not None else None)
+        self._render_floor(surface, ctx.px if ctx is not None else None,
+                           ctx)
         if ctx is None:
             return
         view = ctx.view
         clip = surface.get_clip()
         surface.set_clip(pygame.Rect(*view.box))
+        if not self._viewctl.active:
+            # TRANSCRIPTION map_window_clip: the original draws the map's
+            # objects inside its window 22,22-527,421 only (Draw_Main_Screen_,
+            # mainscr_main.cpp:939-940); while HD mirrors the game, the side
+            # bands of a wider box are past the game's slice, where nothing
+            # can be clicked (309's finding 11). Decoupled, the game is parked
+            # at full zoom-out and the whole box is map.
+            surface.set_clip(pygame.Rect(*view.box).clip(
+                pygame.Rect(*view.native_window())))
 
         player_num = getattr(self._state, "player_num", 0)
         omniscient = self._omniscient
@@ -512,6 +535,11 @@ class GalaxyMapScreen(ScreenBase):
         rnd.render_wormholes(surface, ctx, self._stars,
                              player_num, omniscient,
                              layer=self._wormholes)
+        # The black holes before the lines and the stars, in their own pass
+        # (TRANSCRIPTION `black_hole_order`, Draw_Black_Holes_ before
+        # Do_Ship_Destination_Lines_ and Draw_Stars_, mainscr_main.cpp:967-979).
+        heights = rnd.render_stars(surface, ctx, self._stars, self._cache,
+                                   black_holes=True)
         # Destination lines under the stars, as the original draws them
         # (mainscr_main.cpp:965, before Draw_Stars_).
         maplines.render_destination_lines(
@@ -525,7 +553,14 @@ class GalaxyMapScreen(ScreenBase):
         mapeta.render(surface, ctx, self._state, self._ships, self._stars,
                       self._players, self._icon_anchor(), self.style,
                       boxdraw._texts(self), self._eta_lock, self._eta_cache)
-        heights = rnd.render_stars(surface, ctx, self._stars, self._cache)
+        heights.update(rnd.render_stars(surface, ctx, self._stars,
+                                        self._cache, black_holes=False))
+        # DEVIATION `names_over_stars`: the names after the stars, so over
+        # the black holes and the lines too; the original prints them first
+        # (Print_Star_Names_, mainscr_main.cpp:949, before :967-979). HD's
+        # name sits STAR_NAME_GAP (0.30) of the icon height below the
+        # centre, inside the larger HD sprite, so a star drawn over it
+        # would cut its top.
 
         # Star name size follows the zoom level, as the original
         # switches font style per zoom (Zoom_Level_Font_Style_).
@@ -568,8 +603,13 @@ class GalaxyMapScreen(ScreenBase):
             pygame.draw.circle(surface, HOVER_COLOR[:3],
                                (int(sx), int(sy)), r, 2)
             self._render_hover_name(surface, view)
-        # The movable boxes, above everything on the map (boxdraw).
+        # The movable boxes, above everything on the map (boxdraw); they
+        # are HD's and may stand in the side bands.
+        surface.set_clip(pygame.Rect(*view.box))
         boxdraw.render(self, surface)
+        # The merge-relocation mode at the pointer, above the boxes as the
+        # original's cursor is (`mergemark`, open fix 102).
+        mergemark.render(self, surface, ctx)
         surface.set_clip(clip)
 
     def _render_sidebar(self, surface):
@@ -639,6 +679,14 @@ class GalaxyMapScreen(ScreenBase):
     def handle_mouse_motion(self, screen_x, screen_y):
         super().handle_mouse_motion(screen_x, screen_y)
         mapinput.mouse_motion(self, screen_x, screen_y)
+
+    def handle_left_release(self, screen_x, screen_y):
+        super().handle_left_release(screen_x, screen_y)
+        mapinput.left_release(self)
+
+    def handle_left_cancel(self):
+        super().handle_left_cancel()
+        mapinput.left_release(self)
 
     def handle_click(self, screen_x, screen_y):
         if self._distance.on:               # screen 28: its own clicks

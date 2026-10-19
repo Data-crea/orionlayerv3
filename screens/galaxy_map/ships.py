@@ -5,8 +5,11 @@ WHAT ORION2RE GIVES US
 `s_ship_icon.x/y` are already 640x480 SCREEN coordinates with the
 icon's TOP-LEFT as the anchor — orion2re fills them in
 SHIPS::Set_Ship_Icon_XYs_ / MAINSCR::Draw_Ship_Icons_ using the orbit
-slot geometry of Get_XYs_For_Orbiting_Ships_. Nothing here recomputes
-slot positions; doing so would duplicate logic that can only drift.
+slot geometry of Get_XYs_For_Orbiting_Ships_. The coupled view draws
+them as they are; HD's own zoom stands on a rung the game did not
+compute them for, so there the slot geometry is transcribed
+(`orbit_slot_offset`, work order 310) while the slot itself stays the
+game's.
 
 An icon still carrying the -1 sentinel has not been placed this frame
 and is skipped.
@@ -482,51 +485,152 @@ def kind_config(cfg, kind):
     return fit, scale
 
 
-def icon_screen_pos(icon, ctx, anchor, box_w, box_h):
-    """Top-left HD position for a ship icon.
+def icon_screen_pos(icon, ctx, anchor, box_w, box_h, owner=None,
+                    inset=(0, 0)):
+    """Top-left HD position of a ship icon's box. `inset` is where the
+    drawn pixels start inside the sprite's header box, native px (a
+    monster's, zoomtables.monster_icon_inset).
 
     Coupled view (anchor is None): s_ship_icon.x/y are the game's
     finished 640x480 coordinates and map straight into the box —
     decision 24, unchanged.
 
     Decoupled view: those coordinates were computed for the GAME's
-    slice, not ours, so they are re-anchored rather than re-derived:
+    slice and zoom, not ours, so they are re-derived at HD's own rung:
 
-      * ships in transit or in a wormhole draw at the ship's own
-        galaxy x/y — exact, and better than any back-transform;
-      * orbiting ships draw at their star's HD position plus the
-        game-computed slot offset (icon minus star, both in the
-        game's native pixels — exact integers). The offset is scaled
-        by ctx.px times the ratio of star sprite sizes between the
-        HD zoom step and the game's, so the slot hugs the star sprite
-        we actually drew instead of the one the game drew.
+      * ships in transit (status 1) or in slot 5 draw centred on the
+        ship's own galaxy x/y — exact, and better than any
+        back-transform. DEVIATION `slot_five`: for a slot-5 ship that
+        is NOT in transit the original reads `Get_Scaled_Value_(x)`
+        without the map's origin or the 21 px edge (ships.cpp:248-250);
+        HD keeps the ship's own place (`layout.json` `_markings`);
+      * every other ship sits in its orbit slot, TRANSCRIPTION
+        `orbit_slots` (`orbit_slot_offset`), at the star the ship
+        stands on — whatever its location says, so a fresh order
+        (location 10000 or 20000 + star) keeps its slot as in the
+        original (live 309: the Scout at Zin fell onto the star).
 
-    The slot GEOMETRY still comes from Build_Ship_Icons_ — which
-    ship sits in which slot, and where that slot is relative to the
-    star. Only the anchor changes frame.
+    Which ship sits in which slot is Build_Ship_Icons_'s (`stack_slot`,
+    decision 24); only the geometry is redone.
     """
     from core import mapcoords as mc
 
     view = ctx.view
+    dx, dy = inset[0] * ctx.px, inset[1] * ctx.px
     if anchor is None:
-        return (view.off_x + (icon.x - mc.MAP_LEFT) * view.scale,
-                view.off_y + (icon.y - mc.MAP_TOP) * view.scale)
+        return (view.off_x + (icon.x - mc.MAP_LEFT) * view.scale + dx,
+                view.off_y + (icon.y - mc.MAP_TOP) * view.scale + dy)
 
-    game_state, stars, ship, game_zoom = anchor.resolve(icon)
-
-    if ship is not None and ship_struct.absolute_location(
-            ship.location) != ship.location:
-        # In transit / in a wormhole: the ship's own coordinates.
+    _, _, ship, _ = anchor.resolve(icon)
+    if _in_space(icon, ship) and owner is not None and owner >= 8 and \
+            getattr(ship, "status", None) == ship_struct.STATUS_IN_TRANSIT:
+        # TRANSCRIPTION `monster_in_space`: the sprite's corner is the
+        # ship's point less HALF THE PLAYER ICON's header, BUFFER0.LBX
+        # 205 + zoom (`Get_Ship_Icon_Coords_In_Space_`, ships.cpp:514-531),
+        # whatever sprite is drawn there; the drawn pixels start at the
+        # monster's own inset (`layout.json` `_markings`).
+        hw, hh = zt.ship_icon_header_dimension(ctx.zoom)
+        cx, cy = view.to_screen(ship.x, ship.y)
+        return (cx - (hw >> 1) * ctx.px + dx, cy - (hh >> 1) * ctx.px + dy)
+    if _in_space(icon, ship):
         return _centred(view.to_screen(ship.x, ship.y), box_w, box_h)
 
-    return _star_anchored(icon, icon.x, icon.y, ctx, anchor)
+    pos = _orbit_slot_pos(icon, ctx, anchor, owner)
+    if pos is None:
+        pos = _star_anchored(icon, icon.x, icon.y, ctx, anchor)
+    return pos[0] + dx, pos[1] + dy
+
+
+def _in_space(icon, ship):
+    """`Get_Ship_Icon_Coords_`'s first test (status 1, ships.cpp:211) and
+    its slot 5 (:248): the icon is placed off the ship, not off a star."""
+    if ship is None:
+        return False
+    return (getattr(ship, "status", None) == ship_struct.STATUS_IN_TRANSIT
+            or getattr(icon, "stack_slot", -1) == 5)
+
+
+def sprite_header_width(owner, zoom, players=None):
+    """Width of the sprite `Get_Ship_Icon_Pict_Seg_(owner, 0)` returns at
+    `zoom` (ships.cpp:337-397): a player's own colour, entry index
+    3 - zoom; the Antaran's and each monster's from their own table."""
+    if owner is not None and 0 <= owner < 8:
+        return zt.ship_icon_header_dimension_for_colour(
+            _player_color(players, owner), 3 - zoom)[0]
+    dim = zt.monster_icon_header_dimension(MONSTER_KINDS.get(owner), zoom)
+    if dim is None:
+        return zt.ship_icon_header_dimension(3 - zoom)[0]
+    return dim[0]
+
+
+def orbit_slot_offset(slot, owner, zoom, star_dim, header_w, rung_scale):
+    """TRANSCRIPTION `orbit_slots`: the icon's top-left in native px
+    relative to the star's draw point, for slot 0..4; None otherwise
+    (`layout.json` `_markings`).
+
+    `SHIPS::Get_XYs_For_Orbiting_Ships_` (ships.cpp:289-326, v2 288-325
+    the same) with `star_size` = the star's own
+    `Map_Scale_Star_Size_To_Zoom_Level_` (harold.cpp:1066-1073) and
+    `width` = the owner's sprite header, and the slot switch of
+    `Get_Ship_Icon_Coords_` (ships.cpp:222-252): slot 0 right of the
+    star, slot 1 left, 2..4 below slot 1 by 11 - zoom, one pixel
+    further left; slot 1 two pixels left again for an owner above 9 at
+    map scale 10 or 15 (:231-233). C division of positive values.
+    """
+    zoom_offset = 1 - zoom
+    local = -(star_dim // 2)
+    half_w = header_w // 2
+    if slot == 0:
+        return (zoom_offset - half_w + local + star_dim,
+                local + zoom_offset - 1)
+    x2 = local - half_w - zoom_offset + 2
+    y2 = local + zoom_offset - 2
+    if slot == 1:
+        if owner is not None and owner > 9 and rung_scale in (10, 15):
+            x2 -= 2
+        return (x2, y2)
+    if slot in (2, 3, 4):
+        return (x2 - 1, y2 + (min(slot - 2, 2) + 1) * zt.orbit_stack_step(zoom))
+    return None
+
+
+def _orbit_slot_pos(icon, ctx, anchor, owner=None):
+    """HD top-left of the sprite's header box in its orbit slot at HD's
+    own zoom, or None when star, owner or slot is unknown. The star is
+    `XY_To_Star_Id_(ship.x, ship.y)` (ships.cpp:209, harold.cpp:780-788),
+    else the icon's own star."""
+    _, stars, ship, _ = anchor.resolve(icon)
+    if ship is not None:
+        owner = ship.owner
+    if owner is None or not stars:
+        return None
+    star = None
+    if ship is not None:
+        star = next((s for s in stars
+                     if s.x == ship.x and s.y == ship.y), None)
+    if star is None:
+        idx = ship_struct.absolute_location(getattr(icon, "star_idx", -1))
+        star = stars[idx] if 0 <= idx < len(stars) else None
+    if star is None:
+        return None
+    off = orbit_slot_offset(
+        getattr(icon, "stack_slot", -1), owner, ctx.zoom,
+        zt.star_dimension(star.size, ctx.zoom, ctx.num_stars, ctx.map_scale),
+        sprite_header_width(owner, ctx.zoom, anchor.players),
+        zt.hd_rung(ctx.map_scale, ctx.max_zoom, ctx.num_stars,
+                   ctx.max_map_scale))
+    if off is None:
+        return None
+    sx, sy = ctx.view.to_screen(star.x, star.y)
+    return sx + off[0] * ctx.px, sy + off[1] * ctx.px
 
 
 def _star_anchored(icon, nx, ny, ctx, anchor):
-    """A native point of an orbiting icon, re-anchored on its star: the
-    star's HD position plus the game-computed offset, scaled by ctx.px and
-    the star sprite ratio (see icon_screen_pos). Without a star, the
-    point is back-transformed through the game's slice."""
+    """The FALLBACK for an icon `_orbit_slot_pos` cannot place (no owner
+    known, or a slot outside 0..4 without a ship): the star's HD position
+    plus the game-computed offset, scaled by ctx.px and the star sprite
+    ratio. Without a star, the point is back-transformed through the
+    game's slice."""
     from core import mapcoords as mc
 
     view = ctx.view
@@ -569,12 +673,14 @@ def anchored_point(icon, nx, ny, ctx, anchor):
         return (view.off_x + (nx - mc.MAP_LEFT) * view.scale,
                 view.off_y + (ny - mc.MAP_TOP) * view.scale)
     _, _, ship, game_zoom = anchor.resolve(icon)
-    if ship is not None and ship_struct.absolute_location(
-            ship.location) != ship.location:
+    if _in_space(icon, ship):
         cw, ch = zt.ship_icon_header_dimension(game_zoom)
         hx, hy = view.to_screen(ship.x, ship.y)
         return (hx + (nx - icon.x - (cw >> 1)) * ctx.px,
                 hy + (ny - icon.y - (ch >> 1)) * ctx.px)
+    pos = _orbit_slot_pos(icon, ctx, anchor)
+    if pos is not None:
+        return pos[0] + (nx - icon.x) * ctx.px, pos[1] + (ny - icon.y) * ctx.px
     return _star_anchored(icon, nx, ny, ctx, anchor)
 
 
@@ -587,7 +693,10 @@ def icon_box(icon, owner, ctx, anchor=None, cfg=None):
     nw, nh = native_size(kind, ctx.zoom)
     box_w = max(2, int(round(nw * ctx.px * scale)))
     box_h = max(2, int(round(nh * ctx.px * scale)))
-    left, top = icon_screen_pos(icon, ctx, anchor, box_w, box_h)
+    inset = (zt.monster_icon_inset(kind, ctx.zoom)
+             if kind not in (None, PLAYER_KIND) else (0, 0))
+    left, top = icon_screen_pos(icon, ctx, anchor, box_w, box_h, owner,
+                                inset)
     return left, top, box_w, box_h
 
 
@@ -599,10 +708,12 @@ def _centred(pos, box_w, box_h):
 class IconAnchor:
     """Everything icon_screen_pos needs about the game's own view."""
 
-    def __init__(self, game_state, stars, ships, game_zoom):
+    def __init__(self, game_state, stars, ships, game_zoom, players=None):
         self.game_state = game_state
         self.stars = stars or []
         self.game_zoom = game_zoom
+        #: For the owner's colour, whose sprite width places the slot.
+        self.players = players or []
         self._nodes = wire_nodes(game_state) or []
         self._ships = ships or []
 

@@ -118,6 +118,14 @@ NEBULA_BRIGHTNESS = 230
 #: draws the sprite's full bounding box as an opaque square.
 #: Seconds per revolution, and how finely the revolution is cut.
 #:
+#: HD EXTENSION `black_hole_turn`: the original steps its black hole
+#: sprite through its frames, one frame every second draw
+#: (`_black_hole_anim_count` modulo twice the frame count, frame =
+#: count / 2, Draw_Black_Holes_ mainscr.cpp:729-737) — a stepped
+#: animation at the draw rate. HD turns one master smoothly, 90 s a
+#: revolution in half-degree steps, and stands still exactly where the
+#: original does (`black_hole_animates`, Advance_Black_Hole_Animation_).
+#:
 #: The two used to be one decision, because the frames were
 #: pre-rendered: 72 frames over 40 s meant a 5-degree jump every
 #: 0.55 s, which at a 117 px icon moves the outer edge 5 px at a
@@ -188,8 +196,14 @@ class MapContext:
             star_size, self.zoom, self.num_stars, self.map_scale) * self.px))
 
     def black_hole_px(self):
+        """HD width a black hole is drawn at: its sprite header."""
         return max(2, int(zt.black_hole_dimension(
             self.zoom, self.num_stars, self.map_scale) * self.px))
+
+    def black_hole_origin_px(self):
+        """HD distance from a black hole's centre to its sprite's corner."""
+        return zt.black_hole_origin(
+            self.zoom, self.num_stars, self.map_scale) * self.px
 
     def nebula_px(self, neb_type):
         """HD width of a nebula of type `neb_type`.
@@ -203,8 +217,9 @@ class MapContext:
         Under a continuous HD zoom that error stops being frozen and
         turns into stars drifting across the gas edge.
         """
-        native = zt.nebula_native_dimension(neb_type, self.map_scale,
-                                            self.num_stars)[0]
+        native = zt.nebula_native_dimension(
+            neb_type, self.map_scale, self.num_stars, self.max_map_scale,
+            self.max_zoom)[0]
         return max(8, int(native * self.px))
 
     @property
@@ -651,12 +666,22 @@ def star_icon_width(ctx, s):
     return ctx.star_px(s.size)
 
 
-def render_stars(surface, ctx, stars, cache):
+def render_stars(surface, ctx, stars, cache, black_holes=None):
     """Stars, anchored on their CENTRE. Returns icon heights by
-    star index so the name layer can sit below each icon."""
+    star index so the name layer can sit below each icon.
+
+    `black_holes` True draws only the black holes, False only the
+    rest, None both. TRANSCRIPTION `black_hole_order`: the original
+    draws its black holes in their own pass (Draw_Black_Holes_), after
+    the star names and before the destination lines, the ETA line and
+    the stars (mainscr_main.cpp:947-980), so `_render_map` calls this
+    twice around the lines."""
     view = ctx.view
     heights = {}
     for s in stars:
+        if (black_holes is not None
+                and bool(star_struct.is_black_hole(s)) != black_holes):
+            continue
         name = star_icon_name(s, ctx)
         if not name:
             continue
@@ -669,7 +694,18 @@ def render_stars(surface, ctx, stars, cache):
             continue
         sx, sy = view.to_screen(s.x, s.y)
         iw, ih = img.get_size()
-        surface.blit(img, (int(sx - iw / 2), int(sy - ih / 2)))
+        if star_struct.is_black_hole(s):
+            # TRANSCRIPTION `black_hole_draw`: drawn at its sprite's size
+            # but placed by zoom_dist / 2, a pixel short of half
+            # (mainscr.cpp:28, :740; zoomtables.black_hole_origin;
+            # `layout.json` `_markings`). A frame larger than that size
+            # (a non-circular master's padded fallback, `_black_hole_frame`)
+            # is centred on the same place, not hung off its corner.
+            o = ctx.black_hole_origin_px()
+            surface.blit(img, (int(sx - o - (iw - width) / 2),
+                               int(sy - o - (ih - width) / 2)))
+        else:
+            surface.blit(img, (int(sx - iw / 2), int(sy - ih / 2)))
         heights[s.index] = ih
     return heights
 
@@ -744,6 +780,19 @@ def render_star_names(surface, ctx, stars, heights, render_label,
         for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             surface.blit(shadow, (x + dx, y + dy))
         surface.blit(text, (x, y))
+
+
+# TRANSCRIPTION end_of_turn_stardate: nothing to draw. With the setting
+# `end_of_turn_wait` on (on the wire, `core/structs/settings.py`),
+# Draw_Main_Screen_ prints HESTR 0xDA with the stardate right-aligned at
+# (639, 0) in font 1 (mainscr_main.cpp:955-965) — but inside the map's
+# clip window 22,22-527,421 set just before it (:952-953), and the
+# clipped printer returns at once when the text ends above the window's
+# top (y + height < y1, fonts.cpp:190-197; font 1 is 9 px high, FONTS.LBX
+# entry 0). So the original never shows it, and the native frame's top
+# right is empty (work order 309, s1920 003; that save's flag was not
+# read back, the default is on, initgame.cpp:53). HD draws nothing either.
+# Registered in `layout.json` `_markings`.
 
 
 def render_fleets(surface, ctx, icons, players, cache, tints,

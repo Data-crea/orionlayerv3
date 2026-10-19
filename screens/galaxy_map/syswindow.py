@@ -30,8 +30,12 @@ What is drawn, and from where:
   DEVIATION      `gas_giant_painted`: a gas giant is Data's painted picture
                  (`gasgiant`, work order 236), still; the original's turns
                  in 40 frames (BUFFER0.LBX 0x5C + 50, sys.cpp:199-227)
-  OMISSION       `asteroid_marker`: an asteroid belt's colony has no field,
-                 so HD does not know where the original draws its marker
+  OMISSION       `asteroid_marker`: an asteroid belt's colony gets no
+                 marker. The belt has no planet field to place it by (it is
+                 hovered and clicked through the grid field since work
+                 order 310, TRANSCRIPTION `belt_hit`); the original draws
+                 it at the belt's `Get_Orbit_Display_X_Y_` place plus half
+                 the planet size (sys.cpp:808-812), not built
   TRANSCRIPTION  the planet under the pointer: its highlight and its
                  information in a darkened box at the view's corner
                  (sys.cpp:824-844; `sysinfo`, work order 226 F)
@@ -516,25 +520,45 @@ def planet_under(drawn, pointer):
                  if r.collidepoint(pointer)), None)
 
 
-def planet_info(screen, surface, view, drawn, pointer, state=None):
-    """The planet under the pointer: its highlight and its lines
-    (`sysinfo`, work order 226 F; sys.cpp:824-844). True if one was."""
-    state = state if state is not None else getattr(screen, "_state", None)
+def _info_words(screen):
+    """The planet information's words, loaded once per screen."""
     from core.buildnames import BuildingNames
     from core.estrings import EStrings
-    from screens.galaxy_map import sysinfo
     from screens.planets import planetwords
-    over = planet_under(drawn, pointer)
-    if over is None or state is None:
-        return False
-    p, rect = over
     if getattr(screen, "_sysinfo_words", None) is None:
         lang = (getattr(screen.app, "settings", None) or {}).get(
             "language", "en")
         screen._sysinfo_words = (
             planetwords.Words(EStrings(lang), hestrings.for_app(screen.app)),
             BuildingNames(lang))
-    words, names = screen._sysinfo_words
+    return screen._sysinfo_words
+
+
+def belt_info(screen, surface, view, planet_index, state=None):
+    """TRANSCRIPTION `belt_hit`: the belt under the pointer is scanned as a
+    planet (mainscr.cpp:2141-2163) and the window prints its information,
+    "Asteroids" — with no highlight, which the original skips for a belt
+    (sys.cpp:834-843)."""
+    from screens.galaxy_map import sysinfo
+    state = state if state is not None else getattr(screen, "_state", None)
+    if state is None:
+        return False
+    words, names = _info_words(screen)
+    info_box(screen, surface, view,
+             sysinfo.lines(state, planet_index, words, names))
+    return True
+
+
+def planet_info(screen, surface, view, drawn, pointer, state=None):
+    """The planet under the pointer: its highlight and its lines
+    (`sysinfo`, work order 226 F; sys.cpp:824-844). True if one was."""
+    state = state if state is not None else getattr(screen, "_state", None)
+    from screens.galaxy_map import sysinfo
+    over = planet_under(drawn, pointer)
+    if over is None or state is None:
+        return False
+    p, rect = over
+    words, names = _info_words(screen)
     s = sysorbits.frame(view)[0]
     highlight(surface, rect.center, s,
               tuple(owner_colour(sysinfo.owner_colour(state,

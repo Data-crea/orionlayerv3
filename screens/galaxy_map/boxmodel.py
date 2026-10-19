@@ -95,7 +95,7 @@ from core.structs import ship as ship_struct
 from core.structs import star as star_struct
 from core import systemwindow
 from screens.galaxy_map import ships as ship_icons
-from screens.galaxy_map import sysfleets
+from screens.galaxy_map import mapboxes, sysfleets
 from screens.galaxy_map.boxscroll import FLEET_ICONS_MAX, scroll_window  # noqa: F401
 
 #: GEO::_orbit_consts, geo.cpp:5-13 — ellipse radii in TENTHS of a pixel;
@@ -298,6 +298,29 @@ def star_belts(state, star):
     return out
 
 
+def star_asteroids(state, star):
+    """The star's asteroid belts as the window's grid scan finds them: in
+    the star's planet list's order (mainscr.cpp:2131-2137), each with its
+    planet record's index and orbit — what `sysorbits.belt_point` hits and
+    `sysinfo.lines` describes ("Asteroids", sys.cpp:1326-1533)."""
+    raws = getattr(state, "planets_raw", None) or []
+    out = []
+    for slot, index in enumerate(star_struct.planet_indices(star)):
+        if 0 <= index < len(raws):
+            p = planet_struct.parse(raws[index])
+            if p.planet_type == PLANET_TYPE_ASTEROID:
+                out.append({"planet": index, "slot": slot,
+                            "orbit": int(p.orbit)})
+    return out
+
+
+def grid_field(box):
+    """The system window's grid field (`_system_display_grid_field`,
+    sys.cpp:1922-1931), the one field a belt is clicked through; or None."""
+    return next((f for f in box.fields
+                 if f.field_type == mapboxes.TYPE_GRID), None)
+
+
 def _local(state):
     raws = getattr(state, "player_raw", None) or []
     n = getattr(state, "player_num", 0)
@@ -353,6 +376,15 @@ def system_model(state, ident, box, text, omniscient):
     for index, p in sorted(matched.items(), key=lambda kv: kv[1]["orbit"]):
         model["planets"].append(dict(p, field=index))
     model["belts"] = star_belts(state, star)
+    # TRANSCRIPTION `belt_hit` (work order 310): the belts are hit through
+    # the grid field, from the scan centre off the window's corner
+    # (`sysorbits.belt_point`; mainscr.cpp:2119-2163)
+    grid = grid_field(box)
+    if grid is not None:
+        model["asteroids"] = star_asteroids(state, star)
+        model["grid"] = (grid.x, grid.y, grid.x_end, grid.y_end)
+        model["grid_field"] = grid.index
+        model["corner"] = tuple(box.rect[:2])
     return model, None
 
 

@@ -131,6 +131,9 @@ class GameState:
     #: `core/turnpopup.py` names every key.
     turn_popup: Optional[dict] = None        # "TPOP", fix 49
     planets_screen: Optional[dict] = None    # "PLSM", fix 97
+    #: The galaxy map's merge-relocation mode, open fix 102 (work order
+    #: 310): None without the block, else a bool (`core/mergemode.py`).
+    merging_relocations: Optional[bool] = None  # "MREL", fix 102
     #: The Hall of Fame while it is up, open fix 50 (work order 188):
     #: `core/hofblocks.py` names every key.
     hall_of_fame: Optional[dict] = None      # "HOFM", fix 50
@@ -461,7 +464,9 @@ def parse_state(data: bytes) -> GameState:
     pos = textfields.parse(gs, data, pos)     # TXTF, open fix 88
     pos = systemwindow.parse(gs, data, pos)   # SYSW, open fix 90
     from core import planetsblock
-    pos = planetsblock.parse(gs, data, pos)   # PLSM, open fix 97, LAST
+    pos = planetsblock.parse(gs, data, pos)   # PLSM, open fix 97
+    from core import mergemode
+    pos = mergemode.parse(gs, data, pos)      # MREL, open fix 102, LAST
     return gs
 
 

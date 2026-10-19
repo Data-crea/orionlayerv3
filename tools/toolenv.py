@@ -12,6 +12,12 @@ This is the one home, and the smoke test imports every tool with a
 
 The palette is the SKIN's, without the player's colour preset: tools and
 the smoke test never see the player's choice (`core/usersettings.py`).
+The one exception is a tool that then starts `main.App` (`livedrive`):
+App applies the player's preset, so a palette without it would bind every
+screen module imported before App to the original's colours and every one
+imported after to the preset's — one live run showed Altair's name in
+purple, the next in sky blue (work order 310). Such a tool asks for
+`user=True` and binds what App will bind.
 """
 import os
 import sys
@@ -21,12 +27,25 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 
-def init_palette():
-    """Initialise resources and the skin palette; returns the resolver."""
+def init_palette(user=False, settings_path=None):
+    """Initialise resources and the skin palette; returns the resolver.
+
+    `user=True` reads the player's settings the way `main.App.__init__`
+    does — mod folder switch, colour preset, own base table — so a tool
+    that starts App binds the same colours before App as after it.
+    `settings_path` names the settings file (a check forces its own)."""
     from core import palette, resources
     from core.config import load_settings
     settings = load_settings()
     res = resources.init(settings)
+    preset = base = None
+    if user:
+        from core import usermod, usersettings
+        mine = usersettings.load(settings_path)
+        usermod.init(mine.get("user_mod") != "off")
+        preset = mine.get("player_colors")
+        base = mine.get("player_color_base")
     skin = settings.get("skin", "default")
-    palette.init(res.load_json(f"assets/shared/skins/{skin}/colors.json", {}))
+    colours = res.load_json(f"assets/shared/skins/{skin}/colors.json", {})
+    palette.init(colours, preset=preset, base=base)
     return res

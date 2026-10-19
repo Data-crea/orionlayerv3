@@ -188,6 +188,7 @@ FIX_NUMBERS = {
     "doc/ext_troop_popup.patch": (98,),
     "doc/ext_bitmap_line_short.patch": (99,),
     "doc/ext_combat_refusal_boxes.patch": (101,),
+    "doc/ext_merge_relocation_mode.patch": (102,),
 }
 
 

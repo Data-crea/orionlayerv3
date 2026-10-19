@@ -57,6 +57,14 @@ PARK_INTERVAL = 0.7
 #: screen finds it in the live list (`layout.json` `zoom_out_field`) and
 #: hands its index to `park_game`. The zoom-in field is deliberately
 #: absent from this module.
+#:
+#: OMISSION zoom_rocker: the original draws the ZOOM rocker in its bottom
+#: bar, the "+" button at 244,428 and the "-" at 244,455 with their own
+#: pictures (`_main_zoom_in_button_seg` / `_out_`, Add_Map_Fields_,
+#: mainscr.cpp:1391-1392; help 300). HD draws neither: zoom is HD's own,
+#: on the wheel and the `+` / `-` keys, and the engine's two fields are
+#: used only to park the game (above). Registered in `layout.json`
+#: `_markings`.
 
 
 class _ViewProxy:

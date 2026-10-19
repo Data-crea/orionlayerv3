@@ -70,6 +70,28 @@ def is_home_star(fields):
             HOME_STAR_BUTTON and (entry.x, entry.y) == HOME_STAR_INPUT_AT)
 
 
+def is_zoom_mode(screen, fields):
+    """TRANSCRIPTION zoom_mode_list: the engine's own zoom mode is the map.
+
+    With `_zoom_in == 1` `Add_Map_Fields_` clears the map's fields and adds
+    only '+', '-' and a hidden field over the whole screen (mainscr.cpp:
+    1373-1383), so the map's own test (its grid field) fails and the net
+    showed the F12 notice until the mode ended (309's finding 14). The
+    zoom-out button and that whole-screen field (`layout.json`
+    `zoom_out_field`, `zoom_mode_field`) are the mode's list; a right
+    click on the map leaves it (`mapinput.send_map_cancel`).
+
+    OMISSION zoom_mode_picture: the mode's own picture, the map darkened
+    under the zoom box that follows the pointer (`_Darken_Fill_`,
+    `Draw_Main_Screen_For_Zooming_`, mainscr_main.cpp:763-785), is not
+    drawn; HD shows its map as it stands until the mode ends."""
+    from screens.galaxy_map import mapboxes
+    data = screen._data
+    return (mapboxes.live_field(fields, data.get("zoom_mode_field"))
+            is not None and mapboxes.live_field(
+                fields, data.get("zoom_out_field")) is not None)
+
+
 def is_confirmation(fields):
     box = gamebox.detect(fields)
     return box is not None and box.name == "confirmation"
@@ -93,7 +115,8 @@ class Modal:
             "galaxy map", screen.owns_field_list,
             known=(("home_star", is_home_star),
                    ("confirmation", is_confirmation),
-                   ("tax_rate", taxrate.is_tax_rate)))
+                   ("tax_rate", taxrate.is_tax_rate),
+                   ("zoom_mode", lambda f: is_zoom_mode(screen, f))))
         self.fallback = False
 
     # ── state ─────────────────────────────────────────────

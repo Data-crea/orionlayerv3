@@ -16,11 +16,14 @@ import pygame
 from core import mapcoords as mc
 from core import rightinfo
 from core.screen_base import ScreenBase
+from core.structs import star as star_struct
 from screens.galaxy_map import boxdraw
 from screens.galaxy_map import boxmodel
+from screens.galaxy_map import boxpaint
 from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
 from screens.galaxy_map import mapeta
+from screens.galaxy_map import mapmodal
 from screens.galaxy_map import ships as ship_icons
 
 log = logging.getLogger("galaxy_map")
@@ -36,10 +39,18 @@ def mouse_motion(screen, screen_x, screen_y):
                 screen._viewctl.pan(view, screen._state, dx, dy)
                 screen._pan_from = (screen_x, screen_y)
         return
+    # the held button paints the fleet box's cells (`boxpaint`, 310)
+    boxpaint.motion(screen, screen_x, screen_y)
     if boxdraw.system_open(screen):
         screen._hover_star = None        # the window covers the map (226 F)
         return
     screen._hover_star = screen._star_at(screen_x, screen_y)
+
+
+def left_release(screen):
+    """The left button's release, or its gesture cancelled: the fleet
+    box's paint ends (mainscr_main.cpp:893-897)."""
+    boxpaint.end(screen)
 
 
 def click(screen, screen_x, screen_y):
@@ -97,6 +108,31 @@ def click(screen, screen_x, screen_y):
             screen._data.get("treasury_window_field"))
         if field is not None and screen.app.connected:
             activate(screen, field.index, "treasury window")
+        return True
+
+    # THE COMMAND AND FREIGHTERS WINDOWS — work order 310 (309's finding 2),
+    # TRANSCRIPTION sidebar_windows: the second and fourth windows
+    # (mainscr.cpp:1402, :1404) compare the id as the others do
+    # (mainscr_main.cpp:714-732): Command sets SCREEN_SHOW_COMMAND_POINTS
+    # (43, under the guard `_skip_fields == 0`), Freighters
+    # SCREEN_SCRAP_FREIGHTERS (35), or with no freighter the box HESTR 0xDF,
+    # which comes as MSGB. Neither screen has an HD view: the F12 notice
+    # names it (`core/screen_names.py`, decision 22). The food window has
+    # no handler in the original, so a click there is swallowed below.
+    for _sw_boxes, _sw_key, _sw_what in (
+            (("sb_command_text", "sb_command_icon"),
+             "command_window_field", "command window"),
+            (("sb_freighters_text", "sb_freighters_icon"),
+             "freighters_window_field", "freighters window")):
+        if not any(screen.box_rect(b) and pygame.Rect(*screen.layout.rect(
+                screen.box_rect(b))).collidepoint(screen_x, screen_y)
+                for b in _sw_boxes):
+            continue
+        field = mapboxes.live_field(
+            getattr(screen._state, "fields", None),
+            screen._data.get(_sw_key))
+        if field is not None and screen.app.connected:
+            activate(screen, field.index, _sw_what)
         return True
 
     # The info panel is not map: a click on it that no window took is
@@ -169,8 +205,27 @@ def map_click(screen, view, sx, sy):
     if result.send is not None and screen.app.connected:
         screen.app.client.inject_click(*result.send)
         boxmodel.remember(screen, result, icons, order=orders_ok)
-        if orders_ok and result.what == "star":
+        if orders_ok and result.what == "star" and \
+                is_move_order(screen._state, screen._stars, result.target):
             screen._eta_lock = mapeta.hold(screen._state, screen._ships)
+
+
+def is_move_order(state, stars, star_index):
+    """True when a star click with HD's fleet box drawn is a move order the
+    ETA lock is for (309's finding 16): the order's branch wants a ship of
+    the box selected (`icon_selected_flag`, FSEL here) and a star that is no
+    black hole (mainscr_main.cpp:479-482), and the merge-relocation mode's
+    branch takes the click before it (:455-463; MREL, open fix 102).
+    Otherwise the click gives no order and nothing is locked."""
+    sel = getattr(state, "fleet_selection", None) or {}
+    chain, flags = sel.get("chain") or [], sel.get("selected") or []
+    if not any(flags[n] for n in chain if 0 <= n < len(flags)):
+        return False
+    if getattr(state, "merging_relocations", None):
+        return False
+    if star_index is None or not 0 <= star_index < len(stars):
+        return False
+    return not star_struct.is_black_hole(stars[star_index])
 
 
 def activate_spec(screen, spec, what):
@@ -242,8 +297,10 @@ def right_button(screen, down, mx, my):
     readouts, the bottom bar and the title, and pointedly NOT the
     map area (evanhelp.cpp:4). A right click on the map is not help
     but a CANCEL — it ends the relocation-merge mode and leaves zoom
-    mode, and does nothing else (layout.json `map_cancel`). So a
-    press over the map sends that first, and the drag starts after.
+    mode, and on a zoomed-in map scrolls it to the point clicked
+    (layout.json `map_cancel`, DEVIATION map_cancel_scroll: HD's cancel
+    lands at the grid's centre, so it scrolls nothing). So a press over
+    the map sends that first, and the drag starts after.
     """
     if ScreenBase.handle_right_button(screen, down, mx, my):
         screen._pan_from = None
@@ -264,6 +321,17 @@ def right_button(screen, down, mx, my):
     if planet is not None:
         rightinfo.send(screen.app, rightinfo.field_at_index(screen.app, planet),
                        "planet colony info", rightinfo.opener(screen))
+        return True
+    if boxpaint.cell_at(screen, mx, my) is not None or \
+            boxpaint.own_cell_at(screen, mx, my):
+        # OMISSION `box_cell_detail`: the original opens the ship's
+        # detailed view on a right click on ANY cell of an own stack,
+        # offered for selection or not (`Can_Select_Fleet_Box_Ship_`, the
+        # owner only, mainscr.cpp:3319-3328; `Detailed_View_Ship_`,
+        # :3428-3434; cmbtdrw1.cpp:156-247); HD has no view and no wire
+        # block for it (parked, work order 200 P-B1), so the right click on
+        # such a cell does nothing — no pan.
+        log.info("Right click on a fleet box cell: no ship view in HD")
         return True
     view = screen._map_view()
     if view is not None and boxdraw.system_open(screen):
@@ -288,9 +356,18 @@ def send_map_cancel(screen):
     sent, or None when there was nothing to send to: no connection,
     or no field of that type and rect in the list at this moment —
     refused rather than aimed at a remembered index (decision 20).
+
+    TRANSCRIPTION zoom_mode_exit: in the engine's own zoom mode the list
+    has no grid field (`mapmodal.is_zoom_mode`); the original leaves the
+    mode on any right click, a negative input (`Exit_Zooming_Mode_`,
+    mainscr_main.cpp:396-403), so the cancel goes to the whole-screen
+    field (`zoom_mode_field`), whose centre no '+' or '-' covers.
     """
-    field = mapboxes.live_field(getattr(screen._state, "fields", None),
-                                screen._data.get("map_cancel"))
+    fields = getattr(screen._state, "fields", None)
+    field = mapboxes.live_field(fields, screen._data.get("map_cancel"))
+    if field is None and mapmodal.is_zoom_mode(screen, fields):
+        field = mapboxes.live_field(fields,
+                                    screen._data.get("zoom_mode_field"))
     if field is None or not screen.app.connected:
         log.debug("map cancel: no grid field in the list, nothing sent")
         return None

@@ -524,6 +524,13 @@ LOCAL_PATCHES = {
         "BOARD at an own ship and FIRE at a phased enemy are refused "
         "silently (open fix 101): the original's boxes (KENTEXT 0x40, 80) "
         "never show"),
+    # Work order 310: on the fork's branch `orionlayer` only, f93344f6.
+    "doc/ext_merge_relocation_mode.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 102.",
+        "the engine does not send the galaxy map's merge-relocation mode "
+        "(open fix 102): after F4 HD shows no sign that the next star click "
+        "re-routes every relocation"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

@@ -17,9 +17,18 @@ disc it is a right click on that planet's own field (`core/rightinfo`), which
 the engine answers with `SYS::Potential_Colony_Info_Popup_`'s text box
 (mainscr.cpp:2104-2110; nothing for a gas giant), shown as HD's message box;
 on the fleet box's status line and close button it is the help the original
-appends for the box (310, 304; `help_at`). A ship cell's right click (the
-original's ship view, `Detailed_View_Ship_`) is not offered: HD has no view
-for it (parked, work order 200).
+appends for the box (310, 304; `help_at`). OMISSION `box_cell_detail`: the
+right click on any cell of an own stack (the original's ship view,
+`Detailed_View_Ship_`, mainscr.cpp:3428-3434), offered or not, does nothing:
+HD has no view for it (parked, work order 200 P-B1; `mapinput.right_button`,
+the cells `_box_own_cells`).
+
+TRANSCRIPTION `drag_select` (work order 310): a press in the fleet box
+paints — the held button gives every offered cell it crosses the press's
+value, one MSG_SELECT_SHIP each (`boxpaint`). TRANSCRIPTION `belt_hit` (work
+order 310): an asteroid belt in the system window is hovered and clicked
+through the window's grid field, as the original's scan finds it
+(`sysorbits.belt_point`, `belt_at`, `_inside`).
 
 DEVIATION — the layout is HD's. The boxes are boxes.json's, F3-movable;
 the words are the original's (boxmodel). Two things follow the original
@@ -64,7 +73,7 @@ from core.hud import blocks as hud
 
 from core import hestrings
 from core import palette
-from screens.galaxy_map import (boxmodel, fleetorders, mapboxes,
+from screens.galaxy_map import (boxmodel, boxpaint, fleetorders, mapboxes,
                                 sysfleets, sysorbits, syswindow)
 from screens.galaxy_map import ships as ship_icons
 from screens.galaxy_map.syswindow import TEXT_COLOR
@@ -164,10 +173,27 @@ def _draw_system(screen, surface, r, model, hits):
     for rect, _owner, f in fleets:
         hits.append((rect, ("fleet", f.index, model["nodes"][f.index])))
     pointer = mouse.pos()
+    if model["viewable"] and model.get("asteroids"):
+        screen._box_belts = (view, model)
     if not (model["viewable"] and sysfleets.hover(
             screen, surface, view, screen._state, model["star"], fleets,
             pointer, _texts(screen))):
-        syswindow.planet_info(screen, surface, view, drawn, pointer)
+        if not syswindow.planet_info(screen, surface, view, drawn, pointer):
+            # TRANSCRIPTION `belt_hit`: no ship, no planet under the
+            # pointer — then the grid scan's belt (mainscr.cpp:2141-2163)
+            belt = belt_at(screen, *pointer)
+            if belt is not None:
+                syswindow.belt_info(screen, surface, view,
+                                    belt[1]["planet"])
+
+
+def belt_at(screen, x, y):
+    """(native point, belt) of the asteroid belt the system window's grid
+    scan finds under (x, y) (`sysorbits.belt_point`), or None."""
+    drawn = getattr(screen, "_box_belts", None)
+    if drawn is None or not drawn[0].collidepoint(x, y):
+        return None
+    return sysorbits.belt_point(drawn[1], (x, y))
 
 
 def orders_ok(screen):
@@ -221,6 +247,11 @@ def _draw_scroll(screen, surface, box, grid, scroll, hits):
 
 def _draw_fleet(screen, surface, r, model, hits):
     grid = r["fleet_grid"]
+    # where a press starts the painted selection (`boxpaint`): the box
+    # below its title, the original's drag strip (fleetpop.cpp:142)
+    box, head = r["fleet_box"], r["fleet_title"]
+    screen._box_paint_area = pygame.Rect(box.x, head.bottom, box.w,
+                                         max(0, box.bottom - head.bottom))
     cw, ch = grid.w // 3, grid.h // 3
     if model.get("scroll"):
         _draw_scroll(screen, surface, r["fleet_box"], grid, model["scroll"],
@@ -235,6 +266,9 @@ def _draw_fleet(screen, surface, r, model, hits):
         # (proposal C): the original's blue cell, in the one look.
         chosen = model["selected"][i]
         hud.field(surface, cell, screen.layout.scale, on=chosen)
+        if model["owners"][0] == getattr(screen._state, "player_num", 0):
+            # an own stack's cell, offered or not (`boxpaint.own_cell_at`)
+            screen._box_own_cells.append(cell)
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
         img = sysfleets.icon(screen, owner, min(cell.w, cell.h) * 7 // 10)
@@ -269,6 +303,9 @@ def render(screen, surface):
     screen._box_hits = hits
     screen._box_planets = []
     screen._box_help = []
+    screen._box_belts = None
+    screen._box_paint_area = None
+    screen._box_own_cells = []
     screen._order_rects = {}
     screen._system_drawn = False
     for names, box, model in drawable(screen):
@@ -369,10 +406,34 @@ def handle_click(screen, x, y):
                 _fleet(screen, action[1], action[2])
             elif isinstance(action, tuple):
                 _select(screen, action[1], action[2])
+                # the press paints its cell first (`boxpaint`)
+                boxpaint.start(screen, action[2], action[1])
+            elif action is None:
+                _inside(screen, x, y)
             else:
                 _activate(screen, action, "field")
             return True
     return False
+
+
+def _inside(screen, x, y):
+    """A press on a box where it has no field of HD's own: an asteroid
+    belt in the system window — the original's grid field takes the click
+    at the point it scans (TRANSCRIPTION `belt_hit`: the engine opens the
+    colony screen for an own colony there and box 217 for an own outpost,
+    mainscr_main.cpp:567-577, mainscr.cpp:1567-1582; decision 35, the
+    native point off the live list's fields); the fleet box beside its
+    cells — the press starts a paint that selects (`boxpaint`)."""
+    belt = belt_at(screen, x, y)
+    if belt is not None:
+        log.info("Box: asteroid belt, planet %s (grid click at %s)",
+                 belt[1]["planet"], belt[0])
+        if screen.app.connected:
+            screen.app.client.inject_click(*belt[0])
+        return
+    area = getattr(screen, "_box_paint_area", None)
+    if area is not None and area.collidepoint(x, y):
+        boxpaint.start(screen, True)
 
 
 def help_at(screen, x, y):
@@ -406,6 +467,15 @@ def system_open(screen):
     the map under it takes nothing from the pointer — no hover name, no
     click, no wheel, no pan (work order 226 F, Data's decision 5; beside
     decision 66 and D13). The fleet box is not such a window: with it open
-    a star click is the original's move order (decision 65 amended)."""
+    a star click is the original's move order (decision 65 amended).
+
+    DEVIATION system_window_blocks_map: the original's window is moveable
+    box 0, whose fields Add_Map_Fields_ adds BESIDE the map's own: the
+    map's grid field, through which a star or a ship is hit
+    (mainscr_main.cpp:421-438), stays live around it
+    (Add_Moveable_Box_Fields_ then Add_Grid_Field_, mainscr.cpp:1406,
+    :1426; the window's fields mainscr.cpp:4391-4404). HD blocks the whole
+    map while it is open, by Data's decision 5 of work order 226 F.
+    Registered in `layout.json` `_markings`."""
     return bool(getattr(screen, "_system_drawn", False))
 

@@ -34,6 +34,13 @@ What the original draws when a star is clicked (sys.cpp:546-576,
                  measured make-up — grey dots, as many as the frame has, in
                  a band of +-5 % round the orbit's ellipse — not the
                  picture, which is not extracted.
+  TRANSCRIPTION  `belt_hit`: a belt has no planet field; the original
+                 finds it through the window's grid field, by the orbit
+                 nearest the pointer (`Get_Orbit_From_X_Y_`, geo.cpp:305-
+                 351; mainscr.cpp:2119-2163) — `belt_point` does the same
+                 sum on HD's pointer, and the click goes out as the native
+                 point the engine scans itself (work order 310; v2 the
+                 same, mainscr.cpp:2343-2380, geo.cpp:303).
   TRANSCRIPTION  what turns: in the original only the planets spin
                  (`_ship_frame % frame_count`); where a planet stands is
                  fixed for the turn (the stardate picks it, geo.cpp:246).
@@ -91,6 +98,97 @@ def _div(a, b):
     """C's integer division, truncating towards zero."""
     q = abs(a) // abs(b)
     return q if (a >= 0) == (b > 0) else -q
+
+
+#: `angle::_atan_lookup_table` (angle.cpp:5-14).
+ATAN_TABLE = (
+    0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7,
+    7, 8, 8, 8, 9, 9, 10, 10, 11, 11, 11, 12, 12, 13, 13, 14,
+    14, 14, 15, 15, 16, 16, 16, 17, 17, 18, 18, 18, 19, 19, 20, 20,
+    20, 21, 21, 22, 22, 22, 23, 23, 24, 24, 24, 25, 25, 25, 26, 26,
+    26, 27, 27, 27, 28, 28, 29, 29, 29, 30, 30, 30, 31, 31, 31, 32,
+    32, 32, 32, 33, 33, 33, 34, 34, 34, 35, 35, 35, 36, 36, 36, 36,
+    37, 37, 37, 38, 38, 38, 38, 39, 39, 39, 39, 40, 40, 40, 40, 41,
+    41, 41, 41, 42, 42, 42, 42, 43, 43, 43, 43, 44, 44, 44, 44, 45)
+
+
+def _angle(dx, dy):
+    """TRANSCRIPTION `angle::Get_Angle_` (angle.cpp:28-81)."""
+    if dx == 0:
+        return 270 if dy < 0 else (90 if dy > 0 else 0)
+    if dy == 0:
+        return 180 if dx < 0 else 0
+    if dx < 0:
+        nx, ny, base = ((-dx, -dy, 180) if dy < 0 else (dy, -dx, 90))
+    else:
+        nx, ny, base = ((dx, dy, 0) if dy > 0 else (-dy, dx, 270))
+    if ny == nx:
+        a = 45
+    elif ny > nx:
+        a = 90 - ATAN_TABLE[(nx << 7) // ny]
+    else:
+        a = ATAN_TABLE[(ny << 7) // nx]
+    a += base
+    return 0 if a == 360 else a
+
+
+def orbit_from_xy(x, y):
+    """TRANSCRIPTION `GEO::Get_Orbit_From_X_Y_` (geo.cpp:305-351): the
+    orbit 0..4 whose ellipse lies nearest (x, y) — native px, the hit
+    centre LESS the pointer, as the window's scan passes them
+    (mainscr.cpp:2128, :2149) — or -1 (the centre itself, or nearest the
+    rings inside orbit 0 or outside orbit 4)."""
+    if x == 0 and y == 0:
+        return -1
+    best, best_d = -1, None
+    for i, (rx, ry) in enumerate(ORBIT_CONSTS):
+        a = _angle(ry * x, rx * -y)
+        c = _sin(a + 90, rx)
+        c = _div(c + 10, 10) if c + 5 >= 0 else _div(c, 10)
+        s = _sin(a, ry)
+        s = _div(s, 10) if s - 5 >= 0 else _div(s - 10, 10)
+        d = (c - x) ** 2 + (s + y) ** 2
+        if best_d is None or d < best_d:
+            best, best_d = i, d
+    return best - 1 if 0 < best < 6 else -1
+
+
+#: The window's scan centre, off the window's corner (mainscr.cpp:2122-
+#: 2123: `_system_display_base_x + 171`, `+ 134`) — three native px up and
+#: left of the rings' drawn centre (sys.cpp:1830-1834: the grid field's
+#: corner + 0xA1, + 0x5A); the original's own offset, kept.
+SCAN_CENTRE = (171, 134)
+DRAWN_CENTRE = (0xA1, 0x5A)
+
+
+def belt_point(model, pointer):
+    """TRANSCRIPTION `belt_hit` — the system window's grid scan
+    (`Scan_System_Display_Fields_` part 4, mainscr.cpp:2119-2163): the
+    pointer as the native point it stands for in the window — the rings'
+    drawn centre off the grid field's corner plus the pointer's offset
+    from HD's drawn centre at HD's scale (the frame `draw` drew in) — and
+    the first asteroid belt of the star, in its planet list's order, on
+    the orbit `orbit_from_xy` names from the scan centre. (native point,
+    belt) or None: only inside the grid field (sys.cpp:1922-1931), where
+    the original's click lands."""
+    at, grid, corner = (model.get("frame"), model.get("grid"),
+                        model.get("corner"))
+    if at is None or grid is None or corner is None:
+        return None
+    s, cx, cy = at
+    if s <= 0:
+        return None
+    nx = grid[0] + DRAWN_CENTRE[0] + int(round((pointer[0] - cx) / s))
+    ny = grid[1] + DRAWN_CENTRE[1] + int(round((pointer[1] - cy) / s))
+    if not (grid[0] <= nx <= grid[2] and grid[1] <= ny <= grid[3]):
+        return None
+    orbit = orbit_from_xy(corner[0] + SCAN_CENTRE[0] - nx,
+                          corner[1] + SCAN_CENTRE[1] - ny)
+    if orbit < 0:
+        return None
+    belt = next((b for b in model.get("asteroids", ())
+                 if b["orbit"] == orbit), None)
+    return None if belt is None else ((nx, ny), belt)
 
 
 def orbit_place(star, orbit, stardate):
@@ -181,6 +279,9 @@ def draw(surface, view, model, draw_planet, at=None, colours=None):
     hit rect. `at` (scale, centre x, centre y) in place of `frame(view)`,
     `colours` the rings' (core, side)."""
     s, cx, cy = at or frame(view)
+    # the frame the window was drawn in: the belts' hit test reads it
+    # (`belt_point`), so a click finds the belt where it was drawn
+    model["frame"] = (s, cx, cy)
     prev = surface.get_clip()
     surface.set_clip(view)
     try:

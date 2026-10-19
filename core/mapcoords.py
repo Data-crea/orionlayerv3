@@ -138,6 +138,18 @@ class MapView:
         ny = (sy - self.off_y) / self.scale + MAP_TOP
         return int(round(nx)), int(round(ny))
 
+    def native_window(self):
+        """The original's map window, (22,22)-(527,421), as an HD rect
+        (x, y, w, h): `Draw_Main_Screen_` clips the map's drawing to it
+        (mainscr_main.cpp:939-940). What lies outside it in the box is the
+        side bands, where the game's slice ends. `Set_Window_`'s corners
+        (graphics.cpp:104) are inclusive (a sprite is dropped only past
+        x2 / y2, animate.cpp:105-107), so the window is 506 x 400 native
+        px, one more than the corners' difference."""
+        return (int(round(self.off_x)), int(round(self.off_y)),
+                int(round((MAP_RIGHT - MAP_LEFT + 1) * self.scale)),
+                int(round((MAP_BOTTOM - MAP_TOP + 1) * self.scale)))
+
     def to_galaxy(self, sx, sy):
         """HD pixel -> galaxy coordinate (float)."""
         mx, my, ms = _view_params(self.state)
