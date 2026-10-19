@@ -50,16 +50,21 @@ LEGACY_FOR_STEP = ("large", "large", "medium", "medium", "small", "small")
 # ── Colours (all skin-overridable) ───────────────────────
 
 #: Star name colour per owning player's `color` field (0..7).
-OWNER_COLORS = {
-    0: palette.col("galaxy_map", "owner_0", (196, 74, 56)),
-    1: palette.col("galaxy_map", "owner_1", (206, 172, 34)),
-    2: palette.col("galaxy_map", "owner_2", (86, 166, 70)),
-    3: palette.col("galaxy_map", "owner_3", (226, 226, 234)),
-    4: palette.col("galaxy_map", "owner_4", (126, 174, 216)),
-    5: palette.col("galaxy_map", "owner_5", (196, 130, 88)),
-    6: palette.col("galaxy_map", "owner_6", (162, 104, 136)),
-    7: palette.col("galaxy_map", "owner_7", (238, 132, 12)),
-}
+_OWNER_DEFAULTS = ((196, 74, 56), (206, 172, 34), (86, 166, 70),
+                   (226, 226, 234), (126, 174, 216), (196, 130, 88),
+                   (162, 104, 136), (238, 132, 12))
+OWNER_COLORS = {}
+
+
+@palette.on_preset
+def _bind_owner_colours():
+    """In place, so a module that imported the dict by name (mapeta,
+    planetdraw) holds the new table too (HD EXTENSION `preset_at_once`)."""
+    OWNER_COLORS.update({i: palette.col("galaxy_map", f"owner_{i}", d)
+                         for i, d in enumerate(_OWNER_DEFAULTS)})
+
+
+_bind_owner_colours()
 NEUTRAL_COLOR = palette.col("galaxy_map", "star_name", (150, 152, 166))
 OUTLINE_COLOR = palette.col("galaxy_map", "star_name_outline", (0, 0, 0))
 #: Wormhole link colour, RGBA. The original draws these in palette

@@ -100,7 +100,7 @@ def fitted(app, colour, picture, box, state=None, own=None, size=None):
     if colour is None or not 0 <= int(colour) < COLOURS or box is None \
             or not painted(picture, size):
         return None
-    from core import livery, usermod
+    from core import livery, palette, usermod
     if own is None and state is not None:
         own = own_colour(state)
     box = pygame.Rect(box)
@@ -108,8 +108,10 @@ def fitted(app, colour, picture, box, state=None, own=None, size=None):
     liv = livery.from_settings(us, own)
     choice = us.get("painted_detail") if us is not None else None
     n = number(picture, size)
+    # the colour table's number: a preset applied while the program runs
+    # makes the picture again (HD EXTENSION `preset_at_once`)
     key = (int(colour), n, box.w, box.h, liv.key(), choice,
-           id(usermod._state["index"]))
+           id(usermod._state["index"]), palette.generation())
     if key not in _FITTED:
         if len(_FITTED) >= KEEP:
             _FITTED.clear()

@@ -22,6 +22,13 @@ colors.json structure (per-screen sections are optional):
 init() must run before screen modules are imported, because
 renderers resolve their color constants at import time.
 Changing the skin therefore requires a restart.
+
+The player-colour preset is the one exception (HD EXTENSION
+`preset_at_once`, work order 312): `apply_preset` swaps the four player
+tables while the program runs, bumps `generation` and calls every
+`on_preset` hook, through which a module that bound a player colour at
+import binds it again. Draw time stays free (decision 18's reason): a
+cache that holds a colour keys on, or compares, one integer.
 """
 
 _COLORS = {}
@@ -41,13 +48,23 @@ _ACTIVE_PRESET = "original"
 #: colour instead of letting the mix pass silently.
 _SERVED = {}
 
+#: What `init` was given, so `apply_preset` derives from the same skin.
+_SKIN = {}
+_BASE = None
+#: Counts every change of the colour table (`init`, `apply_preset`).
+_GENERATION = 0
+#: `on_preset` hooks, by "module.qualname": a re-imported module replaces
+#: its hook instead of adding a second.
+_REBINDS = {}
+
 
 def init(colors, preset="original", base=None):
     """Set the active skin's colour dict, with a player-colour preset.
 
-    **THE PRESET IS READ HERE, ONCE** — decision 18: every screen binds
+    **THE PRESET IS READ HERE FIRST** — decision 18: every screen binds
     its colours at import, so a preset has to be in the dict before the
-    first screen module is imported. `main.App` therefore loads
+    first screen module is imported (a later change goes through
+    `apply_preset`, which binds the player tables again). `main.App` therefore loads
     `core.usersettings` BEFORE calling this and passes the player's
     preset (and their own base table, if the file has one). Tools and
     the smoke test pass nothing and always get the original.
@@ -56,9 +73,11 @@ def init(colors, preset="original", base=None):
     tables in a COPY of `colors` (core/playercolors.py, an HD EXTENSION,
     fundament 63); the skin dict itself is never modified.
     """
-    global _COLORS, _ACTIVE_PRESET
+    global _COLORS, _ACTIVE_PRESET, _SKIN, _BASE, _GENERATION
     from core import playercolors
     _COLORS, _ACTIVE_PRESET = playercolors.apply(colors or {}, preset, base)
+    _SKIN, _BASE = colors or {}, base
+    _GENERATION += 1
     stale = stale_bindings()
     if stale:
         import logging
@@ -69,6 +88,56 @@ def init(colors, preset="original", base=None):
             "before the palette it should have read (decision 18)",
             len(stale), section_, key)
     _SERVED.clear()
+
+
+def apply_preset(preset, base=None):
+    """HD EXTENSION `preset_at_once` (work order 312, decision 99): the
+    player-colour preset `preset` (and the settings file's own base table
+    `base`) applied NOW, from the skin `init` was given — the OrionLayer
+    window's Player colours list calls it. Only the four player tables
+    differ between presets (`playercolors.apply`), so only they are bound
+    again: every `on_preset` hook runs, in import order, and `generation`
+    moves on for the caches that hold a coloured picture. True if the
+    table changed."""
+    global _COLORS, _ACTIVE_PRESET, _BASE, _GENERATION
+    from core import playercolors
+    colors, active = playercolors.apply(_SKIN, preset, base)
+    if active == _ACTIVE_PRESET and base == _BASE:
+        return False
+    _COLORS, _ACTIVE_PRESET, _BASE = colors, active, base
+    _GENERATION += 1
+    # a colour handed out under the old table is bound again by its hook,
+    # or read again at the next draw: not a stale binding for `init`
+    for k in stale_bindings():
+        del _SERVED[k]
+    # every hook runs even if one fails: a half-applied preset is worse
+    # than one module's colour left behind, and the window must not raise
+    failed = []
+    for name, hook in list(_REBINDS.items()):
+        try:
+            hook()
+        except Exception:  # noqa: BLE001 — logged and named below
+            failed.append(name)
+    if failed:
+        import logging
+        logging.getLogger(__name__).exception(
+            "palette: %d preset hook(s) failed: %s", len(failed),
+            ", ".join(failed))
+    return True
+
+
+def on_preset(hook):
+    """Register `hook()` to bind a module's player colours again after
+    `apply_preset`; returns it (usable as a decorator). For a colour
+    bound at import — a lookup at draw time needs none."""
+    _REBINDS[f"{hook.__module__}.{hook.__qualname__}"] = hook
+    return hook
+
+
+def generation():
+    """The colour table's number: a cache of coloured pictures keys on it
+    or drops itself when it moves (`apply_preset`, `init`)."""
+    return _GENERATION
 
 
 def stale_bindings():
@@ -86,7 +155,7 @@ def stale_bindings():
 
 
 def active_preset():
-    """The preset `init` applied — what is on screen until a restart."""
+    """The preset in force: `init`'s, or the last `apply_preset`'s."""
     return _ACTIVE_PRESET
 
 

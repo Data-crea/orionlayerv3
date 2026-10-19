@@ -38,10 +38,22 @@ does not cover the star or fleet it belongs to; and a stack shows at most
 nine ships in rows of three — past nine, the three rows the engine shows
 (open fix 59, FBSC) with the bar's thumb where the engine has it and its
 two arrows sending the bar's own "-" / "+" buttons (fleetpop.cpp:189-216,
-mainscr.cpp:3404-3408; work order 197 A2). One thing does not: a ship is drawn as its
-map icon (the fleet box's own ship pictures are not extracted). Since work
+mainscr.cpp:3404-3408; work order 197 A2). Since work
 order 223 the planets stand where the engine puts them, on their orbits
 (`sysorbits`).
+
+HD EXTENSION `box_ship_picture` (work order 312, Data: the popup showed no
+picture of the new designs): the original draws in every cell that cell's
+OWN ship, `Get_Ship_Id_Picture_Seg_(ship)` — SHIPS.LBX picture_num + colour *
+50, the builder's colour (fleetpop.cpp:723-746, ken.cpp:451-468). HD draws
+each cell's own ship by the map's picture rule (`ships.ship_picture`,
+`shippics`: the map slot, else the battle picture, the builder's shape in
+the owner's colour, the setting `map_ship_pictures`), so a cell shows what
+the map shows for that ship, fitted into 8/10 of the cell. Until then every
+cell drew the owner's tinted map master, one picture for every ship. A ship
+with no picture there (setting off, no extraction, a colony, outpost or
+transport ship without its slot file) keeps the tinted master (DEVIATION
+`fleet_icon_drawn`, `sysfleets.icon`), as on the map.
 
 THE SYSTEM WINDOW'S DRAWING IS `syswindow`'s (work order 228 B): one
 implementation for this window and the combat target window
@@ -256,6 +268,7 @@ def _draw_fleet(screen, surface, r, model, hits):
     if model.get("scroll"):
         _draw_scroll(screen, surface, r["fleet_box"], grid, model["scroll"],
                      hits)
+    records = model.get("records") or [None] * len(model["stack"])
     for i, (ship, owner) in enumerate(zip(model["stack"], model["owners"])):
         cell = pygame.Rect(grid.x + cw * (i % 3), grid.y + ch * (i // 3),
                            cw, ch).inflate(-4, -4)
@@ -271,7 +284,7 @@ def _draw_fleet(screen, surface, r, model, hits):
             screen._box_own_cells.append(cell)
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
-        img = sysfleets.icon(screen, owner, min(cell.w, cell.h) * 7 // 10)
+        img = cell_picture(screen, records[i], owner, cell)
         if img is None:
             continue
         surface.blit(img, img.get_rect(center=cell.center))
@@ -281,6 +294,25 @@ def _draw_fleet(screen, surface, r, model, hits):
         status, colour = over[0], (REFUSED if over[1] else TEXT_COLOR)
     syswindow.text(screen, surface, r["fleet_status"], status,
                    syswindow.font(screen, "fleet_status", 16), colour)
+
+
+def cell_picture(screen, ship, owner, cell):
+    """A fleet box cell's picture: its own ship's (HD EXTENSION
+    `box_ship_picture`) fitted into 8/10 of the cell, else the owner's
+    tinted map master at 7/10, as before (`sysfleets.icon`)."""
+    side = min(cell.w, cell.h)
+    if ship is not None and \
+            ship_icons.kind_for_owner(owner) == ship_icons.PLAYER_KIND:
+        state = getattr(screen, "_state", None)
+        pic = ship_icons.ship_picture(
+            getattr(screen, "_tints", None), ship, owner,
+            getattr(screen, "_players", None),
+            getattr(state, "player_num", None),
+            getattr(getattr(screen, "app", None), "user_settings", None),
+            side * 8 // 10, side * 8 // 10)
+        if pic is not None:
+            return pic
+    return sysfleets.icon(screen, owner, side * 7 // 10)
 
 
 def hover_status(screen):

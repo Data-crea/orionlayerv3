@@ -174,6 +174,16 @@ from screens.galaxy_map.renderer import OWNER_COLORS
 #: (`COLONY::_using_colony_screen_palette`). A save with a silver,
 #: blue or brown player is what would settle those three.
 INSET_COLORS = dict(OWNER_COLORS)
+
+
+@palette.on_preset
+def _follow_owner_colours():
+    """The owner entries again after a preset applied while the program
+    runs (HD EXTENSION `preset_at_once`); the renderer's hook ran first,
+    imported first."""
+    INSET_COLORS.update(OWNER_COLORS)
+
+
 INSET_COLORS[8] = palette.col("colony_summary", "inset_star",
                               (172, 212, 240))
 INSET_COLORS[9] = palette.col("colony_summary", "inset_black_hole",

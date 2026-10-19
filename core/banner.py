@@ -204,6 +204,14 @@ class BannerRenderer:
 _RENDERERS = {}
 
 
+@palette.on_preset
+def _drop_renderers():
+    """A renderer holds its banner table from when it was built, so a
+    preset applied while the program runs builds them again:
+    HD EXTENSION `preset_at_once` (`palette.apply_preset`)."""
+    _RENDERERS.clear()
+
+
 def get_renderer(btype, with_background=True):
     """Shared renderer per banner type (lazy, cached). None when the
     asset directory is missing."""

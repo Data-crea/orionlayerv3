@@ -26,7 +26,9 @@ Stack_` (:859-895).
 
 DEVIATION `fleet_icon_drawn`: the original's bar pictures (BUFFER0.LBX 0x111
 + colour for a player, 0x119 and on for monsters, :988-1009) are not
-extracted; HD draws the owner's map icon, as the fleet box does.
+extracted; HD draws the owner's map icon, as the fleet box does for a ship
+with no picture of its own (since work order 312 a cell shows its own ship,
+`boxdraw.cell_picture`, HD EXTENSION `box_ship_picture`).
 DEVIATION `fleet_stack`: the original counts the chain of the icon's own
 stack (`_system_display_ships[owner].ship_idx`); HD counts the owner's ships
 at the star by `Build_System_Popup_Ships_`'s condition — the same ships
@@ -121,7 +123,8 @@ def player_colour_index(state, owner):
 
 def icon(screen, owner, side):
     """The owner's map icon at `side` device px, tinted for a player — the
-    fleet box's ship picture and the bar's (DEVIATION `fleet_icon_drawn`)."""
+    bar's picture, and the fleet box cell's for a ship with no picture of
+    its own (DEVIATION `fleet_icon_drawn`)."""
     kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
     key = ship_icons._resolve_sprite(screen._cache, kind, 0)
     if key is None:

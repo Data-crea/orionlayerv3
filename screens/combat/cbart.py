@@ -185,8 +185,10 @@ class CombatArt:
         #: the largest factor a painted picture is held at (`set_detail`)
         self.detail = DETAIL_FULL
         #: the livery painted ships are coloured in (`set_livery`)
-        from core import livery
+        from core import livery, palette
         self.livery = livery.DEFAULT
+        #: the colour table the plating was made under (`follow_palette`)
+        self._palette_gen = palette.generation()
         self._load()
 
     def set_detail(self, cap):
@@ -211,6 +213,22 @@ class CombatArt:
         if liv == self.livery:
             return False
         self.livery = liv
+        self._drop_plating()
+        return True
+
+    def follow_palette(self):
+        """The plating in the owner colours of the table in force: a
+        player-colour preset applied while the program runs (HD EXTENSION
+        `preset_at_once`, `palette.apply_preset`) drops the plating made
+        under the old one, as a livery change does. True if it did."""
+        from core import palette
+        if self._palette_gen == palette.generation():
+            return False
+        self._palette_gen = palette.generation()
+        self._drop_plating()
+        return True
+
+    def _drop_plating(self):
         for key in [k for k in self._cache
                     if k[0] in ("plating", "plating_src", "plating_lit",
                                 "plating_turn")]:
@@ -218,7 +236,6 @@ class CombatArt:
         cc = getattr(self, "_cloak_cache", None)
         if cc is not None:
             cc.clear()
-        return True
 
     def _drop(self):
         self._cache.clear()

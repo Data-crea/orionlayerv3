@@ -23,6 +23,8 @@ hit flash of its own.
 """
 import pygame
 
+from core import palette as _palette
+
 from . import cbart, cbbeam, cbdraw, cbflare
 
 #: the frame at which the second channel takes the next entry (beams.cpp:
@@ -318,7 +320,9 @@ def _flare(surface, cam, art, b, tick, counter, look, cache):
     frame = counter % max(1, art.frame_count("beams", e))
     pic, (ox, oy) = look or (None, (0, 0))
     if pic is not None and not b.get("reflection"):
-        key = ("flared", id(pic), e, frame, rot)
+        # the palette generation too: a recoloured plating may reuse a
+        # freed picture's id (work order 312)
+        key = ("flared", id(pic), e, frame, rot, _palette.generation())
         if key not in cache:
             m = cbflare.mask(art, e, frame, rot)
             nw, nh = cbart.native_size(pic)

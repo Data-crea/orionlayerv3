@@ -496,6 +496,9 @@ def fleet_model(state, ident, box, text):
     return {"kind": "fleet", "ship": ident.ship, "stack": shown,
             "nodes": nodes, "count": len(stack), "scroll": scroll,
             "owners": [ships[i].owner for i in shown],
+            # each cell's own ship record: its picture is that ship's
+            # (fleetpop.cpp:723-746, HD EXTENSION `box_ship_picture`)
+            "records": [ships[i] for i in shown],
             "selected": [flags[n] for n in nodes],
             "selectable": [ships[i].owner == me and ships[i].status in
                            ORDERABLE_STATUS for i in shown],

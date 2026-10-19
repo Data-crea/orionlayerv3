@@ -6,7 +6,8 @@ picks it, a click anywhere else or ESC closes the list unchanged. Until
 then a click stepped to the next value (`gmorion._cycle`).
 
 `CHOICES` is the one table: each row's setting, its values and the words
-they are shown in. Picking does what stepping did, value by value: the mod
+they are shown in. Picking does what stepping did, value by value: a player-colour preset
+applies at once (`palette.apply_preset`, work order 312), the mod
 folder switched on starts the extraction (`core.modsetup`), a language
 starts reading its game files (`core.langsetup`), the glass switch goes
 through `gmfill.set_glass`. Nothing is sent.
@@ -96,7 +97,12 @@ def pick(screen, name, value):
     if settings is None:
         return
     settings.set(CHOICES[name][0], value)
-    if name == "mods" and value == "on":
+    if name == "colours":
+        # HD EXTENSION `preset_at_once` (work order 312, decision 99): the
+        # preset applies at once, every screen's player colours with it
+        from core import palette
+        palette.apply_preset(value, settings.get("player_color_base"))
+    elif name == "mods" and value == "on":
         # Data, 30 September 2026: switching it on says it can take a while
         # and starts the extraction (the Mod files row shows the progress)
         modsetup.start()

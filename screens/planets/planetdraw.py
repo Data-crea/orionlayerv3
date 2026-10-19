@@ -20,8 +20,18 @@ log = logging.getLogger("planets")
 
 NEUTRAL = palette.require("planets", "neutral")
 NEUTRAL_HOVER = palette.require("planets", "neutral_hover")
-OWNER_HOVER = {n: palette.require("planets", f"owner_hover_{n}")
-               for n in range(8)}
+OWNER_HOVER = {}
+
+
+@palette.on_preset
+def _bind_owner_hover():
+    """In place, again after a preset applied while the program runs (HD
+    EXTENSION `preset_at_once`, `palette.apply_preset`)."""
+    OWNER_HOVER.update({n: palette.require("planets", f"owner_hover_{n}")
+                        for n in range(8)})
+
+
+_bind_owner_hover()
 STATUS_COLORS = {"red": palette.require("planets", "status_red"),
                  "green": palette.require("planets", "status_green"),
                  "neutral": palette.require("planets", "status_neutral")}

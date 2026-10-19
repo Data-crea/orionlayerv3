@@ -370,6 +370,8 @@ def ship(art, colour, picture, facing, glow=0, own_first=True):
     colour-free picture for it. `own_first` False: the colour-free one even
     where the colour has its own — the galaxy map's captured ship, whose
     shape is its builder's and whose colour its owner's (`shippics`)."""
+    if hasattr(art, "follow_palette"):
+        art.follow_palette()
     stored, _m, _f = cbart.stored_facing(facing)
     frame = 4 * stored + max(0, min(3, int(glow)))
     # the colour's own file wins for its colour: its frame 0 makes the

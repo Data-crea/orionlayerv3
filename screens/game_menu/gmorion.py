@@ -30,9 +30,10 @@ window's geometry, the only place the rows' rects are computed.
 **VALUES APPLY AT ONCE, THE FILE IS WRITTEN LATER.** The floor step
 shows on the map behind the popup on the next frame (`floorlift` reads
 it at draw time), and the monster switch on the next Planets frame. The
-preset needs a restart — `palette.init` applies it before any screen
-binds a colour — and the note that says so is shown only while the
-saved preset differs from the active one. The file is written by
+player-colour preset too since work order 312 (`palette.apply_preset`,
+HD EXTENSION `preset_at_once`); the mod folder and the language need a
+restart, and the note that says so is shown only while a saved choice
+differs from the one in force. The file is written by
 `save`, which closing the window, ACCEPT and the overlay's exit call and
 which writes nothing when nothing changed.
 """
@@ -204,14 +205,14 @@ def selected(screen, key):
 
 
 def restart_pending(screen):
-    """The colour preset, the mod folder and the language are read at
-    start: the note shows while a saved choice differs from the one in
-    force."""
+    """The mod folder and the language are read at start: the note shows
+    while a saved choice differs from the one in force. The colour preset
+    is not among them: picking it applies it (`oldrop.pick`, work order
+    312)."""
     started = usermod.started_enabled()
     chosen = selected(screen, "language")
-    return (selected(screen, "player_colors") != palette.active_preset()
-            or (started is not None
-                and (selected(screen, "user_mod") != "off") != started)
+    return ((started is not None
+             and (selected(screen, "user_mod") != "off") != started)
             or (chosen is not None and chosen != lang.current()))
 
 

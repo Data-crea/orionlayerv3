@@ -119,7 +119,20 @@ DEFAULT_FIT = "height"
 #: The values are the skin's (`galaxy_map` ship_0..7, colors.json) with NO
 #: code default — decision 14; moved out of literals here on 14 September
 #: 2026, the tinted sprites compared byte for byte.
-SHIP_COLORS = {i: palette.require("galaxy_map", f"ship_{i}") for i in range(8)}
+SHIP_COLORS = {}
+
+
+@palette.on_preset
+def _bind_ship_colours():
+    """HD EXTENSION `preset_at_once` (work order 312): the Player colours
+    list applies at once, so the tints are bound again in place and every
+    `TintCache` drops what it made under the old table (`follow`).
+    Registered in `layout.json` `_markings`."""
+    SHIP_COLORS.update({i: palette.require("galaxy_map", f"ship_{i}")
+                        for i in range(8)})
+
+
+_bind_ship_colours()
 
 #: A pure multiply drives the highlights straight into the hue and the
 #: hull stops reading as metal. Lifting the multiplier toward white by
@@ -384,12 +397,21 @@ class TintCache:
 
     def __init__(self):
         self._tinted = {}
+        self._gen = palette.generation()
         # the stacks' ship pictures are made at the box's size too, so they
         # go with the tinted sprites (HD EXTENSION `strongest_ship_icon`)
         from screens.galaxy_map import shippics
         self.pictures = shippics.ShipPictures()
 
+    def follow(self):
+        """Drop the tints and pictures made under an older colour table
+        (`palette.apply_preset`): one integer compared per call."""
+        if self._gen != palette.generation():
+            self._gen = palette.generation()
+            self.clear()
+
     def get(self, base, cache_key, color_idx):
+        self.follow()
         key = (cache_key, base.get_width(), base.get_height(), color_idx)
         hit = self._tinted.get(key)
         if hit is not None:
@@ -814,10 +836,25 @@ def _stack_picture(icon, owner, players, tints, ships, nodes, me,
     pictures = getattr(tints, "pictures", None)
     if pictures is None:
         return None
+    if hasattr(tints, "follow"):
+        tints.follow()
     head = head_ship(icon, nodes, ships)
     ship = pictures.representative(head, ships, me)
-    if ship is None:
+    return ship_picture(tints, ship, owner, players, me, settings,
+                        box_w, box_h)
+
+
+def ship_picture(tints, ship, owner, players, me, settings, box_w, box_h):
+    """`ship`'s own picture (`shippics.ShipPictures.icon`) fitted into
+    box_w x box_h, or None for the tinted master: the shape the builder's
+    (`previous_owner`, as `Get_Ship_Id_Picture_Seg_` picks it, ken.cpp:451-
+    455), the colour the owner's. One rule for the map's stack and the
+    fleet box's cell (HD EXTENSION `box_ship_picture`, `boxdraw`)."""
+    pictures = getattr(tints, "pictures", None)
+    if pictures is None or ship is None:
         return None
+    if hasattr(tints, "follow"):
+        tints.follow()       # the box's cells follow a preset change too
     builder = int(ship.previous_owner)
     shape = _player_color(players, builder if 0 <= builder < 8 else owner)
     return pictures.icon(ship, _player_color(players, owner), shape, box_w,
