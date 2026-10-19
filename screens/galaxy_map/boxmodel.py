@@ -189,14 +189,46 @@ def popup_xy(index, x, y, w, h):
     return 22, 22
 
 
-def fleet_xy(icon_x, icon_y, w, h):
-    """Set_Popup_Draw_XY_(2, icon) then the clamp into the map."""
-    x, y = popup_xy(2, icon_x - 21, icon_y - 21, w, h)
+#: TRANSCRIPTION `fleet_box_prior_width` (work order 314): the fleet box is
+#: placed with the width box 2 had BEFORE this open. `Do_Fleet_Popup_` calls
+#: `Set_Popup_Draw_XY_(2, ...)` (mainscr.cpp:1819), whose `Popup_XY_` reads
+#: `_moveable_box[2].width` (mainscr.cpp:1060-1071); the new box's width is
+#: set only afterwards, by `Fleet_Box_Data_` -> `Set_Fleet_Box_Data_
+#: Dimensions_` (fleetpop.cpp:934-990, :1440-1452), whose clamp moves the
+#: box only when it overruns the map. That width is the name picture's
+#: (`Fleet_Box_Width_`, fleetpop.cpp:257-260: BUFFER0.LBX 0x34 small, 0x33
+#: large, measured 198 and 217) or, before any box was opened,
+#: `Init_Fleet_Movement_Box_`'s 200 (harold.cpp:370-380). The save carries
+#: it (`Read_Movable_Box_`, savegame.cpp:1462): g232_mentar holds 200, so
+#: its first box after the load stands at 527 - 200 = 327 and the second at
+#: 329 (live work orders 312-314). The wire does not carry the value, so
+#: the box is accepted at any place the three widths give; the quadrant
+#: and the row still name the clicked icon.
+FLEET_BOX_INIT_WIDTH = 200
+FLEET_NAME_WIDTHS = (198, 217)
+FLEET_PRIOR_WIDTHS = (FLEET_NAME_WIDTHS[0], FLEET_BOX_INIT_WIDTH,
+                      FLEET_NAME_WIDTHS[1])
+
+
+def fleet_xy(icon_x, icon_y, w, h, prior=None):
+    """Set_Popup_Draw_XY_(2, icon) with the width box 2 had before this
+    open (`prior`, default `w`), then the clamp into the map with the new
+    box's own `w` and `h`."""
+    x, y = popup_xy(2, icon_x - 21, icon_y - 21,
+                    w if prior is None else prior, h)
     if x + w > mc.MAP_RIGHT:
         x = mc.MAP_RIGHT - w
     if y + h > mc.MAP_BOTTOM:
         y = mc.MAP_BOTTOM - h
     return x, y
+
+
+def fleet_places(icon_x, icon_y, w, h):
+    """Every place `fleet_xy` gives for the widths box 2 can have held —
+    the stock ones and the box's own width, which a second click finds
+    and which a mod's name pictures may change (the review of 314)."""
+    return sorted({fleet_xy(icon_x, icon_y, w, h, p)
+                   for p in (w,) + tuple(FLEET_PRIOR_WIDTHS)})
 
 
 def _size(box):
@@ -466,10 +498,11 @@ def fleet_model(state, ident, box, text):
         return None, (f"the clicked ship {ident.ship} is not in the stack "
                       f"{stack} the engine's box shows")
     w, h = _size(box)
-    want = fleet_xy(ident.icon[0], ident.icon[1], w, h)
-    if want != tuple(box.rect[:2]):
+    want = fleet_places(ident.icon[0], ident.icon[1], w, h)
+    if tuple(box.rect[:2]) not in want:
         return None, (f"box at {tuple(box.rect[:2])}, the clicked icon "
-                      f"would put it at {want}")
+                      f"would put it at "
+                      f"{' or '.join(str(p) for p in want)}")
     icon_fields = [f for f in box.fields if f.field_type == 7
                    and f.x_end - f.x == FLEET_ICON_SPAN
                    and f.y_end - f.y == FLEET_ICON_SPAN]
