@@ -517,6 +517,13 @@ LOCAL_PATCHES = {
         "a tractor beam clipped to one pixel at the screen's edge stops the "
         "engine with SIGFPE (open fix 99): the battle ends without a "
         "message"),
+    # Work order 306: on the fork's branch `orionlayer` only, 35486477.
+    "doc/ext_combat_refusal_boxes.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 101.",
+        "BOARD at an own ship and FIRE at a phased enemy are refused "
+        "silently (open fix 101): the original's boxes (KENTEXT 0x40, 80) "
+        "never show"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

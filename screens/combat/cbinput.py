@@ -340,21 +340,30 @@ class CombatInput:
                 self._send("fire_missile", missile["index"])
             return None
         if self._pops.scan_mode:             # SCAN, then a unit: HD's own view
-            self._pops.scan_mode, self._pops.local_unit = False, target
+            # TRANSCRIPTION `scan_mode_kept` (work order 306): the original's
+            # click scans any live unit and leaves `skan_flag` on
+            # (combat1.cpp:823-824), so SCAN stays lit and the next unit
+            # clicked is scanned too; only the round's start, BOARD and the
+            # SCAN button put it out (:384, :670, combinit.cpp:1013). A
+            # click on no unit scans nothing and leaves SCAN on (:743, :823)
+            if target is not None:
+                self._pops.local_unit = target
             return None
         if move is not None:                 # TRANSCRIPTION `move_target`
             self._send("move", *move)
         elif self._board:
             # BOARD, then any live unit: the original boards whatever it is
-            # (`Initiate_Boarding_Action_`, combat1.cpp:825-826) and refuses
-            # its own side's in a box (KENTEXT 64 / 65, :2035-2037); the
-            # light stays on until a boarding is carried out (:2149). An
-            # enemy (the planet too) is open fix 58's BOARD.
-            # DEVIATION `board_own_unit`: on the player's own unit HD sends
-            # nothing and shows no box — the engine refuses BOARD there
-            # (ext_api.cpp v2 :3265) and its box would say only that it
-            # cannot be done
-            if target is not None and c["units"][target]["owner"] != me:
+            # (`Initiate_Boarding_Action_`, combat1.cpp:825-826); the light
+            # stays on until a boarding is carried out (:2149). An enemy
+            # (the planet too) is open fix 58's BOARD.
+            # TRANSCRIPTION `board_own_unit_box` (work order 306): on one of
+            # the player's own units too — the original refuses it in its
+            # box, KENTEXT 0x40, or 0x41 for a captured one, the own planet
+            # 0x3F (:2032-2037, `Warning_Box_` :2086-2090); open fix 101
+            # lets that BOARD through to the original's handler and its box
+            # reaches HD as every box does (MSGB, open fix 29). Not on the
+            # acting unit itself, which the engine still refuses
+            if target is not None and target != cur:
                 self._send("board", target)
         elif target is not None and target != cur and \
                 c["units"][target]["owner"] != me:
@@ -368,6 +377,11 @@ class CombatInput:
                 # that branch, its box HD's. A FIRE there is refused.
                 self._send("remove_stasis", target)
             else:
+                # a phased enemy (`special_status_flag` 4) too: the
+                # original's click says why not in its box (KENTEXT 80,
+                # combat1.cpp:797-802), which open fix 101's FIRE runs and
+                # HD shows as every box (MSGB, open fix 29); no shot, the
+                # rows unchanged
                 self._send("fire", target, self._mask(cur, c["units"][cur]))
         elif target is not None and target != cur:
             self._send("select", target)
