@@ -31,14 +31,14 @@ by BOTH sources decision 23 asks for:
     (5)  ship_weapon 28 (8 x 8)  picture_num 92  previous_owner 93
     cost 94  combat_speed 96  date_of_design 97
 
-**THE DAMAGE FIELDS ARE NOT DECLARED, ON PURPOSE.** `armor_damage`
-123, `structural_damage` 125 and the shield/drive/computer percentages
+**TWO DAMAGE FIELDS ARE DECLARED SINCE WORK ORDER 313**, `armor_damage`
+123 and `structural_damage` 125, for the fleet box's damage bars
+(`Draw_Damage_Bars_`, fleetpop.cpp:41-84). Until then none was: they
 compiled where the header says, but every monster the probe could see
 carried zero there — monsters are repaired in full every turn — and a
-zero confirms no offset. Nothing reads them (Data's decision: the panel
-shows maximum values), so they stay UNVERIFIED and absent from this
-spec rather than present and unproven. The one exception is
-`special_device_damage_flags` @118, verified by work order 208 (see its
+zero confirms no offset. The shield/drive/computer percentages stay
+UNVERIFIED and absent from this spec rather than present and unproven.
+`special_device_damage_flags` @118 is verified by work order 208 (see its
 entry below) because the Fleets panel prints a damaged special red.
 
 LOCATION IS ENCODED, not a plain star index. consts.h:22-25 and
@@ -174,6 +174,22 @@ SPEC = Spec("s_ship_data", SIZE, [
     ("crew_quality", 113, "i8"),
     ("crew_experience", 114, "i16"),
     ("officer_index", 116, "i16"),
+    # VERIFIED 19 October 2026 (work order 313), by the two routes
+    # decision 23 names. THE HEADER: `s_ship_data` (orion2.h:2847-2868)
+    # runs officer_index, special_device_damage_flags[5], armor_damage,
+    # structural_damage, mission, just_built — after the verified @118's
+    # five bytes, 123 and 125 (i16 each), and mission 127, just_built 128
+    # end the record at 129, its size assert; the serializer writes them
+    # in that order (savegame.cpp:870-871). THE LIVE READING: on
+    # g256_near_dead (written by gallery_saves.py weaken) the wire's
+    # records carried 1450/1300 (Doom Star), 480/400 (Titan,
+    # Battleship), 5/2 (Cruiser, Destroyer, Frigate) — the values the
+    # save was given, and the engine's own fleet box drew its damage bars
+    # from them: 255 of 255 pixels per cell equal to HD's transcription
+    # of those hits (~/claude/evidence/work_order_313/live/live313_damage_1920x1080,
+    # the store's evidence/work_order_313/README.md).
+    ("armor_damage", 123, "i16"),
+    ("structural_damage", 125, "i16"),
 ], verified=True)
 
 #: s_ship_weapons (orion2.h:1723), the same two sources as the design.

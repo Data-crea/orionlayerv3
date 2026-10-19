@@ -22,14 +22,13 @@ the smoke test forces both states.
 
 **THE DAMAGE BAR IS AN OMISSION FOR A DIFFERENT REASON.**
 `FLEETPOP::Draw_Damage_Bars_` (fleetpop.cpp:41-81) reads
-`structural_damage` and `armor_damage`, which `core/structs/ship.py`
-does NOT carry: they are hand-counted offsets 125 and 123 that no second
-source has confirmed (decision 23), and the reading marks them
-UNVERIFIED. A bar drawn from an unverified offset is a bar that can be
-wrong without looking wrong. The bar's own geometry is unsettled too —
-`Draw_Fltscrn_Big_Ship_Icons_` passes width 1 on this screen
-(flt1.cpp:56-59, :110), which `Draw_Damage_Bars_` turns into an
-effective width of -3.
+`structural_damage` and `armor_damage`. Until work order 313 the ship
+spec did not carry them (hand-counted offsets 125 and 123, decision 23);
+since then `core/structs/ship.py` does, verified, and the galaxy map's
+fleet box draws its bars (`screens/galaxy_map/boxcells.py`). What keeps
+the bar off THIS screen is its geometry, which is unsettled:
+`Draw_Fltscrn_Big_Ship_Icons_` passes width 1 here (flt1.cpp:56-59,
+:110), which `Draw_Damage_Bars_` turns into an effective width of -3.
 
 **THE ATTACK AND DEFENSE BONUSES ARE AN OMISSION** because
 `INITSHIP::Get_Ship_Combat_Bonuses_` (initship.cpp:638-687) needs

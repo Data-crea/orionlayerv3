@@ -55,6 +55,12 @@ with no picture there (setting off, no extraction, a colony, outpost or
 transport ship without its slot file) keeps the tinted master (DEVIATION
 `fleet_icon_drawn`, `sysfleets.icon`), as on the map.
 
+TRANSCRIPTION `box_scanned_name` and TRANSCRIPTION `box_damage_bars` (work
+order 313, `boxcells`): the cell under the pointer puts its ship's text in
+the info line before the move line (fleetpop.cpp:1028-1031, :1368-1392), and
+every own combat ship that is damaged gets the original's bar over its
+picture (fleetpop.cpp:41-84, :748-762).
+
 THE SYSTEM WINDOW'S DRAWING IS `syswindow`'s (work order 228 B): one
 implementation for this window and the combat target window
 (`combattarget`), as the original draws both with one function; this
@@ -84,9 +90,10 @@ import pygame
 from core.hud import blocks as hud
 
 from core import hestrings
+from core import mouse
 from core import palette
-from screens.galaxy_map import (boxmodel, boxpaint, fleetorders, mapboxes,
-                                sysfleets, sysorbits, syswindow)
+from screens.galaxy_map import (boxcells, boxmodel, boxpaint, fleetorders,
+                                mapboxes, sysfleets, sysorbits, syswindow)
 from screens.galaxy_map import ships as ship_icons
 from screens.galaxy_map.syswindow import TEXT_COLOR
 
@@ -167,7 +174,6 @@ def _draw_system(screen, surface, r, model, hits):
     """The window's view through `syswindow`; the planets' hit areas; the
     fleet bar through `sysfleets`, the combat target window's drawing
     (work order 231 C)."""
-    from core import mouse
     view = r["system_view"]
     drawn = syswindow.draw_view(screen, surface, view, model)
     for p, rect in drawn:
@@ -269,6 +275,8 @@ def _draw_fleet(screen, surface, r, model, hits):
         _draw_scroll(screen, surface, r["fleet_box"], grid, model["scroll"],
                      hits)
     records = model.get("records") or [None] * len(model["stack"])
+    me = getattr(screen._state, "player_num", 0)
+    cells = []
     for i, (ship, owner) in enumerate(zip(model["stack"], model["owners"])):
         cell = pygame.Rect(grid.x + cw * (i % 3), grid.y + ch * (i // 3),
                            cw, ch).inflate(-4, -4)
@@ -279,19 +287,30 @@ def _draw_fleet(screen, surface, r, model, hits):
         # (proposal C): the original's blue cell, in the one look.
         chosen = model["selected"][i]
         hud.field(surface, cell, screen.layout.scale, on=chosen)
-        if model["owners"][0] == getattr(screen._state, "player_num", 0):
+        cells.append(cell)
+        if model["owners"][0] == me:
             # an own stack's cell, offered or not (`boxpaint.own_cell_at`)
             screen._box_own_cells.append(cell)
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
         img = cell_picture(screen, records[i], owner, cell)
-        if img is None:
-            continue
-        surface.blit(img, img.get_rect(center=cell.center))
-    status, colour = model["status"], TEXT_COLOR
-    over = hover_status(screen)
-    if over is not None:
-        status, colour = over[0], (REFUSED if over[1] else TEXT_COLOR)
+        if img is not None:
+            surface.blit(img, img.get_rect(center=cell.center))
+        # TRANSCRIPTION `box_damage_bars`: over the picture (fleetpop.cpp:
+        # 748-762)
+        boxcells.draw_bar(surface, cell, boxcells.bar_for(
+            records[i], model["owners"][0], me))
+    # TRANSCRIPTION `box_scanned_name`: a cell under the pointer is the
+    # scanned ship, and its text wins over the move line (fleetpop.cpp:
+    # 1028-1031, mainscr.cpp:3422-3428)
+    at = boxcells.scanned_index(cells, mouse.pos())
+    scanned = None if at is None else boxcells.scanned_name(
+        records[at], me, sysfleets.part_names(screen))
+    screen._box_scanned = None if at is None else model["stack"][at]
+    status, refused = boxcells.info_line(
+        scanned, hover_status(screen) if at is None else None,
+        model["status"])
+    colour = REFUSED if refused else TEXT_COLOR
     syswindow.text(screen, surface, r["fleet_status"], status,
                    syswindow.font(screen, "fleet_status", 16), colour)
 
@@ -338,6 +357,7 @@ def render(screen, surface):
     screen._box_belts = None
     screen._box_paint_area = None
     screen._box_own_cells = []
+    screen._box_scanned = None
     screen._order_rects = {}
     screen._system_drawn = False
     for names, box, model in drawable(screen):

@@ -396,6 +396,11 @@ def render_hover_preview(screen, surface, ctx):
     hover = getattr(screen, "_hover_star", None)
     if hover is None or getattr(screen, "_state", None) is None:
         return None
+    # a fleet box cell under the pointer is the scanned ship, and the
+    # original draws the ETA line only while none is (mainscr_main.cpp:971;
+    # TRANSCRIPTION `box_scanned_name`, `boxcells`) — the box's last frame
+    if getattr(screen, "_box_scanned", None) is not None:
+        return None
     stars = screen._stars
     # BY POSITION, not identity: `_hover_star` is the object the last mouse
     # motion found, and every snapshot builds `_stars` anew (found live, work

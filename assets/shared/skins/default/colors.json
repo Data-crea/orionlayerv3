@@ -633,6 +633,41 @@
       68,
       92,
       128
+    ],
+    "_fleet_damage_note": "TRANSCRIBED, not chosen (work order 313): the fleet box's damage bar, Draw_Damage_Bars_ (fleetpop.cpp:41-84) - each part's top and left outline, its fill, its right and bottom outline: green 0x70 / 0x71 / 0x72, red 0x4B / 0x4D / 0x4E. RGB of the main palette, FONTS.LBX entry 1 (Load_Palette_(0), mainscr_main.cpp:333; s_palette_entry flag, r, g, b; 6-bit x 4), and measured off the engine's own frame of the same bar (work order 313's live run). screens/galaxy_map/boxcells.py.",
+    "fleet_damage_green": [
+      [
+        0,
+        76,
+        0
+      ],
+      [
+        0,
+        96,
+        0
+      ],
+      [
+        8,
+        112,
+        8
+      ]
+    ],
+    "fleet_damage_red": [
+      [
+        80,
+        12,
+        12
+      ],
+      [
+        116,
+        24,
+        24
+      ],
+      [
+        136,
+        32,
+        32
+      ]
     ]
   },
   "colony_summary": {
