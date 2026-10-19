@@ -28,9 +28,14 @@ VALUES, SPECIAL SYSTEMS or HULL AND SYSTEMS.
 The look (work order 298): lying on top — the frame colour's lit edge,
 stronger than a box's, with a soft glow round it; a ground darker than the
 boxes (the fill family's header, opaque: the transparency slider never
-reaches it); the title in the HUD's accent word colour (`text.title`), the total large on the
-right, a separator under the head; the total line a size larger, a
-separator over it. A damaged or destroyed system of this ship says its
+reaches it). A combat value's card has no head (work order 308, Data on
+ACGIFT's word: the value stood in its row, the head and the total line):
+it opens with its parts under the head-less card's top margin and ends
+with the total line, a size larger, a separator over it. A card with no
+total line keeps its head — the title in the HUD's accent word colour
+(`text.title`), the value large on the right, a separator under it: a
+HULL AND SYSTEMS card, and a value's card that says "Breakdown not
+available". A damaged or destroyed system of this ship says its
 state in the state's colour between its name and its number (Data, work
 order 299: "Damaged", "Destroyed", the scan's own state words); an
 operational one says none.
@@ -82,7 +87,7 @@ class Rows:
         self.lines.append((kind, left, right, rgb, size, state))
 
     def height(self):
-        h = HEAD + 8
+        h = HEAD + 8 if self.title else 12
         for kind, *_r in self.lines:
             h += {"note": SUB, "child": SUB, "rule": 12,
                   "gap": GAP_LINE}.get(kind, ROW)
@@ -104,7 +109,9 @@ class Rows:
 def value_rows(title, card, rgb, percent=False):
     """The rows of a combat value's card (`cbscanparts.Card`)."""
     tot = f"{card.total}%" if percent else signed(card.total)
-    rows = Rows(title, tot)
+    # no head over a breakdown: its total line says the value (308); the
+    # head stays where no total line follows
+    rows = Rows(None if card.ok else title, tot)
     if not card.ok:
         rows.add("note", NOT_AVAILABLE, rgb=GREY)
         return rows
@@ -135,7 +142,7 @@ def speed_rows(title, card, top, rgb, galaxy=None):
     DEVIATION `scan_galaxy_speed` (Data, work order 302): the original
     printed it under the drive's hits, above the combat speed, always in
     view (v2 cmbtdrw1.cpp:3548-3567)."""
-    rows = Rows(title, f"{card.total} / {top}")
+    rows = Rows(None if card.ok else title, f"{card.total} / {top}")
     if not card.ok:
         rows.add("note", NOT_AVAILABLE, rgb=GREY)
         if galaxy:
@@ -457,9 +464,11 @@ def show(view, surface, style, scale, k, m, pointer, rgb, column):
         cards = {kk: value_card(m, kk, rgb) for kk in values}
         # one top and one left edge for every row, the height the card's
         # own (work order 299)
+        # the height as `draw` steps it (each step at least 9 px), so a
+        # short card at 1280 x 720 does not end under its last line
         at = value_rect(view.window, view.boxes["values"],
-                        int(cards[key].height() * k), k,
-                        int(max(c.height() for c in cards.values()) * k), r)
+                        cards[key].drawn_height(k), k,
+                        max(c.drawn_height(k) for c in cards.values()), r)
         tip = notch(at, r, k)
         draw(surface, style, scale, k, at, cards[key], rgb, tip,
              bounds=view.window)
