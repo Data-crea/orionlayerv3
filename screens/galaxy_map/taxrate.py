@@ -1,21 +1,23 @@
 """The tax rate popup — work order 230 D (a dialog only F12 answered).
 
-What the original does (mainscr.cpp:2385-2425, mainpups.cpp:207-262):
-the sidebar's treasury window (`_treasury_window_field`, mainscr.cpp:1401;
-mainscr_main.cpp:733-748) clears the map's fields and runs
+What the original does (mainscr.cpp:2604-2643, mainpups.cpp:205-254; v2
+lines since work order 315): the sidebar's treasury window
+(`_treasury_window_field`, mainscr.cpp:1565; mainscr_main.cpp:740-751) clears the map's fields and runs
 `Tax_Rate_Popup_` under SCREEN_MAIN. Its fields (`Add_Tax_Rate_Fields_`):
 
   TRANSCRIPTION  six multi buttons at native y 0xC6, x 0x93, 0xC1, 0xEA,
                  0x113, 0x13C, 0x165 — 0 to 50 %, each sets
                  `_g_temp_tax_rate`; every input but ACCEPT applies it at
                  once (`player.tax_rate`, the colonies recalculated,
-                 `Evaluate_Tax_Rate_Input_`, :250-262); hotkeys 0-5
+                 `Evaluate_Tax_Rate_Input_`, :241-254); hotkeys 0-5
   TRANSCRIPTION  ACCEPT, a button at (0xED, 0xFE), hotkey ESC: applies and
                  closes
   TRANSCRIPTION  which rate is on: `player.tax_rate` off the wire (the
-                 popup starts from it, mainscr.cpp:2402)
-  DEVIATION      `tax_popup_hud`: the original's TAXRATE pictures (the
-                 popup, the six rate buttons, ACCEPT: artwork, no string);
+                 popup starts from it, mainscr.cpp:2621)
+  DEVIATION      `tax_popup_hud`: the original's pictures MAINPUPS.LBX
+                 0x3E-0x45 (`Load_Tax_Rate_Popup_`, mainpups.cpp:66-75:
+                 the popup, the six rate buttons, ACCEPT; artwork, no
+                 string);
                  HD draws the HUD popup, its small buttons and the words of
                  `layout.json` `tax_rate` (decision 15)
 

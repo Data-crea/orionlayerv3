@@ -112,11 +112,14 @@ def click(screen, screen_x, screen_y):
 
     # THE COMMAND AND FREIGHTERS WINDOWS — work order 310 (309's finding 2),
     # TRANSCRIPTION sidebar_windows: the second and fourth windows
-    # (mainscr.cpp:1402, :1404) compare the id as the others do
-    # (mainscr_main.cpp:714-732): Command sets SCREEN_SHOW_COMMAND_POINTS
+    # (mainscr.cpp:1566, :1568) compare the id as the others do
+    # (mainscr_main.cpp:724-739): Command sets SCREEN_SHOW_COMMAND_POINTS
     # (43, under the guard `_skip_fields == 0`), Freighters
-    # SCREEN_SCRAP_FREIGHTERS (35), or with no freighter the box HESTR 0xDF,
-    # which comes as MSGB. Neither screen has an HD view: the F12 notice
+    # SCREEN_SCRAP_FREIGHTERS (35), or with no freighter the box HESTR 0xDF
+    # (:726), which comes as MSGB. 35's `Scrap_Freighters_`
+    # (mainscr2.cpp:253-300) opens HESTR 0xEC when none can be scrapped
+    # (:259), the slider popup (0xED, :274), the confirmation 0xEE (:282)
+    # and the result 0xEF (:288). Neither screen has an HD view: the F12 notice
     # names it (`core/screen_names.py`, decision 22). The food window has
     # no handler in the original, so a click there is swallowed below.
     for _sw_boxes, _sw_key, _sw_what in (
@@ -327,8 +330,8 @@ def right_button(screen, down, mx, my):
         # OMISSION `box_cell_detail`: the original opens the ship's
         # detailed view on a right click on ANY cell of an own stack,
         # offered for selection or not (`Can_Select_Fleet_Box_Ship_`, the
-        # owner only, mainscr.cpp:3319-3328; `Detailed_View_Ship_`,
-        # :3428-3434; cmbtdrw1.cpp:156-247); HD has no view and no wire
+        # owner only, mainscr.cpp:3526-3536; `Detailed_View_Ship_`,
+        # :3638-3643; cmbtdrw1.cpp:227-324, v2); HD has no view and no wire
         # block for it (parked, work order 200 P-B1), so the right click on
         # such a cell does nothing — no pan.
         log.info("Right click on a fleet box cell: no ship view in HD")

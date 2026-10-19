@@ -140,9 +140,6 @@ DEFAULTS = {
     "livery_core": "strong",
     "livery_second": None,
     "livery_strength": 1.0,
-    # How much of the battle shows through the scan's boxes, 0 .. 0.85
-    # (work order 292): 0 is every HD window's look.
-    "scan_transparency": 0.0,
 }
 
 #: Keys a build retired, by the work order that did: read and dropped, so
@@ -153,6 +150,9 @@ RETIRED = {
     # the scan's Normal / Detailed switch (work order 290), gone with
     # Normal in work order 298; its default was "detailed", the one view
     "scan_view": 298,
+    # the scan's transparency slider (work order 292), removed by Data in
+    # work order 315; its default 0 was the window opaque, as it is now
+    "scan_transparency": 315,
 }
 
 

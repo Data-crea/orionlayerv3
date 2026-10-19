@@ -19,7 +19,7 @@ the engine answers with `SYS::Potential_Colony_Info_Popup_`'s text box
 on the fleet box's status line and close button it is the help the original
 appends for the box (310, 304; `help_at`). OMISSION `box_cell_detail`: the
 right click on any cell of an own stack (the original's ship view,
-`Detailed_View_Ship_`, mainscr.cpp:3428-3434), offered or not, does nothing:
+`Detailed_View_Ship_`, mainscr.cpp:3638-3643), offered or not, does nothing:
 HD has no view for it (parked, work order 200 P-B1; `mapinput.right_button`,
 the cells `_box_own_cells`).
 
@@ -41,6 +41,12 @@ two arrows sending the bar's own "-" / "+" buttons (fleetpop.cpp:189-216,
 mainscr.cpp:3404-3408; work order 197 A2). Since work
 order 223 the planets stand where the engine puts them, on their orbits
 (`sysorbits`).
+
+DEVIATION `fleet_box_hud` (work order 315): the original's fleet box is
+pictures, BUFFER0.LBX 0x33-0x38 (its title, grid and bottom pieces,
+fleetpop.cpp:87-115, :880-944) and 0x39 (the bar, :33-38); HD draws the HUD
+popup block as its body (`syswindow.frame`, decision 71) with the title,
+cells and buttons inside it.
 
 HD EXTENSION `box_ship_picture` (work order 312, Data: the popup showed no
 picture of the new designs): the original draws in every cell that cell's

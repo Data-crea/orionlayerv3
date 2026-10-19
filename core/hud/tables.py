@@ -31,18 +31,28 @@ def table_header(surface, rect, scale):
     separator(surface, r.x, r.right, r.bottom - 1, scale)
 
 
-def table_row(surface, rect, scale, index, selected=False):
+def table_row(surface, rect, scale, index, selected=False, fill=None):
     """One table row: striped by LIST index, the selected row filled and
-    rimmed as the colony mockup draws it, a thin line under every row."""
+    rimmed as the colony mockup draws it, a thin line under every row.
+    `fill` (RGB): a selected row filled opaque with it instead of the
+    shared 'on' — only where `blocks.panel`'s `fill` is (the scan, work
+    order 315); the lit edge stays the shared one."""
     st = hudstyle.get()
     r = pygame.Rect(rect)
     if selected:
-        # THE SHARED 'ON' (work order 223, proposal C): a chosen row is
-        # 'on' like a chosen button, so it stays visible at every frame
-        # colour (the mockup's selected blue went to black under a dark one).
-        glass.draw(surface, r, dense=True,
-                   shade=st.colour("field.on_fill"),
-                   shade_alpha=float(st.get("glass.selected_shade")))
+        if fill is not None:
+            # Data's mockup for the scan (work order 315): its own fills,
+            # one of them this row's, where the shared 'on' would be
+            pygame.draw.rect(surface, tuple(fill[:3]), r,
+                             border_radius=max(2, int(4 * scale)))
+        else:
+            # THE SHARED 'ON' (work order 223, proposal C): a chosen row is
+            # 'on' like a chosen button, so it stays visible at every frame
+            # colour (the mockup's selected blue went to black under a dark
+            # one).
+            glass.draw(surface, r, dense=True,
+                       shade=st.colour("field.on_fill"),
+                       shade_alpha=float(st.get("glass.selected_shade")))
         # THE LIT EDGE, as a selected button wears it (work order 225,
         # decision 92: "selected" looks the same everywhere).
         edge = st.colour("field.on_edge")

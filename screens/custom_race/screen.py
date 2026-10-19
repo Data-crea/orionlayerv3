@@ -330,8 +330,7 @@ class CustomRaceScreen(ScreenBase):
         panel = self.box_rect("picks_popup") or FALLBACK_PANEL
         text_rect = (self.box_rect("picks_popup_text")
                      or fallback_text_rect(panel))
-        message = self._popup.message or self._message(
-            "picks_negative", MSG_PICKS_NEGATIVE)
+        message = self._popup.message or self._picks_negative()
         self._popup.render(surface, L, self.style, panel, text_rect,
                            self.box_font_scale_stored("picks_popup_text"),
                            message, self._bg_scaled)
@@ -339,6 +338,19 @@ class CustomRaceScreen(ScreenBase):
     def _message(self, key, fallback):
         """Screen text from traits.json (mod- and translation-ready)."""
         return self._traits_data.get("messages", {}).get(key, fallback)
+
+    def _picks_negative(self):
+        """TRANSCRIPTION `picks_negative_text` (work order 315): the
+        original's refusal is KENTEXT 0x4B in the game's language
+        (racesel.cpp:686-687, `core.kentext.PANEL_MESSAGES`); without the
+        extracted word (or from a file extracted before 315) traits.json's
+        message, else the English literal."""
+        ken = getattr(self, "_kentext", None)
+        if ken is None:
+            from core import kentext, lang
+            ken = self._kentext = kentext.ArcWords(lang.current())
+        return ken.panel_word("picks_negative") or self._message(
+            "picks_negative", MSG_PICKS_NEGATIVE)
 
     def _render_bar(self, surface, L, fs):
         """Combined Race Picks + Score bar.
@@ -448,8 +460,7 @@ class CustomRaceScreen(ScreenBase):
             # invalid Accept, so no framebuffer popup has to be
             # dismissed and the HD screen is never left behind.
             if self.picks_remaining < 0:
-                self._popup.open(self._message("picks_negative",
-                                               MSG_PICKS_NEGATIVE))
+                self._popup.open(self._picks_negative())
                 log.info("Accept blocked: %d picks remaining",
                          self.picks_remaining)
                 return None

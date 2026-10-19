@@ -295,8 +295,8 @@ def sys_planet_orbit(field):
     (colsysdi.cpp:178-224) centres orbit i's planet field on (x + 15,
     y + 14 + 24 i) and starts its summary field right of the picture;
     the colonists in hand land on the planet's field (colony.cpp:1794-1800),
-    the summary opens the planet's description (OMISSION
-    `planet_description`)."""
+    the summary opens the planet's description (TRANSCRIPTION
+    `planet_description`: the game's box, as HD's message box)."""
     cx = SYS_X + SYS_PLANET_DX
     if not field.x <= cx <= field.x_end:
         return None

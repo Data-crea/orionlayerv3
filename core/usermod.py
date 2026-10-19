@@ -92,6 +92,9 @@ FRAME_TREE = "screens/{screen}/assets/frame.png"
 #: the transport, colony and outpost ships have no picture of their own —
 #: by exact name, `all_<picture>.png` or `<colour 0-7>_<picture>.png` for
 #: picture_num 0-47 (`SHIP_PICTURE_NAMES`), so a misspelt one says so.
+#: And the Races screen's painted race leaders (work order 315 B,
+#: `screens/races/racesleaders.py`), found by the race's number like the
+#: leaders' portraits; the tree and the base pack hold none.
 #: Globs relative to the tree.
 SHIP_PICTURE_DIR = "screens/galaxy_map/assets/ship_pictures/"
 SHIP_PICTURE_NAMES = "all_<0-47>.png or <0-7>_<0-47>.png"
@@ -100,6 +103,7 @@ SLOTS = ("screens/*/assets/frame.png",
          "assets/shared/figures/*.png",
          "screens/colony/assets/surfaces/*.png",
          "screens/leaders/assets/portraits/*/*.png",
+         "screens/races/assets/leaders/*.png",
          "screens/leaders/assets/pictures/screen_background.png",
          "screens/leaders/assets/pictures/slot_[1234]_background.png",
          "screens/leaders/assets/pictures/slot_empty_background.png",

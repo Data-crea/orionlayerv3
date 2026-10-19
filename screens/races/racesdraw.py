@@ -23,6 +23,9 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
                   native line height, shrunk to the original's width
   HD EXTENSION    `sprite_scale` — portraits and spy icons at an integer
                   magnification, centred on their native cell
+  HD EXTENSION    `hd_leaders` — Data's painted race leaders in the
+                  portrait cell, the original's portrait only without one
+                  (`racesleaders`, work order 315 B)
 """
 import pygame
 
@@ -32,6 +35,7 @@ from core.hud import text as hudtext
 from screens.leaders import ldrdraw as nd
 
 from . import racesgeom as geom
+from . import racesleaders
 
 #: `_race_normal_color` / `_race_high_color` body indices (racescrn.cpp:
 #: 48-49) and what they are in RACES.LBX 0's palette when it is absent.
@@ -100,8 +104,15 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
     px, py = geom.PICTURE[i]
     cell = nd.rect(layout, (px, py, px + geom.PORTRAIT[0] - 1,
                             py + geom.PORTRAIT[1] - 1))
-    pic = art.portrait(slot.race) if art is not None else None
-    if pic is not None:
+    # HD EXTENSION `hd_leaders` (work order 315 B): Data's painting of the
+    # race's leader from the mod folder, one rule for every race
+    # (`racesleaders.cover`); without one, the original's portrait.
+    hd = racesleaders.picture(slot.race, cell.size)
+    pic = art.portrait(slot.race) if hd is None and art is not None \
+        else None
+    if hd is not None:
+        surface.blit(hd, cell.topleft)
+    elif pic is not None:
         big = nd.magnified(pic, layout)
         surface.blit(big, big.get_rect(center=cell.center))
     else:

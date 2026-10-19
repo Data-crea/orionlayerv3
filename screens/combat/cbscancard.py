@@ -26,9 +26,11 @@ rule 13 (297): beside its cell, inside the window, never over COMBAT
 VALUES, SPECIAL SYSTEMS or HULL AND SYSTEMS.
 
 The look (work order 298): lying on top — the frame colour's lit edge,
-stronger than a box's, with a soft glow round it; a ground darker than the
-boxes (the fill family's header, opaque: the transparency slider never
-reaches it). A combat value's card has no head (work order 308, Data on
+stronger than a box's, with a soft glow round it; since work order 315
+the light brown of Data's mockup's value card, opaque (DEVIATION
+`scan_fills`, `cbscanview`): a head (19, 17, 15) where the card has one,
+the body (29, 25, 21) — the median of the mockup's body, which runs
+from (33, 28, 24) under the head to (20, 18, 16) at its foot. A combat value's card has no head (work order 308, Data on
 ACGIFT's word: the value stood in its row, the head and the total line):
 it opens with its parts under the head-less card's top margin and ends
 with the total line, a size larger, a separator over it. A card with no
@@ -57,6 +59,11 @@ GAP_LINE = 6
 VALUE_W, GAP, NOTCH, NOTCH_H = 600, 16, 14, 14
 #: the head: the title's and the total's size, and its height
 TITLE, TOTAL, HEAD = 22, 34, 54
+#: DEVIATION `scan_fills` (Data, work order 315): the card's head and body
+#: off his mockup's BEAM ATTACK card (x 1112-1648, y 430-655 of 1672 x
+#: 941): the head's mode, the body's median of its text-free pixels — one
+#: flat colour for the body's gradient (33, 28, 24) .. (20, 18, 16)
+CARD_HEAD, CARD_BODY = (19, 17, 15), (29, 25, 21)
 #: the glow's reach round a card, reference px, and its strongest alpha
 GLOW, GLOW_ALPHA = 14, 90
 #: what another unit gives, in its own tint (Data: "a distinct tint")
@@ -284,12 +291,6 @@ def hull_rect(window, hull, height, k, row):
     return pygame.Rect(x, y, w, h)
 
 
-def ground():
-    """The card's ground: the fill family's darkest box member, opaque."""
-    from core.hud import fill
-    return fill.member("header")
-
-
 def glow(rect, edge, k, scale):
     """The soft glow round `rect`: one ring a device px, each on the
     panel's chamfered outline grown by its distance, its alpha falling off
@@ -322,15 +323,22 @@ def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
         surface.set_clip(pygame.Rect(bounds).clip(keep))
     surface.blit(halo, (rect.x - pad, rect.y - pad))
     surface.set_clip(keep)
-    # LOOK EXCEPTION marking: the card's own ground, opaque and darker than
-    # the boxes — the glass (work order 253) and the scan's transparency
-    # slider never reach it, so it reads over stars and nebula; filled to
-    # the panel's own chamfered outline, so no corner shows past the edge
+    # LOOK EXCEPTION marking: the card's own ground, opaque, the light
+    # brown of Data's mockup (work order 315, DEVIATION `scan_fills`) —
+    # filled to the panel's own chamfered outline, so no corner shows past
+    # the edge
     shape = [(rect.x + x, rect.y + y) for x, y in
              hud.panel_polygon(rect.w - 1, rect.h - 1, scale)]
-    pygame.draw.polygon(surface, ground(), shape)
+    pygame.draw.polygon(surface, CARD_BODY, shape)
     if tip is not None:
-        pygame.draw.polygon(surface, ground(), tip)
+        pygame.draw.polygon(surface, CARD_BODY, tip)
+    if rows.title:
+        surface.set_clip(pygame.Rect(rect.x, rect.y, rect.w,
+                                     px(HEAD)).clip(keep))
+        # LOOK EXCEPTION marking: the card's head, darker as the mockup's
+        # (work order 315), down to the separator under it
+        pygame.draw.polygon(surface, CARD_HEAD, shape)
+        surface.set_clip(keep)
     hud.panel(surface, rect, scale, lit=True, filled=False)
     # LOOK EXCEPTION marking: the card's edge, the frame colour lit and
     # stronger than a box's (Data, work order 298), on the panel's own

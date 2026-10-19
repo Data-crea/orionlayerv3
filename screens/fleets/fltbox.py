@@ -1,18 +1,13 @@
-"""Drawing the game's own message box into the HD screen.
+"""Where the game's own message box stands on an HD screen.
 
 `core.gamebox` says WHICH box is up, where its pixels are and which
-fields answer it. This puts them on the screen: an HD panel, the crop
-of the game's own 640x480 pixels inside it, and a hit rect per button
-taken from the box's own field rectangles mapped through the same
-scale the crop is drawn at.
-
-**THE CROP IS THE LIMITATION AND IT IS MEANT TO SHOW.** The box's text
-is `H_Message_(n)` formatted with values the engine computed and it
-reaches a client only as pixels, so HD cannot set it in its own font.
-The replacement is open fix 29; until then this is a transcription of
-the original's own rendering rather than an invention of ours, which is
-the better of the two trades. Marked in `dev:v3_projektstatus.md` and held
-by a smoke check.
+fields answer it. Since open fix 29 (MSGB) the box's text is on the wire
+and HD's message box draws it (`core/msgbox`, [core.message_box]). What
+is left here is the box HD cannot read: with `SHOW_CROP` False (work
+order 188, Stage 1) it draws the F12 notice in the box's place and
+answers nothing blind — the crop of the game's 640x480 pixels this
+module once drew is the original's picture, which the player sees only
+on F12 (decision 76). The crop code stays behind that switch.
 """
 import pygame
 

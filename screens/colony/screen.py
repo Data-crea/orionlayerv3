@@ -35,7 +35,10 @@ and the full-screen field [0] (work order 126's safety rule):
                       system display, a colony at the same star — DEVIATION
                       `settle_same_star` (other stars: the transport
                       button, OMISSION `transport_button`), and no notice
-                      box after it, DEVIATION `settle_notice`
+                      box after it, DEVIATION `settle_notice`; as many
+                      as `Send_Cluster_` moves without a question, the
+                      rest still in hand (TRANSCRIPTION `settle_count`,
+                      work order 315; DEVIATION `settle_past_limit`)
 
 THE COLONISTS IN HAND RIDE ON THE POINTER (work order 233, Data: "a figure
 that is clicked is bound to the mouse and travels with the cursor; a click
@@ -116,6 +119,20 @@ class Names:
         ships = prodname.ShipNames(state, getattr(state, "player_num", 0))
         return prodname.production_name(pid, self._buildings, self._strings,
                                         ships)
+
+
+def _rest_pick(pick, outcome):
+    """The colonists still in hand after a part settled
+    (TRANSCRIPTION `settle_count`): the same kind from the same row, at
+    the indices the settle leaves them, against the source's array as the
+    engine will hold it (each word assigned again: the engine never
+    unassigned them)."""
+    n, words = outcome.pops[pick.colony]
+    words = [w | colsettle.colony_struct.POP_MASK_ASSIGNED for w in words]
+    rest = tuple(outcome.rest)
+    return colonypick.Pick(pick.colony, pick.position, pick.job, pick.slot,
+                           rest[0], colonymove.Cluster(rest), words, n,
+                           pick.icon_count)
 
 
 class ColonyScreen(ScreenBase):
@@ -236,8 +253,13 @@ class ColonyScreen(ScreenBase):
                 self.send_ = None
         outcome = self.carry.settle(
             lambda expected: expected.on_wire(game_state), fresh)
-        if outcome == carry.REFUSED and not self.message:
-            self.message = self._e(colsettle.E_FAILED)
+        if outcome == carry.CONFIRMED:
+            self._retake_rest(game_state)
+        elif outcome == carry.REFUSED:
+            if self.carry.put_back():  # nothing went: the rest goes home
+                self.message = ""
+            if not self.message:
+                self.message = self._e(colsettle.E_FAILED)
 
     @property
     def _view(self):
@@ -558,10 +580,50 @@ class ColonyScreen(ScreenBase):
                 return True
             if not self.app.connected:
                 return True
-            pops = sorted(pick.cluster.indices)
-            log.info("colony: %d colonists %s of colony %d -> colony %d",
-                     len(pops), pops, pick.colony, dest)
+            pops = sorted(outcome.sent)
+            log.info("colony: %d of %d colonists %s of colony %d -> colony "
+                     "%d", len(pops), pick.size, pops, pick.colony, dest)
             self.app.client.settle_pops(pick.colony, dest, pops)
             self.carry.set_down(outcome)
+            if outcome.rest:
+                # TRANSCRIPTION `settle_count`: the rest stay in hand, and
+                # the original's box names why and how many went
+                # (colmove.cpp:366-372, :454-460) — HD's sentence line
+                self.carry.take(_rest_pick(pick, outcome))
+                self.message = self._settle_stopped(outcome)
             return True
         return False
+
+    def _settle_stopped(self, outcome):
+        """The original's "Settlers Failed." lines for a hand that went in
+        part: the reason, then E 0x80 with the number sent (colmove.cpp:
+        404, :454), on one line; `replace`, never `format`
+        (decision 37). DEVIATION `settle_refusal_line`: the original
+        shows them in a text box (E 0x1D6, colmove.cpp:366-372,
+        :454-460); HD on the screen's message line."""
+        sent = self._e(0x80).replace("%d", str(len(outcome.sent)))
+        return " ".join(f"{self._e(outcome.stopped)} {sent}".split())
+
+    def _retake_rest(self, state):
+        """After the wire confirmed a part settled: the colonists still in
+        hand are taken again from the wire's own array, so a later drop
+        compares against what the engine holds (`Pick.stale`); if the wire
+        does not hold them where the settle left them, they go back."""
+        hand = self.pick
+        if hand is None:
+            return
+        raws = getattr(state, "colonies_raw", None) or []
+        if not 0 <= hand.colony < len(raws):
+            self.carry.put_back()
+            return
+        from core.structs import colony as colony_struct
+        rec = colony_struct.parse(raws[hand.colony])
+        words = list(rec.pop)[:rec.n_pops]
+        mask = ~colony_struct.POP_MASK_ASSIGNED
+        if any(i >= len(words) or (words[i] & mask) != (hand.pops[i] & mask)
+               for i in hand.cluster.indices):
+            self.carry.put_back()
+            return
+        self.carry.take(colonypick.Pick(
+            hand.colony, hand.position, hand.job, hand.slot, hand.pop,
+            hand.cluster, words, rec.n_pops, hand.icon_count))

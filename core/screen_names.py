@@ -50,7 +50,13 @@ SCREENS = {
     15: ("MULTI_PLAYER",    "multiplayer"),
     16: ("HOTSEAT",         "multiplayer"),
     17: ("HOTSEAT_SELECT_PLAYER", "multiplayer"),
-    18: ("PLANET_DATA",     "planet_data"),
+    #: 18, 39, 40: no HD screen folder (work order 315 C2, audit S4).
+    #: The status bar still reads "planet_data" / "reports" /
+    #: "turn_summary", from the engine name. 39 is the report phase's id
+    #: for one tick (`Reports_Screen_`, mainscr2.cpp:104); 40's Turn Summary is
+    #: drawn by the App over the held frame (`core/turnpopup.py`), not by
+    #: a screen.
+    18: ("PLANET_DATA",     None),
     21: ("START_NET",       "multiplayer"),
     22: ("JOIN_NET",        "multiplayer"),
     37: ("NET_NEXT_TURN",   "multiplayer"),
@@ -75,8 +81,8 @@ SCREENS = {
     #: framebuffer. `screens/research_change/` is it, built by work
     #: order 165 part B.
     36: ("TECH_CHANGE",     "research_change"),
-    39: ("REPORTS",         "reports"),
-    40: ("TURN_SUMMARY",    "turn_summary"),
+    39: ("REPORTS",         None),
+    40: ("TURN_SUMMARY",    None),
     43: ("SHOW_COMMAND_POINTS", None),
     #: orion2re v2 added the credits (orion2_consts.h SCREEN_CREDITS);
     #: HD has no screen for it (work order 243).

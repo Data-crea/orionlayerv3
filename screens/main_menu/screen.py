@@ -141,8 +141,9 @@ class MainMenuScreen(ScreenBase):
         """The main menu's LOAD GAME (mainmenu.cpp:132, :187-189) is the
         GAME popup's Load dialog, centred. With its save slots on the wire
         (open fix 34) the GAME menu overlay draws it, as in the GAME menu;
-        without them the net shows the game's own picture of it — the
-        rows' names are only there (DEVIATION `modal_fallback`)."""
+        without them the net hands over, and the player gets the F12
+        notice; the game's picture of it, where the rows' names are, only
+        on F12 (DEVIATION `modal_fallback`)."""
         from screens.game_menu import nodes
         d = self.app.dispatcher
         is_load = nodes.classify(getattr(game_state, "fields", None)) in (

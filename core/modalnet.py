@@ -12,8 +12,9 @@ Anything else the engine shows under that id — a field list that is
 neither — is a modal HD does not know, and once it has stood for
 `SETTLE` snapshots (a transition's first ticks still carry the old or a
 half-built list; the no-glimpse rule of work order 166 A) the screen hands
-over: `wants_original()` is true, the window shows the game's own picture
-of that moment, clicks go through the existing fallback and keys through
+over: `wants_original()` is true and the hand-over gate shows the F12
+notice (decision 76, [core.f12]); on F12 the game's own picture of that
+moment, clicks through the existing fallback and keys through
 `OriginalView.forward_key` (main.py). DEVIATION `modal_fallback`: the
 original has no second picture; the net is how an HD client that does not
 know a dialog still lets the player answer it.

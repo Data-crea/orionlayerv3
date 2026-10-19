@@ -36,11 +36,13 @@ and each in `layout.json` `marks`, the status document and check 090p:
   DEVIATION      `one_top` (226 G): the four boxes of the band share one
                  top and one height, the band's (17..158), where the
                  original's art boxes start at 17, 24 and 29
-  OMISSION       `officer_portrait`, `hover_strip`, `roads`,
-                 `planet_description` (the box `_drawing_display` 2 shows,
-                 colony.cpp:1861-1866) — original art this project does
-                 not extract, and the hover strip of the original's own
-                 pointer; each named where it would be drawn
+  OMISSION       `officer_portrait`, `hover_strip`, `roads` — original
+                 art this project does not extract, and the hover strip
+                 of the original's own pointer; each named where it would
+                 be drawn
+  TRANSCRIPTION  `planet_description` (work order 315, seen live): the box
+                 `_drawing_display` 2 shows (colony.cpp:1861-1866) is the
+                 game's own and comes back as HD's message box
 """
 import pygame
 

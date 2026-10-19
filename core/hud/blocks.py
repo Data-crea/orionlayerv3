@@ -86,7 +86,8 @@ def _dim(surf):
 
 # ── panel, popup, separator ──────────────────────────────────────────
 
-def panel(surface, rect, scale, lit=False, filled=True, dense=False):
+def panel(surface, rect, scale, lit=False, filled=True, dense=False,
+          fill=None):
     """A HUD panel. `lit` gives it the action button's edge: a popup.
 
     `filled=False` draws the edge, its glow and the soft inner band but
@@ -97,7 +98,14 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False):
     background under it, dimmed, under the tinted gradient — `dense` the
     variant for content that must dominate (tables, portrait grids). It
     depends on where the panel is and what is behind it, so the cache key
-    carries the position, the background and the slider."""
+    carries the position, the background and the slider.
+
+    `fill` (RGB): the box filled opaque and flat with it instead of the
+    player's fill family and the glass — only for a window whose fills
+    are Data's own exception to decision 94 (the battle's ship scan, work
+    order 315; its marking stands in `cbscanview`), so such a window
+    gets its edge, inner band and glow from here and never draws a panel
+    of its own."""
     rect = pygame.Rect(rect)
     if rect.w < 4 or rect.h < 4:
         return
@@ -107,11 +115,13 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False):
     # depend on where it stands or what is behind it. Glass on (work order
     # 253): a translucent layer over what is drawn under the panel, which
     # depends on that only through the transparency the floor allows.
-    see = filled and boxfill.glass_on()
+    own = None if fill is None or not filled else tuple(fill[:3])
+    see = filled and own is None and boxfill.glass_on()
     t = glass.t_for(surface, rect, dense) if see else None
     if see:
         glass.keep_ground(surface, rect)
-    key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense, t)
+    key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense, t,
+           own)
 
     def build():
         edge = st.colour("popup.edge") if lit else st.colour("panel.edge")
@@ -120,11 +130,11 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False):
             fill_a, col = glass.profile(rect.h, t)
             fill_px = np.broadcast_to(col[:, None, :],
                                       (rect.h, rect.w, 3))
-        elif filled:
+        elif filled and own is None:
             fill_px = glass.fill(None, rect.w, rect.h, dense, rect=rect)
         return raster.shape(
             lambda w, h: panel_polygon(w, h, scale), rect.w, rect.h,
-            fill=st.colour("panel.fill"), edge=edge,
+            fill=own or st.colour("panel.fill"), edge=edge,
             edge_w=_px(st.get("panel.edge_width"), scale),
             glow=st.colour("panel.glow"),
             glow_w=_px(st.get("panel.glow_width"), scale),
@@ -239,9 +249,14 @@ def glow_pad(scale):
     return int(-(-g * 2.2 // 1)) + 2
 
 
-def popup(surface, rect, scale):
-    """A dialog body: opaque, lit (`chosen.popup`)."""
-    panel(surface, rect, scale, lit=True)
+def popup(surface, rect, scale, fill=None):
+    """A dialog body: opaque, lit (`chosen.popup`); `fill` as `panel`'s."""
+    if fill is None:
+        # the one call every popup made before work order 315, so a
+        # wrapper round `panel` (a check's spy) sees what it always saw
+        panel(surface, rect, scale, lit=True)
+    else:
+        panel(surface, rect, scale, lit=True, fill=fill)
 
 
 def separator(surface, x0, x1, y, scale, vertical=False):

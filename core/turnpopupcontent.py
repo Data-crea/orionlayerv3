@@ -60,6 +60,18 @@ def _leader_words(app):
     return words
 
 
+def _warlord_of(state, player):
+    """`_player[player].traits[TRAIT_WARLORD]` (officer.cpp:93) — the hire
+    popup's leaders are nobody's, but the level popup's is the player's own
+    and `Owned_Officer_Level` (officer.cpp:152-172) counts the trait."""
+    from core.structs import player as player_struct
+    raws = getattr(state, "player_raw", None) or []
+    if not 0 <= int(player) < len(raws):
+        return False
+    traits = player_struct.traits(player_struct.parse(raws[player]))
+    return bool(traits[30]) if len(traits) > 30 else False
+
+
 def leader_card(state, index, app=None):
     """The hire popup's card (officer.cpp:449-461, :3747-3837): the title
     `Leader_Name_` prints, the skill rows as `Print_Officer_Data_` does,
@@ -74,7 +86,7 @@ def leader_card(state, index, app=None):
                 "question": lambda c, u: None}
     rec = leader_struct.parse(raw[index])
     words = _leader_words(app)
-    level = ls.shown_level(rec, index, lambda _p: False)
+    level = ls.shown_level(rec, index, lambda p: _warlord_of(state, p))
     title_word = words.estring(ls.level_name_estring(rec, level)) or ""
     the_word = ldrrows.the_word(words, index)
     name = ls.leader_name(rec, title_word, the_word)
@@ -99,7 +111,31 @@ def leader_card(state, index, app=None):
     except Exception:       # absent extraction: no picture, stated
         portrait = None
     return {"title": name, "skills": skills, "portrait": portrait,
-            "leader": rec, "question": question}
+            "leader": rec, "question": question,
+            # `Leader_Name_(idx, 0)`: the level title and name, no title
+            "short_name": ls.leader_name(rec, title_word)}
+
+
+#: TRANSCRIPTION `leader_level_line` (work order 315 C2) — the sentence
+#: `Draw_Officer_Gains_Level_Popup_` prints under the card by its state
+#: (TPOP arg 1, mainpups.cpp:1191): 0 gains a level, ESTRINGS 1 (:2229);
+#: 1 a marooned hero joins, 0x248 (:2233, `Marooned_Officer_Joins_Popup_`
+#: :2098-2102); 2 a hero with no room, 0x249 (:2237, :2092-2096).
+LEVEL_LINE_ESTRINGS = {0: 0x1, 1: 0x248, 2: 0x249}
+
+
+def leader_level_line(card, how, app=None):
+    """The level popup's sentence, `printf`ed with the name as
+    `Leader_Name_(idx, 0)` gives it; without the string (no extraction,
+    an unknown state, where the original leaves its buffer as it was)
+    the name alone, as before work order 315."""
+    name = card.get("short_name") or card["title"]
+    sid = LEVEL_LINE_ESTRINGS.get(how)
+    template = _leader_words(app).estring(sid) if sid is not None else None
+    if not template:
+        return name
+    from core.hestrings import printf
+    return printf(template, name)
 
 
 def _tech_name(tech):
@@ -166,10 +202,15 @@ def content(popup, state, words, app=None):
             i += 1
             if tech < 0:
                 continue
-            if tech & 0x4000:            # a weapon-mod entry and its mask
-                i += 1
-                continue
             names.append(_tech_name(tech) or f"#{tech & 0x1FF}")
+            # TRANSCRIPTION `science_weapon_mod` (work order 315 C2): a
+            # weapon-modification entry is listed by its weapon's name, as
+            # the room shows its help entry `& 0x1FF` (science.cpp:301-307,
+            # :320); its next slot is the mask, not an entry (:323-325).
+            # OMISSION `science_mod_names`: the mask's modification names
+            # (`weapon_modifications[].name`, :327-336) are not listed
+            if tech & 0x4000:
+                i += 1
         lines = [f"• {nm}" for nm in names]
         if popup.get("text"):
             lines = [""] + lines
@@ -240,7 +281,19 @@ def content(popup, state, words, app=None):
         else:
             buttons.append((words["close"], act(a[2])))
     elif kind == "leader_level":
-        lines = [_leader_name(state, a[0])]
+        # the hire popup's card, as the original draws it here too: the
+        # full name as title (mainpups.cpp:2245), the portrait and the
+        # skills (`Wrapper_For_Colony_Officer_Popup_Data_`, :2224), then
+        # the sentence of the state (`leader_level_line`)
+        card = leader_card(state, a[0], app)
+        if card.get("leader") is None:      # no such leader on the wire
+            lines = [_leader_name(state, a[0])]
+        else:
+            title = card["title"]
+            lines = list(card["skills"]) + [
+                "", leader_level_line(card, a[1], app)]
+            picture = card["portrait"]
+            leader_rec = card["leader"]
         buttons = [(words["close"], act(a[3]) or (
             ("activate", anywhere) if anywhere else None))]
     elif kind == "gnn":
@@ -273,7 +326,11 @@ def content(popup, state, words, app=None):
     return {"title": title, "lines": lines, "options": options,
             "buttons": buttons, "right": right, "line_right": line_right,
             "right_help": RIGHT_HELP.get(kind),
-            "picture": picture if kind == "leader_hire" else None,
-            "leader": leader_rec if kind == "leader_hire" else None}
+            "picture": picture if kind in LEADER_CARDS else None,
+            "leader": leader_rec if kind in LEADER_CARDS else None}
+
+
+#: The kinds that draw a leader's card with its portrait.
+LEADER_CARDS = ("leader_hire", "leader_level")
 
 

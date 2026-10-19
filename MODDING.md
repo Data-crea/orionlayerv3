@@ -98,6 +98,13 @@ skill and its starred variant); it is drawn as painted, fitted into the
 icon's square — at 3840 x 2160 64 x 64 in the hire offer, 61 x 61 on a
 slot (49 x 49 with five skills); a square picture of 64 x 64 serves all.
 
+### Race leaders in HD
+
+Painted race leaders: an optional download like the leader portraits, unpacked into
+`files/screens/races/assets/leaders/<nn>_<name>.png` (`<nn>` = the race, 00-12).
+Each fills the Races screen's portrait cell (476 x 409 at 3840 x 2160), cut
+centred, from the top.
+
 ### The Leaders screen's pictures
 
 The Leaders screen has eight picture places, filled only from your mod

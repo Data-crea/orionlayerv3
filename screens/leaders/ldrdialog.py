@@ -1,24 +1,26 @@
 """The Leaders screen's dialogs: the hire popup and the skill help box.
 
 The game's own message boxes — the confirmation, the message and the
-warning (`Officer_Screen_User_Box_`, officer.cpp:1696-1722) — are drawn
-by `screens/fleets/fltbox`, reused as it is: `core/gamebox` recognises
-them by their whole field list and the crop is the game's own pixels
-(the marked limitation open fix 29 would lift).
+warning (`Officer_Screen_User_Box_`, officer.cpp:1696-1722) — come as open
+fix 29's MSGB and are HD's message box (`core/msgbox`, [core.message_box]);
+`screens/fleets/fltbox` still recognises one by its field list
+(`core/gamebox`) and, with `SHOW_CROP` False, draws the F12 notice in its
+place — never the game's pixels.
 
 THE HIRE POPUP (`ldrpopup` says which leader and why it is known).
 
-  identified    HD draws it: the popup art MAINPUPS.LBX 0x39 at its
-                native rectangle, the portrait, the title
+  identified    HD draws it: the HUD popup at the popup's native
+                rectangle (DEVIATION `hire_popup_hud`: the original's
+                MAINPUPS.LBX 0x39-0x3B, `Load_New_Officer_Popup_For_
+                Officer_Screen_`, mainpups.cpp:1805-1809, are not drawn;
+                decision 71), the portrait, the title
                 `Leader_Name_(id, 1)`, the skill lines exactly as the
                 row prints them, the question `Ask_For_Hire_` puts, and
                 REJECT / HIRE — every piece at the source's own offsets
                 (ldrpopup). DEVIATION `hd_font`, as everywhere.
-  not identified   the game's own pixels of the popup's rectangle,
-                scaled nearest-neighbour onto that same rectangle — the
-                `core/gamebox` limitation, for a popup whose leader the
-                wire does not name. The buttons answer either way,
-                through the popup's own fields.
+  not identified   the F12 notice in the popup's rectangle (`fltbox.
+                draw_notice`, `SHOW_CROP` False) and no blind answer
+                (`ldrinput`): the wire does not name the leader.
 
 THE SKILL HELP BOX. `Print_Officer_Skill_Help_` (officer.cpp:1761-1792)
 opens `TEXTBOX::Text_Box_` with a title and a paragraph and changes
@@ -90,8 +92,9 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
             draw.draw_box(surface, screen, ldrpopup.popup_rect())
         return
     # The HUD popup block (decision 71, work order 169): every dialog
-    # wears it; the OFFICER.LBX popup picture is not drawn — DEVIATION,
-    # the same as the buttons' (`ldrdraw.draw_button`).
+    # wears it; the MAINPUPS.LBX 0x39-0x3B popup pictures are not drawn —
+    # DEVIATION `hire_popup_hud`, the same as the buttons'
+    # (`ldrdraw.draw_button`).
     hud.popup(surface, box, layout.scale)
     idx = popup.leader
     rec = view.leaders[idx]

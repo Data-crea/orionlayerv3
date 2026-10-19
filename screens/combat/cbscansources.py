@@ -1,15 +1,11 @@
 """What the ship scan reads besides the battle, and its pictures — split
 off `cbscanview` (work order 303, at the 40 KB limit): the screen's
-tables, art and colours, the player's transparency setting, the round's
-first frame (`Sources`), the unit's and the officer's pictures
-(`Pictures`). The window itself is `cbscanview`; what it says, `cbscan`.
+tables, art and colours, the round's first frame (`Sources`), the unit's
+and the officer's pictures (`Pictures`). The window itself is
+`cbscanview`; what it says, `cbscan`.
 """
-import pygame
-
 from . import cbscan
-from .cbscanview import MAX_TRANSPARENCY, NOSE_UP
-
-TRANSPARENCY = "scan_transparency"
+from .cbscanview import NOSE_UP
 
 
 class Pictures:
@@ -49,7 +45,7 @@ class Pictures:
 
 class Sources:
     """What the scan reads besides the battle: the screen's tables, its
-    art and colours, the player's setting. Built by the combat screen."""
+    art and colours. Built by the combat screen."""
 
     def __init__(self, screen):
         self._screen = screen
@@ -57,7 +53,6 @@ class Sources:
         self._round = None
         self._leader_art = None
         self._pictures = {}
-        self._backdrop = None
 
     def words(self):
         s = self._screen
@@ -87,50 +82,6 @@ class Sources:
         if r is None or r[0] != int(shown.get("turn", 0)):
             return None
         return r[1]
-
-    def _settings(self):
-        return getattr(self._screen.app, "user_settings", None)
-
-    def transparency(self):
-        us = self._settings()
-        v = us.get(TRANSPARENCY) if us is not None else None
-        try:
-            return max(0.0, min(MAX_TRANSPARENCY, float(v or 0.0)))
-        except (TypeError, ValueError):
-            return 0.0          # a hand-edited file: no glass, not a crash
-
-    def set_transparency(self, value, save=False):
-        us = self._settings()
-        if us is None:
-            return
-        us.set(TRANSPARENCY, round(max(0.0, min(MAX_TRANSPARENCY, value)), 3))
-        import os
-        from core import usersettings
-        if save and us.path != os.devnull:
-            usersettings.save(us)
-
-    def backdrop(self, size):
-        """What the transparency lets through: the battle's space only —
-        the field's star layers over the whole window, the panel band's
-        part included; no unit, no legal box, no panel and not the shell's
-        background picture (Data, 17 Oct 2026). Kept while the camera, the
-        art and the nebula stay."""
-        s = self._screen
-        cam, c = s._cam, s._shown()
-        if cam is None:
-            return None
-        nebula = bool(c and c.get("in_nebula"))
-        key = (tuple(size), cam.scale, cam.ox, cam.oy, tuple(cam.area),
-               nebula, id(s._art))
-        if self._backdrop is None or self._backdrop[0] != key:
-            import types
-            from . import cbdraw
-            surf = pygame.Surface(size)
-            whole = types.SimpleNamespace(area=(0, 0, *size), scale=cam.scale,
-                                          ox=cam.ox, oy=cam.oy)
-            cbdraw.draw_background(surf, whole, s._art, nebula, s._cache)
-            self._backdrop = (key, surf)
-        return self._backdrop[1]
 
     def pictures(self, unit):
         """Made once per unit, picture and colours (P828: kept with what

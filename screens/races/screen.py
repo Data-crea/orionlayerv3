@@ -18,6 +18,7 @@ THE MODULES, one topic each:
   racesrows   what a slot says: treaties, relation, spies, the bonuses
   racesdraw   the drawing, in the HUD style
   racesart    the original's portraits and spy icons, extracted
+  racesleaders Data's painted race leaders from the mod folder (WO 315)
 
 **WHAT HD MAY SEND** is `raceswire.View.sendable`'s answer: RETURN (and
 ESC), the four actions, and in WHO mode a race or the catcher — each

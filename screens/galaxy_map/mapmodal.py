@@ -14,9 +14,9 @@ screen 0 through all of them; what tells them apart is the FIELD LIST
                     picture, clicks and keys passed through, one log line
 
 THE HOME STAR NAME — TRANSCRIPTION of `Input_Box_Popup_` (namestar.cpp:
-236-395) and the continuous input field (fields.cpp:1171-1227):
+296-401, v2) and the continuous input field (fields.cpp:1171-1227, 1.60):
 
-  prompt      HESTR 0x101 "Enter Home Star Name" (namestar.cpp:157-160)
+  prompt      HESTR 0x101 "Enter Home Star Name" (namestar.cpp:153-156)
   the name    prefilled with the home star's (`home_planet_id` → planet →
               star, the map's own `home_star()`); at most 14 characters
   typing      a printable key but '_' APPENDS; the FIRST Backspace clears
@@ -27,7 +27,12 @@ THE HOME STAR NAME — TRANSCRIPTION of `Input_Box_Popup_` (namestar.cpp:
               ACTIVATE_FIELD: an activation returns before
               `Copy_Continuous_String_` and the typed name would be lost
               (fields.cpp:172-183)
-  ESC         the game restores the old name (namestar.cpp:369-373)
+  ESC         the game restores the old name (namestar.cpp:365-368)
+
+**DEVIATION `name_box_hud`** (work order 315; the same deviation as the
+other name boxes', `core/namebox.py`): the original draws INBOX.LBX 0 and 1
+(`Setup_Input_Box_Popup_`, namestar.cpp:28-29); HD draws the HUD popup with
+the prompt, the field and ACCEPT (decision 71).
 
 **HD STATE `typed_name_mirror`.** The text being typed is not on the wire
 (`_continuous_string`): HD keeps its own copy by the field's own rules and

@@ -270,9 +270,9 @@ class SelectRaceScreen(ScreenBase):
     def _modal_net(self):
         """The safety net (work order 177 C, DEVIATION `modal_fallback`,
         `core/modalnet`). The race list and the picture list are radio
-        buttons (`Add_Radio_Button_Field_`, racesel.cpp:203, :312, :343);
-        the ruler's name (`Naming_Popup_`, :787) and the banners
-        (`Flag_Screen_`, :899 — hidden fields and an ESC) have none, and
+        buttons (`Add_Radio_Button_Field_`, racesel.cpp:223, :331, :362;
+        v2); the ruler's name (`Naming_Popup_`, :811) and the banners
+        (`Flag_Screen_`, :886 — hidden fields and an ESC) have none, and
         both are dialogs under screen 51 — found live: a client that
         connects during them drew the race grid over them. In the normal flow the race click hands to
         `empire_identity` first, so the net only catches what no HD screen

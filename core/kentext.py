@@ -53,7 +53,12 @@ PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
                   "ammo": 26, "mods": 27, "ready": 28, "none": 29,
                   "specials": 30, "crew_green": 31, "crew_regular": 32,
                   "crew_veteran": 33, "crew_elite": 34, "crew_ultra": 35,
-                  "structure_of": 0x59, "armor_of": 0x5B}
+                  "structure_of": 0x59, "armor_of": 0x5B,
+                  # not the battle's: Custom Race's refusal of an
+                  # overspent race (`Warning_Box_` of message 0x4B,
+                  # racesel.cpp:686-687), work order 315 — the extractor
+                  # writes every id in this table
+                  "picks_negative": 0x4B}
 
 #: The bits in the order the original tests them, 0x10 last.
 ARC_ORDER = (0x01, 0x02, 0x04, 0x08, 0x10)

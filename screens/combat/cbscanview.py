@@ -8,11 +8,14 @@ systems on the right; the weapons across the foot — not COMBAT.LBX 5 with
 the game's own lines (cmbtdrw1.cpp:3223-4007). No weapon or special icons
 (Data: the game has none).
 
-HD EXTENSION `scan_transparency`: a slider in the foot lets the battle's
-space — stars and nebula, no unit, no panel — through the window's and
-the boxes' fills, 0 to 85 %, the edges and the
-words stay whole; the player's setting `scan_transparency` (Data, work
-order 292).
+DEVIATION `scan_fills` (Data, work order 315): the window's own fills
+from Data's mockup (`ship_scan_mockup_315.png`, 1672 x 941, kept in
+`~/claude/references/`): the ground between the boxes, each box's body,
+its title strip, the row under the pointer — opaque, not the player's
+box fill (decision 94) and no glass; the edges stay the HUD's. The
+transparency slider of work order 292 and the state legend in the foot
+are gone (Data, 315: "not needed any more"; "everyone who plays can
+read" the state words).
 DEVIATION `scan_one_view` (Data, work order 298): one view that shows more
 than the original's — what its scan prints and HD's additions (`cbscan`)
 in one window, with the click rule of `scan_card_click`; the Normal /
@@ -58,11 +61,19 @@ TITLES = {"ship": "SHIP", "officer": "OFFICER", "crew": "CREW",
 #: damaged, destroyed (the original colours only a destroyed special).
 STATE_RGB = {cbscan.OK: (80, 210, 110), cbscan.DAMAGED: (240, 170, 60),
              cbscan.DESTROYED: (230, 70, 60)}
-#: The foot's transparency slider, reference px, and its range: 0 is the
-#: boxes as every HD window has them, at most 85 % of the battle through.
-SLIDER = (1260, 1010, 420, 16)
-MAX_TRANSPARENCY = 0.85
 BAR_BACK = (40, 46, 60)
+#: DEVIATION `scan_fills` (Data, work order 315): the fills measured off
+#: his mockup, medians of text-free areas — the ground between the boxes
+#: (13, 19, 23; the window's margins 12-14, 18-19, 22-24), a box's body
+#: (the seven boxes 11-15, 18-22, 22-26; OFFICER's own median), the title
+#: strip (31, 37, 41; SHIP, SHIELDS, COMBAT VALUES, HULL alike within 1),
+#: the row under the pointer (47, 48, 38, its text-free parts).
+GROUND, BODY = (13, 19, 23), (14, 21, 25)
+STRIP, SELECTED = (31, 37, 41), (47, 48, 38)
+#: the title strip's height from a box's top, and WEAPONS' strip a tab
+#: round its title only: its column heads share the title's line (the
+#: mockup's tab; "#" stands at 176), reference px
+STRIP_H, WEAPONS_TAB = 38, 160
 #: The facing at which a unit's nose points up the screen, so the shield
 #: ring's Front stands at its nose: 0 is nose right, 4 nose up, 12 nose
 #: down (`cbart.stored_facing`; rendered, work order 296 — 12 had stood
@@ -172,6 +183,31 @@ def marker_shapes(box, state, k):
     return one, [(l + r - x, y) for x, y in one]
 
 
+def title_strip(surface, box, scale, k, tab=False):
+    """A box's title strip in the mockup's fill (DEVIATION `scan_fills`,
+    work order 315): inside the box's edge, its chamfered top corners
+    kept, a separator under it; WEAPONS' a tab round its title."""
+    from core.hud import raster
+    from core.hud import style as hudstyle
+    e = max(1, round(float(hudstyle.get().get("panel.edge_width")) * scale))
+    h = max(9, int(STRIP_H * k))
+    shape = [(box.x + x, box.y + y) for x, y in raster.inset(
+        hud.panel_polygon(box.w - 1, box.h - 1, scale), e)]
+    band = pygame.Rect(box.x, box.y, round(WEAPONS_TAB * k) if tab
+                       else box.w, h)
+    keep = surface.get_clip()
+    surface.set_clip(band.clip(keep))
+    # LOOK EXCEPTION marking: the title strip's fill, Data's mockup for the
+    # scan (work order 315), where the HUD's boxes have none
+    pygame.draw.polygon(surface, STRIP, shape)
+    surface.set_clip(keep)
+    x0, x1 = box.x + e, band.right - (e if not tab else 0)
+    hud.separator(surface, x0, x1, box.y + h, scale)
+    if tab:
+        hud.separator(surface, box.y + e, box.y + h, band.right, scale,
+                      vertical=True)
+
+
 class View:
     def __init__(self):
         self.rects = {}
@@ -181,16 +217,12 @@ class View:
         #: the card shows under the pointer (work order 297 part B)
         self.cut = []
 
-    def draw(self, surface, style, scale, model, turn, pics,
-             transparency=0.0, under=None, pointer=None):
+    def draw(self, surface, style, scale, model, turn, pics, pointer=None):
         """One frame of the scan of `model` (`cbscan.Model`); `pics` hands
         in the pictures (`ship`, `upright`, `portrait`, `skill_icon`).
-        `transparency` 0..`MAX_TRANSPARENCY` lets `under` — the battle's
-        space, `Sources.backdrop` — through the window's and the boxes'
-        fills, never through their edges or words (HD EXTENSION
-        `scan_transparency`). `pointer`: where the pointer is — the card of
-        what is under it (HD EXTENSION `scan_breakdown`) and the value row
-        under it in the selected look."""
+        `pointer`: where the pointer is — the card of what is under it (HD
+        EXTENSION `scan_breakdown`) and the value row under it in the
+        selected look."""
         self.rects, self.cut = {}, []
         self.card = None
         k = k_of(surface)
@@ -238,18 +270,12 @@ class View:
 
         label, value = hudtext.colour("label"), hudtext.colour("value")
         head = hudtext.colour("sub")
-        hud.popup(surface, R(*WINDOW), scale)
+        # DEVIATION `scan_fills`: Data's fills, the HUD's edges
+        hud.popup(surface, R(*WINDOW), scale, fill=GROUND)
         for key, box in BOXES.items():
-            hud.panel(surface, R(*box), scale, dense=True)
-        if transparency > 0 and under is not None:
-            win = R(*WINDOW).clip(surface.get_rect())
-            see = under.subsurface(win).copy()
-            see.set_alpha(int(255 * min(MAX_TRANSPARENCY, transparency)))
-            surface.blit(see, win)
-            # only the fills let the battle through: the edges again
-            hud.panel(surface, R(*WINDOW), scale, lit=True, filled=False)
-            for box in BOXES.values():
-                hud.panel(surface, R(*box), scale, dense=True, filled=False)
+            r = R(*box)
+            hud.panel(surface, r, scale, dense=True, fill=BODY)
+            title_strip(surface, r, scale, k, key == "weapons")
         text("SHIP SCAN", R(960, 40, 0, 0).topleft, 40, value, "midtop")
         if turn is not None:
             text(f"Combat turn  {turn}", R(1790, 52, 0, 0).topleft, 28,
@@ -487,9 +513,11 @@ class View:
             lit = bool(m.cards) and pointer is not None and \
                 band.collidepoint(pointer)
             if lit:
-                # the row under the pointer: the one "selected" look of
-                # decision 92 (Data, work order 298), no colour of its own
-                hud.table_row(surface, band, scale, 0, selected=True)
+                # the row under the pointer: the selected look's lit edge
+                # (decision 92, Data, work order 298) on the mockup's fill
+                # (DEVIATION `scan_fills`, work order 315)
+                hud.table_row(surface, band, scale, 0, selected=True,
+                              fill=SELECTED)
             if key == "speed":
                 # the current speed follows the drive, the maximum not
                 mr = text(f" / {m.speed_max}", (vx, cy), 24, value,
@@ -542,7 +570,8 @@ class View:
             lit = key in cards and pointer is not None and \
                 band.collidepoint(pointer)
             if lit:
-                hud.table_row(surface, band, scale, 0, selected=True)
+                hud.table_row(surface, band, scale, 0, selected=True,
+                              fill=SELECTED)
             frac = cur / most if most else 0
             rgb = STATE_RGB[cbscan.OK] if most and cur >= most else \
                 STATE_RGB[cbscan.DAMAGED] if cur > 0 else \
@@ -643,24 +672,8 @@ class View:
         cr = R(840, 996, 240, 42)
         button(cr, "CLOSE")
         self.rects["close"] = cr
-        x0 = R(100, 1004, 0, 0)
-        for n, (state, rgb) in enumerate(STATE_RGB.items()):
-            at = (x0.x + px(n * 170), x0.y)
-            pygame.draw.circle(surface, rgb, (at[0] + px(6), at[1] + px(11)),
-                               px(6))
-            text(state, (at[0] + px(22), at[1]), 18, label)
-        # the transparency slider (HD EXTENSION `scan_transparency`)
-        text("Transparency", R(1110, 1004, 0, 0).topleft, 18, label)
-        bar = R(*SLIDER)
-        hud.field(surface, bar, scale)
-        t = max(0.0, min(MAX_TRANSPARENCY, transparency))
-        knob = pygame.Rect(0, 0, max(4, px(10)), bar.h + px(8))
-        knob.center = (bar.x + int(bar.w * t / MAX_TRANSPARENCY), bar.centery)
-        # LOOK EXCEPTION marking: the slider's knob, in the value colour
-        pygame.draw.rect(surface, value[:3], knob, border_radius=px(3))
-        text(f"{round(t * 100)}%", (bar.right + px(14), R(0, 1004, 0, 0).y),
-             18, value)
-        self.rects["transparency"] = bar.inflate(0, px(16))
+        # CLOSE alone in the foot: no state legend (the tables say each
+        # state in words) and no transparency slider (Data, work order 315)
         self.boxes = {key: R(*b) for key, b in BOXES.items()}
         self.window = R(*WINDOW)
         if pointer is not None:
