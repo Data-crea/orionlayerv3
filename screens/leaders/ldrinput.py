@@ -15,10 +15,10 @@ THE RIGHT BUTTON, as the original splits it (officer.cpp:1283-1339,
 `Find_Selected_Leader_` (:3159-3220), sent as a right click on the
 portrait's own field, whose answer is a box the wire shows; anywhere
 else it is the help list (`help.json`, the original's two tables). On a
-big ship icon, with the block, it is `CMBTDRW1::Detailed_View_Ship_`
-(officer.cpp:1041-1047), sent as a right click on the icon's field; the
-game's view answers as the fallback picture (OMISSION
-`detailed_ship_view`).
+big ship icon, with the block, it is `CMBTDRW1::Detailed_View_Ship`
+(officer.cpp:1171-1177), sent as a right click on the icon's field
+(TRANSCRIPTION `detailed_ship_view`); the view is HD's with open fix 106
+(`core/shipview.py`, work order 317), the F12 notice names it without.
 
 THE GALAXY BOX AND THE GRID (work order 175, open fix 30 applied) —
 `ldrmap` finds the field, and only in mode -1, as the loop reads them

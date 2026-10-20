@@ -24,14 +24,22 @@ KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          # `doc/ext_slider_popup.patch`) and 105 (the Antaran room,
          # `doc/ext_antaran_room.patch`) send these; without them the
          # game's picture stays behind the F12 notice
-         20: "slider", 22: "antaran_room"}
+         20: "slider", 22: "antaran_room",
+         # work order 318: open fix 107 (`doc/ext_evolutionary_mutation.
+         # patch`), the evolutionary mutation; its tail is
+         # `core.mutationwire`'s, its view the Custom Race screen's mode
+         23: "mutation",
+         # work order 319: open fix 108 (`doc/ext_dragon_bribe.patch`), the
+         # Space Dragon's bribe; its tail is `core.dragonwire`'s
+         24: "dragon_bribe"}
 #: The ids open fix 49 reports (40, 52 and 33 are the game's own); 68 and
 #: 69 are open fix 91's.
 IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
        60: "planet_choice", 61: "discovery", 62: "leader_level", 63: "gnn",
        64: "combat_target", 33: "landing", 68: "colony_combat",
        69: "ground_combat", 70: "council", 71: "troops",
-       80: "slider", 82: "antaran_room"}
+       80: "slider", 82: "antaran_room", 83: "mutation",
+       84: "dragon_bribe"}
 #: The system display's slots (MAX_PLANETS_PER_STAR) and ship buttons.
 SLOTS, SHIP_SLOTS = 5, 15
 
@@ -101,6 +109,12 @@ def parse(gs, data, pos):
         if KINDS[kind] == "troops":
             from core import troopwire
             popup["troops"] = troopwire.read_tail(take, text)
+        if KINDS[kind] == "mutation":
+            from core import mutationwire
+            popup["mutation"] = mutationwire.read_tail(take)
+        if KINDS[kind] == "dragon_bribe":
+            from core import dragonwire
+            popup["dragon"] = dragonwire.read_tail(take)
     except ValueError:
         return pos
     gs.turn_popup = popup
@@ -108,7 +122,8 @@ def parse(gs, data, pos):
 
 
 def build(kind, args=(), title=None, text=None, messages=None, system=None,
-          targets=None, invasion=None, council=None, troops=None):
+          targets=None, invasion=None, council=None, troops=None,
+          mutation=None, dragon=None):
     """The block as the engine writes it — for the checks' stand-ins."""
     code = {v: k for k, v in KINDS.items()}[kind]
     out = b"TPOP" + _st.pack("<BBh", 1, code, len(args))
@@ -154,6 +169,12 @@ def build(kind, args=(), title=None, text=None, messages=None, system=None,
     if kind == "troops":
         from core import troopwire
         out += troopwire.build_tail(troops)
+    if kind == "mutation":
+        from core import mutationwire
+        out += mutationwire.build_tail(mutation)
+    if kind == "dragon_bribe":
+        from core import dragonwire
+        out += dragonwire.build_tail(dragon)
     return out
 
 

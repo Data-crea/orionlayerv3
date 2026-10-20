@@ -20,7 +20,10 @@ DEFAULT_WORDS = {"close": "CLOSE",
                  # fourth reads ACCEPT in the live framebuffer of the
                  # freighter scrap, work order 316)
                  "slider_down": "-", "slider_up": "+",
-                 "slider_cancel": "CANCEL", "slider_ok": "ACCEPT"}
+                 "slider_cancel": "CANCEL", "slider_ok": "ACCEPT",
+                 # the Space Dragon's bribe (work order 319: MAINPUPS.LBX
+                 # 0x46 refuse / close, 0x47 yes, art)
+                 "dragon_no": "NO", "dragon_yes": "YES"}
 
 
 def _star_name(state, index):
@@ -176,7 +179,10 @@ def _field(state, index):
 TROOPS_ID = 71
 
 RIGHT_HELP = {"turn_summary": 247, "planet_choice": 563,
-              "leader_level": 564}
+              "leader_level": 564,
+              # the Space Dragon's bribe: 561 over the whole screen
+              # (erichelp.cpp:45-47, set at mainpups.cpp:521)
+              "dragon_bribe": 561}
 
 
 def content(popup, state, words, app=None):
@@ -350,6 +356,28 @@ def content(popup, state, words, app=None):
             lines = [popup["text"]]
         buttons = [(words["continue"], act(a[1]) or (
             ("activate", anywhere) if anywhere else None))]
+    elif kind == "dragon_bribe":
+        # TRANSCRIPTION `dragon_bribe` (work order 319, open fix 108):
+        # `MAINPUPS::Dragon_New_Star_Popup_` (mainpups.cpp:493-543) — the
+        # message as the engine formatted it (E 555 the offer, E 464 choose
+        # a star, E 583 too poor, :2594-2599); mp_fields[2] refuses (-1, the
+        # battle goes on) or closes, mp_fields[25] YES pays when the BC
+        # reach the bribe (:2611-2633). NO left, YES right, as the fields
+        # stand (186 and 381, :2135-2151). DEVIATION `dragon_button_words`:
+        # mp_fields[2] is one picture (MAINPUPS 0x46) in every mode; HD
+        # words it NO beside YES and CLOSE alone.
+        # UNVERIFIED `dragon_yes_after`: the YES field stays in the list
+        # after it is pressed (the fields are added once, :522); whether
+        # the original still draws it is not seen — HD does not offer it.
+        # Mode 1's star click is `screens/galaxy_map/dragonpopup.py`'s
+        from core import dragonwire
+        if popup.get("text"):
+            lines = [popup["text"]]
+        if dragonwire.mode(popup) == dragonwire.OFFER:
+            buttons = [(words["dragon_no"], act(a[4])),
+                       (words["dragon_yes"], act(a[5]))]
+        else:
+            buttons = [(words["close"], act(a[4]))]
     elif kind == "landing":
         title = title or _planet_name(state, a[0])
         buttons = [(words["continue"], act(a[3]) or (

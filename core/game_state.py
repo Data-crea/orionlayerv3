@@ -137,6 +137,9 @@ class GameState:
     #: The last long-form settlement's outcome, open fix 103 (work order
     #: 316): None without the block (`core/settlewire.py` names every key).
     settle_outcome: Optional[dict] = None    # "STLR", fix 103
+    #: The ship detail view outside a battle, open fix 106 (work order
+    #: 317): None without the block (`core/shipviewwire.py` names every key).
+    ship_view: Optional[dict] = None         # "SHPV", fix 106
     #: The Hall of Fame while it is up, open fix 50 (work order 188):
     #: `core/hofblocks.py` names every key.
     hall_of_fame: Optional[dict] = None      # "HOFM", fix 50
@@ -458,6 +461,8 @@ def parse_state(data: bytes) -> GameState:
     pos = combatblocks.parse_events_after(gs, data, pos)
     from core import combatpopup, combatoptions, helplist
     pos = combatpopup.parse(gs, data, pos)    # CPOP, open fix 66
+    from core import shipviewwire
+    pos = shipviewwire.parse(gs, data, pos)   # SHPV, open fix 106
     pos = combatoptions.parse(gs, data, pos)  # COPT, open fix 68
     pos = helplist.parse(gs, data, pos)       # HLPL, open fix 69
     pos = colonyblocks.parse_refit(gs, data, pos)   # RFIT, open fix 85

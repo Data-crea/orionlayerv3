@@ -113,15 +113,17 @@ SCREENS = {
     52: ("(synthetic)",     None),
     53: ("(synthetic)",     "research_select"),
     #: 54, 55, 56, synthetic, ON THE WIRE ONLY WITH OPEN FIX 45 (work
-    #: order 185, NOT APPLIED): the Ship Designer's shield / computer,
-    #: weapon and special-system pickers, which run under SCREEN_DESIGN.
+    #: order 185, applied by work order 186): the Ship Designer's shield /
+    #: computer, weapon and special-system pickers, which run under
+    #: SCREEN_DESIGN.
     #: One HD screen answers all three (`EXTRA_SCREEN_IDS`).
     54: ("(synthetic)",     "design_box"),
     55: ("(synthetic)",     "design_box"),
     56: ("(synthetic)",     "design_box"),
     #: 57 and 58, synthetic, ON THE WIRE ONLY WITH OPEN FIX 46 (work order
-    #: 185, NOT APPLIED): the diplomacy audience the player opened (57) and
-    #: the one an AI asked for (58), which run under their caller's id.
+    #: 185, applied by work order 186): the diplomacy audience the player
+    #: opened (57) and the one an AI asked for (58), which run under their
+    #: caller's id.
     57: ("(synthetic)",     "audience"),
     58: ("(synthetic)",     "audience"),
     #: 59-64, synthetic, ON THE WIRE ONLY WITH OPEN FIX 49 (work order 188):
@@ -168,7 +170,25 @@ SCREENS = {
     #: (`ANTAROOM::Main_Antaran_Room_Screen_`), which the App draws over the
     #: held frame like 59-64.
     80: ("(synthetic)",     None),             # the slider popup
+    #: 81, synthetic, ON THE WIRE ONLY WITH OPEN FIX 106 (work order 317):
+    #: the ship detail view outside a battle (`CMBTDRW1::Detailed_View_Ship`,
+    #: cmbtdrw1.cpp:227, from the galaxy map, Fleets and Leaders), which the
+    #: App draws over the held frame (`core/shipview.py`); in a battle the
+    #: same view stays 66.
+    81: ("(synthetic)",     None),             # the ship detail view
     82: ("(synthetic)",     None),             # the Antaran room
+    #: 83, synthetic, ON THE WIRE ONLY WITH OPEN FIX 107 (work order 318):
+    #: the evolutionary mutation (`raceopt::Evolutionary_Mutation_Screen`,
+    #: raceopt.cpp:213, from report.cpp:537), which runs under the galaxy
+    #: map's 0 without the fix: the Custom Race screen in its mutation mode
+    #: while TPOP kind 23 is on the wire (`screens/custom_race/mutation.py`).
+    83: ("(synthetic)",     "custom_race"),    # the evolutionary mutation
+    #: 84, synthetic, ON THE WIRE ONLY WITH OPEN FIX 108 (work order 319):
+    #: the Space Dragon's bribe (`MAINPUPS::Dragon_New_Star_Popup`,
+    #: mainpups.cpp:493, from combfind.cpp:157), which the App draws over
+    #: the map like 59-64 (`core/turnpopup.py`; the star choice
+    #: `screens/galaxy_map/dragonpopup.py`); without the fix the F12 notice.
+    84: ("(synthetic)",     None),             # the Space Dragon's bribe
 }
 
 #: The last value of orion2re's own SCREEN enum:

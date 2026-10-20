@@ -169,8 +169,11 @@ class ScreenBase(HelpMixin):
         has no HD view for — a dialog of its own id, not data still on its
         way. The F12 notice then stands at once and says it, instead of
         holding the last frame for the data hold (work order 208 B3).
-        None: nothing known (the default)."""
-        return None
+        The default knows one: the ship detail view an engine without
+        open fix 106 runs under its caller's id (`core/shipviewwire.py`,
+        work order 317) — else None."""
+        from core import shipviewwire
+        return shipviewwire.bare_reason(game_state)
 
     def claims(self, game_state):
         """May this screen take its GAME_SCREEN_ID for this snapshot?

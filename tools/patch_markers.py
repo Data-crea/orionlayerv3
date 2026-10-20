@@ -551,6 +551,25 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 105.",
         "the engine does not send the Antaran room (open fix 105): an "
         "Antaran attack's message shows only the F12 notice"),
+    # Work order 317: on the fork's branch `orionlayer` only, 86842dfe.
+    "doc/ext_ship_view.patch": (
+        os.path.join("src", "game", "cmbtdrw1.cpp"),
+        "OrionLayer, open fix 106.",
+        "the engine does not send the ship detail view outside a battle "
+        "(open fix 106): a right click on an own ship in the fleet box, "
+        "the Fleets or the Leaders screen shows only the F12 notice"),
+    # Work order 318: on the fork's branch `orionlayer` only, ec66171a.
+    "doc/ext_evolutionary_mutation.patch": (
+        os.path.join("src", "game", "raceopt.cpp"),
+        "OrionLayer, open fix 107.",
+        "the engine does not send the evolutionary mutation (open fix "
+        "107): its picker shows only the F12 notice"),
+    # Work order 319: on the fork's branch `orionlayer` only, 39c5cc6d.
+    "doc/ext_dragon_bribe.patch": (
+        os.path.join("src", "game", "mainpups.cpp"),
+        "OrionLayer, open fix 108.",
+        "the engine does not send the Space Dragon's bribe (open fix 108): "
+        "the dragon's offer and its new star show only the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

@@ -313,7 +313,8 @@ def finishing(app):
 def overlay_for(app):
     """What HD draws OVER the held frame instead of any picture (work order
     188, open fixes 29 and 49): `("box", box)` while a generic message box
-    is up (MSGB), `("popup", popup)` while a turn-time popup is (TPOP),
+    is up (MSGB), `("ship", view)` while the ship detail view is (SHPV, open
+    fix 106), `("popup", popup)` while a turn-time popup is (TPOP),
     None otherwise — and None on F12, the player's own mode. The box wins
     over a popup: it is the one taking input (a confirmation over the
     planet choice). The Leaders screen draws its own hire popup
@@ -329,6 +330,11 @@ def overlay_for(app):
     box = getattr(state, "message_box", None)
     if box is not None:
         return ("box", box)
+    # the ship detail view outside a battle (open fix 106, work order 317)
+    from core import shipviewwire
+    ship = shipviewwire.for_state(state)
+    if ship is not None:
+        return ("ship", ship)
     popup = popup_under_box(app)
     if popup is not None:
         return ("popup", popup)
@@ -355,10 +361,11 @@ def name_box_for(state, top=None):
 
 
 #: TPOP kinds that are HD screens of their own, not popups over the held
-#: frame: the ground combat (open fix 91's kind 11, `screens/ground_combat`)
-#: and the galactic council (open fix 96's kind 12, `screens/council`,
-#: work order 270).
-SCREEN_KINDS = ("ground_combat", "council")
+#: frame: the ground combat (open fix 91's kind 11, `screens/ground_combat`),
+#: the galactic council (open fix 96's kind 12, `screens/council`, work
+#: order 270) and the evolutionary mutation (open fix 107's kind 23, the
+#: Custom Race screen's mutation mode, work order 318).
+SCREEN_KINDS = ("ground_combat", "council", "mutation")
 
 
 def popup_under_box(app):

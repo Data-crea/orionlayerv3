@@ -533,6 +533,10 @@ def fleet_model(state, ident, box, text):
             # (fleetpop.cpp:723-746, HD EXTENSION `box_ship_picture`)
             "records": [ships[i] for i in shown],
             "selected": [flags[n] for n in nodes],
+            # each cell's own hidden field, in the order FLEETPOP adds them
+            # (fleetpop.cpp:148-162): a right click on one opens the ship's
+            # detail view (TRANSCRIPTION `box_cell_detail`, `mapinput`)
+            "fields": [getattr(f, "index", None) for f in icon_fields],
             "selectable": [ships[i].owner == me and ships[i].status in
                            ORDERABLE_STATUS for i in shown],
             "title": title, "status": fleet_status(state, first, stars, text),

@@ -71,11 +71,17 @@ class View:
         self.rects = []            # [(rect, action)] of what can be clicked
         self.buttons = []          # the bottom row's actions, in order
         self.sent = None
+        #: `point(x, y)` -> an action for a click outside every rect, or
+        #: None: the Space Dragon's star choice on the map (work order 319)
+        self.point = None
+        self._choosing = False     # the last frame drew that star choice
 
     def reset(self):
         self._base = None
         self.rects = []
         self.buttons = []
+        self.point = None
+        self._choosing = False
 
     def render(self, surface, style, labels, popup, state, backdrop=None,
                app=None):
@@ -84,11 +90,23 @@ class View:
         (mainscr2.cpp: Reports_Screen_ runs over the map) — and returns
         True; without one, or when it has nothing to draw, the popup stands
         over the held frame (`msgbox.dimmed_base`, work order 196 A)."""
+        # first: no popup but the dragon's star choice keeps its star click
+        self.point = None
+        choosing = self._choosing
+        self._choosing = False
         if popup["kind"] == "combat_target":
             return self._render_window(surface, popup, state, backdrop, app)
         if popup["kind"] == "colony_combat":
             return self._render_invasion(surface, popup, state, backdrop,
                                          app, labels)
+        if popup["kind"] == "dragon_bribe":
+            from core import dragonwire
+            if dragonwire.mode(popup) == dragonwire.CHOOSE:
+                if not choosing:
+                    self._base = None     # the offer's dimmed copy
+                self._choosing = True
+                return self._render_dragon(surface, style, labels, popup,
+                                           state, backdrop, app)
         self._base = dimmed_base(surface, self._base, 110, backdrop)
         surface.blit(self._base, (0, 0))
         words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
@@ -141,6 +159,33 @@ class View:
         self.buttons, self.right_help = drawn.buttons, drawn.right_help
         return self.rects
 
+    def _render_dragon(self, surface, style, labels, popup, state, backdrop,
+                       app):
+        """The Space Dragon's star choice (open fix 108's mode 1, work
+        order 319) over the map, not dimmed: the map is where the star is
+        chosen (`screens/galaxy_map/dragonpopup.py`). A star can be clicked
+        only where the backdrop drew THE galaxy map of this game this frame
+        (`Overlays.backdrop_screen`); otherwise the panel alone."""
+        self._base = dimmed_base(surface, self._base, 0, backdrop)
+        surface.blit(self._base, (0, 0))
+        words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
+                                       if k in DEFAULT_WORDS and v})
+        c = content(popup, state, words, app)
+        host = app.dispatcher.screens.get("galaxy_map") \
+            if app is not None else None
+        drew = getattr(getattr(backdrop, "__self__", None),
+                       "backdrop_screen", None)
+        from core.overlays import same_game
+        if host is None or drew is not host or not same_game(
+                getattr(host, "_state", None), state):
+            host = None
+        from screens.galaxy_map import dragonpopup
+        self.rects, self.buttons, self.point = dragonpopup.render(
+            host, surface, style, c, popup, state)
+        self.right = []
+        self.right_help = c["right_help"]
+        return self.rects
+
     def right_at(self, x, y):
         """A right click's answer: ("field", field), ("help", id) or None
         (`turnpopupcontent.RIGHT_HELP`, TRANSCRIPTION `popup_right`)."""
@@ -154,6 +199,10 @@ class View:
         for rect, action in self.rects:
             if action is not None and rect.collidepoint(x, y):
                 return action
+        # a rect that takes no click still covers what lies under it
+        if self.point is not None and not any(
+                rect.collidepoint(x, y) for rect, _a in self.rects):
+            return self.point(x, y)
         return None
 
 
@@ -326,7 +375,10 @@ def key_action(view, popup, event):
     # '+', the up arrow (mp_fields[9]) E_Strings 11, '-' (:696-711; seen
     # live, work order 316) — so a typed '+' LOWERS the value, as in the
     # original, although HD's buttons are worded by what they do
-    if popup["kind"] in ("colony_combat", "slider"):
+    # the Space Dragon's bribe too (work order 319): NO / CLOSE carries ESC
+    # (E 135), YES E 561's "y" (`Update_Dragon_New_Star_Fields_`,
+    # mainpups.cpp:2135-2151)
+    if popup["kind"] in ("colony_combat", "slider", "dragon_bribe"):
         code = 27 if event.key == pygame.K_ESCAPE else \
             ord((event.unicode or " ")[0].upper())
         for action in view.buttons:

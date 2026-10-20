@@ -1,0 +1,186 @@
+OrionLayer open fix 108 — the Space Dragon's bribe on the wire
+==============================================================
+
+Work order 319 ("the Space Dragon's bribe", from 316's part E, 315 P7).
+orion2re on the fork's branch `orionlayer` (v2.0.0), on top of open fix
+107; commit 39c5cc6d. Not on `orionlayer-local`. In src/game/mainpups.cpp
+and src/ext/ext_api.cpp under ORION2RE_EXT.
+
+MAINPUPS::Dragon_New_Star_Popup (mainpups.cpp:493; the lines are
+the branch's at 21bdc2b8, just before this fix moved them), opened by COMBFIND when the Space
+Dragon (attacker 12, NONPLAYER_SHIP_TYPE_DRAGON; the comment there says
+"Antarans") reaches a human player's colony (combfind.cpp:157; the
+network's :482), ran under the galaxy map's id with nothing on the wire
+but its fields. After Update_Dragon_New_Star_Fields (:522) a
+TurnPopupGuard reports id 84 and TPOP kind 24 (the kind = id - 60
+pairing of 20/80, 22/82, 23/83): args [0] the dragon's star, [1] the
+player, [2] COMBFIND::dragon_bribe_bc (capped at 32767), [3] field_mode
+(0 the offer, 1 paid: choose a star, 2 too poor — set again after every
+input, Evaluate_Dragon_New_Star_Input moves it inside the loop), [4]
+mp_fields[2] (refuse / close, ESC), [5] mp_fields[25] (YES, E 561; the
+fields are added once, so it stays in modes 1 and 2). The text is the
+message as Draw_Dragon_New_Star_Popup last formatted it (E 555, 464 or
+583; :2594-2599), copied into a static buffer, the draw's own being a
+local. The tail, written on every snapshot: int16 field_mode, int16 n,
+n x (int16 star field, int16 star) — the hidden fields
+MOVEBOX::Add_Galaxy_Map_Fields_2 added for the popup's galaxy map
+(MOX::galaxy_map_star_field); n is NUM_STARS in mode 1, 0 otherwise.
+Ended right after the loop, before Do_Popup_Cleanup releases the fields.
+Read only.
+
+Live: UNVERIFIED — no live run (Data's decision of 20 October 2026); built
+and compiled (`linux-debug`, ORION2RE_EXT on; mainpups.cpp also without
+it; a misspelt member refused by the compiler on the scratch clone).
+
+commit 39c5cc6d6a68a861d3d888235f1a39dba4f01df8
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Tue Oct 20 15:39:04 2026 +0200
+
+    OrionLayer Open Fix 108: the Space Dragon's bribe on the wire (MAINPUPS::Dragon_New_Star_Popup reports id 84 and TPOP kind 24 from Update_Dragon_New_Star_Fields to the end of its loop: args the dragon's star, the player, dragon_bribe_bc, field_mode (set again after every input), mp_fields[2] and mp_fields[25]; the message as Draw_Dragon_New_Star_Popup last formatted it, copied into a static buffer; a tail re-read every snapshot with the mode and, in mode 1, every star's galaxy-map field of the popup as (field, star) pairs; ended before the fields are released)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 4d2a5a34..bfb5f508 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -304,6 +304,25 @@ static void WriteMutationTail(std::vector<uint8_t>& buf) {
+     Write16(buf, raceopt::accept);
+ }
+ 
++// OrionLayer, open fix 108. The Space Dragon's bribe's TPOP tail (kind 24):
++// the mode as Evaluate_Dragon_New_Star_Input leaves it and, in mode 1, every
++// star's field of the popup's galaxy map (Update_Dragon_New_Star_Fields adds
++// them through MOVEBOX::Add_Galaxy_Map_Fields_2; a click on one sends the
++// dragon to that star, mainpups.cpp's Evaluate_Dragon_New_Star_Input).
++static void WriteDragonTail(std::vector<uint8_t>& buf) {
++    static_assert(sizeof(MOX::galaxy_map_star_field) / sizeof(int16_t) == MAX_STARS, "galaxy_map_star_field");
++    const int16_t mode = MAINPUPS::field_mode;
++    int16_t n = mode == 1 ? MOX::NUM_STARS : (int16_t)0;
++    if (n < 0) n = 0;
++    if (n > MAX_STARS) n = MAX_STARS;
++    Write16(buf, mode);
++    Write16(buf, n);
++    for (int16_t i = 0; i < n; i++) {
++        Write16(buf, MOX::galaxy_map_star_field[i]);
++        Write16(buf, i);
++    }
++}
++
+ static void WriteInvasionTail(std::vector<uint8_t>& buf, uint8_t kind) {
+     if (kind == 10) {
+         const s_colony_combat_popup_data* p = g_invasion.popup;
+@@ -1345,6 +1364,20 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     //                                                          (a group's level 1-3
+     //                                                          where it matches);
+     //                                                          the tail below
++    //     24    84  the Space Dragon's bribe (MAINPUPS::Dragon_New_Star_Popup,
++    //               combfind.cpp:157, the network's :482; open fix 108)
++    //                                                        [0] the dragon's star
++    //                                                          [1] the player [2] the bribe
++    //                                                          (COMBFIND::dragon_bribe_bc,
++    //                                                          capped at 32767) [3] field_mode
++    //                                                          0 the offer, 1 paid: choose a
++    //                                                          star, 2 too poor (set again
++    //                                                          after every input) [4]
++    //                                                          mp_fields[2] refuse / close
++    //                                                          [5] mp_fields[25] YES (-1000
++    //                                                          when not added); text = the
++    //                                                          message as last drawn; the
++    //                                                          tail below
+     //
+     //     Written: version, kind, n_args + args, title, text (int16
+     //     length + raw bytes each), then per kind:
+@@ -1404,6 +1437,14 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     //       int16 option_toggle, 36 x int16 group_button (group g's level
+     //       l at [g * 4 + l], [g * 4] -1000), 22 x int16 option_button,
+     //       int16 accept; -1000 a field not added (not offered).
++    //     - 24 (open fix 108): MAINPUPS::field_mode as it is now (int16),
++    //       then int16 n, n x (int16 star field, int16 star) — kind 4's
++    //       (field, index) pairs: the hidden fields
++    //       MOVEBOX::Add_Galaxy_Map_Fields_2 added for each star of the
++    //       popup's galaxy map (MOX::galaxy_map_star_field), the field a
++    //       click on the star activates; n is NUM_STARS in mode 1 and 0 in
++    //       modes 0 and 2, where Evaluate_Dragon_New_Star_Input reads no
++    //       star. Re-read every snapshot: the mode moves inside the loop.
+     if (g_turn_popup.kind != 0) {
+         buf.push_back((uint8_t)'T');
+         buf.push_back((uint8_t)'P');
+@@ -1515,6 +1556,9 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         if (g_turn_popup.kind == 23) {
+             WriteMutationTail(buf);  // OrionLayer, open fix 107.
+         }
++        if (g_turn_popup.kind == 24) {
++            WriteDragonTail(buf);  // OrionLayer, open fix 108.
++        }
+     }
+ 
+     // 17. The Hall of Fame: "HOFM", written ONLY while it takes input (it
+diff --git a/src/game/mainpups.cpp b/src/game/mainpups.cpp
+index 7ab31afe..9df91cd6 100755
+--- a/src/game/mainpups.cpp
++++ b/src/game/mainpups.cpp
+@@ -490,6 +490,13 @@ namespace MAINPUPS {
+         }
+     }
+ 
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 108. The bribe's message as
++    // Draw_Dragon_New_Star_Popup last formatted it: the draw's own buffer is
++    // a local, gone before a snapshot is written.
++    static char ext_dragon_message[300];
++#endif
++
+     int16_t __cdecl Dragon_New_Star_Popup(int16_t player_idx, int16_t star_idx) {
+         int16_t ret_val;
+         int16_t scanned_input;
+@@ -520,6 +527,23 @@ namespace MAINPUPS {
+         fields::Assign_Auto_Function(Draw_Dragon_New_Star_Popup, 1);
+         ERICHELP::Set_Dragon_New_Star_Popup_Help_List();
+         Update_Dragon_New_Star_Fields();
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 108. The Space Dragon's bribe on the wire
++        // while its loop runs: id 84, TPOP kind 24, the message as last
++        // drawn. The fields are added once, here, for all three modes; YES
++        // moves field_mode to 1 (paid: choose a star) or 2 (too poor) inside
++        // the loop, so the mode is set again after every input, and the
++        // star fields of mode 1 are the tail's, re-read every snapshot
++        // (ext_api.cpp).
++        ext_dragon_message[0] = '\0';
++        ext::TurnPopupGuard ext_popup(84, 24, nullptr, ext_dragon_message);
++        ext_popup.arg(0, star_idx);       // the dragon's star (refused as the new one)
++        ext_popup.arg(1, player_idx);     // the player asked
++        ext_popup.arg(2, (int16_t)(COMBFIND::dragon_bribe_bc > 0x7FFF ? 0x7FFF : COMBFIND::dragon_bribe_bc));
++        ext_popup.arg(3, field_mode);     // 0 the offer, 1 choose a star, 2 too poor
++        ext_popup.arg(4, mp_fields[2]);   // refuse / close (ESC): -1, no bribe
++        ext_popup.arg(5, mp_fields[25]);  // YES (E 561), added in mode 0
++#endif
+         Draw_Dragon_New_Star_Popup();
+         RUSS::Mox_Sync_Update();
+         video::Set_Refresh_Differential();
+@@ -530,8 +554,14 @@ namespace MAINPUPS {
+             ret_val = Evaluate_Dragon_New_Star_Input(&input_val, &scanned_input, &flag, star_idx);
+             Draw_Dragon_New_Star_Popup();
+             RUSS::Mox_Sync_Update();
++#ifdef ORION2RE_EXT
++            ext_popup.arg(3, field_mode);  // the mode the next snapshot shows
++#endif
+         } while (flag == 0);
+ 
++#ifdef ORION2RE_EXT
++        ext_popup.end();  // before the fields are released
++#endif
+         Do_Popup_Cleanup();
+         fields::Deactivate_Help_List();
+ 
+@@ -2598,6 +2628,10 @@ namespace MAINPUPS {
+                 snprintf(msg_buffer, sizeof(msg_buffer), ESTRINGS::E_Strings(str_idx), COMBFIND::dragon_bribe_bc, MOX::player[g_player_n].name, MOX::star[g_star_n].name);
+             }
+ 
++#ifdef ORION2RE_EXT
++            // OrionLayer, open fix 108. The message as formatted, for TPOP.
++            strlcpy(ext_dragon_message, msg_buffer, sizeof(ext_dragon_message));
++#endif
+             BILL::Squeeze_Formatted_Paragraph_Centered(188, 271, 262, 35, msg_buffer, 2);
+             video::Copy_Off_To_Back();
+             COLONY::full_draw = 0;

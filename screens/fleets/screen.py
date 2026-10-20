@@ -651,6 +651,35 @@ class FleetsScreen(ScreenBase):
 
     # ── Right-click help ──────────────────────────────────
 
+    def handle_right_button(self, down, screen_x, screen_y):
+        """Help first (the engine walks its help list first, fields.cpp:
+        1217-1222), then the ship's detail view.
+
+        TRANSCRIPTION `ship_view_right_click` (work order 317): a right
+        click on an own stack's big icon is that icon's field answered
+        negative, `Scan_Fltscrn_Big_Icons_`' result 1 (flt2.cpp:892-925),
+        which opens `Detailed_View_Ship` (flt1.cpp:625-636; the original
+        has fields there only for the player's own stack, flt2.cpp:312-322).
+        HD right-clicks the icon's own field (`core/rightinfo`); the view is
+        HD's with open fix 106 (`core/shipview.py`), the F12 notice names it
+        without (`ScreenBase.no_view_reason`)."""
+        if super().handle_right_button(down, screen_x, screen_y):
+            return True
+        if not down or self._inert() or not (
+                self._view is not None and self._view.ok and
+                self._view.own_stack):
+            return False
+        slot = self._slot_at(screen_x, screen_y)
+        if slot is None:
+            return False
+        field = fltwire.icon_field(getattr(self._state, "fields", None),
+                                   fltgeom.native_cells()[slot])
+        if field is None:
+            return False
+        from core import rightinfo
+        return rightinfo.send(self.app, field, "ship detail view",
+                              rightinfo.opener(self))
+
     def open_help_at(self, screen_x, screen_y):
         """The static table first, then help 360 over the EMPTY slots.
 

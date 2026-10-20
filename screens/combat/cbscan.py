@@ -730,13 +730,11 @@ SHIELD_UPGRADES = (13, 30, 20)          # Hard Shields, Shield Capacitor,
 DAMPER_FIELD = 7                        # Multi-Phased Shields
 
 
-def build_for(unit_index, shown, state, words, start=None):
-    """`build` from the battle as drawn (`shown`) and the snapshot;
-    `start`: the battle's units at the round's start
-    (`cbscansources.Sources.round_start`), what the combat values' parts are
-    counted from."""
-    unit = dict(shown["units"][unit_index])
-    unit["_index"] = unit_index
+def build_unit(unit, state, words):
+    """`build` for one unit dict and the snapshot: its ship record, the
+    players and the leaders off the wire. `(model, players)` — the one path
+    for the battle (`build_for`) and the ship view outside it
+    (`core/shipview.py`, work order 317)."""
     ship_rec = None
     idx = int(unit["ship_idx"])
     ships = getattr(state, "ships_raw", None) or []
@@ -744,9 +742,19 @@ def build_for(unit_index, shown, state, words, start=None):
         ship_rec = ship_struct.SPEC.parse(ships[idx])
     players = [player_struct.SPEC.parse(raw)
                for raw in getattr(state, "player_raw", None) or []]
+    return build(unit, words, ship_rec, getattr(state, "leaders_raw", None),
+                 players, getattr(state, "num_players", 0)), players
+
+
+def build_for(unit_index, shown, state, words, start=None):
+    """`build` from the battle as drawn (`shown`) and the snapshot;
+    `start`: the battle's units at the round's start
+    (`cbscansources.Sources.round_start`), what the combat values' parts are
+    counted from."""
+    unit = dict(shown["units"][unit_index])
+    unit["_index"] = unit_index
+    m, players = build_unit(unit, state, words)
     leaders = getattr(state, "leaders_raw", None)
-    m = build(unit, words, ship_rec, leaders, players,
-              getattr(state, "num_players", 0))
     # the combat values' parts (HD EXTENSION `scan_breakdown`, work order
     # 297): from every unit of the battle as drawn, the players' traits
     # and the officers' records

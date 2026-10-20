@@ -24,7 +24,7 @@ from screens.custom_race.description import (
 from screens.custom_race.popup import (
     MessagePopup, FALLBACK_PANEL, fallback_text_rect,
 )
-from screens.custom_race import governments, racename
+from screens.custom_race import governments, mutation, racename
 
 log = logging.getLogger("custom_race")
 
@@ -39,6 +39,9 @@ MSG_PICKS_NEGATIVE = ("Picks remaining must be greater than or "
 class CustomRaceScreen(ScreenBase):
     SCREEN_NAME = "custom_race"
     GAME_SCREEN_ID = 50     # Custom Race sub-screen (patched in racesel.cpp)
+    #: The evolutionary mutation (open fix 107, work order 318): this
+    #: screen in its mutation mode, `screens/custom_race/mutation.py`.
+    EXTRA_SCREEN_IDS = (83,)
     USE_FRAME = True
     #: THE SCREEN SHELL (work order 225): the three columns fill the content
     #: rectangle above the button row in their old proportion, the headers
@@ -70,6 +73,10 @@ class CustomRaceScreen(ScreenBase):
         self._panel_outer = {}    # outer box rects (headers/skins)
         self._panel_fs = {}       # font scale per panel (from boxes)
         self._popup = MessagePopup()   # blocks Accept on negative picks
+        #: The evolutionary mutation's TPOP, while this screen is its view
+        #: (the last one seen, so a frame between two snapshots keeps it).
+        self._mutation = None
+        self._mutation_sender = mutation.Sender()
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -80,10 +87,42 @@ class CustomRaceScreen(ScreenBase):
         self._spec_scroll = 0
         self._desc_scroll = 0
         self._popup.close()
+        self._mutation = mutation.popup_of(
+            game_state if game_state is not None else self.app.client.state)
+        self._mutation_sender = mutation.Sender()
+        # the mutation mode's shell: its title, ACCEPT alone (no CLEAR,
+        # raceopt.cpp:1189-1191); the class's own outside it
+        for name, value in (("FRAME_TITLE", mutation.TITLE),
+                            ("FRAME_BTN_LEFT", None)):
+            if self._mutation is not None:
+                setattr(self, name, value)
+            else:
+                self.__dict__.pop(name, None)
+        if self._mutation is not None:
+            # nothing is sent on entry: field 4 is a pick in this list
+            return
         # Sync game to zero: the game loads stock traits on entry,
         # HD starts clean — sending Clear aligns both sides.
         if self.app.connected:
             self.app.client.activate_field(4)
+
+    def claims(self, game_state):
+        """83 only with open fix 107's TPOP (else the F12 notice stands);
+        50 always."""
+        if getattr(game_state, "current_screen", -1) == \
+                mutation.GAME_SCREEN_ID:
+            return mutation.active(game_state)
+        return True
+
+    def _mutation_now(self):
+        """The mutation's TPOP while this screen is its view, else None;
+        the newest one the engine sent, or the last seen."""
+        if self._mutation is None:
+            return None
+        got = mutation.popup_of(self.app.client.state)
+        if got is not None:
+            self._mutation = got
+        return self._mutation
 
     def _load_traits(self):
         """Trait data, mod-overridable (screens/custom_race/traits.json)."""
@@ -160,6 +199,9 @@ class CustomRaceScreen(ScreenBase):
 
     @property
     def picks_remaining(self):
+        pop = self._mutation_now()
+        if pop is not None:
+            return pop["mutation"]["picks"]     # the engine's, every snapshot
         return self._starting_picks - self.picks_used
 
     @property
@@ -271,7 +313,15 @@ class CustomRaceScreen(ScreenBase):
         pr = self._panel_outer["picks"]
         self._draw_panel_header(surface, L, "RACE PICKS",
                                 "picks_header", pr)
-        blocked = self.blocked_traits
+        pop = self._mutation_now()
+        if pop is not None:
+            # every selection and offer the engine's (work order 318)
+            self._trait_state = mutation.trait_state(
+                pop, self._categories, self._specials)
+            blocked = mutation.blocked(pop, self._categories,
+                                       self._specials, self._trait_state)
+        else:
+            blocked = self.blocked_traits
         render_race_picks_panel(surface, L, self.style,
             self._categories, self._trait_state,
             self._panels["picks"], self._icons, self._icon_cache,
@@ -302,8 +352,9 @@ class CustomRaceScreen(ScreenBase):
         render_description_panel(surface, L, self.style,
             self._active_entry(), desc,
             self._panel_fs["description"], self._desc_scroll)
-        racename.render(self, surface,
-                        self._message("race_name", racename.LABEL))
+        if pop is None:      # the mutation screen has no name field
+            racename.render(self, surface,
+                            self._message("race_name", racename.LABEL))
 
         # Frame overlay
         if self.USE_FRAME:
@@ -439,6 +490,8 @@ class CustomRaceScreen(ScreenBase):
         if self._popup.visible:
             self._popup.close()
             return None
+        if self._mutation is not None:
+            return self._mutation_click(screen_x, screen_y)
 
         if racename.click(self, screen_x, screen_y):
             return None
@@ -524,6 +577,44 @@ class CustomRaceScreen(ScreenBase):
 
         return super().handle_click(screen_x, screen_y)
 
+    def _mutation_click(self, screen_x, screen_y):
+        """The mutation mode's click: the field the original takes for
+        what is under the pointer, from the list of now — or nothing
+        (`mutation.py`; the engine answers, HD keeps no selection)."""
+        pop = self._mutation_now()
+        state = self.app.client.state
+        if mutation.popup_of(state) is None:
+            return None          # not the list of the mutation: no send
+        if self._frame_button_side(screen_x, screen_y) == "right":
+            self._btn_flash = ("right", time.monotonic())
+            self._mutation_sender.send(self.app, pop, mutation.accept_field(
+                state, pop), "ACCEPT")
+            return None
+        L = self.layout
+        hit = picks_hit_test(L, self._categories,
+                             self._panels.get("picks", (0, 0, 0, 0)),
+                             self._panel_fs.get("picks", 1.0),
+                             screen_x, screen_y)
+        if hit:
+            cat, opt = hit
+            self._set_active(
+                {"name": opt["label"], "description": opt["description"]}
+                if opt.get("description") else cat)
+            self._mutation_sender.send(
+                self.app, pop, mutation.pick_field(state, pop, cat, opt),
+                f"{cat['name']} {opt['label']}")
+            return None
+        spec = specials_hit_test(L, self._specials,
+                                 self._panels.get("specials", (0, 0, 0, 0)),
+                                 self._panel_fs.get("specials", 1.0),
+                                 self._spec_scroll, screen_x, screen_y)
+        if spec is not None:
+            self._set_active(spec)
+            self._mutation_sender.send(
+                self.app, pop, mutation.special_field(state, pop, spec),
+                spec["name"])
+        return None
+
     def _toggle_special(self, spec):
         """Toggle a special ability, honouring exclusive groups.
 
@@ -587,6 +678,8 @@ class CustomRaceScreen(ScreenBase):
         if self._popup.visible:
             self._popup.close()
             return
+        if self._mutation is not None:
+            return       # the mutation's fields carry no key (mutation.py)
         if racename.editing(self):
             # the name is being typed: every key is the field's, ESC too
             # (it restores the old name, fields.cpp:1180-1190)

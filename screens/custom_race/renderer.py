@@ -135,7 +135,10 @@ def render_race_picks_panel(surface, L, style, categories, trait_state,
             ox, oy = L.pos(orx, ory)
             ow, oh = L.size(orw, orh)
             selected = (cur == opt["value"])
-            dimmed = cat_blocked
+            # one option alone may be dimmed too: what the evolutionary
+            # mutation does not offer (`mutation.blocked`, work order 318)
+            dimmed = cat_blocked or \
+                (cat["trait_id"], opt["value"]) in blocked
 
             ic = icon(icons, cache,
                       "radio_on" if selected else "radio_off", isize)

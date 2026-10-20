@@ -329,14 +329,30 @@ def right_button(screen, down, mx, my):
         return True
     if boxpaint.cell_at(screen, mx, my) is not None or \
             boxpaint.own_cell_at(screen, mx, my):
-        # OMISSION `box_cell_detail`: the original opens the ship's
-        # detailed view on a right click on ANY cell of an own stack,
-        # offered for selection or not (`Can_Select_Fleet_Box_Ship_`, the
-        # owner only, mainscr.cpp:3526-3536; `Detailed_View_Ship_`,
-        # :3638-3643; cmbtdrw1.cpp:227-324, v2); HD has no view and no wire
-        # block for it (parked, work order 200 P-B1), so the right click on
-        # such a cell does nothing — no pan.
-        log.info("Right click on a fleet box cell: no ship view in HD")
+        # TRANSCRIPTION `box_cell_detail` (work order 317): the original
+        # opens the ship's detail view on a right click on ANY cell of an
+        # own stack, offered for selection or not — its field answered
+        # negative is `Scan_Fleet_Movement_Box_Fields`' result 1
+        # (`Can_Select_Fleet_Box_Ship_`, the owner only, mainscr.cpp:
+        # 3526-3536; `Detailed_View_Ship`, :3637-3643; cmbtdrw1.cpp:227).
+        # HD right-clicks that cell's own field (`core/rightinfo`); the view
+        # is HD's with open fix 106 (`core/shipview.py`), the F12 notice
+        # names it without (`ScreenBase.no_view_reason`). Never a pan.
+        index = next((f for r, f in getattr(screen, "_box_cell_fields",
+                                            None) or []
+                      if r.collidepoint(mx, my)), None)
+        field = None if index is None else \
+            rightinfo.field_at_index(screen.app, index)
+        # P816: the live list must still hold that cell's field — hidden,
+        # 0x35 square (fleetpop.cpp:161-162) — at the moment of sending
+        if field is None or field.field_type != 7 or \
+                field.x_end - field.x != boxmodel.FLEET_ICON_SPAN or \
+                field.y_end - field.y != boxmodel.FLEET_ICON_SPAN:
+            log.info("Right click on a fleet box cell: its field is not in "
+                     "the live list")
+            return True
+        rightinfo.send(screen.app, field, "ship detail view",
+                       rightinfo.opener(screen))
         return True
     view = screen._map_view()
     if view is not None and boxdraw.system_open(screen):

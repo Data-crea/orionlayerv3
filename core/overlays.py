@@ -11,7 +11,7 @@ galaxy map behind a popup.
 """
 import logging
 
-from core import handover, msgbox, namebox, rightinfo, turnpopup
+from core import handover, msgbox, namebox, rightinfo, shipview, turnpopup
 
 log = logging.getLogger("orionlayer")
 
@@ -28,6 +28,10 @@ class Overlays:
         self.name_base = None
         self.box_view = msgbox.View()
         self.popup_view = turnpopup.View()
+        #: The ship detail view outside a battle (open fix 106, work order
+        #: 317, `core/shipview.py`), or None.
+        self.ship = None
+        self.ship_view = None
         #: The last box answered: a second click before it has gone would
         #: land in whatever comes after it (decision 65's reasoning).
         self.box_sent = None
@@ -43,16 +47,19 @@ class Overlays:
         self.name = over[1] if over and over[0] == "name" else None
         self.box = over[1] if over and over[0] == "box" else None
         self.popup = over[1] if over and over[0] == "popup" else None
+        self.ship = over[1] if over and over[0] == "ship" else None
         if self.box is None:
             self.box_sent = None
         if self.popup is None:
             self.popup_view.sent = None
+        if self.ship is None and self.ship_view is not None:
+            self.ship_view.reset()      # a new view: its own close, base
         return over is not None
 
     @property
     def active(self):
         return self.box is not None or self.popup is not None or \
-            self.name is not None
+            self.name is not None or self.ship is not None
 
     # ── drawing ───────────────────────────────────────────────────────
     def render(self, surface):
@@ -68,6 +75,14 @@ class Overlays:
             return True
         self.name_view.reset()
         self.name_base = None
+        if self.ship is not None:
+            # over the held frame of the screen that opened it (the troop
+            # popup's way: under id 81 its own page cannot be drawn again)
+            self._ship_view().render(surface, app.style, app.layout.scale,
+                                     self.ship, app.client.state, app)
+            return True
+        if self.ship_view is not None:
+            self.ship_view.reset()
         if self.box is not None:
             self.box_view.render(surface, app.style, self.box_labels,
                                  self.box, backdrop=self.box_backdrop)
@@ -129,6 +144,9 @@ class Overlays:
           none does, before a game              the held frame
         """
         d = self.app.dispatcher
+        #: the screen this call drew, or None: the Space Dragon's star
+        #: choice is offered only over the live galaxy map (work order 319)
+        self.backdrop_screen = None
         if d.overlay is not None:
             return False
         top = d.active
@@ -152,6 +170,7 @@ class Overlays:
             follow_game(top, self.app.client.state)
         surface.fill((4, 6, 14))
         top.render_backdrop(surface)
+        self.backdrop_screen = top
         return True
 
     # ── input ─────────────────────────────────────────────────────────
@@ -167,6 +186,8 @@ class Overlays:
             host.help.close()
             return
         fields = self.app.client.state.fields
+        if self.ship is not None:
+            return        # TRANSCRIPTION `ship_view_right`: nothing closes
         if self.box is not None:
             if self.box["kind"] != "confirmation":
                 self.answer_box(dict(msgbox.answers(self.box, fields))
@@ -192,6 +213,11 @@ class Overlays:
         if self.name is not None:
             self.send_name(self.name_view.click_code(x, y))
             return
+        if self.ship is not None:
+            view, state = self._ship_view(), self.app.client.state
+            view.send(self.app, self.ship, view.action_at(x, y, self.ship,
+                                                          state))
+            return
         if self.box is not None:
             self.answer_box(self.box_view.answer_at(self.box, fields, x, y))
         elif self.popup is not None:
@@ -206,11 +232,21 @@ class Overlays:
         if self.name is not None:
             self.send_name(namebox.key_code(event))
             return
+        if self.ship is not None:
+            act = shipview.View.key_action(event, self.ship,
+                                           self.app.client.state)
+            self._ship_view().send(self.app, self.ship, act)
+            return
         if self.box is not None:
             self.answer_box(msgbox.View.answer_key(self.box, fields, event))
         elif self.popup is not None:
             self.answer_popup(turnpopup.key_action(self.popup_view,
                                                    self.popup, event))
+
+    def _ship_view(self):
+        if self.ship_view is None:
+            self.ship_view = shipview.View()
+        return self.ship_view
 
     def send_name(self, code):
         """A key into the name box, as the game's own field takes it

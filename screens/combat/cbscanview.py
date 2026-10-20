@@ -337,7 +337,13 @@ class View:
         tx = r.x + px(172)
         room = r.right - px(16) - tx
         y = r.y + px(42)
+        # the name's place: outside a battle the whole name line is the
+        # field a click opens (`core/shipview.py`, open fix 106), marked by
+        # the HUD's separator under it (the hint is labelled there)
         text(m.name, (tx, y), 32, value, room=room)
+        self.rects["name"] = pygame.Rect(tx, y, room, px(38))
+        if getattr(m, "name_editable", False):
+            hud.separator(surface, tx, tx + room, y + px(38), scale)
         y += px(40)
         for line, size, rgb in ((m.hull, 24, value), (m.owner_name, 24, label),
                                 (m.design_date and

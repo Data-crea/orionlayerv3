@@ -17,11 +17,13 @@ disc it is a right click on that planet's own field (`core/rightinfo`), which
 the engine answers with `SYS::Potential_Colony_Info_Popup_`'s text box
 (mainscr.cpp:2104-2110; nothing for a gas giant), shown as HD's message box;
 on the fleet box's status line and close button it is the help the original
-appends for the box (310, 304; `help_at`). OMISSION `box_cell_detail`: the
-right click on any cell of an own stack (the original's ship view,
-`Detailed_View_Ship_`, mainscr.cpp:3638-3643), offered or not, does nothing:
-HD has no view for it (parked, work order 200 P-B1; `mapinput.right_button`,
-the cells `_box_own_cells`).
+appends for the box (310, 304; `help_at`). TRANSCRIPTION `box_cell_detail`
+(work order 317): the right click on any cell of an own stack, offered or
+not, is a right click on that cell's own field (`_box_cell_fields`, through
+`core/rightinfo`), which the original answers with the ship's detail view
+(`Scan_Fleet_Movement_Box_Fields` result 1, mainscr.cpp:3513-3560,
+:3637-3643; `Detailed_View_Ship`), drawn by HD from open fix 106
+(`core/shipview.py`; `mapinput.right_button`).
 
 TRANSCRIPTION `drag_select` (work order 310): a press in the fleet box
 paints — the held button gives every offered cell it crosses the press's
@@ -295,8 +297,12 @@ def _draw_fleet(screen, surface, r, model, hits):
         hud.field(surface, cell, screen.layout.scale, on=chosen)
         cells.append(cell)
         if model["owners"][0] == me:
-            # an own stack's cell, offered or not (`boxpaint.own_cell_at`)
+            # an own stack's cell, offered or not (`boxpaint.own_cell_at`),
+            # and its field (TRANSCRIPTION `box_cell_detail`)
             screen._box_own_cells.append(cell)
+            fields = model.get("fields") or []
+            if i < len(fields) and fields[i] is not None:
+                screen._box_cell_fields.append((cell, fields[i]))
         if model["selectable"][i]:
             hits.append((cell, ("select", ship, not chosen)))
         img = cell_picture(screen, records[i], owner, cell)
@@ -363,6 +369,7 @@ def render(screen, surface):
     screen._box_belts = None
     screen._box_paint_area = None
     screen._box_own_cells = []
+    screen._box_cell_fields = []
     screen._box_scanned = None
     screen._order_rects = {}
     screen._system_drawn = False

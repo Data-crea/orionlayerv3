@@ -192,6 +192,9 @@ FIX_NUMBERS = {
     "doc/ext_settle_anywhere.patch": (103,),
     "doc/ext_slider_popup.patch": (104,),
     "doc/ext_antaran_room.patch": (105,),
+    "doc/ext_ship_view.patch": (106,),
+    "doc/ext_evolutionary_mutation.patch": (107,),
+    "doc/ext_dragon_bribe.patch": (108,),
 }
 
 
