@@ -19,6 +19,24 @@ not sent: its box is shown at once (decision 33), as the original's loop
 shows it at its first pop. What waits on the wire waits on STLR's sequence;
 no new sequence within `carry.REFUSED_AFTER` snapshots is the original's
 fallback, E 0xE4 in a help box.
+
+THE QUESTION THE FORECAST MISSED: the forecast reads the owner race's room
+alone, `Room_For_Another_` (settler.cpp:65-123) each race's with mixed
+limits, so the engine may stop on "no room" (or an ETA) at a pop HD never
+asked about (STLR stop DECLINED). The original asks at that very pop, so HD
+asks then, off the outcome — the number sent so far in its text — and on
+YES sends the colonists still in hand, as one walk; on NO the boxes are the
+first command's, as after any NO. Only where the wire does not hold the rest
+where the walk left them is the outcome shown as it stands.
+
+DEVIATION `config_bound_send`: original = `Send_Cluster_` stops at its
+first pop on "the last pop" or "25 in transit" and shows its box; HD = a
+walk that only these stop is SENT, and the engine's STLR draws the box —
+v2 reads both rules from its config (colony.allow_last_population_transfer,
+settler.cpp:268; colony.max_pop_freighted, :289), which HD cannot read, so
+a refusal off the defaults could refuse a move the engine makes
+(`colxfer.engine_decides`). On the defaults the box is the same, one
+snapshot later.
 """
 import logging
 
@@ -53,8 +71,13 @@ class Flow:
         self.outcome = None             # the Walk the boxes are drawn from
         self.boxes = []                 # [{"kind", "title", "text"}]
         self.sent = False
+        self.moved = 0                  # settled by an earlier command
+        self.asked = 0                  # the question kinds put to the player
+        self._extra = False             # `extra_success_notice` so far
+        self._earlier = None            # the outcome a late question stopped
         self._seq0 = None
         self._snapshots = 0
+        self._sent_state = None
         self.rects = {}
         self._advance(state)
 
@@ -62,7 +85,7 @@ class Flow:
 
     def _walk(self, state):
         return colxfer.walk(state, self.source, self.held, self.dest,
-                            self.answers, self.job, self.plague)
+                            self.answers, self.job, self.plague, self.moved)
 
     def _advance(self, state):
         """The next question, or the command, or the boxes at once."""
@@ -70,13 +93,20 @@ class Flow:
         if w.stop == settlewire.STOP_DECLINED and w.question is not None:
             self.phase, self.question = ASK, w.question
             return
-        self.question, self.forecast = None, w
-        if w.settled == 0 or not self.connected:
+        self.question = None
+        self._send_or_show(state, w)
+
+    def _send_or_show(self, state, w):
+        self.forecast = w
+        if (w.settled == 0 and not colxfer.engine_decides(w)) or \
+                not self.connected:
             # nobody would go: the box the original shows at its first pop
-            self._show(w)
+            self._show(self._total(w))
             return
         out = settlewire.available(state) and state.settle_outcome
         self._seq0 = out["seq"] if out else None
+        self._snapshots = 0
+        self._sent_state = state
         self.client.settle_pops(self.source, self.dest, list(self.held),
                                 answers=self.answers, job=self.job)
         self.sent = True
@@ -89,24 +119,21 @@ class Flow:
         """The player's answer to the question on screen."""
         if self.phase != ASK or self.question is None:
             return
+        self.asked |= self.question.needs
+        earlier, self._earlier = self._earlier, None
         if yes:
             self.answers |= self.question.needs
             self._advance(state)
             return
+        self.question = None
+        if earlier is not None:
+            # NO to a late question: the walk ended where the engine
+            # stopped, the boxes are that command's
+            self._show(earlier)
+            return
         # NO: the walk stops at this pop (colmove.cpp:264, then the
         # declined lines) — sent if anyone before it goes
-        self.question = None
-        w = self._walk(state)
-        self.forecast = w
-        if w.settled == 0 or not self.connected:
-            self._show(w)
-            return
-        out = settlewire.available(state) and state.settle_outcome
-        self._seq0 = out["seq"] if out else None
-        self.client.settle_pops(self.source, self.dest, list(self.held),
-                                answers=self.answers, job=self.job)
-        self.sent = True
-        self.phase = SENDING
+        self._send_or_show(state, self._walk(state))
 
     def update(self, state, new_snapshot):
         """While the command is on the wire: its outcome, or the bound."""
@@ -118,11 +145,62 @@ class Flow:
             if out["stop"] == settlewire.STOP_LIST:
                 self._fallback()
                 return
-            self._show(colxfer.from_outcome(out, self.forecast))
+            w = colxfer.from_outcome(out, self._basis(int(out["settled"])))
+            if w.stop == settlewire.STOP_DECLINED and self._late(state, w):
+                return
+            self._show(self._total(w))
             return
         self._snapshots += int(bool(new_snapshot))
         if self._snapshots > carry.REFUSED_AFTER:
             self._fallback()
+
+    def _basis(self, settled):
+        """The forecast the outcome's arrays come from: the forecast where
+        it settled as many, else its replay up to the engine's count."""
+        f = self.forecast
+        if f is not None and f.settled == settled:
+            return f
+        if self._sent_state is None:
+            return None
+        return colxfer.walk(self._sent_state, self.source, self.held,
+                            self.dest, self.answers, self.job, self.plague,
+                            self.moved, upto=settled)
+
+    def _late(self, state, w):
+        """A DECLINED outcome on a question never put to the player (the
+        module docstring): asked now, the rest in hand. False when it was
+        asked (a NO) or the rest cannot be found on the wire."""
+        needs = colxfer.needs_of(w.result)
+        if not needs or self.asked & needs:
+            return False
+        held = self.held
+        if w.settled:
+            rest = rest_at(state, self.source, w)
+            if rest is None:
+                log.info("transfer: a late question, but the rest is not "
+                         "on the wire where the walk left it")
+                return False
+            held = rest[0]
+        k = w.settled
+        self.moved += k
+        self._extra = self._extra or w.extra
+        self.held = tuple(sorted(held))
+        self.question = colxfer.question(w.result, self.moved,
+                                         len(self.held))
+        w.settled = self.moved
+        self.outcome = self._earlier = w
+        self.phase = ASK
+        log.info("transfer: the engine stopped at a question HD did not "
+                 "ask (%d sent): asked now", k)
+        return True
+
+    def _total(self, w):
+        """`w` as the whole `Send_Cluster_`: with what earlier commands of
+        this walk sent and the notice they set (`moved_count`,
+        `extra_success_notice`, colmove.cpp:146-148)."""
+        w.settled += self.moved
+        w.extra = w.extra or self._extra
+        return w
 
     def _fallback(self):
         w = colxfer.Walk()
@@ -256,13 +334,18 @@ def rest_of(hand, state, w):
     their jobs either way)."""
     if hand is None or w is None:
         return None
+    return rest_at(state, hand.colony, w)
+
+
+def rest_at(state, colony, w):
+    """`rest_of` for the colony `colony` the walk took them from."""
     rest = tuple(w.rest) if w.pops else ()
     raws = getattr(state, "colonies_raw", None) or []
-    if not rest or not 0 <= hand.colony < len(raws):
+    if not rest or not 0 <= colony < len(raws) or colony not in w.pops:
         return None
-    rec = colony_struct.parse(raws[hand.colony])
+    rec = colony_struct.parse(raws[colony])
     words = list(rec.pop)[:rec.n_pops]
-    _n, want = w.pops[hand.colony]
+    _n, want = w.pops[colony]
     mask = ~colony_struct.POP_MASK_ASSIGNED
     if rec.n_pops != len(want) or any(
             i >= len(words) or (words[i] & mask) != (want[i] & mask)

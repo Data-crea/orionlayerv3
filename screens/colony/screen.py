@@ -41,8 +41,9 @@ and the full-screen field [0] (work order 126's safety rule):
                       fix 103 the original's `Send_Cluster_` to any colony:
                       its questions before the command, its "Settlers
                       Failed." and "Settlers Depart" after it, in HD's box
-                      (TRANSCRIPTION `transfer_walk`, `transfer_boxes`;
-                      `colxfer`, `colxferflow`; work order 316); on one
+                      (TRANSCRIPTION `transfer_walk`, `transfer_boxes`,
+                      DEVIATION `config_bound_send`; `colxfer`,
+                      `colxferflow`; work order 316); on one
                       with open fix 92 alone a colony at the star, as many
                       as move without a question (TRANSCRIPTION
                       `settle_count`, DEVIATION `settle_without_fix103`)

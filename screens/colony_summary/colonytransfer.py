@@ -22,20 +22,9 @@ colmove.cpp:528-531). On an engine without it the row refuses, as before
 (`colonypick.REFUSE_OTHER_COLONY`, DEVIATION `list_without_fix103`).
 """
 from core import settlewire
-from core.estrings import EStrings
 from screens.colony import colxferflow
 
 from . import colonymove, colonypick
-
-_STRINGS = {}
-
-
-def strings(screen):
-    lang = (getattr(screen.app, "settings", None) or {}).get("language",
-                                                              "en")
-    if lang not in _STRINGS:
-        _STRINGS[lang] = EStrings(lang)
-    return _STRINGS[lang]
 
 
 def start(move, state, row, job, client, connected, estrings):
@@ -54,13 +43,17 @@ def start(move, state, row, job, client, connected, estrings):
     return True
 
 
-def advance(move, state):
-    """Per snapshot: the flow's wait, and the hand after its outcome."""
+def advance(move, state, fresh):
+    """The flow's wait, and the hand after its outcome. `fresh` is True
+    only the first time a snapshot is seen: the frame loop and every
+    click call this, and the wait's bound counts snapshots, never calls
+    (decisions 78, 79 — a frame count would run out in a third of a
+    second and show E 0xE4 for a move the engine made)."""
     flow = move.flow
     if flow is None:
         return
     was = flow.phase
-    flow.update(state, True)
+    flow.update(state, fresh)
     if was == colxferflow.SENDING and flow.phase != colxferflow.SENDING:
         _retake(move, state, flow)
     if flow.done:
@@ -88,7 +81,7 @@ def click(screen, x, y):
     if move.flow is None:
         return False
     move.flow.click(screen._state, x, y)
-    advance(move, screen._state)
+    advance(move, screen._state, False)
     screen._rebuild_rows()
     return True
 
@@ -99,7 +92,7 @@ def key(screen, event_key):
         return False
     move.flow.key(screen._state, event_key,
                   chr(event_key) if 0 < event_key < 128 else "")
-    advance(move, screen._state)
+    advance(move, screen._state, False)
     screen._rebuild_rows()
     return True
 

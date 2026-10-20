@@ -323,10 +323,10 @@ def content(popup, state, words, app=None):
                     if anywhere and ours else None)]
     elif kind == "slider":
         # TRANSCRIPTION `slider_popup` (work order 316 E, open fix 104):
-        # `MAINPUPS::Slider_Popup_` (mainpups.cpp:747-777) — the message,
+        # `MAINPUPS::Slider_Popup_` (mainpups.cpp:747-794) — the message,
         # then min, the value and max as `Draw_Slider_Popup_` prints them
-        # (:2369-2412); down / up step the value by one, unclamped as the
-        # original (`Evaluate_Slider_Input_`, :1936-1957); CANCEL answers
+        # (:2386-2430); down / up step the value by one, unclamped as the
+        # original (`Evaluate_Slider_Input_`, :1953-1973); CANCEL answers
         # -1, ACCEPT the value. OMISSION `slider_bar`: the bar's drag (the
         # scroll field mp_fields[11], 207 px) is not drawn; the arrows do
         # its work
@@ -341,7 +341,7 @@ def content(popup, state, words, app=None):
         # TRANSCRIPTION `antaran_room` (work order 316 E, open fix 105):
         # `ANTAROOM::Main_Antaran_Room_Screen_` (antaroom.cpp:26-80) prints
         # one ANTARMSG.LBX message (:107-114) and ends on a click on its
-        # full-screen field or any key (:52-58); the room's picture and
+        # full-screen field or any key (:60-70); the room's picture and
         # animation (ANTAROOM.LBX 0, 1) are not drawn (the HUD look of
         # every turn popup, `hud_turn_popup` in core/turnpopup.py).
         # UNVERIFIED `antaran_room_live`: drawn from the stand-in's bytes

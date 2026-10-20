@@ -81,6 +81,9 @@ class MoveController:
         #: (`colonytransfer`, TRANSCRIPTION `list_transfer`), or None.
         self.flow = None
         self._estrings = None
+        #: The last snapshot `advance` saw: a flow's bound counts new
+        #: ones, never frames (decision 78, `ScreenBase.new_snapshot`).
+        self._seen = None
 
     @property
     def busy(self):
@@ -286,9 +289,11 @@ class MoveController:
         is in `colonysend`: the first snapshot after a send is
         serialized in the very tick that consumed it.
         """
+        fresh = state is not self._seen
+        self._seen = state
         if self.flow is not None:
             from . import colonytransfer
-            colonytransfer.advance(self, state)
+            colonytransfer.advance(self, state, fresh)
             return
         if self.send is None:
             return

@@ -49,7 +49,9 @@ WIN_X0, WIN_Y0, WIN_X1, WIN_Y1 = 66, 179, 354, 422
 #: A row's height and the first row's y (mainmenu.cpp:545, :610).
 ROW_H, START_Y = 14, 422
 #: 2 px a frame, a frame 3 ticks of 55 ms, 10 frames before the first move
-#: (mainmenu.cpp:546, :573, :556; timer.cpp:10).
+#: (mainmenu.cpp:546, :573, :556; timer.cpp:10) — at v2's default speed:
+#: `Release_Time` takes the player's `animation_speedup` off each wait
+#: (timer.cpp:61), which is not on the wire, so HD keeps the original's.
 STEP_PX, FRAME_S, DELAY_FRAMES = 2, 3 * 0.055, 10
 #: Column one (English, mainmenu.cpp:874-878) from the row's left edge, and
 #: the right column 4 px after it (:491).

@@ -320,7 +320,12 @@ def key_action(view, popup, event):
     field's hotkey the key is (I, B, D, M, H, A; ESC CANCEL's), read off the
     live list the popup's buttons stand in."""
     # the slider popup the same way: its CANCEL carries ESC
-    # (`Add_Slider_Fields_`, mainpups.cpp:678-739; work order 316 E)
+    # (`Add_Slider_Fields_`, mainpups.cpp:678-739; work order 316 E).
+    # TRANSCRIPTION `slider_hotkeys`: a key is the field's own hotkey as the
+    # engine carries it — the down arrow (mp_fields[10]) has E_Strings 137,
+    # '+', the up arrow (mp_fields[9]) E_Strings 11, '-' (:696-711; seen
+    # live, work order 316) — so a typed '+' LOWERS the value, as in the
+    # original, although HD's buttons are worded by what they do
     if popup["kind"] in ("colony_combat", "slider"):
         code = 27 if event.key == pygame.K_ESCAPE else \
             ord((event.unicode or " ")[0].upper())
@@ -330,6 +335,12 @@ def key_action(view, popup, event):
                     code).lower()) if code < 128 else -1):
                 return action
         return None
+    # The Antaran room ends on ANY key (`key::Keyboard_Status()`,
+    # antaroom.cpp:69): HD answers every key with the room's one field,
+    # the only answer the wire takes (TRANSCRIPTION `antaran_room`)
+    if popup["kind"] == "antaran_room":
+        buttons = [a for a in view.buttons if a is not None]
+        return buttons[-1] if buttons else None
     if popup["kind"] not in KEY_KINDS or event.key not in (
             pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_KP_ENTER,
             pygame.K_SPACE):

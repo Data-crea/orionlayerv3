@@ -148,7 +148,9 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
     ignored = reach = None
     if slot.ignored:
         at = nd.point(layout, px + geom.IGNORED_DX, py + geom.IGNORED_DY)
-        ignored = (screen.words_ignored, at[0], at[1], cell.w,
+        # fitted to the band's width, as the name is (`racesband.in_cell`)
+        ignored = (screen.words_ignored, at[0], at[1],
+                   racesband.inner(layout, cell).w,
                    nd.font_px(layout, "note"))
         reach = racesband.line_rect(style, *ignored, "center")
     name_at = nd.point(layout, px + geom.NAME_W // 2, py + geom.NAME_DY)

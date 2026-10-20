@@ -1,0 +1,75 @@
+From a9a1f725fdd5c2b3ec6dfaca3fb9222f2f188b5a Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Tue, 20 Oct 2026 10:27:22 +0200
+Subject: [PATCH] OrionLayer Open Fix 103, amended: the long form refuses an
+ empty colony slot (owner or planet -1, as BOMB::Destroy_Colony leaves it,
+ bomb.cpp:83-85) before Pop_Tries_To_Settle_ reads its planet
+ (settler.cpp:237), the destination calculated only while it is a player's
+ colony; the comments name the two refusals the short form gained with 103 and
+ label the calculation after a job refusal (DEVIATION job_refusal_calc,
+ colmove.cpp:283-286) (work order 316)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 30 ++++++++++++++++++++++++++----
+ 1 file changed, 26 insertions(+), 4 deletions(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 72bff98e..a990f9c9 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2675,7 +2675,10 @@ static int Set_Jobs_(int16_t colony_idx, const uint8_t* pairs,
+ ///
+ /// **THE SHORT FORM (open fix 92)** is the colony screen's drop on a colony
+ /// at its own star: only what needs no question, and a list with one pop
+-/// that would need one is refused whole, both colonies put back.
++/// that would need one is refused whole, both colonies put back. Open fix
++/// 103 added two refusals both forms share: a job outside -1..2, and a
++/// list that leaves another pop of the source unassigned (the walk takes
++/// every unassigned pop, so such a list would move pops it does not name).
+ ///
+ /// **THE LONG FORM (OrionLayer, open fix 103)** is `Send_Cluster_` to any
+ /// colony from the colony screen or the Colonies list. The client asks the
+@@ -2732,6 +2735,14 @@ static int Settle_Pops_(int16_t source_idx, int16_t dest_idx,
+             (!extended && dest.owner != MOX::PLAYER_NUM)) {
+         return -1;
+     }
++    // OrionLayer, open fix 103, amended: but never an empty slot. A
++    // destroyed colony keeps its slot with planet -1 and owner -1
++    // (BOMB::Destroy_Colony, bomb.cpp:83-85), and `Pop_Tries_To_Settle_`
++    // reads `planet[dest->planet].star_index` (settler.cpp:237) before its
++    // owner test, and `Col_Calc_Wrapper` would recalculate the empty slot.
++    if (dest.owner < 0 || dest.planet < 0 || dest.planet >= MAX_PLANETS) {
++        return -1;
++    }
+     // No cluster of the game's own in hand (see Set_Jobs_).
+     if (COLMOVE::cluster_colony_n != -1) {
+         return -1;
+@@ -2838,13 +2849,24 @@ static int Settle_Pops_(int16_t source_idx, int16_t dest_idx,
+     }
+     // ONCE, AFTER THE WHOLE LIST, both colonies - `Send_Cluster`'s own
+     // order (colmove.cpp:476-479), then, when someone went, the second
+-    // calculation after its notice (:524-525).
++    // calculation after its notice (:524-525). The destination only while
++    // it is a player's colony (open fix 103, amended; the test above holds
++    // it, this one keeps it held).
++    // DEVIATION (open fix 103, amended) `job_refusal_calc`: after a job
++    // refusal the original returns from `Send_Cluster_` (colmove.cpp:
++    // 283-286) with no calculation and the cluster still in hand; here the
++    // rest go back to their jobs, so both colonies are calculated as after
++    // any other stop.
+     COLONY::Col_Calc_Wrapper(source_idx);
+-    COLONY::Col_Calc_Wrapper(dest_idx);
++    if (dest.owner >= 0) {
++        COLONY::Col_Calc_Wrapper(dest_idx);
++    }
+     if (extended) {
+         if (settled > 0) {
+             COLCALC::Colony_Calculation(source_idx);
+-            COLCALC::Colony_Calculation(dest_idx);
++            if (dest.owner >= 0) {
++                COLCALC::Colony_Calculation(dest_idx);
++            }
+         }
+         out.settled = (uint8_t)settled;
+         g_settle_outcome = out;

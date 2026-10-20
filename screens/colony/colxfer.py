@@ -73,8 +73,14 @@ REASON_LINES = (
     ("insufficient_freighters", 0x184), ("dest_owner_mismatch", 0x211),
     ("field10_0xa", 0x20F), ("selected_pop_flag_0x400", 0x20E))
 #: The settlers a player may have in transit: `settlers[]`'s 25
-#: (settler.cpp:236, :290; v2's `max_pop_freighted`).
+#: (settler.cpp:236, :290) — the original's, and v2's default of
+#: `colony.max_pop_freighted` (settler_config.cpp:6).
 MAX_IN_TRANSIT = 25
+#: The two refusals whose rule v2 reads from its config (settler.cpp:268,
+#: :289), which HD cannot read: the forecast assumes the original's
+#: defaults, so a walk that only these stop is sent and the engine answers
+#: (`engine_decides`).
+CONFIG_BOUND = ("only_one_pop_left", "max_settlers_in_transit")
 #: `Room_For_Another_`'s ceiling (settler.cpp:98).
 MAX_POPS = 42
 #: The pop strings `Colony_Pop_String_` builds the notice's noun from
@@ -183,11 +189,16 @@ def room_limit(state, dest, dest_index):
 
 
 def walk(state, source_index, held, dest_index, answers=0, job=-1,
-         plague=None):
+         plague=None, moved=0, upto=None):
     """`Send_Cluster_(dest_index, job)` with the pops `held` of colony
     `source_index` in hand, the questions answered by `answers`
     (`settlewire.YES_*` bits): a `Walk`. `plague` is the source's plague
-    where the screen knows it (the colony screen's CEVT), else None."""
+    where the screen knows it (the colony screen's CEVT), else None.
+    `moved` is how many this `Send_Cluster_` sent by an earlier command
+    (the questions' "after sending N", colmove.cpp:221-252). With `upto`
+    it is a REPLAY: the engine reported `upto` pops settled, so the first
+    `upto` pass every rule and the walk ends there — where the rest then
+    stand on the wire."""
     w = World(state)
     out = Walk()
     source, dest = w.colony(source_index), w.colony(dest_index)
@@ -223,13 +234,21 @@ def walk(state, source_index, held, dest_index, answers=0, job=-1,
         return next((k for k, p in enumerate(src)
                      if not colony_struct.pop_is_assigned(p)), None)
 
-    asked = 0                    # the kinds asked so far (warning_state)
+    # `answers` stands for `warning_state` (colmove.cpp:204-266): a kind
+    # answered YES is not asked again, a kind without its YES is the
+    # question the walk stops on
+    forced = upto is not None
     i = unassigned()
     while i is not None:
+        if forced and out.settled >= upto:
+            break
         word = src[i]
         r = dict.fromkeys(settlewire.RESULT_FIELDS, 0)
         out.result = r
-        if dest.owner != source.owner:
+        if forced:
+            r["eta_turns"] = eta
+            r["can_settle"] = 1
+        elif dest.owner != source.owner:
             r["dest_owner_mismatch"] = 1
         elif blockaded(s_star, source.owner):
             r["source_blockaded"] = 1
@@ -254,16 +273,15 @@ def walk(state, source_index, held, dest_index, answers=0, job=-1,
         if not r["can_settle"]:
             out.stop = settlewire.STOP_REFUSED
             break
-        if r["eta_turns"] or r["no_room_at_destination"]:
-            q = question(r, out.settled, n_held - out.settled)
+        if not forced and (r["eta_turns"] or r["no_room_at_destination"]):
+            q = question(r, moved + out.settled, n_held - out.settled)
             if not answers & q.needs:
                 out.stop = settlewire.STOP_DECLINED
-                out.question = q if not asked & q.needs else None
+                out.question = q
                 break
-            asked |= q.needs
         prof = colony_struct.pop_prof(word)
         if job != -1 and prof != job:
-            refusal = job_refusal(src, word, job)
+            refusal = 0 if forced else job_refusal(src, word, job)
             if refusal:
                 out.stop, out.job_refusal = settlewire.STOP_JOB, refusal
                 break
@@ -309,6 +327,24 @@ def question(result, moved, unemployed):
                 Question(settlewire.YES_PAST_LIMIT, E_LIMIT_AFTER,
                          (moved, unemployed)))
     return Question(settlewire.YES_ETA, E_ETA_SURE, (eta,))
+
+
+def needs_of(result):
+    """The answer bit the question at this pop asks for (the engine's
+    test, ext_api.cpp's long form): "no room" first, else the ETA; 0 when
+    the pop needs none."""
+    if result.get("no_room_at_destination"):
+        return settlewire.YES_PAST_LIMIT
+    return settlewire.YES_ETA if result.get("eta_turns") else 0
+
+
+def engine_decides(w):
+    """Does a walk that moves nobody stop only on a rule v2's config may
+    lift (`CONFIG_BOUND`)? Then HD sends and lets the engine answer
+    (`colxferflow`'s `config_bound_send`)."""
+    r = w.result or {}
+    return w.settled == 0 and w.stop == settlewire.STOP_REFUSED and \
+        any(r.get(k) for k in CONFIG_BOUND)
 
 
 def next_question(state, source_index, held, dest_index, answers, job=-1,
