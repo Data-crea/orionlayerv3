@@ -112,6 +112,21 @@ SPEC = Spec("s_player", SIZE, [
     ("bc",                     50, "i32"),
     ("n_freighters",           54, "i16"),
     ("surplus_freighters",     56, "i16"),
+    # THE SETTLERS IN TRANSIT AND THE SPEED THEY TRAVEL AT, work order 316
+    # (colonists to another star, `screens/colony/colxfer.py`): what
+    # `SETTLER::Pop_Tries_To_Settle_` reads — the freighters a settler
+    # needs (`n_freighters < settlers_freighted * 5 + 5`, settler.cpp:
+    # 285-289), the room the settlers already on their way take
+    # (`Room_For_Another_` with freighters, :79-91) and the ETA
+    # (`Settler_ETA_`, ship_speed, :217-231). Header route (offsetof over
+    # the 1.60 headers, dev:tools/struct_header_check.py from these lines);
+    # the second source is live, work order 316: settlers_freighted grew by
+    # the colonists sent to another star, and each settler's destination
+    # planet and ETA were the ones the move was given. `settlers` itself
+    # is read by `settlers()` below, not parsed with every record.
+    ("food_freighted",         62, "i16"),
+    ("settlers_freighted",     64, "i16"),
+    ("ship_speed",           1541, "u8"),
     ("command_points",         58, "i16"),
     ("command_points_used",    60, "i16"),
     ("total_pop",             266, "i16"),
@@ -386,3 +401,41 @@ def parse(raw):
 
 def parse_all(raw_list):
     return SPEC.parse_all(raw_list)
+
+
+#: `struct s_settler_info settlers[]` (orion2.h): 25 in 1.60, 1000 in v2;
+#: one 8-byte word each (`SETTLER::value_type`, settler.h) — bits 0-15 the
+#: source colony, 16-31 the destination planet, 32-35 the race, 36-39 the
+#: ETA, 40-41 the job. Not a spec field: a whole array per record per
+#: snapshot for a count that is mostly 0.
+SETTLERS_OFFSET = 66
+SETTLER_SIZE = 8
+
+
+def settlers(raw):
+    """The settlers in transit of one raw player record:
+    `[{"source", "dest_planet", "race", "eta", "job"}]`, the first
+    `settlers_freighted` of the array, at the engine's own offset."""
+    if not raw:
+        return []
+    rec = SPEC.parse(raw)
+    count = int(rec.settlers_freighted or 0)
+    member = _layout.member("s_player", "settlers")
+    at = member.offset if member is not None else SETTLERS_OFFSET
+    cap = (member.count if member is not None and member.element
+           else (len(raw) - at) // SETTLER_SIZE)
+    out = []
+    for i in range(max(0, min(count, cap))):
+        lo = at + i * SETTLER_SIZE
+        if lo + SETTLER_SIZE > len(raw):
+            break
+        v = int.from_bytes(raw[lo:lo + SETTLER_SIZE], "little")
+        out.append({"source": _signed16(v & 0xFFFF),
+                    "dest_planet": _signed16((v >> 16) & 0xFFFF),
+                    "race": (v >> 32) & 0xF, "eta": (v >> 36) & 0xF,
+                    "job": (v >> 40) & 0x3})
+    return out
+
+
+def _signed16(v):
+    return v - 0x10000 if v & 0x8000 else v

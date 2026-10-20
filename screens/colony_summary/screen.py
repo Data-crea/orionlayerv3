@@ -101,6 +101,7 @@ from core.hud import blocks as hud
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
+from . import colonytransfer  # noqa: E402  (work order 316)
 from . import (colonybuild, colonyempire, colonyfigures,
                colonyheader, colonyinset, colonylist,
                colonymoveui, colonyoutput, colonyrows, colonyscroll,
@@ -436,12 +437,14 @@ class ColonySummaryScreen(ScreenBase):
         # sprite it is made of.
         _fscale = colonytrack.figure_scale(_area, _cfg)
         _first = self._window.top(_area, _cfg, _scale, _n)
-        self._move.draw_held(
-            surface, self._rows, mouse_input.pos(),
-            colonyfigures.set_for(self, _area, _cfg), _fscale,
-            lambda _ink: colonytrack.held_figure_y(
-                _area, _cfg, _scale, _n - _first, mouse_input.pos(),
-                _fscale, _ink))
+        if not colonytransfer.boxed(self):   # no cluster under a box
+            self._move.draw_held(
+                surface, self._rows, mouse_input.pos(),
+                colonyfigures.set_for(self, _area, _cfg), _fscale,
+                lambda _ink: colonytrack.held_figure_y(
+                    _area, _cfg, _scale, _n - _first, mouse_input.pos(),
+                    _fscale, _ink))
+        colonytransfer.render(self, surface)
         # THE HELP POPUP, LAST — the shared one (core/screenhelp.py,
         # core/helppopup.py), over everything including a held cluster,
         # as on every other screen that has a help.json.
@@ -592,6 +595,11 @@ class ColonySummaryScreen(ScreenBase):
 
     # ── Input ─────────────────────────────────────────────
 
+    def handle_key(self, key):
+        if colonytransfer.key(self, key):   # a box of open fix 103's move
+            return
+        ScreenBase.handle_key(self, key)
+
     def handle_click(self, screen_x, screen_y):
         # AN OPEN HELP POPUP TAKES THE CLICK FIRST and closes, and the
         # click reaches nothing else — the swallow every help screen
@@ -599,6 +607,8 @@ class ColonySummaryScreen(ScreenBase):
         # not override this).
         if self.help_consumes_click(screen_x, screen_y):
             return None
+        if colonytransfer.click(self, screen_x, screen_y):
+            return None           # open fix 103's boxes (work order 316)
         if colonyscroll.handle(self, screen_x, screen_y):
             return
         if self._move.busy or self._jump is not None:

@@ -14,5 +14,9 @@
   "inv_mind_control": "MIND CONTROL",
   "inv_drop_all": "DROP ALL",
   "inv_cease_fire": "HALT",
-  "inv_bomb_hits": "BOMBARD"
+  "inv_bomb_hits": "BOMBARD",
+  "slider_down": "-",
+  "slider_up": "+",
+  "slider_cancel": "CANCEL",
+  "slider_ok": "ACCEPT"
 }

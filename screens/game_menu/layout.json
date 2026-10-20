@@ -1,7 +1,6 @@
 {
   "_comment": "The GAME menu overlay (SCREEN_GAME, 8): wording, row rules and message ids. Geometry is boxes.json; every box there is the original's rectangle scaled by 2.25, and `native` below says which rectangle, per box. At load the whole group is seated into the frame's opening, which is fitted to the galaxy map's cutout (gmframe.seat, work order 125); `_anchor_note` records the earlier anchor.",
   "_anchor_note": "SUPERSEDED BY WORK ORDER 125 (16 September 2026) - kept as the record of 122's reading, which is still true of the original. TRANSCRIBED POSITION, 16 September 2026 (decision 69). LOADSAVE::Add_Game_Popup_Fields_ (loadsave.cpp:176-293) puts all four in-game dialogs at one fixed top-left, MOX::_popup_base_x = 0x90, _popup_base_y = 0x19 (:182-183, :205-206, :231-232; the centred branch at :225-229 is the MAIN MENU's Load), and _Draw_Main_Game_Popup_ draws GAME.LBX picture 0 there (:1356); pictures 0, 8, 11 and 14 are all 279x378, measured in the LBX headers. So the popup's centre is native (283.5, 214), which is 51.68 % across and 48.0 % down the map window (22,22)-(527,421) (Add_Grid_Field_, mainscr.cpp:1427) - near its centre and not on it, and nowhere near the 640x480 window's (320, 240). HD transcribes that PROPORTION against the galaxy map's own map_area box: in reference px the target is (90 + 0.5168 * 1422, 66 + 0.48 * 885) = (824.9, 490.8), and every box in boxes.json moved by (-53, +10) from the centred-4:3 placement, which put the body's centre at (878, 481). The smoke test holds the body's centre to the proportion within 1 ref px, so a galaxy frame that moves map_area fails it. help_popup is not part of the group: it is centred on the galaxy map's map_area, like the galaxy map's own. WHAT HD DOES NOW: the frame is fitted to the galaxy map's map_area cutout and every box here is seated into its opening by one move and one factor at load (gmframe.seat, HD DEVIATION); these rects are the unscaled design geometry that seating starts from, and an F3 save writes them back through the inverse.",
-  "_dialog_fit_note": "HD DEVIATION, work order 123 (Data): the confirmation (native 310 px wide) and the slot warning (331 px) are wider than the popup (279 px) and overhang it in the original. In boxes.json each group - confirm_* and warning_* - is scaled by ONE factor, body width over panel width (628/698 = 0.8997, 628/745 = 0.8430), rects and font sizes alike, about the panel's centre, then centred horizontally on the body; the vertical centre stays the original's (confirm 527, warning 549 ref px). No question gains a line at 1080p, 1440p or 2160p (HESTRNGS 186, 187, 178-180, checked before the change). NO returns to the game menu as in the original (Do_Main_Game_Popup_, loadsave.cpp:1240-1283: the popup loop continues with _screen_data 0), the slot warning to the Load dialog.",
   "sliders": {
     "_note": "TRANSCRIBED, work order 124 C. Add_Game_Popup_Fields_ adds both volumes as scroll fields (loadsave.cpp:200-201): x = base + 0x3e = 206, y = base + 0xc2 = 219 (music) and base + 0xd8 = 241 (sound), width 0x9b = 155, height 0xc = 12, range 0..0x9c = 156. fields::Find_Bar_Position_ (fields.cpp:1702-1743) sets value = (pointer_x - 206) * 156 / 155, clamped; it runs while the press is held (Push_Field_Down_ -> Draw_Field_, fields.cpp:2124, 2837-2840), so dragging is the original's. The input loop then stores level = value * 100 / 155 in _settings.music_level / sound_fx_level, and 5 or less switches the channel off (Set_Music_For_Game_Popup_ / Set_Sound_For_Game_Popup_, loadsave.cpp:1685-1740); opening the dialog sets value = level * 155 / 100 (:1139-1140). The bar is GAME.LBX picture 7, 155 x 12, drawn clipped to 206 .. 206 + value (_Draw_Main_Game_Popup_, :1338-1409; picture 7 at :1385-1409): ten blocks whose x ranges and rows are measured off that picture below, so a block can show partly lit. The words are artwork of picture 0, typed here.",
     "native_x": 206,
@@ -155,42 +154,6 @@
       382,
       383
     ],
-    "confirm_panel": [
-      161,
-      117,
-      471,
-      343
-    ],
-    "confirm_text": [
-      204,
-      145,
-      428,
-      271
-    ],
-    "confirm_yes": [
-      235,
-      302,
-      286,
-      323
-    ],
-    "confirm_no": [
-      345,
-      302,
-      396,
-      323
-    ],
-    "warning_panel": [
-      154,
-      144,
-      485,
-      335
-    ],
-    "warning_text": [
-      208,
-      172,
-      434,
-      292
-    ],
     "volume_panel": [
       194,
       185,
@@ -222,7 +185,7 @@
       278
     ]
   },
-  "_native_note": "640x480 rectangles from Add_Game_Popup_Fields_ (loadsave.cpp:176-293), Confirmation_Box_ (gendraw.cpp:153-175, CONFIRM.LBX drawn at 0xa1,0x75) and Message_Box_Exploding_ (gendraw.cpp:90-127, WARNING.LBX at 0x9a,0x90, 0x14B x 0xBF). body, settings_title and slot_list are read off the native screenshots, not the source: the popup's frame is artwork (GAME.LBX 0, 29, 11, 14).",
+  "_native_note": "640x480 rectangles from Add_Game_Popup_Fields_ (loadsave.cpp:176-293). body, settings_title and slot_list are read off the native screenshots, not the source: the popup's frame is artwork (GAME.LBX 0, 29, 11, 14).",
   "words": {
     "menu": {
       "save": "SAVE GAME",
@@ -245,14 +208,7 @@
       "save": "SAVE",
       "cancel": "CANCEL"
     },
-    "confirm": {
-      "yes": "YES",
-      "no": "NO"
-    },
-    "_artwork_note": "Every word above is ARTWORK in the original \u2014 GAME.LBX entries 1-6, 10, 12, 13, 15, 29 (Load_Game_Popup_Pictures_, loadsave.cpp:1177-1207) and CONFIRM.LBX (gendraw.cpp:167-175). There is no string to extract, so they are typed here from the native screenshots, per decision 15.",
-    "confirm_unknown": "Confirm?",
-    "warning_unknown": "The game refused slot {n}.",
-    "_unknown_note": "HD STATE: shown only when the overlay did not see which button led here (it was opened into a confirmation or warning) or, for the warning, without MSG_SAVE_SLOTS; the original prints H 186/187 and H 178-180 (loadsave.cpp:1241, :1258, :934-940).",
+    "_artwork_note": "Every word above is ARTWORK in the original \u2014 GAME.LBX entries 1-6, 10, 12, 13, 15, 29 (Load_Game_Popup_Pictures_, loadsave.cpp:1177-1207). There is no string to extract, so they are typed here from the native screenshots, per decision 15.",
     "string_missing": "String {id}: run tools/hestrings_extract.py",
     "orionlayer": {
       "heading": "OrionLayer",
@@ -382,7 +338,9 @@
       "sample_field": "Field",
       "sample_selected": "Selected",
       "sample_button": "Button"
-    }
+    },
+    "box_without_msgb": "The game asks a question HD cannot read here (its MSGB block did not come).",
+    "_box_note": "TRANSCRIPTION one_confirmation_box (work order 316): the NEW/QUIT confirmation and the slot warning are the game's generic boxes (GENDRAW::Confirmation_Box_, gendraw.cpp:160-231; Message_Box_Exploding_, :93-112), drawn by core/msgbox.py from open fix 29's MSGB with the engine's own text, H 186/187 and H 178-180 (loadsave.cpp:1241, :1258, :934-940). Without MSGB the F12 notice says box_without_msgb."
   },
   "settings_rows": {
     "label_ids": [
@@ -438,15 +396,6 @@
     "empty": 388,
     "_empty_note": "H 388 '... empty slot ...': the stardate is not printed for a slot whose description is this string (:884)",
     "omission_icon": "OMISSION: the game-type icon at the right of every row (GAME.LBX 16/17/18, loadsave.cpp:833-846) is not drawn \u2014 that artwork is not extracted, and a word in its place would be an invention."
-  },
-  "confirm": {
-    "new": 186,
-    "quit": 187
-  },
-  "warning": {
-    "1": 178,
-    "2": 179,
-    "3": 180
   },
   "save_empty_slot_deviation": "DEVIATION: an empty slot starts the HD name edit empty. The original copies the slot's description, '... empty slot ...', into the field (loadsave.cpp:517); its first backspace clears it (fields.cpp:1191-1193), and a typed character appends to it where the field width allows (fields.cpp:1196-1216, source reading). Kept deliberately (16 September 2026): HD sends a backspace before the name, so the game receives the typed name, or its own default name when nothing was typed (loadsave.cpp:541-548).",
   "unverified_right_click": "UNVERIFIED, NOT TRANSCRIBED: a right click inside the Save dialog outside every help rectangle returns -1, which Do_Save_Game_Popup_'s `input_id < 0` branch reads as `abs(-1) = 1` inside the slot field range and leaves for the menu (loadsave.cpp:568-574). Data's order: verify live first. It could not be run: the game is a native Wayland client that xdotool cannot reach, and every field centre in that dialog lies inside a help rectangle, so MSG_CANCEL_FIELD cannot produce the case. Until it is verified, HD does nothing there.",

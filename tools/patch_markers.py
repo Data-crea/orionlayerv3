@@ -531,6 +531,26 @@ LOCAL_PATCHES = {
         "the engine does not send the galaxy map's merge-relocation mode "
         "(open fix 102): after F4 HD shows no sign that the next star click "
         "re-routes every relocation"),
+    # Work order 316: on the fork's branch `orionlayer` only, 96c39753.
+    "doc/ext_settle_anywhere.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 103.",
+        "the engine takes colonists only to a colony at the same star (open "
+        "fix 103): no TRANSPORT button, no move from the Colonies list, and "
+        "the original's questions answered NO"),
+    # Work order 316: on the fork's branch `orionlayer` only, 4b77ed0b.
+    "doc/ext_slider_popup.patch": (
+        os.path.join("src", "game", "mainpups.cpp"),
+        "OrionLayer, open fix 104.",
+        "the engine does not send the slider popup (open fix 104): the "
+        "galaxy map's freighter scrap and the leader cheat show only the "
+        "F12 notice"),
+    # Work order 316: on the fork's branch `orionlayer` only, 29c61acd.
+    "doc/ext_antaran_room.patch": (
+        os.path.join("src", "game", "antaroom.cpp"),
+        "OrionLayer, open fix 105.",
+        "the engine does not send the Antaran room (open fix 105): an "
+        "Antaran attack's message shows only the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

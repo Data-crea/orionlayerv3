@@ -9,12 +9,19 @@ race the report is about.
   DEVIATION      `hud_parts`: RACERPRT.LBX 0's painted boxes are the
                  shared field (work order 223, decision 71 as amended);
                  the font is the HD font (`hd_font`, the Races screen's)
+  HD EXTENSION   `hd_leaders` — Data's painting of the race's leader from
+                 the mod folder in the portrait cell, the original's
+                 portrait only without one; DEVIATION `leader_cover`, the
+                 painting covers the cell by the same one rule. Both are
+                 the Races screen's (`screens/races/racesleaders`, work
+                 order 315 B), reused here, never copied (work order
+                 316 D)
 """
 from core.hud import blocks as hud
 from screens.info import infodraw
 from screens.info import infopages as pages
 from screens.leaders import ldrdraw as nd
-from screens.races import racesdraw
+from screens.races import racesdraw, racesleaders
 
 from . import rrgeom as geom
 
@@ -51,8 +58,17 @@ def draw_column(surface, screen, view, words, art):
     w, h = geom.PORTRAIT_SIZE
     cell = nd.rect(layout, (px, py, px + w - 1, py + h - 1))
     hud.field(surface, cell, layout.scale)
-    pic = art.portrait(int(p.race)) if art is not None else None
-    if pic is not None:
+    # HD EXTENSION `hd_leaders` and DEVIATION `leader_cover`, the Races
+    # screen's (work order 316 D; [races.panels]): Data's painting of the
+    # race's leader from the mod folder covers the cell by the Races
+    # screen's one rule (`racesleaders.picture`); without one, the
+    # original's portrait (racerprt.cpp:104-107) as before.
+    hd = racesleaders.picture(int(p.race), cell.size)
+    pic = art.portrait(int(p.race)) if hd is None and art is not None \
+        else None
+    if hd is not None:
+        surface.blit(hd, cell.topleft)
+    elif pic is not None:
         big = nd.magnified(pic, layout)
         surface.blit(big, big.get_rect(center=cell.center))
     racesdraw.banner_frame(surface, layout, cell, int(p.color), art)

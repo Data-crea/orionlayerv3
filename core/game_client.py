@@ -451,14 +451,22 @@ class GameClient:
             payload += struct.pack('<BB', pop_index, job)
         self._send_message(MSG_SET_JOBS, payload)
 
-    def settle_pops(self, source_index, dest_index, pops):
-        """Settle pops of the colony screen's colony in another colony at
-        the same star (`MSG_SETTLE_POPS`, open fix 92,
-        `doc/ext_settle_pops.patch`). The engine settles the whole list or
-        none of it; the result is read off a later snapshot, as for
-        `set_jobs`."""
+    def settle_pops(self, source_index, dest_index, pops, answers=None,
+                    job=-1):
+        """Settle pops of one colony in another colony of the player
+        (`MSG_SETTLE_POPS`). The short form (open fix 92,
+        `doc/ext_settle_pops.patch`): the colony screen's colony to a colony
+        at its star, the whole list or none of it. With `answers` the long
+        form (open fix 103, `doc/ext_settle_anywhere.patch`): any colony,
+        from the colony screen or the Colonies list, colonist by colonist up
+        to the first that may not go — `answers` the YES bits of the
+        original's two questions (`core.settlewire.YES_*`), `job` the job
+        each takes first (-1 keeps it); its outcome is STLR. Either result
+        is read off a later snapshot, as for `set_jobs`."""
         payload = struct.pack('<hhB', source_index, dest_index, len(pops))
         payload += bytes(int(p) for p in pops)
+        if answers is not None:
+            payload += struct.pack('<Bb', int(answers) & 0xFF, int(job))
         self._send_message(MSG_SETTLE_POPS, payload)
 
     def select_ship(self, ship_index, selected):

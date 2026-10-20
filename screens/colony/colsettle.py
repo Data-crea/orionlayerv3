@@ -33,12 +33,18 @@ counts the pops the original moves without a question — the source keeps
 its last pop (settler.cpp:269-272), the target takes them while it has room
 (:296-297, `Room_For_Another_`) — sends those, and leaves the rest in hand
 with the original's sentence.
-DEVIATION `settle_past_limit`: original = at the first pop without room it
-asks whether to go on (E 0x205, or 0x203 with the number sent,
-`Do_Confirmation_Box_`, colmove.cpp:204-266); YES settles the rest beyond
-the limit (they die there), NO ends as above; HD = the answer NO, always:
-open fix 92 refuses a pop without room (`Settle_Pops_`, ext_api.cpp), so a
-YES has no command (an amendment of 92 would carry it — decision 85).
+DEVIATION `settle_without_fix103` (work order 316): this module is the
+move on an engine with open fix 92 ALONE. There the original's question at
+the first pop without room (E 0x205 / 0x203, `Do_Confirmation_Box_`,
+colmove.cpp:204-266) is answered NO, always — fix 92 refuses a pop without
+room, so a YES has no command — and the refusal and the part sent are said
+on the screen's message line, not in the "Settlers Failed." box (E 0x1D6,
+colmove.cpp:366-372, :454-460); no "Settlers Depart" box follows (E
+0x1D5/0x1D1, :482-522); only colonies at the colony's own star, the system
+display's, are reached, and no TRANSPORT button is drawn. On an engine with
+open fix 103 (STLR on the wire) the colony screen takes `colxfer` /
+`colxferflow` instead: the original's walk to any colony, its questions
+and its boxes (`coltransfer`).
 
 Before sending, HD mirrors the
 refusals it can read on the wire (decision 33), each with the game's own
@@ -48,16 +54,6 @@ transit to the planet) the engine still refuses, and the screen then says
 so with the game's own fallback sentence (E 0xE4). So `plan` is a FILTER,
 not a guarantee (P627): its name for success is `may_settle`.
 
-DEVIATION `settle_same_star`: only colonies at the colony's own star — the
-system display's. The original reaches other stars through the transport
-button that appears while colonists are in hand ([11], colony.cpp:1771-1781,
-`COLXPORT::Xport_Popup_`, colony_main.cpp:1068-1076), with freighters, an
-ETA and a confirmation; HD draws no such button yet (OMISSION
-`transport_button`).
-DEVIATION `settle_notice`: the original reports a settlement in a text box
-("Settlers Depart", E 0x1D5/0x1D1, colmove.cpp:482-522) the player closes;
-HD shows no box — the source's row and the target's line on the system
-display show the move.
 """
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct

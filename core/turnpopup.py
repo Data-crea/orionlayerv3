@@ -310,7 +310,8 @@ def state_key(popup):
 #: others takes any input. A leader offer takes no key (its answers carry
 #: ESTRINGS hotkeys HD does not type for the player).
 KEY_KINDS = ("science", "turn_summary", "planet_choice", "discovery",
-             "leader_level", "gnn", "combat_target", "landing", "troops")
+             "leader_level", "gnn", "combat_target", "landing", "troops",
+             "antaran_room")
 
 
 def key_action(view, popup, event):
@@ -318,7 +319,9 @@ def key_action(view, popup, event):
     or, on the colony combat popup (work order 232 C), the button whose
     field's hotkey the key is (I, B, D, M, H, A; ESC CANCEL's), read off the
     live list the popup's buttons stand in."""
-    if popup["kind"] == "colony_combat":
+    # the slider popup the same way: its CANCEL carries ESC
+    # (`Add_Slider_Fields_`, mainpups.cpp:678-739; work order 316 E)
+    if popup["kind"] in ("colony_combat", "slider"):
         code = 27 if event.key == pygame.K_ESCAPE else \
             ord((event.unicode or " ")[0].upper())
         for action in view.buttons:

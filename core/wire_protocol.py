@@ -81,6 +81,10 @@ MSG_INJECT_RAW_KEY = 0x8A
 #: another colony of the player at the same star — int16 source colony, int16
 #: destination colony, uint8 n, n x uint8 pop index; the engine settles all
 #: of them or none, only while the colony screen shows the source.
+#: Open fix 103 (work order 316): two bytes more — uint8 answers (bit 0 YES
+#: past the limit, bit 1 YES to the ETA), int8 job (-1 keeps it) — make it
+#: the original's Send_Cluster_ to any colony, from the colony screen or the
+#: Colonies list, colonist by colonist; its outcome is STLR.
 MSG_SETTLE_POPS = 0x8B
 
 #: How many STATE/VISUAL pairs after an injected command can still

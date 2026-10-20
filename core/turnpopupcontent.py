@@ -14,7 +14,13 @@ DEFAULT_WORDS = {"close": "CLOSE",
                  "inv_bomb": "BOMBARD", "inv_destroy": "DESTROY",
                  "inv_mind_control": "MIND CONTROL",
                  "inv_drop_all": "DROP ALL", "inv_cease_fire": "HALT",
-                 "inv_bomb_hits": "BOMBARD"}
+                 "inv_bomb_hits": "BOMBARD",
+                 # the slider popup's buttons (work order 316 E: MAINPUPS.LBX
+                 # 0x4A down, 0x4B up, 0x4C cancel, 0x4D accept, art; the
+                 # fourth reads ACCEPT in the live framebuffer of the
+                 # freighter scrap, work order 316)
+                 "slider_down": "-", "slider_up": "+",
+                 "slider_cancel": "CANCEL", "slider_ok": "ACCEPT"}
 
 
 def _star_name(state, index):
@@ -315,6 +321,35 @@ def content(popup, state, words, app=None):
         ours = getattr(state, "current_screen", None) == TROOPS_ID
         buttons = [(words["close"], ("activate", anywhere)
                     if anywhere and ours else None)]
+    elif kind == "slider":
+        # TRANSCRIPTION `slider_popup` (work order 316 E, open fix 104):
+        # `MAINPUPS::Slider_Popup_` (mainpups.cpp:747-777) — the message,
+        # then min, the value and max as `Draw_Slider_Popup_` prints them
+        # (:2369-2412); down / up step the value by one, unclamped as the
+        # original (`Evaluate_Slider_Input_`, :1936-1957); CANCEL answers
+        # -1, ACCEPT the value. OMISSION `slider_bar`: the bar's drag (the
+        # scroll field mp_fields[11], 207 px) is not drawn; the arrows do
+        # its work
+        if popup.get("text"):
+            lines = [popup["text"]]
+        lines.append(f"{a[0]}   [ {a[2]} ]   {a[1]}")
+        buttons = [(words["slider_down"], act(a[4])),
+                   (words["slider_up"], act(a[5])),
+                   (words["slider_cancel"], act(a[6])),
+                   (words["slider_ok"], act(a[7]))]
+    elif kind == "antaran_room":
+        # TRANSCRIPTION `antaran_room` (work order 316 E, open fix 105):
+        # `ANTAROOM::Main_Antaran_Room_Screen_` (antaroom.cpp:26-80) prints
+        # one ANTARMSG.LBX message (:107-114) and ends on a click on its
+        # full-screen field or any key (:52-58); the room's picture and
+        # animation (ANTAROOM.LBX 0, 1) are not drawn (the HUD look of
+        # every turn popup, `hud_turn_popup` in core/turnpopup.py).
+        # UNVERIFIED `antaran_room_live`: drawn from the stand-in's bytes
+        # only; no test save brings an Antaran attack (work order 316)
+        if popup.get("text"):
+            lines = [popup["text"]]
+        buttons = [(words["continue"], act(a[1]) or (
+            ("activate", anywhere) if anywhere else None))]
     elif kind == "landing":
         title = title or _planet_name(state, a[0])
         buttons = [(words["continue"], act(a[3]) or (

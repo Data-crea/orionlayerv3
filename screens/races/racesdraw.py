@@ -26,6 +26,14 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
   HD EXTENSION    `hd_leaders` — Data's painted race leaders in the
                   portrait cell, the original's portrait only without one
                   (`racesleaders`, work order 315 B)
+  HD EXTENSION    `name_band` — the name, IGNORED and the relation word
+                  on a band of the HUD's glass, where the original prints
+                  them in an outlined font (`racesband`, work order 316 C)
+  OMISSION        `their_spies` — the original prints that race's spies
+                  in the player's empire over its portrait when there are
+                  any (`BILL::Get_Their_Spy_Number`, ROW_RACE_SPIES,
+                  racescrn.cpp:548-557); HD does not draw the number
+                  (found unlabelled by work order 316 C)
 """
 import pygame
 
@@ -34,6 +42,7 @@ from core.hud import hover
 from core.hud import text as hudtext
 from screens.leaders import ldrdraw as nd
 
+from . import racesband
 from . import racesgeom as geom
 from . import racesleaders
 
@@ -132,15 +141,24 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
                          cell.inflate(4 * width, 4 * width), width)
         hud.panel(surface, nd.rect(layout, geom.slot_box(i)), layout.scale,
                   lit=True, filled=False)
-    name_at = nd.point(layout, px + geom.NAME_W // 2, py + geom.NAME_DY)
-    nd.blit_text(surface, style, slot.name, name_at[0], name_at[1],
-                 nd.rect(layout, (0, 0, geom.NAME_W - 1, 0)).w,
-                 nd.font_px(layout, "status"), ink(art, "high"), "center")
+    # HD EXTENSION `name_band` (work order 316 C): the name and IGNORED
+    # stand on one band of the HUD's glass across the cell's foot — the
+    # original keeps them readable with an outlined font HD does not draw
+    # (`racesband`), on every cell, painted or not.
+    ignored = reach = None
     if slot.ignored:
         at = nd.point(layout, px + geom.IGNORED_DX, py + geom.IGNORED_DY)
-        nd.blit_text(surface, style, screen.words_ignored, at[0], at[1],
-                     cell.w, nd.font_px(layout, "note"), ink(art, "high"),
-                     "center")
+        ignored = (screen.words_ignored, at[0], at[1], cell.w,
+                   nd.font_px(layout, "note"))
+        reach = racesband.line_rect(style, *ignored, "center")
+    name_at = nd.point(layout, px + geom.NAME_W // 2, py + geom.NAME_DY)
+    racesband.in_cell(surface, layout, style, cell, slot.name, name_at[0],
+                      name_at[1],
+                      nd.rect(layout, (0, 0, geom.NAME_W - 1, 0)).w,
+                      nd.font_px(layout, "status"), ink(art, "high"),
+                      "center", reach=reach)
+    if ignored is not None:
+        nd.blit_text(surface, style, *ignored, ink(art, "high"), "center")
     _draw_text(surface, screen, slot, art)
     _draw_bar(surface, screen, i, slot.relation if slot.active else None,
               art)
@@ -240,10 +258,12 @@ def relation_word(surface, screen, slot, art):
     i = slot.index
     at = nd.point(screen.layout, geom.BAR[i][0] + 4,
                   geom.slider_y(i, slot.relation) + 1)
-    nd.blit_text(surface, screen.style, slot.relation_word, at[0], at[1],
-                 nd.rect(screen.layout, (0, 0, 120, 0)).w,
-                 nd.font_px(screen.layout, "status"), ink(art, "high"),
-                 "center")
+    # HD EXTENSION `name_band` (work order 316 C): on a band of the HUD's
+    # glass, in place of the original's outlined font (`racesband.free`).
+    racesband.free(surface, screen.style, slot.relation_word, at[0], at[1],
+                   nd.rect(screen.layout, (0, 0, 120, 0)).w,
+                   nd.font_px(screen.layout, "status"), ink(art, "high"),
+                   "center")
 
 
 def draw_icons(surface, screen, box, count, race, art):

@@ -30,15 +30,22 @@ and the full-screen field [0] (work order 126's safety rule):
     a pop move        one MSG_SET_JOBS (decision 52), picked locally and
                       sent on the drop (decision 47), the Colonies
                       screen's rules and sender unchanged
-    to another colony one MSG_SETTLE_POPS (open fix 92, `colsettle`): the
-                      colonists in hand dropped on a planet of the
-                      system display, a colony at the same star — DEVIATION
-                      `settle_same_star` (other stars: the transport
-                      button, OMISSION `transport_button`), and no notice
-                      box after it, DEVIATION `settle_notice`; as many
-                      as `Send_Cluster_` moves without a question, the
-                      rest still in hand (TRANSCRIPTION `settle_count`,
-                      work order 315; DEVIATION `settle_past_limit`)
+    to another colony one MSG_SETTLE_POPS: the colonists in hand dropped
+                      on a planet of the system display, or on a row of
+                      the transport popup the TRANSPORT button opens
+                      (TRANSCRIPTION `transport_button`,
+                      `transport_popup`, DEVIATION `transport_popup_hud`,
+                      OMISSION `transport_plague_red`, HD EXTENSION
+                      `transport_escape`, `transport_row_hover`;
+                      `coltransfer`, `colxport`) — on an engine with open
+                      fix 103 the original's `Send_Cluster_` to any colony:
+                      its questions before the command, its "Settlers
+                      Failed." and "Settlers Depart" after it, in HD's box
+                      (TRANSCRIPTION `transfer_walk`, `transfer_boxes`;
+                      `colxfer`, `colxferflow`; work order 316); on one
+                      with open fix 92 alone a colony at the star, as many
+                      as move without a question (TRANSCRIPTION
+                      `settle_count`, DEVIATION `settle_without_fix103`)
 
 THE COLONISTS IN HAND RIDE ON THE POINTER (work order 233, Data: "a figure
 that is clicked is bound to the mouse and travels with the cursor; a click
@@ -90,8 +97,8 @@ from screens.colony_summary import (colonylist, colonymove, colonypick,
                                     colonysend)
 from screens.leaders import ldrdraw as nd
 
-from . import (coldraw, colgeom as geom, colright, colsettle, colwire,
-               colwords)
+from . import (coldraw, colgeom as geom, colright, colsettle, coltransfer,
+               colwire, colwords)
 
 log = logging.getLogger("colony")
 
@@ -191,6 +198,7 @@ class ColonyScreen(ScreenBase):
         self._drawn_view = None     # what is drawn: the wire, the carry
         self._drawn_key = None
         self.carry = carry.Carry()  # the colonists in hand (`colonypick.Pick`)
+        self.transfer = coltransfer.Transfer()   # open fix 103's moves
         self.send_ = None
         self.message = ""
         lang = (getattr(app, "settings", None) or {}).get("language", "en")
@@ -243,7 +251,11 @@ class ColonyScreen(ScreenBase):
                                           self._wire.index != self.pick.colony):
                 # another colony, or a box: `Set_Colony_Screen_To_New_
                 # Colony_` / leaving put the colonists back
+                log.info("colony: colonists in hand put back (%s)",
+                         "a box" if not self._wire.draws else "another colony")
                 self.carry.put_back()
+                if self.transfer.popup is not None:
+                    self.transfer.popup = None
         if self.send_ is not None:
             self.send_.update(game_state)
             if self.send_.finished:
@@ -251,6 +263,7 @@ class ColonyScreen(ScreenBase):
                     self.message = self._move_words.get(
                         self.send_.reason, self.send_.reason or "")
                 self.send_ = None
+        coltransfer.update(self, game_state, fresh)
         outcome = self.carry.settle(
             lambda expected: expected.on_wire(game_state), fresh)
         if outcome == carry.CONFIRMED:
@@ -306,7 +319,8 @@ class ColonyScreen(ScreenBase):
                              align="center")
         self.render_shell(surface)
         if view is not None and view.draws:
-            self.carry.draw(surface, mouse_input.pos(), self._draw_hand)
+            coltransfer.render(self, surface, lambda: self.carry.draw(
+                surface, mouse_input.pos(), self._draw_hand))
         self.render_help(surface)
 
     def _draw_hand(self, surface, hand, pointer):
@@ -365,6 +379,8 @@ class ColonyScreen(ScreenBase):
         if self.help_consumes_key(key) or not (self._view and
                                                self._view.draws):
             return
+        if coltransfer.key(self, key, chr(key) if 0 < key < 128 else ""):
+            return
         what = KEYS.get(key)
         if what is None:
             # the rest of the original's keys (C, the Alt cheats;
@@ -379,6 +395,7 @@ class ColonyScreen(ScreenBase):
             sent = self.send(self._hot(what), f"key {what}")
         if sent and what in LEAVES:
             self.carry.put_back()     # TRANSCRIPTION `put_back`
+            self.transfer.clear()
 
     def handle_right_button(self, down, mx, my):
         # Colonists in hand stay in hand: the right button is help where the
@@ -395,6 +412,8 @@ class ColonyScreen(ScreenBase):
         view = self._view
         if view is None or not view.draws or self.send_ is not None \
                 or self.carry.sent is not None:
+            return None
+        if coltransfer.click(self, screen_x, screen_y):
             return None
         self.message = ""
         if self._job_click(screen_x, screen_y):
@@ -574,6 +593,9 @@ class ColonyScreen(ScreenBase):
             if dest == pick.colony:
                 self.carry.put_back()
                 return True
+            if coltransfer.available(self):     # open fix 103
+                coltransfer.start(self, dest)
+                return True
             outcome = colsettle.plan(self._state, self._wire, pick, dest)
             if isinstance(outcome, colsettle.Refusal):
                 self.message = self._e(outcome.estring)
@@ -598,7 +620,7 @@ class ColonyScreen(ScreenBase):
         """The original's "Settlers Failed." lines for a hand that went in
         part: the reason, then E 0x80 with the number sent (colmove.cpp:
         404, :454), on one line; `replace`, never `format`
-        (decision 37). DEVIATION `settle_refusal_line`: the original
+        (decision 37). DEVIATION `settle_without_fix103`: the original
         shows them in a text box (E 0x1D6, colmove.cpp:366-372,
         :454-460); HD on the screen's message line."""
         sent = self._e(0x80).replace("%d", str(len(outcome.sent)))

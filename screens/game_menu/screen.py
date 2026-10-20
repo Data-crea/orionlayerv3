@@ -32,7 +32,6 @@ import logging
 import pygame
 
 from core import hestrings
-from core.hestrings import printf
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
@@ -78,7 +77,6 @@ class GameMenuScreen(ScreenBase):
         nodes.SETTINGS: [("settings_accept", "A")],
         nodes.LOAD: [("load_load", "L"), ("load_cancel", "C")],
         nodes.SAVE: [("save_save", "S"), ("save_cancel", "C")],
-        nodes.CONFIRM: [("confirm_yes", "Y"), ("confirm_no", "N")],
     }
 
     def __init__(self, app):
@@ -89,7 +87,6 @@ class GameMenuScreen(ScreenBase):
         self.state = None
         self.flags = None       # the thirteen checkbox states, held locally
         self.pending = None     # "new" / "quit": which confirmation is up
-        self.last_slot = None   # the Load row HD sent, for the warning
         self.hstrings = None
         self._sent = None
         self.save = SaveEditor(self)
@@ -115,7 +112,7 @@ class GameMenuScreen(ScreenBase):
         # holds exactly them, so the galaxy map and Planets get this
         # instance rather than building their own.
         self.hstrings = hestrings.for_app(self.app)
-        self.node = self.under = self.pending = self.last_slot = None
+        self.node = self.under = self.pending = None
         self.menu_keys = set()
         self._sent = None
         self.livery = None
@@ -221,21 +218,17 @@ class GameMenuScreen(ScreenBase):
         return True
 
     def present(self, node, key):
-        ftype = nodes.TYPE_HIDDEN if node == nodes.CONFIRM else nodes.TYPE_BUTTON
-        return nodes.hotkey_field(self.fields(), key, ftype) is not None
+        return nodes.hotkey_field(self.fields(), key,
+                                  nodes.TYPE_BUTTON) is not None
 
     def press(self, key):
         """One of the dialog's own letters, clicked or typed."""
         node = self.node
-        ftype = nodes.TYPE_HIDDEN if node == nodes.CONFIRM else nodes.TYPE_BUTTON
-        field = nodes.hotkey_field(self.fields(), key, ftype)
+        field = nodes.hotkey_field(self.fields(), key, nodes.TYPE_BUTTON)
         if field is None or not self.can_send():
             return
-        if node == nodes.CONFIRM and key == "Y" and self.pending == "quit":
-            # Before YES, never after: the game saves SAVE10.GAM and
-            # exits (loadsave.cpp:1261-1273), and a watchdog still armed
-            # would read that silence as a dead link and reconnect.
-            self.app.client.expect_shutdown()
+        # QUIT's YES is the message box's: `core.overlays.quit_confirmed`
+        # disarms the watchdog before it goes out (loadsave.cpp:1261-1273).
         if node == nodes.MENU and key in ("N", "Q"):
             self.pending = "new" if key == "N" else "quit"
         if node == nodes.LOAD and key == "L":
@@ -244,24 +237,31 @@ class GameMenuScreen(ScreenBase):
             gmorion.save(self)
         self.send(field)
 
-    def confirm_text(self):
-        hid = self.words.get("confirm", {}).get(self.pending)
-        if hid is None:
-            return self.words.get("words", {}).get("confirm_unknown", "")
-        return gmdraw.game_string(self, hid)
+    # ── The confirmation and the warning: the message box's ─────
 
-    def warning_text(self):
-        slots = gmdraw.slots_for(self, nodes.LOAD)
-        if self.last_slot is None:
-            return self.words.get("words", {}).get("warning_unknown", "")
-        if slots:
-            hid = self.words.get("warning", {}).get(
-                str(slots[self.last_slot]["status"]))
-            if hid is not None:
-                return printf(gmdraw.game_string(self, hid),
-                              self.last_slot + 1)
+    def _box_without_msgb(self):
+        """True while the NEW/QUIT confirmation or the slot warning stands
+        and open fix 29's MSGB did not come with it. The box is drawn by
+        `core/msgbox.py` only (TRANSCRIPTION `one_confirmation_box`, work
+        order 316); the engine sets MSGB right after the box's fields
+        (gendraw.cpp:181-184, :108-112), so both come in one snapshot, and
+        an engine without the fix gets the F12 notice, never a second box
+        of the menu's own."""
+        return (self.node in (nodes.CONFIRM, nodes.WARNING) and
+                getattr(self.state, "message_box", None) is None)
+
+    def wants_original(self):
+        return self._box_without_msgb()
+
+    def handover_is_modal(self):
+        return self._box_without_msgb()
+
+    def no_view_reason(self, game_state):
+        if not self._box_without_msgb():
+            return None
         return self.words.get("words", {}).get(
-            "warning_unknown", "").replace("{n}", str(self.last_slot + 1))
+            "box_without_msgb",
+            "The game asks a question HD cannot read (no MSGB block).")
 
     # ── Input ─────────────────────────────────────────────
 
@@ -317,11 +317,8 @@ class GameMenuScreen(ScreenBase):
             rows = nodes.slot_rows(self.fields())
             if i is not None and rows and self.can_send():
                 # A slot row loads AT ONCE (loadsave.cpp:332-375).
-                self.last_slot = i
                 self.app.client.hold_watchdog(LOAD_HOLD_S)
                 self.send(rows[i])
-        elif self.node == nodes.WARNING:
-            self.send(nodes.esc_field(self.fields()))
         return None
 
     def handle_mouse_motion(self, screen_x, screen_y):
@@ -355,8 +352,8 @@ class GameMenuScreen(ScreenBase):
             olwin.handle_key(self, event.key)
             return
         if event.key == pygame.K_ESCAPE:
-            if self.node == nodes.CONFIRM:
-                return          # the loop wants YES or NO (gendraw.cpp:212)
+            if self.node in (nodes.CONFIRM, nodes.WARNING):
+                return          # the message box's (core/overlays)
             if self.node == nodes.MENU:
                 self.press(nodes.ESC)       # RETURN, the first ESC field
             else:

@@ -77,10 +77,14 @@ class MoveController:
         self.notice = ""
         self._plan = None
         self._size = 0
+        #: A move to another colony on an engine with open fix 103
+        #: (`colonytransfer`, TRANSCRIPTION `list_transfer`), or None.
+        self.flow = None
+        self._estrings = None
 
     @property
     def busy(self):
-        return self.send is not None
+        return self.send is not None or self.flow is not None
 
     # ── Input ─────────────────────────────────────────────
 
@@ -105,9 +109,34 @@ class MoveController:
             return self._first_click(row, row_index, pops, n_pops, x,
                                      area, cfg, scale, sort_key, words,
                                      figures)
+        if row["index"] != self.pick.colony and \
+                self._to_other_colony(row, x, area, cfg, scale, state,
+                                      client, connected):
+            return True
         return self._second_click(row, row_index, pops, n_pops, max_farms,
                                   x, area, cfg, scale, words, client,
                                   connected)
+
+    def _to_other_colony(self, row, x, area, cfg, scale, state, client,
+                         connected):
+        """Another colony's job column or name: `Send_Cluster_(colony,
+        job)` (colsum.cpp:869, :909) — on an engine with open fix 103 the
+        transfer (`colonytransfer`); without it the row refuses below."""
+        from . import colonytransfer
+        job = colonylist.drop_band(area, cfg, scale, row, x)
+        if job is None and not colonytrack.on_name(area, cfg, scale, row,
+                                                   x):
+            return False
+        # the session's language, as the colony screen's own loader
+        # (colony/screen.py) — an untold loader reads English (090zs)
+        from core import lang
+        from core.estrings import EStrings
+        language = lang.current()
+        if self._estrings is None or self._estrings[0] != language:
+            self._estrings = (language, EStrings(language))
+        return colonytransfer.start(self, state, row,
+                                    -1 if job is None else job, client,
+                                    connected, self._estrings[1])
 
     def _first_click(self, row, row_index, pops, n_pops, x, area, cfg,
                      scale, sort_key, words, figures=None):
@@ -257,6 +286,10 @@ class MoveController:
         is in `colonysend`: the first snapshot after a send is
         serialized in the very tick that consumed it.
         """
+        if self.flow is not None:
+            from . import colonytransfer
+            colonytransfer.advance(self, state)
+            return
         if self.send is None:
             return
         self.send.update(state)

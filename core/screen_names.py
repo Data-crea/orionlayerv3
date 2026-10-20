@@ -85,8 +85,8 @@ SCREENS = {
     40: ("TURN_SUMMARY",    None),
     43: ("SHOW_COMMAND_POINTS", None),
     #: orion2re v2 added the credits (orion2_consts.h SCREEN_CREDITS);
-    #: HD has no screen for it (work order 243).
-    44: ("CREDITS",         None),
+    #: `screens/credits/` draws it since work order 316 E.
+    44: ("CREDITS",         "credits"),
     #: 50 has no entry in the SCREEN enum — synthetic value used
     #: only by the ext-API patch in Racial_Option_Screen_ (racesel.cpp)
     #: while Custom Race's own input loop runs. See
@@ -161,6 +161,14 @@ SCREENS = {
     #: the colony screen's troop popup (`NEWPUP::Troop_Popup`), which the
     #: App draws over the held colony screen like 59-64.
     71: ("(synthetic)",     None),             # the troop popup
+    #: 80 and 82, synthetic, ON THE WIRE ONLY WITH OPEN FIXES 104 AND 105
+    #: (work order 316; numbers left free below them for other orders):
+    #: the slider popup
+    #: (`MAINPUPS::Slider_Popup_`) and the Antaran room
+    #: (`ANTAROOM::Main_Antaran_Room_Screen_`), which the App draws over the
+    #: held frame like 59-64.
+    80: ("(synthetic)",     None),             # the slider popup
+    82: ("(synthetic)",     None),             # the Antaran room
 }
 
 #: The last value of orion2re's own SCREEN enum:

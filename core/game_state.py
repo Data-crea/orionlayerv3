@@ -134,6 +134,9 @@ class GameState:
     #: The galaxy map's merge-relocation mode, open fix 102 (work order
     #: 310): None without the block, else a bool (`core/mergemode.py`).
     merging_relocations: Optional[bool] = None  # "MREL", fix 102
+    #: The last long-form settlement's outcome, open fix 103 (work order
+    #: 316): None without the block (`core/settlewire.py` names every key).
+    settle_outcome: Optional[dict] = None    # "STLR", fix 103
     #: The Hall of Fame while it is up, open fix 50 (work order 188):
     #: `core/hofblocks.py` names every key.
     hall_of_fame: Optional[dict] = None      # "HOFM", fix 50
@@ -466,7 +469,9 @@ def parse_state(data: bytes) -> GameState:
     from core import planetsblock
     pos = planetsblock.parse(gs, data, pos)   # PLSM, open fix 97
     from core import mergemode
-    pos = mergemode.parse(gs, data, pos)      # MREL, open fix 102, LAST
+    pos = mergemode.parse(gs, data, pos)      # MREL, open fix 102
+    from core import settlewire
+    pos = settlewire.parse(gs, data, pos)     # STLR, open fix 103, LAST
     return gs
 
 

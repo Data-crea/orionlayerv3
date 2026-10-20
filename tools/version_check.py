@@ -189,6 +189,9 @@ FIX_NUMBERS = {
     "doc/ext_bitmap_line_short.patch": (99,),
     "doc/ext_combat_refusal_boxes.patch": (101,),
     "doc/ext_merge_relocation_mode.patch": (102,),
+    "doc/ext_settle_anywhere.patch": (103,),
+    "doc/ext_slider_popup.patch": (104,),
+    "doc/ext_antaran_room.patch": (105,),
 }
 
 

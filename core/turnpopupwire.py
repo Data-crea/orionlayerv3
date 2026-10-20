@@ -19,13 +19,19 @@ KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          12: "council",
          # open fix 98 (work order 274): the colony screen's troop popup;
          # its tail is `core.troopwire`'s
-         13: "troops"}
+         13: "troops",
+         # work order 316: open fixes 104 (the slider popup,
+         # `doc/ext_slider_popup.patch`) and 105 (the Antaran room,
+         # `doc/ext_antaran_room.patch`) send these; without them the
+         # game's picture stays behind the F12 notice
+         20: "slider", 22: "antaran_room"}
 #: The ids open fix 49 reports (40, 52 and 33 are the game's own); 68 and
 #: 69 are open fix 91's.
 IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
        60: "planet_choice", 61: "discovery", 62: "leader_level", 63: "gnn",
        64: "combat_target", 33: "landing", 68: "colony_combat",
-       69: "ground_combat", 70: "council", 71: "troops"}
+       69: "ground_combat", 70: "council", 71: "troops",
+       80: "slider", 82: "antaran_room"}
 #: The system display's slots (MAX_PLANETS_PER_STAR) and ship buttons.
 SLOTS, SHIP_SLOTS = 5, 15
 

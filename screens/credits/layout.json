@@ -1,0 +1,14 @@
+{
+  "_comment": "The credits screen (wire id 44, orion2re v2; work order 316 E). MAINMENU::Credits_Screen_ (mainmenu.cpp:504-561), reached only from the main menu while it shows the mod list (mainmenu.cpp:761). Its words are none of the game's: the original has no title and no button, so CLOSE is typed here per decision 15.",
+  "words": {
+    "close": "CLOSE"
+  },
+  "marks": {
+    "transcription_credits_scroll": "TRANSCRIPTION credits_scroll: the window (66, 179)-(354, 422), rows 14 px from y 422 up by 2 px a frame of 3 ticks of 55 ms after 10 frames' delay, again from the bottom once every row has passed the top (mainmenu.cpp:538-549, :563-623, timer.cpp:10); each row the left column, dots up to column one, the right column 4 px after it (Copy_Credit_String_To_Bitmap_, mainmenu.cpp:467-492; column 0x7C, mainmenu.cpp:874-878).",
+    "transcription_credits_exit": "TRANSCRIPTION credits_exit: a click anywhere or ESC activates the screen's one full-screen field (hotkey ESC, mainmenu.cpp:541-552); nothing else is sent.",
+    "deviation_credits_text": "DEVIATION credits_text: original = the session language's CREDITS.LBX / GERCRDTS.LBX / ... (Init_Credits_, mainmenu.cpp:844-879; Load_Credits_, :789-833); HD = the HD main menu's own credits (screens/main_menu/assets/credits.txt, English), the text the main menu scrolls.",
+    "deviation_credits_window": "DEVIATION credits_window: original = the window over MAINMENU.LBX 1, the title art; HD = the same window as a HUD panel filling the shell's content rectangle, rows scaled by its height (decision 71), on the universal background as every screen without its own picture (work order 173).",
+    "deviation_credits_fade": "DEVIATION credits_fade: original = the row entering at the bottom and the row leaving at the top step their font palette (Fade_Credit_Colors_, mainmenu.cpp:494-498, :578-596); HD = those rows drawn at the share of them inside the window.",
+    "hd_extension_credits_close": "HD EXTENSION credits_close: a CLOSE button bottom right; the original leaves on a click anywhere or ESC, which HD takes too."
+  }
+}

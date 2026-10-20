@@ -5,6 +5,8 @@
     "hd_state_report_player": "HD STATE \u2014 which race the report is about is a parameter of Race_Report_Screen_ and never on the wire; Races remembers the race HD picked after REPORT, and only that report is drawn (a report opened on F12 keeps the F12 notice).",
     "hd_state_local_navigation": "HD STATE \u2014 the Tech Review's tabs and list are local, as on Info (info.cpp's file statics); the report sends RETURN / ESC only.",
     "deviation_hud_parts": "DEVIATION \u2014 RACERPRT.LBX 0's painted boxes are the shared field and the panels decision 71's; the portrait, its banner frame, the spy icons and every word are the original's.",
-    "deviation_hd_font": "DEVIATION \u2014 the HD font at the native line height, as on Races and Info."
+    "deviation_hd_font": "DEVIATION \u2014 the HD font at the native line height, as on Races and Info.",
+    "hd_extension_hd_leaders": "HD EXTENSION \u2014 the Races screen's hd_leaders (work order 316 D): the portrait cell shows Data's painting of the race's leader from the player's mod folder (screens/races/racesleaders, reused); without one, the original's RACES.LBX 32 + race as before.",
+    "deviation_leader_cover": "DEVIATION \u2014 the Races screen's leader_cover: the painting covers the cell (0.92 : 1 here, the original's 76 x 88 mapped) by the one rule racesleaders.window holds, scaled to cover, cut centred across and from the top."
   }
 }

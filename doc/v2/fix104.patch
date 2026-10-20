@@ -1,0 +1,68 @@
+From 4b77ed0b6ea9b4aceb3a6e5085690781a5e8ff6c Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Tue, 20 Oct 2026 08:44:43 +0200
+Subject: [PATCH] OrionLayer Open Fix 104: the slider popup on the wire
+ (MAINPUPS::Slider_Popup reports id 80 and TPOP kind 20 while its loop runs:
+ min, max, the value now, its scroll, down, up, cancel and OK fields, the
+ popup style, and the message as text; the galaxy map's freighter scrap and
+ the leader cheat)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp   |  7 +++++++
+ src/game/mainpups.cpp | 17 +++++++++++++++++
+ 2 files changed, 24 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 6048ac71..0524418c 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1300,6 +1300,13 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     //               marines and armour; open fix 98)         [0] the planet shown
+     //                                                          (-1 before its first
+     //                                                          draw); the tail below
++    //     20    80  slider popup (MAINPUPS::Slider_Popup: the Freighters count,
++    //               mainscr2.cpp:274, the leader cheat, officer.cpp:559;
++    //               open fix 104)                            [0] min [1] max [2] value
++    //                                                          now [3] scroll field
++    //                                                          [4] down [5] up [6] cancel
++    //                                                          [7] OK [8] popup style;
++    //                                                          text = the message
+     //
+     //     Written: version, kind, n_args + args, title, text (int16
+     //     length + raw bytes each), then per kind:
+diff --git a/src/game/mainpups.cpp b/src/game/mainpups.cpp
+index 2f49e0f1..086d852a 100755
+--- a/src/game/mainpups.cpp
++++ b/src/game/mainpups.cpp
+@@ -761,6 +761,20 @@ namespace MAINPUPS {
+         fields::Deactivate_Auto_Function();
+         fields::Assign_Auto_Function(Draw_Slider_Popup, 1);
+         Load_Slider_Fields();
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 104. The slider popup on the wire while its
++        // loop runs: id 80, TPOP kind 20, the message as drawn (ext_api.cpp).
++        const ext::TurnPopupGuard ext_popup(80, 20, nullptr, g_msg);
++        ext_popup.arg(0, g_min);
++        ext_popup.arg(1, g_max);
++        ext_popup.arg(2, g_var);
++        ext_popup.arg(3, mp_fields[11]);  // the scroll field, bound to g_var
++        ext_popup.arg(4, mp_fields[10]);  // down (--g_var, :1955)
++        ext_popup.arg(5, mp_fields[9]);   // up (++g_var, :1951)
++        ext_popup.arg(6, mp_fields[2]);   // cancel (g_var = -1)
++        ext_popup.arg(7, mp_fields[3]);   // OK
++        ext_popup.arg(8, popup_style);
++#endif
+         Draw_Slider_Popup();
+         RUSS::Mox_Sync_Update();
+ 
+@@ -770,6 +784,9 @@ namespace MAINPUPS {
+             Draw_Slider_Popup();
+             RUSS::Mox_Sync_Update();
+             Evaluate_Slider_Input(&input, &scanned_field, &done);
++#ifdef ORION2RE_EXT
++            ext_popup.arg(2, g_var);  // the value the next snapshot shows
++#endif
+         } while (done == 0);
+ 
+         Do_Popup_Cleanup();

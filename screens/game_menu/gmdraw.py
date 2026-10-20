@@ -5,10 +5,9 @@ the popup body, which wears one fixed frame image (decision 69,
 `gmframe`); a panel with `backdrop` in its style is first filled from
 the shared cockpit texture, the same fill the help popup uses, so the
 popup is opaque without a dimmed backdrop a palette-indexed engine
-could not draw. HD DEVIATION: the confirmation and the slot warning are
-drawn at the original's layout scaled to the popup's width, inside the
-frame's opening, where the original lets them overhang the popup (work
-order 123; `gmframe`'s docstring has the sizes and the reason).
+could not draw. The NEW/QUIT confirmation and the slot warning are not
+drawn here: they are the game's generic boxes, `core/msgbox.py`'s
+(TRANSCRIPTION `one_confirmation_box`, work order 316).
 Rows are computed from one box and a count (decision 51) and plated
 with `draw_plate`. Every string goes through `Style.render_text`
 (decision 30); the words come from layout.json (decision 15) and the
@@ -23,7 +22,6 @@ from core.hud import glyphs
 from core import palette
 from core.hestrings import printf
 from core.structs import settings as settings_spec
-from core.textfit import wrap_text
 from screens.game_menu import gmframe, nodes
 
 COL_BUTTON = palette.require("game_menu", "button_text")
@@ -32,7 +30,6 @@ COL_ROW = palette.require("game_menu", "row_text")
 COL_ACTIVE = palette.require("game_menu", "row_active")
 COL_DETAIL = palette.require("game_menu", "row_detail")
 COL_OPTION = palette.require("game_menu", "option_text")
-COL_MESSAGE = palette.require("game_menu", "message")
 
 #: Which HESTRNGS id is the Load/Save status a slot message names.
 SCREEN_DATA = {nodes.LOAD: 2, nodes.SAVE: 3}
@@ -102,8 +99,8 @@ def panel(screen, surface, name):
     # image under decision 69, `gmframe`); nothing else is drawn for it.
     if b.style.get("frame") and gmframe.draw(screen, surface, b.screen_rect):
         return b
-    # A panel with a `backdrop` is a DIALOG — the confirmation, the slot
-    # warning: the popup block too, opaque, as every dialog is since 71.
+    # A panel with a `backdrop` is a DIALOG: the popup block too, opaque,
+    # as every dialog is since 71.
     if b.style.get("backdrop"):
         hud.popup(surface, b.screen_rect, screen.layout.scale)
         return b
@@ -175,14 +172,15 @@ def render(screen, surface):
     node = screen.node
     if node is None:
         return
+    # The NEW/QUIT confirmation and the slot warning are NOT drawn here:
+    # they are `GENDRAW::Confirmation_Box_` and `Message_Box_Exploding_`
+    # (gendraw.cpp:160-231, :93-112), the generic boxes every screen opens,
+    # and `core/msgbox.py` draws them from open fix 29's MSGB with the
+    # engine's own text (TRANSCRIPTION `one_confirmation_box`, work order
+    # 316: until then this module drew a second copy). Under one, the
+    # popup draws the dialog the box covers, as the original keeps it.
     base = screen.under if node in (nodes.CONFIRM, nodes.WARNING) else node
     DIALOGS.get(base, lambda s, f: None)(screen, surface)
-    if node == nodes.CONFIRM:
-        _message(screen, surface, "confirm", screen.confirm_text())
-        button(screen, surface, "confirm_yes", word(screen, "confirm", "yes"))
-        button(screen, surface, "confirm_no", word(screen, "confirm", "no"))
-    elif node == nodes.WARNING:
-        _message(screen, surface, "warning", screen.warning_text())
 
 
 def _menu(screen, surface):
@@ -312,22 +310,6 @@ def _slots(screen, surface, node):
                       row.x + int(row.w * rule.get("date_x", 0.48)), dy)
     for name, key in screen.BUTTONS[node]:
         button(screen, surface, name, word(screen, node, name.split("_", 1)[1]))
-
-
-def _message(screen, surface, prefix, text):
-    panel(screen, surface, f"{prefix}_panel")
-    area_box = box(screen, f"{prefix}_text")
-    if area_box is None or area_box.screen_rect is None or not text:
-        return
-    size = _size(screen, area_box, default=34)
-    area = area_box.screen_rect
-    lines = wrap_text(screen.style, text, size, area.w)
-    imgs = [screen.style.render_text(line, size, tuple(COL_MESSAGE[:3]))
-            for line in lines]
-    y = area.y + (area.h - sum(i.get_height() for i in imgs)) // 2
-    for img in imgs:
-        surface.blit(img, (area.x + (area.w - img.get_width()) // 2, y))
-        y += img.get_height()
 
 
 DIALOGS = {
