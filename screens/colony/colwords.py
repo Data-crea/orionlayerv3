@@ -121,7 +121,9 @@ class Words:
                  if 0 <= col.owner < len(players) else None)
         traits = player_struct.traits(owner) if owner is not None else None
         pops = _fmt(self.e(SYS_POP), col.n_pops,
-                    colonyrows.max_population(col, planet, traits))
+                    colonyrows.max_population(
+                        col, planet, traits,
+                        colonyrows.city_planning(owner)))  # WO 322
         return _fmt(self.e(SYS_OWNED),
                     owner.race_name if owner is not None else "",
                     grav, mineral, pops)

@@ -60,13 +60,24 @@ LOG = os.path.expanduser("~/.cache/orionlayer/orion2re.log")
 #: The variables the tools force on a client (work order 182) — a player's
 #: OrionLayer must not inherit them from a shell that set them for a tool.
 TOOL_ONLY = ("SDL_VIDEODRIVER", "SDL_AUDIODRIVER", "ORIONLAYER_REAL_DESKTOP")
+#: The two this start sets itself (work order 322 C), which no shell may
+#: hand down from another start.
+ENGINE_ENV = ("ORIONLAYER_ENGINE_PID", "ORIONLAYER_ENGINE_LOG")
 
 
-def client_env(base=None):
-    """OrionLayer's environment: the player's own, minus the tools' forcing."""
+def client_env(base=None, pid=None, log=None):
+    """OrionLayer's environment: the player's own, minus the tools' forcing
+    — and, with `pid`, the engine this start owns and its log, so that a
+    lost connection to an engine that has ENDED is said, not retried
+    forever (HD EXTENSION `engine_lost`, `core/enginelink.py`; the names
+    are its ENV_PID and ENV_LOG)."""
     env = dict(os.environ if base is None else base)
-    for key in TOOL_ONLY:
+    for key in TOOL_ONLY + ENGINE_ENV:
         env.pop(key, None)
+    if pid:
+        env["ORIONLAYER_ENGINE_PID"] = str(pid)
+        if log:
+            env["ORIONLAYER_ENGINE_LOG"] = log
     return env
 
 
@@ -178,7 +189,7 @@ def main(argv=None, out=print):
     rc = None
     try:
         rc = subprocess.call([sys.executable, os.path.join(ROOT, "main.py")],
-                             cwd=ROOT, env=client_env())
+                             cwd=ROOT, env=client_env(pid=pid, log=LOG))
         return rc
     finally:
         out(ending(rc))

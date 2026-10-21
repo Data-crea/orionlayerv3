@@ -1,5 +1,5 @@
 {
-  "_comment": "Wording that belongs to OrionLayer and not to MOO2 (decision 15). The REASON itself is the screen's own sentence from fallback_reason(); this file holds only the frame around it, so a translation replaces it without touching code. Work order 139 D. Work order 188 Part 1 adds the Stage 1 notice's two lines (HD EXTENSION f12_notice, core/f12notice.py): shown wherever the game's picture would otherwise appear without F12. Work order 229 B adds the frame guard's notice (HD EXTENSION frame_guard, core/frameguard.py): {screen} is filled in, the log's path follows fault_log.",
+  "_comment": "Wording that belongs to OrionLayer and not to MOO2 (decision 15). The REASON itself is the screen's own sentence from fallback_reason(); this file holds only the frame around it, so a translation replaces it without touching code. Work order 139 D. Work order 188 Part 1 adds the Stage 1 notice's two lines (HD EXTENSION f12_notice, core/f12notice.py): shown wherever the game's picture would otherwise appear without F12. Work order 229 B adds the frame guard's notice (HD EXTENSION frame_guard, core/frameguard.py): {screen} is filled in, the log's path follows fault_log. Work order 322 C adds the lost engine's panel (HD EXTENSION engine_lost, core/enginelink.py): lost_* while OrionLayer retries, gone_* once the engine play.py started has ended; the engine log's path follows gone_log.",
   "prefix": "OrionLayer is showing the game's own picture:",
   "cut": "\u2026 (shortened)",
   "notice_waiting": "The game is waiting for an answer",
@@ -9,5 +9,12 @@
   "fault_what": "{screen}: an error in HD's own code. The game itself is still running.",
   "fault_log": "The details are in",
   "fault_action": "F12: play on (and save) in the original - F12 again: try HD once more",
-  "fault_action_alone": "No game is connected: close OrionLayer and start it again"
+  "fault_action_alone": "No game is connected: close OrionLayer and start it again",
+  "lost_title": "The connection to the game was lost",
+  "lost_what": "OrionLayer tries to reach the game again every few seconds and carries on as soon as it answers.",
+  "lost_action": "Close the window to end OrionLayer",
+  "gone_title": "The game has ended",
+  "gone_what": "orion2re is no longer running, so OrionLayer stops trying.",
+  "gone_log": "The game's log is",
+  "gone_action": "Close OrionLayer and start it again: python play.py"
 }

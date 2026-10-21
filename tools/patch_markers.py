@@ -570,6 +570,20 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 108.",
         "the engine does not send the Space Dragon's bribe (open fix 108): "
         "the dragon's offer and its new star show only the F12 notice"),
+    # Work order 322 part E: on the fork's branch `orionlayer` only, 90656654.
+    "doc/ext_system_picker.patch": (
+        os.path.join("src", "game", "dip_scrn.cpp"),
+        "OrionLayer, open fix 109.",
+        "the engine does not send the diplomacy system picker (open fix "
+        "109): choosing a system to offer or demand shows only the F12 "
+        "notice"),
+    # Work order 322 part B2: on the fork's branch `orionlayer` only, c024495c.
+    "doc/ext_colsum_block.patch": (
+        os.path.join("src", "game", "colsum.cpp"),
+        "OrionLayer, open fix 110.",
+        "the engine does not send the Colonies list's numbers (open fix "
+        "110): no turn suffix, and no BUY on a row outside the game's "
+        "window"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

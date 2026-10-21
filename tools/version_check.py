@@ -195,6 +195,8 @@ FIX_NUMBERS = {
     "doc/ext_ship_view.patch": (106,),
     "doc/ext_evolutionary_mutation.patch": (107,),
     "doc/ext_dragon_bribe.patch": (108,),
+    "doc/ext_system_picker.patch": (109,),
+    "doc/ext_colsum_block.patch": (110,),
 }
 
 

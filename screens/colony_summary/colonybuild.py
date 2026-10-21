@@ -75,7 +75,9 @@ Two things are not:
      sprite is in the player's LBX and is not shipped.
 
 Both are deviations, and naming only the first would leave the larger
-one unmarked.
+one unmarked. WHETHER it is drawn, and what a click sends, are the
+game's own field list's (`colonybuy`, work order 322 B1); the rect
+the click is tested against is `buy_rect`, the drawing's own (decision 5).
 """
 import pygame
 
@@ -147,38 +149,90 @@ def draw(surface, row, x, y, width, row_h, cfg, style, layout):
             note = cfg.get("names_unsourced", "")
         if note:
             _blit_note(surface, note, x, y, width, row_h, style, layout, cfg)
+        # BUY does not hang on the name: the game's field decides it
+        # (`colonybuy`), whether HD can name the product or not.
+        cell = _cell(row, x, y, width, row_h, cfg, style, layout)
+        if cell["buy"] is not None:
+            surface.blit(cell["buy"], cell["buy_rect"])
         return
+    cell = _cell(row, x, y, width, row_h, cfg, style, layout)
+    top, left = cell["top"], x + cell["pad"]
+    for surf in cell["lines"]:
+        surface.blit(surf, (left, top))
+        top += surf.get_height()
+    if cell["turns"] is not None:
+        surface.blit(cell["turns"], (left, top))
+    if cell["buy"] is not None:
+        surface.blit(cell["buy"], cell["buy_rect"])
+
+
+def _cell(row, x, y, width, row_h, cfg, style, layout):
+    """The column's pieces and where they go — ONE function for the
+    drawing and the BUY hit test (decision 5, work order 322 B1)."""
+    name = row.get("producing") or ""
     small = layout.font_size(cfg.get("small_font", 15))
     floor = layout.font_size(cfg.get("build_font_min", 10))
     sizes = list(range(small, floor - 1, -1)) or [small]
 
     turns = row.get("producing_turns")
+    # "{turns}" from the player's E 0x27 (`list_cfg`), else layout.json's
+    # copy (decision 15). DEVIATION `suffix_line`: the original prints
+    # name and suffix as ONE paragraph squeezed into 85 x 22
+    # (colsum.cpp:765, :783, the tree with open fix 110); here the
+    # suffix is the second line under the name, beside BUY.
     turn_text = (cfg.get("turns", "- {turns}t").replace(
         "{turns}", str(turns)) if turns else "")
-    buy_surf = _buy_button(cfg, style, small) if row.get("can_buy") else None
+    # A small left pad, so a line's first glyph (the suffix's hyphen)
+    # never touches the column's border (`build_pad`, reference px).
+    pad = max(1, int(cfg.get("build_pad", 3) * getattr(layout, "scale",
+                                                       1.0)))
+    buy_surf = _buy_button(cfg, style, small, row.get("can_buy")) \
+        if row.get("can_buy") else None
 
     # Line two's height is what line one may not take.
     second_h = max(
         buy_surf.get_height() if buy_surf else 0,
         style.render_text(turn_text or "0", small, BUILD_TURNS).get_height())
-    lines, _size = squeeze_lines(style, name, width, row_h - second_h,
-                                 sizes, BUILD_NAME)
-
+    lines = squeeze_lines(style, name, width - pad, row_h - second_h,
+                          sizes, BUILD_NAME)[0] if name else []
     top = y + (row_h - sum(s.get_height() for s in lines) - second_h) // 2
-    for surf in lines:
-        surface.blit(surf, (x, top))
-        top += surf.get_height()
-    if turn_text:
-        surface.blit(style.render_text(turn_text, small, BUILD_TURNS),
-                     (x, top))
-    if buy_surf:
-        surface.blit(buy_surf, (x + width - buy_surf.get_width(), top))
+    second_y = top + sum(s.get_height() for s in lines)
+    # A small inset from the cell's right edge, so the button never
+    # touches the plate's border (`buy_inset`, reference px).
+    inset = max(1, int(cfg.get("buy_inset", 4) * getattr(layout, "scale",
+                                                          1.0)))
+    return {
+        "lines": lines, "top": top, "pad": pad,
+        "turns": (style.render_text(turn_text, small, BUILD_TURNS)
+                  if turn_text else None),
+        "buy": buy_surf,
+        "buy_rect": (pygame.Rect(x + width - inset - buy_surf.get_width(),
+                                 second_y, buy_surf.get_width(),
+                                 buy_surf.get_height())
+                     if buy_surf else None)}
 
 
-def _buy_button(cfg, style, px):
+def buy_rect(row, x, y, width, row_h, cfg, style, layout):
+    """Where this row's BUY is drawn, or None: the rect the click is
+    tested against is the one `draw` blits into (decision 5)."""
+    if not row.get("can_buy"):
+        return None
+    return _cell(row, x, y, width, row_h, cfg, style, layout)["buy_rect"]
+
+
+def _buy_button(cfg, style, px, state=True):
     """A small labelled button. The original's is a sprite with an
-    empty label string (E_Strings_(12)), so the word is ours."""
-    label = style.render_text(cfg.get("buy_label", "Buy"), px, BUY_TEXT)
+    empty label string (E_Strings_(12)), so the word is ours. A bought
+    product's is drawn SELECTED (decision 92), as the original draws its
+    locked button down while `bought_outright` is set (colsum.cpp:302,
+    `_list_buy_data`; fields.cpp v2 :1825-1845) — `colonybuy`."""
+    bought = state == "bought"
+    # Bought: the selected fill and lit edge AND the label in that lit
+    # edge's colour, so the state reads at 1920 without the edge alone.
+    from core.hud import style as hudstyle
+    colour = tuple(hudstyle.get().colour("button.active_edge"))[:3] \
+        if bought else BUY_TEXT
+    label = style.render_text(cfg.get("buy_label", "Buy"), px, colour)
     pad = max(2, px // 3)
     surf = pygame.Surface((label.get_width() + 2 * pad,
                            label.get_height() + pad), pygame.SRCALPHA)
@@ -186,7 +240,8 @@ def _buy_button(cfg, style, px):
     # button is one block on every screen. Its scale is the label's
     # own (px at 1080p's 15).
     from core.hud import blocks as hud
-    hud.small_button(surf, surf.get_rect(), px / 15.0)
+    hud.small_button(surf, surf.get_rect(), px / 15.0,
+                     state="active" if bought else "normal")
     surf.blit(label, (pad, pad // 2))
     return surf
 
@@ -204,6 +259,24 @@ def _blit_note(surface, text, x, y, width, row_h, style, layout, cfg):
     if surf.get_width() > width:
         return
     surface.blit(surf, (x, y + (row_h - surf.get_height()) // 2))
+
+
+#: E 0x27, "%s - %dt" (colsum.cpp:765, the tree with open fix 110).
+TURNS_STRING = 0x27
+
+
+def turns_format(strings, fallback):
+    """The suffix as "{turns}" text from the player's E 0x27 — the part
+    after the name's "%s", its "%d" the count — or `fallback` (layout.json's
+    copy, decision 15) when the entry is not extracted or not of that
+    shape."""
+    text = strings.string(TURNS_STRING) if strings is not None else None
+    if not text or not text.startswith("%s"):
+        return fallback
+    tail = text[2:].strip()
+    if tail.count("%d") != 1 or tail.replace("%d", "").count("%"):
+        return fallback
+    return tail.replace("%d", "{turns}")
 
 
 def names_for(screen):
@@ -247,6 +320,8 @@ def list_cfg(screen):
     """
     cfg = dict(screen._data.get("list", {}))
     cfg["names_state"] = names_for(screen).state
+    cfg["turns"] = turns_format(getattr(names_for(screen), "strings", None),
+                                cfg.get("turns", "- {turns}t"))
     cfg["names_missing"] = screen._data.get("build", {}).get(
         "names_missing", "")
     cfg["names_unsourced"] = screen._data.get("build", {}).get(

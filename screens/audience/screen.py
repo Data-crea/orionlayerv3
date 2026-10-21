@@ -21,6 +21,8 @@ choose (decision 65):
                          field, fields.cpp:1640-1688 — measured live in
                          part 9: Good Bye by activation left the audience)
     a statement          its one full-screen field, on any click
+    the system picker    a star's own hidden field, only one the original
+                         takes, or CANCEL's (`aupicker`, open fix 109)
 
 Refused before it goes out (decision 33): a disabled item — the list
 ignores it (fields.cpp:1647-1649). No keys are sent: the list's fields
@@ -55,7 +57,9 @@ class AudienceScreen(ScreenBase):
     # Literal, as every screen's is (the id check reads them off the
     # source); `augeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 57
-    EXTRA_SCREEN_IDS = (58,)
+    #: 85: the system picker over the audience (open fix 109, work order
+    #: 322 E, `aupicker`).
+    EXTRA_SCREEN_IDS = (58, 85)
     SHELL_WORN = True
     #: THE SCREEN SHELL (work order 225): the audience has no title in the
     #: game (no plate) and is ONE picture — the room, the ambassador, the
@@ -103,6 +107,15 @@ class AudienceScreen(ScreenBase):
         from core import mouse as mouse_input
         return rect.collidepoint(*mouse_input.pos())
 
+    def native_at(self, screen_x, screen_y):
+        """The 640x480 point under window (x, y), or None."""
+        return nat.from_hd_point(self.layout.to_ref(screen_x, screen_y),
+                                 self.layout)
+
+    def pointer_native(self):
+        from core import mouse as mouse_input
+        return self.native_at(*mouse_input.pos())
+
     def render(self, surface):
         self._render_background(surface)
         if self._view is not None and self._view.draws:
@@ -141,6 +154,13 @@ class AudienceScreen(ScreenBase):
             return None
         if live.state == auwire.STATEMENT:
             self.send(live.fields[0], "statement")
+            return None
+        if live.state == auwire.PICKER:
+            from . import aupicker
+            got = aupicker.click(self, state, live.picker, screen_x,
+                                 screen_y, self.native_at(screen_x, screen_y))
+            if got is not None:
+                self.send(*got)
             return None
         for item, f in live.items():
             if nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \

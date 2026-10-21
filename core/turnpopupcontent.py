@@ -69,6 +69,32 @@ def _leader_words(app):
     return words
 
 
+#: `planet_special_string[special]` is ESTRINGS 0x2B9 + the special
+#: (estrings.cpp:175-187), the special popup's title (sys.cpp:626-632).
+E_SPECIAL_NAME = 0x2B9
+SPECIALS = 12
+
+
+def _special_name(app, special):
+    """The system special's name in the player's language, or None."""
+    try:
+        special = int(special)
+    except (TypeError, ValueError):
+        return None
+    if not 0 < special < SPECIALS:
+        return None
+    lang = (getattr(app, "settings", {}) or {}).get("language", "en")
+    held = getattr(app, "_turnpopup_estrings", None) if app is not None \
+        else None
+    # one table per language, read once (as `sysfleets.part_names`)
+    if not held or held[0] != lang:
+        from core import estrings
+        held = (lang, estrings.EStrings(lang))
+        if app is not None:
+            app._turnpopup_estrings = held
+    return held[1].string(E_SPECIAL_NAME + special) or None
+
+
 def _warlord_of(state, player):
     """`_player[player].traits[TRAIT_WARLORD]` (officer.cpp:93) — the hire
     popup's leaders are nobody's, but the level popup's is the player's own
@@ -276,6 +302,15 @@ def content(popup, state, words, app=None):
         sysd = popup.get("system") or {}
         title = title or _star_name(state, sysd.get("star", -1))
         if popup.get("text"):
+            # TRANSCRIPTION `special_name` (work order 322 D): the special
+            # popup's title over its description (`Draw_System_Special_
+            # Popup_`, sys.cpp:626-632; mainpups.cpp:1781-1787, :1920-1926)
+            # — the special is arg 3 of the planet choice, 1 of a new system
+            # (open fix 49's TPOP, mainpups.cpp:890, :1155)
+            name = _special_name(app, a[3] if kind == "planet_choice"
+                                 else a[1])
+            if name:
+                lines.append(name)
             lines.append(popup["text"])
         for slot in sysd.get("planets", []):
             if slot["planet"] < 0:

@@ -9,7 +9,9 @@ row (fields.cpp:769-822). Both pictures are drawn at (0, 0), the room
 """
 #: The synthetic ids open fix 46 reports: the player's, the AI's.
 GAME_SCREEN_ID = 57
-EXTRA_SCREEN_IDS = (58,)
+#: 85: the system picker over the audience, open fix 109 (work order 322 E).
+PICKER_SCREEN_ID = 85
+EXTRA_SCREEN_IDS = (58, PICKER_SCREEN_ID)
 
 TYPE_LIST = 10
 FULL_SCREEN = (0, 0, 0x27F, 0x1DF)

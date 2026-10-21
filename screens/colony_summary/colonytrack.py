@@ -314,7 +314,7 @@ def row_regions(row):
     Zones are laid down in ECON order and clipped at POP_LIMIT_CAP,
     which the engine cannot pass either. Cells past `max_pop` are
     kept, not clipped: a pop is a fact, `max_pop` a computation with
-    two documented deviations (`colonyrows.max_population`), so they
+    documented deviations (`colonyrows.max_population`), so they
     stay visible and the disagreement stays visible with them.
 
     The count is `row["cells"]` where the row carries it — one entry

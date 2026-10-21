@@ -33,20 +33,42 @@ log = logging.getLogger("game_client")
 # Connection health
 RECV_BUF_SIZE = 4 * 1024 * 1024   # 4 MB OS receive buffer
 
-# Seconds without data before the connection is treated as dead.
+# Seconds without data after which the client says so in the log — and
+# nothing else (work order 322 C).
 #
 # SILENCE IS NOT DEATH. `ext::Tick()` runs from `fields::Get_Input_()`,
 # so the server only talks while the game is inside an input loop.
 # Galaxy generation, turn processing and savegame loading all run
 # with no input loop at all and can be silent for many seconds — in a
-# debug build, tens of them. A watchdog that fires there does real
-# damage: it drops a healthy connection and the fresh one misses
-# every FIELD_LIST published while it was gone, because `ext_api.cpp`
-# resends the list only on a field-count change or a screen change.
+# debug build, tens of them. Until work order 322 a watchdog reconnected
+# here, and that did real damage (P811): it dropped a healthy connection, and
+# the fresh one waited, without even a HELLO_REPLY, until the busy game came
+# back to its input loop (F909). The field list itself is no longer lost by
+# a reconnect: HELLO marks it dirty, so a new connection gets the current
+# list at once (ext_server.cpp:198-200), and since open fix 84 the list is
+# also resent whenever its content changes. And the reconnect could cure
+# nothing: every way the server drops a
+# client closes its socket (`Server::RemoveDeadClients`, ext_server.cpp:
+# 460-471; `Server::Stop`, :75-82), and an engine that dies has its
+# sockets closed by the kernel — so a lost engine always arrives as a
+# close or a reset, which `poll` reads, and silence on an open socket is
+# an engine that is busy (or hung, which no reconnect helps). A peer that
+# vanishes without a close (a remote `orion2re.host` whose machine went
+# away) is found by TCP keepalive (`KEEPALIVE`), which the far side's
+# kernel answers however busy the game is.
 #
-# Anything that knows the game is about to go quiet calls
-# `hold_watchdog()` and the timeout is suspended for that long.
+# Anything that knows the game is about to go quiet may still call
+# `hold_watchdog()`: the silence is then not even logged.
 STALE_TIMEOUT = 10.0
+#: TCP keepalive: idle seconds, interval, probes (Linux names; skipped
+#: where the platform lacks them). Answered by the peer's kernel, not the
+#: game, so a busy game is never taken for a dead one.
+KEEPALIVE = (10, 5, 3)
+#: The connect's timeout at the start; a retry after a loss uses
+#: `RETRY_TIMEOUT` — a refused connect on this machine returns at once, and
+#: a retry must not hold the window (`core/enginelink.py` paces them).
+CONNECT_TIMEOUT = 5.0
+RETRY_TIMEOUT = 0.5
 
 
 #: How long a tool waits for the first STATE_SNAPSHOT before giving
@@ -135,6 +157,20 @@ def count_connections(port=17362):
     return total if found else None
 
 
+def _keepalive(sock):
+    """TCP keepalive on `sock` with `KEEPALIVE`'s timing, where the
+    platform has the options (see STALE_TIMEOUT for why)."""
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        for name, value in zip(("TCP_KEEPIDLE", "TCP_KEEPINTVL",
+                                "TCP_KEEPCNT"), KEEPALIVE):
+            opt = getattr(socket, name, None)
+            if opt is not None:
+                sock.setsockopt(socket.IPPROTO_TCP, opt, value)
+    except OSError as e:
+        log.info("TCP keepalive not set: %s", e)
+
+
 #: The kinds the engine sends again unchanged (work order 273): a repeat of
 #: one of these is not a change (`GameClient.changes`).
 REPEATED = (MSG_STATE, MSG_VISUAL, MSG_FIELDS, MSG_SAVE_SLOTS)
@@ -170,6 +206,13 @@ class GameClient:
         # instead of starting a reconnect.
         self.shutdown_expected = False
         self.game_ended = False
+        # A LOST ENGINE (work order 322 C, HD EXTENSION `engine_lost`): the
+        # reason the last connection ended, while no new one has opened —
+        # None when connected, and when none was ever made (the standalone
+        # start, which is not a loss). `core/enginelink.py` reads it, paces
+        # `retry` and tells the player.
+        self.lost = None
+        self._silence_logged = False
         # WHAT CAME THAT CAN CHANGE A PICTURE (work order 273,
         # `core/drawgate.py`): the engine sends the whole snapshot — and the
         # framebuffer — on every tick, changed or not, so a message of a
@@ -193,29 +236,44 @@ class GameClient:
 
         return self._open()
 
-    def _open(self):
+    def _open(self, timeout=CONNECT_TIMEOUT):
         """Open socket, set buffer size, send HELLO."""
         self.disconnect()
         try:
             self.sock = socket.socket(socket.AF_INET,
                                       socket.SOCK_STREAM)
-            self.sock.settimeout(5.0)
+            self.sock.settimeout(timeout)
             self.sock.connect((self.host, self.port))
             self.sock.setsockopt(socket.SOL_SOCKET,
                                 socket.SO_RCVBUF, RECV_BUF_SIZE)
+            _keepalive(self.sock)
+            # HELLO is sent here, not through `_send_message`, whose failure
+            # is a loss and would reconnect from inside the connect; and
+            # BEFORE the client counts as connected, so a failed HELLO
+            # leaves `lost` as it was and the loss is retried (WO 322 C)
+            payload = struct.pack('<HH', PROTO_VERSION, self._subs)
+            self.sock.sendall(self._frame(MSG_HELLO, payload))
             self.sock.setblocking(False)
             self.connected = True
+            self.lost = None
             self._recv_buf.clear()
             self._last_recv_time = time.monotonic()
-
-            payload = struct.pack('<HH', PROTO_VERSION, self._subs)
-            self._send_message(MSG_HELLO, payload)
+            self._silence_logged = False
             log.info(f"Connected to orion2re at "
                      f"{self.host}:{self.port}")
             return True
 
         except (ConnectionRefusedError, TimeoutError, OSError) as e:
-            log.warning(f"Cannot connect to orion2re: {e}")
+            # a retry's refusal is the loss going on, said once by
+            # `core/enginelink.py` — not one warning every retry
+            (log.debug if self.lost else log.warning)(
+                f"Cannot connect to orion2re: {e}")
+            if self.sock:
+                try:
+                    self.sock.close()
+                except OSError:
+                    pass
+            self.sock = None
             self.connected = False
             return False
 
@@ -235,8 +293,8 @@ class GameClient:
     def poll(self):
         """Read all available messages. Non-blocking.
 
-        Returns True if at least one message was processed.
-        Auto-reconnects if no data received for STALE_TIMEOUT.
+        Returns True if at least one message was processed. A close or
+        a reset is a loss (`_lost`); silence is not (see STALE_TIMEOUT).
         """
         if not self.connected:
             return False
@@ -260,16 +318,19 @@ class GameClient:
                         return False
                     self._recv_buf.extend(chunk)
                     self._last_recv_time = time.monotonic()
+                    self._silence_logged = False
                 except BlockingIOError:
                     break
 
-            # Check for stale connection, unless somebody has told us
-            # the game is legitimately busy (see STALE_TIMEOUT).
+            # A long silence is said once and acted on never: the socket
+            # is open, so the game is busy (see STALE_TIMEOUT, P811).
             now = time.monotonic()
             silent = now - self._last_recv_time
-            if silent > STALE_TIMEOUT and now >= self._hold_until:
-                self._lost(f"No data for {silent:.1f}s — reconnecting")
-                return False
+            if silent > STALE_TIMEOUT and now >= self._hold_until and \
+                    not self._silence_logged:
+                self._silence_logged = True
+                log.info("no data for %.1fs on an open socket: the game is "
+                         "busy, not gone — waiting, not reconnecting", silent)
 
             # Parse messages from buffer. Collected first: A STATE SNAPSHOT
             # ANOTHER ONE FOLLOWS IN THIS POLL IS NOT PARSED (work order
@@ -287,7 +348,8 @@ class GameClient:
                 if magic != MAGIC:
                     log.error(f"Bad magic: 0x{magic:08X}")
                     self._recv_buf.clear()
-                    self._reconnect()
+                    self._lost("a frame with a bad magic: the stream is "
+                               "out of step")
                     return False
 
                 total = 8 + length
@@ -345,7 +407,11 @@ class GameClient:
         log.info("shutdown expected: the watchdog is disarmed")
 
     def _lost(self, reason):
-        """The connection is gone or silent: end, or reconnect."""
+        """The connection closed or broke: end, or reconnect once now.
+
+        A refused reconnect leaves `lost` set; `core/enginelink.py` then
+        calls `retry` at its own pace and tells the player (work order 322
+        C). Silence never comes here (see STALE_TIMEOUT)."""
         if self.shutdown_expected:
             log.info("orion2re went away after QUIT was confirmed "
                      "(%s); not reconnecting", reason)
@@ -353,9 +419,18 @@ class GameClient:
             self.game_ended = True
             return
         log.warning(reason)
-        self._reconnect()
+        self.lost = reason
+        self._reconnect(timeout=RETRY_TIMEOUT)
 
-    def _reconnect(self):
+    def retry(self):
+        """One more connect after a loss — `_reconnect` with a short
+        timeout. True once a connection is open again."""
+        if self.lost is None or self.shutdown_expected:
+            return self.connected
+        self._reconnect(timeout=RETRY_TIMEOUT)
+        return self.connected
+
+    def _reconnect(self, timeout=None):
         """Close and reopen the connection.
 
         The field list is dropped. It describes whatever dialog was
@@ -367,7 +442,10 @@ class GameClient:
         """
         log.info("Reconnecting...")
         self.state.fields = []
-        self._open()
+        if timeout is None:
+            self._open()
+        else:
+            self._open(timeout)
 
     def activate_field(self, field_id):
         """Activate a field (simulates mouse click on a button).
@@ -498,14 +576,17 @@ class GameClient:
         """Send a framed message."""
         if not self.connected or not self.sock:
             return
-        msg_header = struct.pack('<HHI', msg_type, 0, 0)
-        frame_header = struct.pack('<II', MAGIC,
-                                   len(msg_header) + len(payload))
         try:
-            self.sock.sendall(frame_header + msg_header + payload)
+            self.sock.sendall(self._frame(msg_type, payload))
         except (BrokenPipeError, OSError) as e:
-            log.warning(f"Send failed: {e}")
-            self._reconnect()
+            self._lost(f"Send failed: {e}")
+
+    @staticmethod
+    def _frame(msg_type, payload=b''):
+        """One framed message's bytes."""
+        msg_header = struct.pack('<HHI', msg_type, 0, 0)
+        return struct.pack('<II', MAGIC, len(msg_header) + len(payload)) + \
+            msg_header + payload
 
     def _carry_combat_events(self):
         """This poll's CMEV events so far onto the state just parsed."""

@@ -17,11 +17,17 @@ What drives the game from here, and how (decision 20):
                 each the game's own field, the planet brought into the
                 game's window by its star icon first
 
+  star click    with PLSM and more than eight rows in the game's list, the
+                star's own icon field (plntsum.cpp:2052-2064, v2
+                :2044-2058) — the game's warning box (H 0x14F) when the
+                star has no planet in its list, HD's message box (work
+                order 322 A1)
+
 What is local and sends nothing: the list, its scroll window (decision
-46), the hover, the star click in the inset, the bottom windows. Without
-PLSM the two send buttons are display only, as before. The Planets In
-Range toggle drives the game and the HD list does not filter on it: a
-marked gap (`planetrows.FILTER_GAPS`).
+46), the hover, the bottom windows. Without PLSM the two send buttons are
+display only, as before, and a star click only scrolls HD's list. The
+Planets In Range toggle filters the HD list as the game's does
+(`planetrange`, work order 322 A3).
 
 The rows, the order and the words are `planetrows` and `planetwords`; the
 drawing is `planetdraw`; this file owns the boxes, the input and the wire.
@@ -31,6 +37,7 @@ import logging
 from core import hestrings
 from core import lang
 from core import listgrid
+from core import planetsblock
 from core.hud import shell
 from core import mouse as mouse_input
 from core.screen_base import ScreenBase
@@ -321,15 +328,40 @@ class PlanetsScreen(ScreenBase):
         return None
 
     def _star_click(self, star):
-        """plntsum.cpp:2052-2064: only with more than eight rows."""
+        """A click on a star of the inset: the original's `planet_icons[i]`
+        field (plntsum.cpp:2052-2064, v2 :2044-2058), which acts only with
+        more than eight rows in the GAME's list — it scrolls the game's
+        list to the star's first planet, or, when the star has none, opens
+        `GENDRAW::Warning_Box_` with H 0x14F formatted with the star
+        (`HESTR_14F_NO_PLANETS_IN_THE_S_ST`, :2056-2059, v2 :2049-2052),
+        which HD's message box draws (MSGB).
+
+        TRANSCRIPTION `star_click` (work order 322 A1): HD sends that
+        field, read from the PLSM block of the snapshot on screen, and only
+        when the live field list carries it (P816: the decision is the
+        game's own count, against the original's literal 8 —
+        `planetsblock.ROWS_SHOWN`, not HD's row count — and the game's own
+        field, never HD's list); HD scrolls its own list (decision 46)
+        where the star has a row. Without PLSM nothing is sent and only
+        HD's list scrolls.
+        UNVERIFIED `star_click_live`: the field sent and the box seen live
+        — no live runs (Data, 20 October 2026)."""
+        b = planetsend.block(self._state)
+        if b is not None:
+            stars = b["fields"]["stars"]
+            field = stars[star] if 0 <= star < len(stars) else -1
+            live = {getattr(f, "index", None)
+                    for f in (getattr(self._state, "fields", None) or [])}
+            if b["total"] > planetsblock.ROWS_SHOWN and field >= 0 \
+                    and field in live:
+                log.info("Planets: star %d's icon -> field %d", star, field)
+                if self.app.connected:
+                    self.app.client.activate_field(field)
         if len(self._list.rows) <= self.visible:
             return
         row = self._list.first_row_of_star(star)
-        if row <= -1:
-            log.info("Star %d has no planet in the list; the original's "
-                     "warning box (H 0x14F) is not built", star)
-            return
-        self._first = row
+        if row > -1:
+            self._first = row
 
     def _scroll(self, step):
         """The up/down buttons move one row when there are more than eight

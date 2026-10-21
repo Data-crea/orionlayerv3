@@ -97,6 +97,13 @@ class Notice:
         self._orig = None       # the frame as it was held, undimmed
         self._key = None        # (size, what) it was built for
 
+    @property
+    def size(self):
+        """The window size the held frame was taken at, or None before the
+        first render (work order 322 C: the lost engine's panel starts over
+        on the universal background when the window size has changed)."""
+        return self._base.get_size() if self._base is not None else None
+
     def reset(self, surface=None):
         """The notice has ended. With `surface` (a plain hold follows),
         the held frame is put back as it was, without the panel."""

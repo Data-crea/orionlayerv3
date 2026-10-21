@@ -363,9 +363,11 @@ def name_box_for(state, top=None):
 #: TPOP kinds that are HD screens of their own, not popups over the held
 #: frame: the ground combat (open fix 91's kind 11, `screens/ground_combat`),
 #: the galactic council (open fix 96's kind 12, `screens/council`, work
-#: order 270) and the evolutionary mutation (open fix 107's kind 23, the
-#: Custom Race screen's mutation mode, work order 318).
-SCREEN_KINDS = ("ground_combat", "council", "mutation")
+#: order 270), the evolutionary mutation (open fix 107's kind 23, the
+#: Custom Race screen's mutation mode, work order 318) and the diplomacy
+#: system picker (open fix 109's kind 25, the audience's picker, work order
+#: 322 E).
+SCREEN_KINDS = ("ground_combat", "council", "mutation", "system_picker")
 
 
 def popup_under_box(app):

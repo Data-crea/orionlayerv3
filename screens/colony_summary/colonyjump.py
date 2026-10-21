@@ -77,8 +77,19 @@ class Jump:
     """One jump from row `position` of the HD list (the game's order)."""
 
     def __init__(self, client, state, *, colony, position, n_colonies,
-                 sort_key, order_known=True):
+                 sort_key, order_known=True, open_field=None,
+                 wait_open=None, what="jump", in_window=False):
+        # The slot's field the walk ends on and what ends it: the name
+        # field and the colony screen by default; `colonybuy` (work order
+        # 322 B1) ends on the slot's buy field and waits for its effect
+        # (`wait_open(sent_state, state, slot)`, a predicate). With
+        # `in_window` a row the game's window already shows is its slot
+        # there, no step sent.
         self.client = client
+        self._open_field = open_field or live_list_field
+        self._wait_open = wait_open
+        self.what = what
+        self._field_word = "name" if open_field is None else what
         self.colony = colony
         self.n = int(n_colonies)
         self.state = FAILED
@@ -101,9 +112,12 @@ class Jump:
                        "scroll thumb")
             return
         self.first = first
+        if in_window and first <= position < first + GameWindow.SLOTS:
+            self.target, self.slot = first, position - first
+            slot = self.slot
         self.state = STEPPING
-        log.info("jump: colony %d, row %d -> window %d slot %d (game at %d)",
-                 colony, position, self.target, slot, first)
+        log.info("%s: colony %d, row %d -> window %d slot %d (game at %d)",
+                 what, colony, position, self.target, slot, first)
         self._next(state)
 
     @property
@@ -112,7 +126,7 @@ class Jump:
 
     def _fail(self, why):
         self.state, self.reason = FAILED, why
-        log.warning("jump: refused — %s", why)
+        log.warning("%s: refused — %s", self.what, why)
 
     def _next(self, state):
         """Send the next step, or open the colony."""
@@ -127,13 +141,20 @@ class Jump:
             self._wait = _Wait(self.client, lambda st: game_first(
                 st, self.n) == self._expect, "the window step")
             return
-        field = live_list_field(state, self.slot)
+        field = self._open_field(state, self.slot)
         if field is None:
-            self._fail(f"slot {self.slot}'s name field is not in the live "
-                       "list")
+            self._fail(f"slot {self.slot}'s {self._field_word} field is "
+                       "not in the live list")
             return
         self.state = OPENING
         self.client.activate_field(field.index)
+        if self._wait_open is not None:
+            log.info("%s: slot %d -> field %d", self.what, self.slot,
+                     field.index)
+            sent = state
+            self._wait = _Wait(self.client, lambda st: self._wait_open(
+                sent, st, self.slot), f"the {self.what}'s effect")
+            return
         self._wait = _Wait(self.client, lambda st: getattr(
             st, "current_screen", SCREEN_COLONY_SUMMARY)
             != SCREEN_COLONY_SUMMARY, "the colony screen")

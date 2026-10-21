@@ -43,6 +43,9 @@ def draw(surface, screen, view):
         _statement(surface, screen, view)
         if view.items():
             _menu(surface, screen, view)
+    if view.picker is not None:
+        from . import aupicker
+        aupicker.draw(surface, screen, view, screen.pointer_native())
 
 
 def _stage(surface, screen, view):
@@ -65,7 +68,7 @@ def _stage(surface, screen, view):
 
 
 def _statement(surface, screen, view):
-    words = view.audience["text"]
+    words = view.statement
     if not words:
         return
     panel = nd.draw_box(surface, screen, geom.STATEMENT_PANEL)

@@ -109,6 +109,7 @@ anything else.
 """
 import collections
 
+from core import colsumblock
 from core import prodname
 from core import zoomtables
 from core.structs import colony as colony_struct
@@ -184,11 +185,30 @@ def player_climate(climate, traits):
     return climate
 
 
-def max_population(colony, planet, traits):
+#: Advanced City Planning (work order 322 A2/A10): `TECH_APP_ADVANCED_
+#: CITY_PLANNING` 3 (orion2_consts.h, v2 :702) researched (status 3,
+#: orion2_consts.h:1324) adds 5 — 1.60's literal (colcalc.cpp:928, :1022)
+#: and v2's default, which v2 reads from its config (DEVIATION
+#: `city_planning_config`, colcalc_config.cpp:79-82).
+TECH_APP_ADVANCED_CITY_PLANNING = 3
+TECH_RESEARCH_STATUS_RESEARCHED = 3
+CITY_PLANNING_BONUS = 5
+
+
+def city_planning(player):
+    """Has this parsed player record researched Advanced City Planning?
+    False for no record, or one whose layout has no `tech_applications`."""
+    apps = getattr(player, "tech_applications", None) if player else None
+    return bool(apps) and len(apps) > TECH_APP_ADVANCED_CITY_PLANNING and \
+        apps[TECH_APP_ADVANCED_CITY_PLANNING] == \
+        TECH_RESEARCH_STATUS_RESEARCHED
+
+
+def max_population(colony, planet, traits, city_planning=False):
     """The maximum the original prints, for the colony's OWNER.
 
-    `COLCALC::Colony_Race_Pop_Limit_` (colcalc.cpp) over
-    `Size_And_Climate_Race_Pop_Limit_` and
+    `COLCALC::Colony_Race_Pop_Limit_` (colcalc.cpp:1012-1033, v2
+    :1103-1125) over `Size_And_Climate_Race_Pop_Limit_` and
     `Size_And_Climate_Max_Population_` (colcalc.cpp:1271).
 
     Two details that are easy to get wrong and were both read out of
@@ -199,23 +219,21 @@ def max_population(colony, planet, traits):
     the immunity bonus scale it, which is the difference between 10
     and the 5 the game prints for a Small Ocean planet.
 
-    TWO DEVIATIONS, both stated rather than hidden:
+    ADVANCED CITY PLANNING is applied since work order 322: the caller
+    passes `city_planning(owner record)` — the colony OWNER's research
+    (colcalc.cpp:1021-1023), the local player's for an unsettled planet
+    (:927-929) — and its +5 goes on before the biospheres, the cap last.
+    DEVIATION `city_planning_config`: v2's config may name another bonus
+    (see `CITY_PLANNING_BONUS`).
 
-    1. Advanced City Planning adds a flat +5 and is NOT applied,
-       because it lives in `s_player.tech_applications`, which
-       `core/structs/player.py` does not expose and which has no
-       verified offset. Adding an unverified one to make a bar
-       longer is exactly the trade decision 23 forbids.
-    2. The original returns the best limit over the RACES PRESENT in
-       the colony; this returns the limit for the owner's race. The
-       two agree for a single-race colony. The walk needs the pop
-       nibble, which is now confirmed for 0..7 — what it does not
-       have is the 8 and 9 sentinels, and a walk that mis-resolves
-       androids and natives would pick the wrong race for exactly
-       the colonies the walk exists for.
-
-    Both make the bar too SHORT rather than too long, which shows as
-    a bar that cannot hold its own squares — visible, not silent.
+    ONE DEVIATION remains: the original returns the best limit over the
+    RACES PRESENT in the colony; this returns the limit for the owner's
+    race. The two agree for a single-race colony. The walk needs the pop
+    nibble, which is now confirmed for 0..7 — what it does not have is
+    the 8 and 9 sentinels, and a walk that mis-resolves androids and
+    natives would pick the wrong race for exactly the colonies the walk
+    exists for. It makes the bar too SHORT rather than too long, which
+    shows as a bar that cannot hold its own squares — visible, not silent.
     """
     climate = player_climate(colony.climate, traits)
     immune = bool(traits[TRAIT_ENVIRONMENT_IMMUNE]) if traits else False
@@ -224,6 +242,8 @@ def max_population(colony, planet, traits):
     limit = (factor * SIZE_BASE[size] + 50) // 100
     if traits and traits[TRAIT_SUBTERRANEAN]:
         limit += 2 * size + 2          # COLCALC::Double_Add_Two_
+    if city_planning:
+        limit += CITY_PLANNING_BONUS
     if colony.buildings[BUILDING_BIOSPHERES]:
         limit += POP_BONUS_BIOSPHERES
     return min(limit, POP_LIMIT_CAP)
@@ -750,7 +770,9 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     name, climate, pops, jobs, cells, held, no_farming, max_pop,
     producing,
     producing_id, producing_state, producing_turns, can_buy for
-    `colonylist.render()`, and size,
+    `colonylist.render()` — `can_buy` is False here and set by
+    `colonybuy.annotate` to False, "buy" or "bought" (work order 322
+    B1) — and size,
     gravity, mineral, growth, morale, morale_applies,
     drawn_production, shortage for
     `colonyoutput.render()` on top of climate, pops and max_pop,
@@ -765,9 +787,11 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     stars = game_state.stars
     me = game_state.player_num
     traits = None
+    planning = False
     if 0 <= me < len(game_state.player_raw):
-        traits = player_struct.traits(
-            player_struct.parse(game_state.player_raw[me]))
+        _me = player_struct.parse(game_state.player_raw[me])
+        traits = player_struct.traits(_me)
+        planning = city_planning(_me)
     # PLAYER INDEX -> RACE INDEX, for the figures.
     # `Colony_Pop_Anim_` reads `_player[Get_Effective_Pop_Player_(..)]
     # .race` (colony.cpp:1272-1275), and the effective player is the
@@ -900,13 +924,17 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             # name here is the thing this must not do.
             #
             # `producing_turns` — the "- 8t" the original appends — is
-            # still 0 and the suffix is NOT drawn. It is
-            # `COLONY::Calculate_Current_Production_Turn_Count_`
-            # (colsum.cpp:588), a cost calculation over the colony's
-            # industry and the item's price, and neither the cost
-            # table nor the accumulated production is established on
-            # the wire yet. Approximating it would put a number on
-            # screen that no source backs.
+            # `COLONY::Calculate_Current_Production_Turn_Count` as the
+            # engine computes it, read from CSUM (open fix 110,
+            # `core.colsumblock.turn_suffix`: 0 for none, as the
+            # original prints none for a product of NONE or a count
+            # outside 1..9999, colsum.cpp:751-753 in the tree with open
+            # fix 110). TRANSCRIPTION
+            # `turn_suffix` (work order 322 B2, `build._turns_note`);
+            # the autobuild line is OMISSION `autobuild_line`.
+            # The price (`Colony_Product_Cost`) is config-bound in v2,
+            # so it is never computed here: without the block the
+            # suffix stays 0 and is not drawn.
             # THREE KEYS, not one, because the column now has three
             # things to say and used to be able to say two. `names`
             # is a `core.prodname.Resolver`; `name()` is
@@ -931,7 +959,12 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             "producing_id": col.producing[0],
             "producing": _producing[0] or "",
             "producing_state": _producing[1],
-            "producing_turns": 0,
+            "producing_turns": colsumblock.turn_suffix(
+                colsumblock.of_colony(game_state, index)),
+            # False here: the record cannot decide it. `colonybuy`
+            # sets it to "buy" or "bought" — from the game's own buy
+            # field for the rows the game shows (work order 322 B1),
+            # from CSUM for the others (open fix 110, 322 B2).
             "can_buy": False,
             # production[4] in ECON order, orion2_consts.h:119-123.
             # Read for the four sort keys that need it. Nothing in
@@ -957,7 +990,7 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             # see `production_shortage`, where the refusal is the
             # part that matters.
             "shortage": [production_shortage(col, e) for e in range(4)],
-            "max_pop": max_population(col, planet, traits),
+            "max_pop": max_population(col, planet, traits, planning),
             # ── For output_panel, and NOT drawn in the row ──
             # The original's scan box prints seven values for the
             # SELECTED colony (colsum.cpp:1196-1205) and the row

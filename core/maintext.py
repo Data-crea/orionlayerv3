@@ -15,10 +15,11 @@ touched — into `maintext_<lang>.json` with a format version; the file is
 never committed; its absence is a state ("missing"), and a file from an
 older extractor is refused ("stale") rather than rendered almost right.
 
-NOTHING DRAWS THIS YET. The special popup lives inside the system
-window, and HD's answer to the galaxy map's movable boxes is its own
-brief (Data, 14 September 2026). The extractor and the loader come
-first so that brief finds the text in place.
+WHO READS IT: the system window's space-monster branch
+(`screens/galaxy_map/sysextras.monster_words`, work order 322 D) and the
+Build Queue's product text (`screens/build_queue/bqproduct.py`). The turn
+popups' special text (new system, planet choice) comes on the wire instead
+(open fix 49's TPOP), with the name from ESTRINGS.
 """
 import logging
 import os

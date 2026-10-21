@@ -195,7 +195,8 @@ def _room(state, dest, dest_index):
              if 0 <= dest.owner < len(players) else None)
     traits = player_struct.traits(owner) if owner is not None else None
     return colonyrows.max_population(
-        dest, planet_struct.parse(planets[dest.planet]), traits)
+        dest, planet_struct.parse(planets[dest.planet]), traits,
+        colonyrows.city_planning(owner))     # the owner's (work order 322)
 
 
 def _expected(source, source_index, dest, dest_index, held, count=None,

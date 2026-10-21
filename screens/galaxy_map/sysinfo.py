@@ -18,8 +18,9 @@ the engine:
   population              H 0x181 (n pops, maximum) for a colony, H 0x162
                           (maximum) otherwise; the maximum is the LOCAL
                           player's (`Planet_Max_Population_For_Player_`;
-                          `colonyrows.max_population`, with its two marked
-                          deviations)
+                          `colonyrows.max_population`, with its marked
+                          deviations; Advanced City Planning the colony
+                          owner's, since work order 322)
   minerals[, gravity]     gravity only when it is not normal
   the orbit               star fortress, star base, battlestation, missile
                           base, ground batteries, stellar converter, fighter
@@ -93,7 +94,14 @@ def lines(state, planet_index, words, buildings):
     traits = player_struct.traits(player_struct.parse(players[me])) \
         if 0 <= me < len(players) else None
     stand_in = colony if colony is not None else _bare_colony(planet)
-    maximum = colonyrows.max_population(stand_in, planet, traits)
+    # Advanced City Planning: the colony owner's research, the local
+    # player's for an unsettled planet (colcalc.cpp:927-929, :1021-1023;
+    # work order 322)
+    planner = int(colony.owner) if colony is not None else me
+    maximum = colonyrows.max_population(
+        stand_in, planet, traits, colonyrows.city_planning(
+            player_struct.parse(players[planner])
+            if 0 <= planner < len(players) else None))
     if colony is not None:
         out.append((_fmt(words.h(H_POP), int(colony.n_pops), maximum), 0))
     else:

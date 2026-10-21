@@ -20,6 +20,7 @@ when `visited & (1 << N)`. An omniscient player sees every name,
 but a system they have not visited is shown in brackets.
 """
 from core.structs import Spec
+from core.structs import layout as _layout
 
 SIZE = 0x6A + (1024 + 7) // 8   # 234
 
@@ -46,6 +47,15 @@ SPEC = Spec("s_star_data", SIZE, [
     ("colonize_player", 175, "i8"),
     ("has_colony",     176, "u8"),
     ("has_stargate",   182, "u8"),
+    # work order 322 D: the system window's gate icons. BITMASKS over
+    # players. `has_jumpgate` (set per owner, colcalc.cpp:358-360) has no
+    # icon in the window — only the two after it are drawn — (`Player_Has_Artemis_Net_` / `_Dimensional_Portal_`,
+    # harold.cpp:524-536), between has_stargate and is_stagepoint in the
+    # header (orion2.h:2997-3001) and named in the engine's layout table
+    # (ext_layout_table.inc:599-601), which places them on the wire
+    ("has_jumpgate",   183, "u8"),
+    ("has_artemis_net", 184, "u8"),
+    ("has_dimensional_portal", 185, "u8"),
     ("is_stagepoint",  186, "u8"),
     # `int8_t officer_index[MAX_PLAYERS]` (orion2.h:3005): the colony
     # leader each player keeps at this star, -1 for none. Work order
@@ -129,3 +139,39 @@ def parse(raw):
 
 def parse_all(raw_list):
     return SPEC.parse_all(raw_list)
+
+
+#: `int8_t black_hole_blocks[BITMAP(MAX_STARS)]` (orion2.h:2985, v2 :2982):
+#: bit n set means a black hole lies between this star and star n.
+#: Work order 322 A3 (`screens/planets/planetrange.py`). NOT a spec field:
+#: parsed with every record it would unpack 128 bytes per star on every
+#: snapshot for a test only the Planets list's range toggle makes. TWO
+#: SOURCES: offsetof 31, 128 bytes, over the 1.60 headers (the compile of
+#: work order 322), and this spec's own verified `system_special` at
+#: 159 = 23 + 8 + 128, which a bitmap of another place or width would
+#: have moved. An engine with the LAYOUT says its own place and width
+#: (decision 97).
+BLACK_HOLE_BLOCKS_OFFSET = 31
+BLACK_HOLE_BLOCKS_SIZE = 128
+
+
+def black_hole_blocks(view, star_index):
+    """`struct_::Test_Bit_Field_(star->black_hole_blocks, star_index)`
+    (struct.cpp v2 :20-25: byte index >> 3, bit index & 7): True when a
+    black hole blocks the line from this star to `star_index`."""
+    if _layout.current() is None:
+        # no LAYOUT: the engine the offset was read against (1.60)
+        at, size = BLACK_HOLE_BLOCKS_OFFSET, BLACK_HOLE_BLOCKS_SIZE
+    else:
+        member = _layout.member("s_star_data", "black_hole_blocks")
+        if member is None:
+            return False        # a layout without the member: unknown,
+            #                     read as "not blocked", as a spec field
+            #                     the engine lacks reads None
+        at, size = member.offset, member.size
+    index = int(star_index)
+    if not 0 <= index < size * 8:
+        return False
+    raw = view.raw
+    byte = at + (index >> 3)
+    return byte < len(raw) and bool((raw[byte] >> (index & 7)) & 1)

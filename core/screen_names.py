@@ -189,6 +189,12 @@ SCREENS = {
     #: the map like 59-64 (`core/turnpopup.py`; the star choice
     #: `screens/galaxy_map/dragonpopup.py`); without the fix the F12 notice.
     84: ("(synthetic)",     None),             # the Space Dragon's bribe
+    #: 85, synthetic, ON THE WIRE ONLY WITH OPEN FIX 109 (work order 322 E):
+    #: the diplomacy system picker (`DIP_SCRN::Diplomacy_System_Display`,
+    #: dip_scrn.cpp:701, "choose a system to offer / demand"), which sets
+    #: screen 6 under the audience's 57 / 58 without the fix: the audience
+    #: screen draws it over the room (`screens/audience/aupicker.py`).
+    85: ("(synthetic)",     "audience"),       # the diplomacy system picker
 }
 
 #: The last value of orion2re's own SCREEN enum:

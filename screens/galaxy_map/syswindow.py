@@ -292,10 +292,17 @@ def draw_view(screen, surface, view, model, state=None):
     (the screen's own by default)."""
     if not model["viewable"]:
         # The star's description, as `Print_Empty_System_Data_` sets it
-        # (sys.cpp:1536-1593): a paragraph centred across and down the
+        # (sys.cpp:1574-1637): a paragraph centred across and down the
         # view, in the window's blue (measured 0x41 on the original's
         # frame) — raised to the word floor on the ground, as the title
         from screens.galaxy_map import sysstars
+        if model.get("monster"):
+            # the monster branch (sys.cpp:756-774, `sysextras`, WO 322 D)
+            from screens.galaxy_map import sysextras
+            sysextras.draw_monster(
+                screen, surface, view, at_floor(BLUE, sysstars.GROUND),
+                at_floor(title_colour(), sysstars.GROUND))
+            return []
         size = font(screen, "system_view", 16)
         lines = textfit.wrap_text(screen.style, model["body"], size,
                                   int(view.w * 0.9))

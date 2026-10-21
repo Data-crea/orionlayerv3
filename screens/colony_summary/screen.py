@@ -102,7 +102,7 @@ from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
 from . import colonytransfer  # noqa: E402  (work order 316)
-from . import (colonybuild, colonyempire, colonyfigures,
+from . import (colonybuild, colonybuy, colonyempire, colonyfigures,
                colonyheader, colonyinset, colonylist,
                colonymoveui, colonyoutput, colonyrows, colonyscroll,
                colonyplanets, colonyplates, colonyselect, colonysort,
@@ -295,6 +295,9 @@ class ColonySummaryScreen(ScreenBase):
         self._selection.rebuild(self._state, self._sort_key,
                                 colonybuild.names_for(self),
                                 held=self._move.held(), resort=resort)
+        # BUY from the game's own field list (work order 322 B1).
+        colonybuy.annotate(self._rows, self._state, self._sort_key,
+                           self._selection.order_known)
 
     @property
     def _rows(self):
@@ -598,6 +601,12 @@ class ColonySummaryScreen(ScreenBase):
     def handle_key(self, key):
         if colonytransfer.key(self, key):   # a box of open fix 103's move
             return
+        if self._move.busy or self._jump is not None:
+            # As `handle_click`: a forwarded sort key re-sorts the game's
+            # list and resets `_first` (colsum.cpp:829-838) under a chain
+            # that has sent its first step — a BUY would land on another
+            # colony's field (work order 322 B2).
+            return
         ScreenBase.handle_key(self, key)
 
     def handle_click(self, screen_x, screen_y):
@@ -655,6 +664,9 @@ class ColonySummaryScreen(ScreenBase):
         area, cfg, scale, _n_rows = self._list_view()
         row_index = self._window.row_at(area, cfg, scale, _n_rows,
                                         (screen_x, screen_y))
+        if row_index is not None and self._buy_click(row_index, screen_x,
+                                                     screen_y):
+            return None
         if row_index is not None and self._move.click(
                 rows=self._rows, row_index=row_index, x=screen_x,
                 state=self._state, area=area, cfg=cfg, scale=scale,
@@ -694,6 +706,23 @@ class ColonySummaryScreen(ScreenBase):
                     self._jump = None
             return None
         return super().handle_click(screen_x, screen_y)
+
+    def _buy_click(self, row_index, screen_x, screen_y):
+        """A click on a drawn BUY: the slot's own buy field, the game's
+        window stepped to the colony first (`colonybuy`, TRANSCRIPTION
+        `list_buy`, colsum.cpp:952-955). True when the click was BUY's."""
+        hit = colonybuy.rect(self, row_index)
+        if hit is None or not hit.collidepoint(screen_x, screen_y):
+            return False
+        if self.app.connected and self._state is not None:
+            self._jump = colonybuy.start(
+                self.app.client, self._state,
+                colony=self._rows[row_index]["index"], position=row_index,
+                n_colonies=len(self._rows), sort_key=self._sort_key,
+                order_known=self._selection.order_known)
+            if self._jump.finished:
+                self._jump = None
+        return True
 
     # THE RIGHT BUTTON IS HELP AND NOTHING ELSE — brief 98, Data's
     # decision (a), 13 September 2026. `ScreenBase`'s shared walk

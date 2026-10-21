@@ -29,6 +29,7 @@ from core import f12notice
 from core import overlays
 from core import pointergate
 from core import frameguard
+from core import enginelink
 from core import drawgate
 
 logging.basicConfig(level=logging.INFO,
@@ -217,6 +218,7 @@ class App:
         )
 
         # Try connecting to orion2re
+        self._link = enginelink.Link.from_env()
         self._connect()
 
     def _load_cursor(self):
@@ -303,8 +305,9 @@ class App:
 
             if self._input_log is not None:
                 self._input_log.begin(self, event)
-            if frameguard.blocks(self, event):
-                pass                     # a suspended screen (229 B)
+            if frameguard.blocks(self, event) or \
+                    enginelink.blocks(self, event):
+                pass                     # a suspended screen, a lost engine
             elif event.type == pygame.QUIT:
                 lastword.ended("the window was closed")
                 self.running = False
@@ -534,18 +537,8 @@ class App:
     def _update(self):
         """Poll game state and update active screen + overlay."""
         state = None
-        if self.connected:
-            self.client.poll()
-            if self.client.game_ended:
-                # QUIT -> YES in the GAME menu: the player asked the
-                # game to end, the client stood its watchdog down
-                # before sending YES, and OrionLayer ends with it
-                # (decision 62). No reconnect, no "game ended" screen.
-                log.info("orion2re ended at the player's request; "
-                         "OrionLayer exits with it")
-                lastword.ended("the game ended at the player's request")
-                self.running = False
-                return
+        # the poll, a lost engine and the requested end (322 C, decision 62)
+        if enginelink.follow(self):
             state = self.client.state
 
             if state.framebuffer and state.palette:
@@ -554,14 +547,16 @@ class App:
             if state.current_screen >= 0:
                 self.dispatcher.update_from_game(state)
 
-        if frameguard.suspended(self) is None:  # nothing reaches it (229 B)
+        if not enginelink.down(self) and \
+                frameguard.suspended(self) is None:  # nothing reaches it
             self.dispatcher.update_screens(state)
 
     def _render(self):
         """Render based on current mode."""
         shown = self._showing_original()
         if shown or frameguard.suspended(self) is not None or \
-                self._handover.holding or not self.dispatcher.active:
+                enginelink.down(self) or self._handover.holding or \
+                not self.dispatcher.active:
             self._draw_gate.forget()     # another picture: redraw after it
             # a screen's own pointer (the battle's move arrow, work order
             # 303) never outlives the frames that screen draws
@@ -593,6 +588,8 @@ class App:
                     self.surface, self.style, self.colors, state,
                     self.dispatcher.screen_name_for(state.current_screen),
                     self.render_mode)
+        elif enginelink.down(self):
+            enginelink.render(self)       # the engine lost (322 C)
         elif frameguard.suspended(self) is not None:
             self._guard.render(self)      # the fault notice (229 B)
         elif self._handover.holding:

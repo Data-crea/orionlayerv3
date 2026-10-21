@@ -31,7 +31,11 @@ KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          23: "mutation",
          # work order 319: open fix 108 (`doc/ext_dragon_bribe.patch`), the
          # Space Dragon's bribe; its tail is `core.dragonwire`'s
-         24: "dragon_bribe"}
+         24: "dragon_bribe",
+         # work order 322 E: open fix 109 (`doc/ext_system_picker.patch`),
+         # the diplomacy system picker; its tail is `core.systempickerwire`'s,
+         # its view the audience's (`screens/audience/aupicker.py`)
+         25: "system_picker"}
 #: The ids open fix 49 reports (40, 52 and 33 are the game's own); 68 and
 #: 69 are open fix 91's.
 IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
@@ -39,7 +43,7 @@ IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
        64: "combat_target", 33: "landing", 68: "colony_combat",
        69: "ground_combat", 70: "council", 71: "troops",
        80: "slider", 82: "antaran_room", 83: "mutation",
-       84: "dragon_bribe"}
+       84: "dragon_bribe", 85: "system_picker"}
 #: The system display's slots (MAX_PLANETS_PER_STAR) and ship buttons.
 SLOTS, SHIP_SLOTS = 5, 15
 
@@ -115,6 +119,9 @@ def parse(gs, data, pos):
         if KINDS[kind] == "dragon_bribe":
             from core import dragonwire
             popup["dragon"] = dragonwire.read_tail(take)
+        if KINDS[kind] == "system_picker":
+            from core import systempickerwire
+            popup["picker"] = systempickerwire.read_tail(take)
     except ValueError:
         return pos
     gs.turn_popup = popup
@@ -123,7 +130,7 @@ def parse(gs, data, pos):
 
 def build(kind, args=(), title=None, text=None, messages=None, system=None,
           targets=None, invasion=None, council=None, troops=None,
-          mutation=None, dragon=None):
+          mutation=None, dragon=None, picker=None):
     """The block as the engine writes it — for the checks' stand-ins."""
     code = {v: k for k, v in KINDS.items()}[kind]
     out = b"TPOP" + _st.pack("<BBh", 1, code, len(args))
@@ -175,6 +182,9 @@ def build(kind, args=(), title=None, text=None, messages=None, system=None,
     if kind == "dragon_bribe":
         from core import dragonwire
         out += dragonwire.build_tail(dragon)
+    if kind == "system_picker":
+        from core import systempickerwire
+        out += systempickerwire.build_tail(picker)
     return out
 
 

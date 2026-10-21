@@ -1,0 +1,192 @@
+OrionLayer open fix 110 — the Colonies list's numbers on the wire
+=================================================================
+
+Work order 322 part B2 ("the Colonies list's turn suffix and BUY for rows
+outside the game's window", from 321's part B). orion2re on the fork's
+branch `orionlayer` (v2.0.0), on top of open fix 109; commit c024495c. Not
+on `orionlayer-local`. In src/ext/ext_api.cpp, src/ext/ext_api.h and
+src/game/colsum.cpp under ORION2RE_EXT.
+
+COLSUM::Colony_Summary_Screen (colsum.cpp:183; the lines are the branch's
+at 0e021bda, just before this fix moved colsum.cpp's by 3 from the top and
+by 8 after :207; the comments in the commit cite the patched tree)
+prints each row's product as "name - Nt" from
+COLONY::Calculate_Current_Production_Turn_Count (colsum.cpp:733, the
+suffix only for 1..9999 turns and a product other than none, :743-766) and
+adds a BUY button where COLONY::Colony_Can_Buy_Product_0 or the colony's
+bought_outright holds (Add_Fields, :397-405) — for the ten rows of its
+window. Both follow from COLCALC::Colony_Product_Cost (colcalc.cpp:2645),
+whose building, lander-ship and misc tables v2 reads from its config, so a
+client could not compute them for any row. "CSUM", written while
+SCREEN_COLONY_SUMMARY is up and its list exists, after STLR: uint8 version
+(1), int16 COLSUM::first, int16 n (the game's list, COLXPORT::
+g_colony_list_ptr, up to the -1 that ends it, at most MAX_COLONIES, each
+index below NUM_COLONIES), then per colony in the game's order int16
+index, int16 producing[0], int32 COLCALC::Colony_Producing_Product_Cost
+(colcalc.cpp:1560), int32 COLCALC::Colony_Cost_To_Buy_Producing_Product
+(:1607), int16 COLONY::Calculate_Current_Production_Turn_Count
+(colony.cpp:418), uint8 COLONY::Colony_Can_Buy_Product_0 (colony.cpp:569);
+then the ten int16 COLSUM::list_buy_fields. A colony whose planet is out of
+range gets -1, -1, -1, 0.
+
+The list is a buffer on the screen's stack (colsum.cpp:187-190) that
+g_colony_list_ptr keeps pointing at after the screen returns.
+ext::ColsumListGuard (ext_api.h) names it from the moment it is built and
+sorted (after :207) to the screen's return, and the writer reads it only
+while the name is set and equals g_colony_list_ptr.
+
+Pure: every function called only reads — Colony_Product_Cost (the tables,
+the colony's buildings, the planet's terraforms, a ship's or design's cost,
+DESIGN::Cost_Reduction_For_Govt_Type on a local), Production_Cost_To_Buy
+(colcalc_base.cpp:13), Colony_N_Turns_To_Produce (colcalc.cpp:1640-1662),
+Colony_Can_Afford_To_Buy_Product (:1597), struct_::Test_Bit_Field on the
+star's blockade; the screen itself asks the turn count of every colony when
+sorted by product (cmp_Prod, colsum.cpp:1287).
+
+Live: UNVERIFIED — no live run (Data's decision of 20 October 2026); built
+and compiled (`linux-debug`, ORION2RE_EXT on; colsum.cpp also without it;
+a misspelt member refused by the compiler on the scratch clone).
+
+commit c024495cbd26c14eba6662ab2b919394e7e04154
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Wed Oct 21 05:05:54 2026 +0200
+
+    OrionLayer Open Fix 110: the Colonies list's numbers on the wire ("CSUM", written while SCREEN_COLONY_SUMMARY is up and its list exists, after STLR: a version byte, COLSUM::first, n the game's list (COLXPORT::g_colony_list_ptr, bounded by MAX_COLONIES and NUM_COLONIES), per colony in the game's order the index, producing[0], COLCALC::Colony_Producing_Product_Cost, COLCALC::Colony_Cost_To_Buy_Producing_Product, COLONY::Calculate_Current_Production_Turn_Count and COLONY::Colony_Can_Buy_Product_0, then the ten COLSUM::list_buy_fields; ext::ColsumListGuard names the screen's stack buffer from the sorted list to the screen's return, so the snapshot never reads it outside that scope)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index e55b4e9e..31cc9805 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2656,6 +2656,64 @@ static void SerializeState(std::vector<uint8_t>& buf,
+                       "STLR sends the fifteen bytes of s_settler_settle_result");
+         WriteBytes(buf, &o.result, sizeof(o.result));
+     }
++
++    // 36. The Colonies list's numbers: "CSUM", written ONLY while
++    //     SCREEN_COLONY_SUMMARY is up and its list exists (ColsumListGuard),
++    //     after STLR. OrionLayer, open fix 110.
++    //
++    //     The list prints "name - Nt" from
++    //     COLONY::Calculate_Current_Production_Turn_Count (colsum.cpp:741,
++    //     :751-768) and adds a BUY button where COLONY::Colony_Can_Buy_Product_0
++    //     or bought_outright holds (Add_Fields, colsum.cpp:405-413) - for the
++    //     ten rows its window shows. Both follow from
++    //     COLCALC::Colony_Product_Cost (colcalc.cpp:2645), whose tables v2
++    //     reads from its config, so a client cannot compute them. Sent for
++    //     every colony of the list, in the game's order
++    //     (COLXPORT::g_colony_list_ptr, built by Build_Global_Colony_List and
++    //     sorted by Sort_Col_List): a version byte, COLSUM::first, n (the
++    //     entries before the -1 that ends the list, at most MAX_COLONIES,
++    //     each a colony index below NUM_COLONIES), then per colony the index,
++    //     producing[0], Colony_Producing_Product_Cost,
++    //     Colony_Cost_To_Buy_Producing_Product,
++    //     Calculate_Current_Production_Turn_Count and Colony_Can_Buy_Product_0
++    //     - each only reads the colony, its player and its star, and the
++    //     screen calls them itself (cmp_Prod asks the turn count of every
++    //     colony, colsum.cpp:1295); a colony whose planet is out of range gets
++    //     -1 and 0 instead; then the ten list_buy_fields. Read only; nothing
++    //     here changes the game.
++    if (current_screen == SCREEN_COLONY_SUMMARY && g_colsum_list != nullptr &&
++            g_colsum_list == COLXPORT::g_colony_list_ptr) {
++        int16_t n = 0;
++        while (n < MAX_COLONIES && g_colsum_list[n] >= 0 &&
++               g_colsum_list[n] < MOX::NUM_COLONIES) {
++            ++n;
++        }
++        buf.push_back((uint8_t)'C');
++        buf.push_back((uint8_t)'S');
++        buf.push_back((uint8_t)'U');
++        buf.push_back((uint8_t)'M');
++        Write8(buf, 1);                                   // block version
++        Write16(buf, COLSUM::first);
++        Write16(buf, n);
++        for (int16_t i = 0; i < n; ++i) {
++            const int16_t idx = g_colsum_list[i];
++            s_colony* c = &MOX::colony[idx];
++            const bool ok = c->planet >= 0 && c->planet < MAX_PLANETS;
++            Write16(buf, idx);
++            Write16(buf, c->producing[0]);
++            Write32(buf, ok ? COLCALC::Colony_Producing_Product_Cost(c) : -1);
++            Write32(buf, ok ? COLCALC::Colony_Cost_To_Buy_Producing_Product(c) : -1);
++            Write16(buf, ok ? COLONY::Calculate_Current_Production_Turn_Count(idx)
++                            : (int16_t)-1);
++            Write8(buf, (ok && COLONY::Colony_Can_Buy_Product_0(idx)) ? (uint8_t)1
++                                                                      : (uint8_t)0);
++        }
++        static_assert(sizeof(COLSUM::list_buy_fields) == 10 * sizeof(int16_t),
++                      "CSUM sends the ten list_buy_fields");
++        for (int i = 0; i < 10; ++i) {
++            Write16(buf, COLSUM::list_buy_fields[i]);
++        }
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -3485,6 +3543,17 @@ ScreenOverride::~ScreenOverride() {
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 110. The Colonies screen's list while it exists (ext_api.h).
++const int16_t* g_colsum_list = nullptr;
++
++ColsumListGuard::ColsumListGuard(const int16_t* list) : previous(g_colsum_list) {
++    g_colsum_list = list;
++}
++
++ColsumListGuard::~ColsumListGuard() {
++    g_colsum_list = previous;
++}
++
+ // OrionLayer, open fix 50. The Hall of Fame takes input (ext_api.h).
+ bool g_hof_live = false;
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 9eef9f80..aee6355d 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -500,4 +500,19 @@ extern bool g_timed_wait;
+ /// keep the next wait.
+ extern bool g_animation_poll;
+ 
++/// OrionLayer, open fix 110. The Colonies screen's own colony list, for
++/// "CSUM". COLSUM::Colony_Summary_Screen keeps the list in a buffer on its
++/// stack (colsum.cpp:190-193) that COLXPORT::g_colony_list_ptr points at
++/// while the screen runs and after it has returned. ColsumListGuard names
++/// the buffer from the moment the list is built and sorted to the
++/// screen's return, so the snapshot reads it only while it exists. What
++/// is SENT, nothing the game reads.
++extern const int16_t* g_colsum_list;
++
++struct ColsumListGuard {
++    const int16_t* previous;
++    explicit ColsumListGuard(const int16_t* list);
++    ~ColsumListGuard();
++};
++
+ } // namespace ext
+diff --git a/src/game/colsum.cpp b/src/game/colsum.cpp
+index a1e246a6..27e553d8 100755
+--- a/src/game/colsum.cpp
++++ b/src/game/colsum.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 110. ColsumListGuard.
++#endif
+ 
+ #include "build_queue.h"
+ 
+@@ -206,6 +209,11 @@ namespace COLSUM {
+             COLSUM::Reset_List_Col_Array();
+             COLSUM::Update_Col_List();
+         }
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 110. The list just built and sorted, named for
++        // "CSUM" until the screen returns (ext_api.h).
++        ext::ColsumListGuard ext_colsum_list(colony_list_buffer);
++#endif
+ 
+         fonts::Set_Font_Style_Shadow_Down(1, &COLONY::font_color_array);
+         MOX2::Get_Auto_Function(&saved_auto_fn);

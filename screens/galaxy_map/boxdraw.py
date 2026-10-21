@@ -74,13 +74,14 @@ implementation for this window and the combat target window
 (`combattarget`), as the original draws both with one function; this
 module places the map's window and keeps its hits.
 
-OMISSION (decision 61), each a field HD leaves alone: the system window's
-gate icons (its planet information under the pointer is drawn since work
-order 226 F, `sysinfo`; its fleet bar since work order 231 C, `sysfleets`,
-from open fix 90's SYSW); the bar's thumb drag (a scroll
-field that reads the POINTER, fleetpop.cpp:213-216 — a click on the track
-steps one row toward it instead, DEVIATION `fleet_scroll_track`); the
-space-monster branch of the system window. The fleet box's ALL and its
+OMISSION (decision 61), a field HD leaves alone: the bar's thumb drag (a
+scroll field that reads the POINTER, fleetpop.cpp:213-216 — a click on the
+track steps one row toward it instead, DEVIATION `fleet_scroll_track`). The
+system window's planet information under the pointer is drawn since work
+order 226 F (`sysinfo`), its fleet bar since work order 231 C (`sysfleets`,
+from open fix 90's SYSW), its gate icons and their line and its
+space-monster branch since work order 322 D (`sysextras`, TRANSCRIPTION
+`gate_icons`, `gate_info`, `monster_branch`). The fleet box's ALL and its
 Outpost / Colonize / Engage / Transport / Attack buttons are drawn since
 work order 229 (`fleetorders`, open fix 86). (The orbit rings and the
 asteroid belts are drawn since work order 223, `sysorbits`; the colony
@@ -101,7 +102,8 @@ from core import hestrings
 from core import mouse
 from core import palette
 from screens.galaxy_map import (boxcells, boxmodel, boxpaint, fleetorders,
-                                mapboxes, sysfleets, sysorbits, syswindow)
+                                mapboxes, sysextras, sysfleets, sysorbits,
+                                syswindow)
 from screens.galaxy_map import ships as ship_icons
 from screens.galaxy_map.syswindow import TEXT_COLOR
 
@@ -189,8 +191,14 @@ def _draw_system(screen, surface, r, model, hits):
         screen._box_planets.append((rect, p["field"]))
     bar = sysfleets.bar_rect(view, r["system_close"])
     s = sysorbits.frame(view)[0]
+    gates = []
     if model["viewable"]:
         fleets = sysfleets.draw_bar(screen, surface, bar, model["fleets"], s)
+        # TRANSCRIPTION `gate_icons` (sys.cpp:891-892, `sysextras`)
+        stars = getattr(screen._state, "stars", None) or []
+        gates = sysextras.draw_gates(
+            screen, surface, r["system_close"], s,
+            stars[model["star"]] if 0 <= model["star"] < len(stars) else None)
     else:
         # TRANSCRIPTION `hidden_ship_fields`: an unviewable window draws no
         # bar (sys.cpp:692-731) but keeps its ship fields (:1845-1870), so a
@@ -211,6 +219,10 @@ def _draw_system(screen, surface, r, model, hits):
             if belt is not None:
                 syswindow.belt_info(screen, surface, view,
                                     belt[1]["planet"])
+            else:
+                # TRANSCRIPTION `gate_info`: scanned last (mainscr.cpp:2384)
+                sysextras.gate_hover(screen, surface, view, screen._state,
+                                     gates, pointer, _texts(screen))
 
 
 def belt_at(screen, x, y):

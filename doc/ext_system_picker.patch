@@ -1,0 +1,247 @@
+OrionLayer open fix 109 — the diplomacy system picker on the wire
+=================================================================
+
+Work order 322 part E ("the diplomacy system picker", from 321's part B).
+orion2re on the fork's branch `orionlayer` (v2.0.0), on top of open fix
+108; commit 90656654. Not on `orionlayer-local`. In src/game/dip_scrn.cpp,
+src/game/dip_scrn.h and src/ext/ext_api.cpp under ORION2RE_EXT.
+
+DIP_SCRN::Diplomacy_System_Display (dip_scrn.cpp:701; the lines are the
+branch's at d1efc870, just before this fix moved them), "choose a system to
+offer / demand", opened from the audience's Offer Gift > System
+(dip_scrn_main.cpp:390), Demand > Surrender System (dip_scrn.cpp:1555), the
+better offer asked of any human target (:1195), and in a network game the
+chat's Demand and Offer Gift (`Get_Net_Diplomacy_Choices`, :1966, :1971),
+sets screen 6 (:710), which open fix
+46's 57 / 58 override masks, and put nothing on the wire but its fields.
+After its fields (:740) a TurnPopupGuard reports id 85 and TPOP kind 25
+(the kind = id - 60 pairing of 20/80, 22/82, 23/83, 24/84; both free):
+args [0] the giver, [1] the receiver, [2] display_mode (0 offer, 1
+demand), [3] the CANCEL field (:740), [4] current_ambassador, [5]
+ambassador_option; title choose_a_system_buffer ("Choose A System:",
+JIMTEXT2 0x02), text diplomacy_message (the statement the room prints,
+JIMTEXT2 0x37 / 0x3F decoded at :728-729). The tail, written on every
+snapshot: five strings (int16 length + raw bytes) — CANCEL's words
+(system_cancel_buffer), the star line's and the population line's
+templates (JIMTEXT2 0x3A and 0x38, read once at the picker's start into
+two static buffers, undecoded: the game's own buffers hold them decoded
+for the last star hovered), " (HOMEWORLD)" and "(Unsurrenderable)";
+int16 n (NUM_STARS), n x int16 star i's hidden field
+(diplomacy_system_fields[i + 1], :734-738); int16 m, then for each star
+Diplomacy_System_Scan answers with the giver: int16 star, int16
+May_Surrender_Star (0 / 1), int16 the capitol's planet (-1 none), int16
+Get_System_Population, int16 k, k x (int16 planet, string "size,
+climate" as Draw_Diplomacy_System_Text prints it, :2364). Ended right
+after the loop, before the fields are released. It changes no game
+state; the two template reads pump Mox_Update as the original's own reads
+do (the engine's comment says "Read only", meaning that).
+
+Observed, not changed: the picker writes diplomacy_system_fields[NUM_STARS]
+(MAX_STARS entries), one past the array in a galaxy of MAX_STARS stars; the
+writer does not read that slot.
+
+Live: UNVERIFIED — no live run (Data's decision of 20 October 2026); built
+and compiled (`linux-debug`, ORION2RE_EXT on; dip_scrn.cpp also without
+it; a misspelt member refused by the compiler on the scratch clone).
+
+commit 90656654d1f47758fd80704e7054f86bca342946
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Tue Oct 20 17:34:08 2026 +0200
+
+    OrionLayer Open Fix 109: the diplomacy system picker on the wire (DIP_SCRN::Diplomacy_System_Display reports id 85 and TPOP kind 25 from its fields to the end of its loop: args the giver, the receiver, display_mode, the CANCEL field, current_ambassador and ambassador_option; title "Choose A System:", text the statement; a tail re-read every snapshot with CANCEL's words, the two line templates read at the picker's start, the homeworld and unsurrenderable words, every star's hidden field, and per system of the giver's the surrender flag, the capitol, the population and its planets' lines; ended before the fields are released)
+    
+    Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index bfb5f508..e55b4e9e 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -323,6 +323,67 @@ static void WriteDragonTail(std::vector<uint8_t>& buf) {
+     }
+ }
+ 
++// OrionLayer, open fix 109. The diplomacy system picker's TPOP tail (kind
++// 25): the words of its lines, every star's hidden field and, for each star
++// whose systems are the giver's, what the hover shows
++// (DIP_SCRN::Diplomacy_System_Display and Draw_Diplomacy_System_Text,
++// dip_scrn.cpp). A string is int16 length + raw bytes. Read only: the scan,
++// the population and May_Surrender_Star change nothing.
++static void WriteText16(std::vector<uint8_t>& buf, const char* str, size_t cap) {
++    const size_t len = str != nullptr ? strnlen(str, cap) : 0;
++    Write16(buf, (int16_t)len);
++    WriteBytes(buf, str, len);
++}
++
++static void WriteSystemPickerTail(std::vector<uint8_t>& buf) {
++    static_assert(sizeof(DIP_SCRN::diplomacy_system_fields) / sizeof(int16_t) == MAX_STARS, "diplomacy_system_fields");
++    const int16_t giver = g_turn_popup.args[0];
++    const int16_t receiver = g_turn_popup.args[1];
++    WriteText16(buf, DIP_SCRN::system_cancel_buffer, 20);
++    WriteText16(buf, DIP_SCRN::ext_system_star_template, sizeof(DIP_SCRN::ext_system_star_template));
++    WriteText16(buf, DIP_SCRN::ext_system_colonists_template, sizeof(DIP_SCRN::ext_system_colonists_template));
++    WriteText16(buf, DIP_SCRN::system_homeworld_buffer, 30);
++    WriteText16(buf, DIP_SCRN::system_unsurrenderable_buffer, 40);
++    int16_t n = MOX::NUM_STARS;
++    if (n < 0) n = 0;
++    if (n > MAX_STARS) n = MAX_STARS;
++    Write16(buf, n);
++    // star i's field is diplomacy_system_fields[i + 1]; the picker writes
++    // index NUM_STARS, one past the array when NUM_STARS is MAX_STARS, which
++    // this does not read
++    for (int16_t i = 0; i < n; i++) {
++        Write16(buf, i + 1 < MAX_STARS ? DIP_SCRN::diplomacy_system_fields[i + 1] : (int16_t)-1000);
++    }
++    const size_t count_at = buf.size();
++    Write16(buf, 0);
++    if (giver < 0 || giver >= MAX_PLAYERS || receiver < 0 || receiver >= MAX_PLAYERS) return;
++    int16_t m = 0;
++    for (int16_t i = 0; i < n; i++) {
++        int16_t capitol = -1, owned = 0, planets[5];
++        if (DIP_SCRN::Diplomacy_System_Scan(i, giver, &capitol, &owned, planets) != giver) continue;
++        if (owned < 0) owned = 0;
++        if (owned > 5) owned = 5;
++        m++;
++        Write16(buf, i);
++        Write16(buf, COLCALC::May_Surrender_Star(i, giver, receiver) ? (int16_t)1 : (int16_t)0);
++        Write16(buf, capitol);
++        Write16(buf, COLCALC::Get_System_Population(giver, i));
++        Write16(buf, owned);
++        for (int16_t k = 0; k < owned; k++) {
++            const s_planet_data* planet = &MOX::planet[planets[k]];
++            char line[80];
++            line[0] = '\0';
++            if (planet->size >= 0 && planet->size < PLANET_SIZE_COUNT && planet->climate >= 0 && planet->climate < PLANET_CLIMATE_COUNT) {
++                snprintf(line, sizeof(line), "%s, %s", MOX::planet_size_string[planet->size], MOX::planet_climate_string[planet->climate]);
++            }
++            Write16(buf, planets[k]);
++            WriteText16(buf, line, sizeof(line));
++        }
++    }
++    buf[count_at] = (uint8_t)(m & 0xFF);
++    buf[count_at + 1] = (uint8_t)((m >> 8) & 0xFF);
++}
++
+ static void WriteInvasionTail(std::vector<uint8_t>& buf, uint8_t kind) {
+     if (kind == 10) {
+         const s_colony_combat_popup_data* p = g_invasion.popup;
+@@ -1378,6 +1439,18 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     //                                                          when not added); text = the
+     //                                                          message as last drawn; the
+     //                                                          tail below
++    //     25    85  the diplomacy system picker (DIP_SCRN::Diplomacy_System_Display,
++    //               "choose a system to offer / demand", from the audience's
++    //               Offer Gift (dip_scrn_main.cpp's case 3), Demand (dip_scrn.cpp's
++    //               case 7) and the hotseat's better offer; open fix 109)
++    //                                                        [0] the giver [1] the receiver
++    //                                                          [2] display_mode 0 offer, 1
++    //                                                          demand [3] the CANCEL field
++    //                                                          [4] current_ambassador [5]
++    //                                                          ambassador_option; title =
++    //                                                          "Choose A System:", text = the
++    //                                                          statement (diplomacy_message);
++    //                                                          the tail below
+     //
+     //     Written: version, kind, n_args + args, title, text (int16
+     //     length + raw bytes each), then per kind:
+@@ -1445,6 +1518,18 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     //       click on the star activates; n is NUM_STARS in mode 1 and 0 in
+     //       modes 0 and 2, where Evaluate_Dragon_New_Star_Input reads no
+     //       star. Re-read every snapshot: the mode moves inside the loop.
++    //     - 25 (open fix 109): five strings (int16 length + raw bytes):
++    //       CANCEL's words, the star line's and the population line's
++    //       templates (JIMTEXT2 0x3A, 0x38, undecoded: 0x81 the star's
++    //       name, 0x82 the number), " (HOMEWORLD)", "(Unsurrenderable)";
++    //       int16 n (NUM_STARS), n x int16 star i's hidden field
++    //       (diplomacy_system_fields[i + 1]); int16 m, then per star whose
++    //       Diplomacy_System_Scan answers the giver: int16 star, int16
++    //       May_Surrender_Star (0 / 1), int16 the capitol's planet (-1
++    //       none), int16 Get_System_Population, int16 k, k x (int16 planet,
++    //       string "size, climate" as Draw_Diplomacy_System_Text prints
++    //       it). A click on a star is taken when it is the giver's, may be
++    //       surrendered and holds no capitol.
+     if (g_turn_popup.kind != 0) {
+         buf.push_back((uint8_t)'T');
+         buf.push_back((uint8_t)'P');
+@@ -1559,6 +1644,9 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         if (g_turn_popup.kind == 24) {
+             WriteDragonTail(buf);  // OrionLayer, open fix 108.
+         }
++        if (g_turn_popup.kind == 25) {
++            WriteSystemPickerTail(buf);  // OrionLayer, open fix 109.
++        }
+     }
+ 
+     // 17. The Hall of Fame: "HOFM", written ONLY while it takes input (it
+diff --git a/src/game/dip_scrn.cpp b/src/game/dip_scrn.cpp
+index 7bf49a0a..6e36b592 100755
+--- a/src/game/dip_scrn.cpp
++++ b/src/game/dip_scrn.cpp
+@@ -1,6 +1,17 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 109. TurnPopupGuard.
++#endif
+ 
+ namespace DIP_SCRN {
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 109. The system picker's two line templates
++    // (JIMTEXT2 0x3A "\x81 Star System", 0x38 "\x82 Million Colonists"), read
++    // at the picker's start: the game's own buffers hold them decoded for
++    // the last star hovered, not as templates.
++    char ext_system_star_template[100];
++    char ext_system_colonists_template[100];
++#endif
+     s_mouse_list diplomacy_hand_mouse = {19, 0, 0, 0, 639, 479};
+     s_mouse_list diplomacy_blank_mouse = {0, 0, 0, 0, 639, 479};
+     uint8_t noreport = 0;
+@@ -739,6 +750,24 @@ namespace DIP_SCRN {
+ 
+         exit_field_id = fields::Add_Hidden_Field(0xF, 0x8B, 0x9D, 0xA2, s__00551100, 0);
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 109. The system picker on the wire while its
++        // loop runs: id 85, TPOP kind 25, the title "Choose A System:" and
++        // the statement the room prints (diplomacy_message, set above).
++        // Every star's hidden field, the giver's systems with what the hover
++        // shows for each, and the words of the lines are the tail's, re-read
++        // every snapshot (ext_api.cpp). Read only.
++        JIM::Get_Text_Message(DIP_SCRN::s_jimtext2_lbx, 0x3A, DIP_SCRN::ext_system_star_template, (int16_t)sizeof(DIP_SCRN::ext_system_star_template));
++        JIM::Get_Text_Message(DIP_SCRN::s_jimtext2_lbx, 0x38, DIP_SCRN::ext_system_colonists_template, (int16_t)sizeof(DIP_SCRN::ext_system_colonists_template));
++        ext::TurnPopupGuard ext_popup(85, 25, DIP_SCRN::choose_a_system_buffer, DIP_SCRN::diplomacy_message);
++        ext_popup.arg(0, giver_idx);                         // whose systems are offered
++        ext_popup.arg(1, receiver_idx);                      // who would receive one
++        ext_popup.arg(2, display_mode);                      // 0 offer, 1 demand
++        ext_popup.arg(3, exit_field_id);                     // CANCEL
++        ext_popup.arg(4, DIP_SCRN::current_ambassador);      // the room's race
++        ext_popup.arg(5, DIP_SCRN::ambassador_option);       // 0 refused, 1 normal, 2 a proposal
++#endif
++
+         while (true) {
+             timer::Mark_Time();
+             DIP_SCRN::diplomacy_scan_input_flag = -1;
+@@ -796,6 +825,9 @@ namespace DIP_SCRN {
+             timer::Release_Time(2);
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_popup.end();  // OrionLayer, open fix 109. Before the fields are released.
++#endif
+         fields::Clear_Fields();
+         fields::Deactivate_Auto_Function();
+         MOX::star_bg_seg = saved_star_bg_seg;
+diff --git a/src/game/dip_scrn.h b/src/game/dip_scrn.h
+index 7d9accf0..7bf5a61a 100755
+--- a/src/game/dip_scrn.h
++++ b/src/game/dip_scrn.h
+@@ -237,6 +237,11 @@ namespace DIP_SCRN {
+     extern int16_t diplomacy_system_homeworld_flag;
+     extern s_animation_header* diplomacy_system_star_background_seg;
+     extern int16_t diplomacy_system_fields[MAX_STARS];
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 109. The system picker's line templates, for TPOP.
++    extern char ext_system_star_template[100];
++    extern char ext_system_colonists_template[100];
++#endif
+     extern uint8_t* diplomacy_mouse_bitmap;
+     extern char* system_homeworld_buffer;
+     extern int16_t diplomacy_good_music;

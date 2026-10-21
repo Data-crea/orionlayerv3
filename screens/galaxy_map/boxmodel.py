@@ -95,7 +95,7 @@ from core.structs import ship as ship_struct
 from core.structs import star as star_struct
 from core import systemwindow
 from screens.galaxy_map import ships as ship_icons
-from screens.galaxy_map import mapboxes, sysfleets
+from screens.galaxy_map import mapboxes, sysextras, sysfleets
 from screens.galaxy_map.boxscroll import FLEET_ICONS_MAX, scroll_window  # noqa: F401
 
 #: GEO::_orbit_consts, geo.cpp:5-13 — ellipse radii in TENTHS of a pixel;
@@ -438,11 +438,17 @@ def window_texts(state, star_index, text, omniscient):
     viewable = (not star_struct.is_black_hole(star)
                 and (star_struct.visited_by(star, me) or omniscient))
     out = {"kind": "system", "viewable": viewable, "body": "",
-           "wormhole": ""}
+           "wormhole": "", "monster": False}
     if viewable or _contact(state, star_planets(state, star), _local(state)):
         out["title"] = _msg(text, H_SYSTEM, star.name)
     else:
         out["title"] = _msg(text, H_UNEXPLORED)
+    if not viewable and sysextras.sighted_monster(star, me):
+        # TRANSCRIPTION `monster_branch` (sys.cpp:756-774, `sysextras`):
+        # the special's popup in place of the description, "Star System %s"
+        out["monster"] = True
+        out["title"] = _msg(text, H_SYSTEM, star.name)
+        return out
     if not viewable:
         out["body"] = _msg(text, H_STAR_CLASS + int(star.spectral_class))
         return out

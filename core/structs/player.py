@@ -207,6 +207,20 @@ SPEC = Spec("s_player", SIZE, [
     # the game's own FIELD_LIST on every entry — and the screen still
     # hands over to the fallback when they disagree.
     ("tech_applications",     379, "u8[212]"),
+    # `int16_t ship_range` (orion2.h:1808, v2 :1811) — the parsecs a ship of
+    # this player reaches from a colony; `Star_In_Extended_Range_Of_Player_`
+    # takes 150 % of it (shipmove.cpp:327-331, v2 :363-367), the Planets
+    # screen's In Range toggle (work order 322 A3,
+    # `screens/planets/planetrange.py`). Header route: offsetof over the
+    # 1.60 headers gives 904 with sizeof 0xf0e (the compile of work order
+    # 322, repeated by dev:tools/struct_header_check.py from this line).
+    # SECOND SOURCE, offline (work order 322): dev:tools/range_lore_check.py
+    # over 100 saves on this disk, 473 players — every one reads the range
+    # of the best fuel tier its VERIFIED `tech_applications` has researched
+    # (`Update_Player_Ship_Range_`, shipmove.cpp:227; techdata.cpp:95-102),
+    # values 4, 6, 9 and 255 all seen. An engine with the LAYOUT finds it by
+    # name (decision 97).
+    ("ship_range",            904, "i16"),
     # THE RACES SCREEN'S FIELDS, work order 175 C. Header route (the
     # compiler asserts every offset, `dev:tools/struct_header_check.py`) and,
     # as the second source, the game's own invariants over every save on
@@ -250,17 +264,28 @@ SPEC = Spec("s_player", SIZE, [
     ("spies",                3772, "u8[8]"),
     ("history_btns",         3780, "i8"),
     ("ignoring",             3781, "u8"),
+    # `int8_t has_galactic_lore` (orion2.h:1915, v2 :1918) — set to 1 when
+    # the player hires a ship officer with Galactic Lore (skills 18 and 19,
+    # officer.cpp v2 :1666-1676, :2152-2161) and never cleared; it IS
+    # `OFFICER::One_Leader_With_Galactic_Lore_` (officer.cpp:221-223, v2
+    # :291-293), the leader half of `HAROLD::Player_Is_Omniscient_`
+    # (harold.cpp:765-775, v2 :708-718). Work order 322 A2. Header route
+    # as `ship_range`: offsetof 3802 over the 1.60 headers, sizeof 0xf0e.
+    # UNVERIFIED as a second source: dev:tools/range_lore_check.py reads 0
+    # for all 473 players of 100 saves — inside its 0..1 range, but no save
+    # has a lore leader, so no 1 has been seen (work order 322).
+    ("has_galactic_lore",    3802, "i8"),
 ], verified=True)
 
 CONTACT_OFFSET = 1512      # sbyte contact[MAX_PLAYERS]
 TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
 #: uint8_t tech_applications[TECH_APP_COUNT]; TECH_APP_COUNT is 212
-#: (orion2_consts.h:1388, orion2re 1.60). Not a spec field — the
-#: table is not decoded yet — but the offset is wanted as an ANCHOR:
+#: (orion2_consts.h:1388, orion2re 1.60). The spec field above reads
+#: it; the offset is also wanted as an ANCHOR:
 #: a live read that gets race, traits and this right and the sidebar
 #: scalars wrong is telling you about the scalars, not the record.
 #: Advanced City Planning lives in this table; see
-#: colonyrows.max_population, which does NOT apply it.
+#: colonyrows.city_planning, which applies it (work order 322).
 #: THE SAME OFFSET AS THE SPEC FIELD ABOVE, kept as a constant because
 #: two callers want the NUMBER and not the parsed array: the live probe
 #: (`dev:tools/struct_probe.py`) slices a raw record with it, and the
@@ -335,14 +360,25 @@ def traits(view):
 
 
 def has_omniscience(view):
-    """Galactic lore via the racial pick.
+    """Galactic lore via the racial pick — the TRAIT half only.
 
-    NOT the whole story: HAROLD::Player_Is_Omniscient_ also returns
-    true when any hired leader carries the Galactic Lore skill, which
-    lives in the leader records. Treat a False here as "no lore from
-    traits", not as "no lore".
+    `HAROLD::Player_Is_Omniscient_` (harold.cpp:765-775, v2 :708-718)
+    also answers true for a hired Galactic Lore leader, which the
+    record keeps as `has_galactic_lore`; `is_omniscient` below is the
+    whole test. This half stays on its own because the Planets screen's
+    explored bits read the trait alone (`Set_Planet_Explored_Flags_`,
+    plntsum.cpp:649-662).
     """
     return traits(view)[TRAIT_OMNISCIENCE] != 0
+
+
+def is_omniscient(view):
+    """`HAROLD::Player_Is_Omniscient_` (harold.cpp:765-775, v2 :708-718):
+    a Galactic Lore leader (`One_Leader_With_Galactic_Lore_`, which reads
+    `has_galactic_lore`, officer.cpp:221-223) or the trait. An engine
+    whose layout has no such member reads None there: the trait alone."""
+    return bool(getattr(view, "has_galactic_lore", 0)) or \
+        has_omniscience(view)
 
 
 #: `s_ship_design` (orion2.h:1732): 99 bytes, `name` char[16] at 0,

@@ -8,20 +8,28 @@ pixels: rows are plain dicts, and `planetwords` turns them into text.
 `core/structs/planet.py` warns about: `planet_type` is tested before
 anything reads `colony_index`.
 
-**THE RANGE TOGGLE IS A MARKED GAP** (brief 101, Data's decision (c)). The
-game filters on it; this module does not — `FILTER_GAPS` says so, and a
-smoke check fails if that entry disappears while the filter is still
-missing. `Star_In_Extended_Range_Of_Player_` (shipmove.cpp:327) needs
-`s_player.ship_range`, the treaty table and the black-hole block bitmap,
-none of them a verified spec (decision 23).
+**THE RANGE TOGGLE IS A TRANSCRIPTION since work order 322 A3**:
+`planetrange` computes `Star_In_Extended_Range_Of_Player_` (shipmove.cpp:327,
+v2 :363) from `s_player.ship_range`, the treaties and each star's black-hole
+bitmap, all on the wire; `FILTER_GAPS` is empty, and a smoke check fails if
+the toggle goes inert while nothing marks it.
 
-**TWO KNOWN DIFFERENCES FROM THE GAME, both too short rather than too
-long:** Advanced City Planning's +5 is not applied to `max_pop`
-(`tech_applications` is an anchor offset, not a decoded table — the same
-deviation `colonyrows.max_population` states), and omniscience is read from
-the racial trait only, so a Galactic Lore LEADER (which
-`HAROLD::Player_Is_Omniscient_` also counts, harold.cpp:765) does not reveal
-unvisited planets here.
+**OMNISCIENCE AND ADVANCED CITY PLANNING, work order 322 A2.** Omniscience
+is `HAROLD::Player_Is_Omniscient_` whole (harold.cpp:765-775, v2 :708-718):
+the trait OR a hired Galactic Lore leader, which the player record keeps as
+`has_galactic_lore` (`player_struct.is_omniscient`); the explored bits the
+enemy toggle also asks for are the trait's alone, as the source sets them
+(`Set_Planet_Explored_Flags_`, plntsum.cpp:649-662). Advanced City Planning
+adds `CITY_PLANNING_BONUS` when `tech_applications[3]` reads researched
+(colcalc.cpp:927-929, :1021-1023; v2 :1017-1019, :1112-1114).
+DEVIATION `city_planning_config`: v2 reads the bonus from its config
+(`colony.pop_bonus.advanced_city_planning`, colcalc_config.cpp:79-82, 5 by
+default); HD transcribes 1.60's 5, which is that default, and cannot read a
+mod's other number. UNVERIFIED `lore_and_city_planning`: a live run would
+show an unvisited system's planets after a lore leader is hired and every
+max pop 5 higher after the research (no live runs, Data, 20 October 2026);
+`has_galactic_lore`'s offset has no second source yet (`core/structs/
+player.py`).
 """
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
@@ -29,6 +37,8 @@ from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
 from screens.colony_summary import colonyrows
+
+from . import planetrange
 
 PLANET_TYPE_PLANET = 3                  # orion2_consts.h:404
 MAX_PLAYERS = 8
@@ -44,10 +54,16 @@ STACK_SKIP = ship_struct.STATUS_STACK_SKIP
 #: The five toggles, in the original's field order and hotkeys 1-5
 #: (Add_Plntsum_Fields_, plntsum.cpp:697-701).
 FILTERS = ("enemy", "gravity", "hostile", "minerals", "range")
-#: Toggles the game applies and this module does not. See the docstring.
-FILTER_GAPS = {"range": "MARKED GAP - Planet_In_Range_Of_A_Colony_ needs "
-                        "ship_range, treaties and black-hole blocks; its "
-                        "own follow-up brief (brief 101, decision (c))"}
+#: Toggles the game applies and this module does not — none since work
+#: order 322 A3 built the range filter (`planetrange`). Kept, empty, because
+#: a smoke check holds a toggle that changes nothing to an entry here.
+FILTER_GAPS = {}
+
+#: Advanced City Planning's application, status and bonus: one home,
+#: `colonyrows` (DEVIATION `city_planning_config`, see the docstring).
+TECH_APP_ADVANCED_CITY_PLANNING = colonyrows.TECH_APP_ADVANCED_CITY_PLANNING
+TECH_RESEARCH_STATUS_RESEARCHED = colonyrows.TECH_RESEARCH_STATUS_RESEARCHED
+CITY_PLANNING_BONUS = colonyrows.CITY_PLANNING_BONUS
 
 #: The three sort keys and the row value each sorts on, descending
 #: (qsort_by_climate_ / _minerals_ / _max_population_, plntsum.cpp:1216-1230).
@@ -92,14 +108,38 @@ class View:
         return self.traits(self.player_num)
 
 
+def omniscient(view):
+    """`HAROLD::Player_Is_Omniscient_` for the local player: the trait or a
+    Galactic Lore leader (`player_struct.is_omniscient`)."""
+    local = view.player(view.player_num)
+    return local is not None and player_struct.is_omniscient(local)
+
+
 def visited(view, star_index):
-    """`Planet_Has_Been_Visited_` (plntsum.cpp:376): the star's visited bit,
-    or omniscience — from the trait only, see the module docstring."""
+    """`Planet_Has_Been_Visited_` (plntsum.cpp:376-384, v2 :376-386): the
+    star's visited bit, or omniscience — the trait or a lore leader."""
+    if not 0 <= star_index < len(view.stars):
+        return False
+    return (star_struct.visited_by(view.stars[star_index], view.player_num)
+            or omniscient(view))
+
+
+def explored(view, star_index):
+    """The planet's bit in `_explored_bitmap`, set by
+    `Set_Planet_Explored_Flags_` (plntsum.cpp:649-662) from the omniscience
+    TRAIT or the visited bit — not from a lore leader, so with the enemy
+    toggle on a planet only a leader reveals stays out (:1005-1008)."""
     if not 0 <= star_index < len(view.stars):
         return False
     local = view.player(view.player_num)
     return (star_struct.visited_by(view.stars[star_index], view.player_num)
             or (local is not None and player_struct.has_omniscience(local)))
+
+
+def city_planning(view, player):
+    """Has `player` researched Advanced City Planning?"""
+    record = view.player(player) if 0 <= int(player) < MAX_PLAYERS else None
+    return colonyrows.city_planning(record)
 
 
 def productivity_penalty(traits, gravity):
@@ -168,11 +208,13 @@ def race_pop_limit(view, size, climate, race):
 
 
 def max_population(view, planet):
-    """`COLCALC::Planet_Max_Population_For_Player_` (colcalc.cpp:896-936) for
-    the local player. A settled (non-outpost) colony answers the best limit
-    over the races living in it, each through `Colony_Race_Pop_Limit_`
-    (biospheres +2); anything else answers the local player's limit.
-    Advanced City Planning (+5) is not applied — see the module docstring."""
+    """`COLCALC::Planet_Max_Population_For_Player_` (colcalc.cpp:896-936,
+    v2 :986-1025) for the local player. A settled (non-outpost) colony
+    answers the best limit over the races living in it, each through
+    `Colony_Race_Pop_Limit_` (colcalc.cpp:1012-1033, v2 :1103-1125): the
+    COLONY OWNER's Advanced City Planning, then biospheres +2, capped at
+    42; anything else answers the local player's limit with the LOCAL
+    player's Advanced City Planning (colcalc.cpp:927-929), capped at 42."""
     colony = view.colony(planet.colony_index) if planet.colony_index != -1 \
         else None
     if colony is not None and not colony.outpost_flag:
@@ -181,12 +223,17 @@ def max_population(view, planet):
         best = 0
         for race in races:
             limit = race_pop_limit(view, planet.size, colony.climate, race)
+            if city_planning(view, int(colony.owner)):
+                limit += CITY_PLANNING_BONUS
             if colony.buildings[colonyrows.BUILDING_BIOSPHERES]:
                 limit += TRAIT_BIOSPHERE_BONUS
             best = max(best, min(limit, colonyrows.POP_LIMIT_CAP))
         return best
-    return min(race_pop_limit(view, planet.size, planet.climate,
-                              view.player_num), colonyrows.POP_LIMIT_CAP)
+    limit = race_pop_limit(view, planet.size, planet.climate,
+                           view.player_num)
+    if city_planning(view, view.player_num):
+        limit += CITY_PLANNING_BONUS
+    return min(limit, colonyrows.POP_LIMIT_CAP)
 
 
 def planet_row(view, index, planet):
@@ -231,10 +278,17 @@ def build_rows(view, filters):
                 and colony.outpost_flag != 0:
             continue                          # Planet_Is_Outpost_Planet_
         star = int(planet.star_index)
-        # The enemy toggle ALSO requires the explored bit, set by
-        # Set_Planet_Explored_Flags_ (plntsum.cpp:649) from the omniscience
-        # TRAIT or the visited bit — which is `visited` here exactly.
         if not visited(view, star):
+            continue
+        # The enemy toggle ALSO requires the explored bit
+        # (plntsum.cpp:1005-1008), set from the omniscience TRAIT or the
+        # visited bit alone — a lore leader does not set it.
+        if "enemy" in on and not explored(view, star):
+            continue
+        # The range toggle first, as the source tests it (plntsum.cpp:1013,
+        # v2 :1012): `Planet_In_Range_Of_A_Colony_` (work order 322 A3).
+        if "range" in on and not planetrange.star_in_range(
+                view, star, view.player_num):
             continue
         if "gravity" in on and productivity_penalty(
                 view.local_traits(), int(planet.gravity_class)) > 0:

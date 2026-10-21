@@ -14,17 +14,27 @@ THE STATES:
   STATEMENT  DIPL carries no list and the live list is one field over the
              whole screen: a statement waiting for a click (the refusal,
              a greeting, a reply). Any click answers it.
-  GAME_BOX   anything else — the system picker (its own loop and stars,
-             dip_scrn.cpp:700-860), a list that disagrees with DIPL: HD has
-             no view for it and hands over, a modal net (decision 22).
+  PICKER     the system picker (`Diplomacy_System_Display_`, dip_scrn.cpp:
+             701-805) under id 85 with open fix 109's TPOP kind 25 — its
+             own loop and a hidden field per star; drawn by `aupicker`
+             (work order 322 E). Without fix 109 it runs under 57 / 58 and
+             is GAME_BOX.
+  GAME_BOX   anything else — the picker on an engine without open fix
+             109, a list that disagrees with DIPL: HD has no view for it
+             and hands over, a modal net (decision 22).
 """
 from . import augeom as geom
 
-MENU, STATEMENT, GAME_BOX = "menu", "statement", "game_box"
+MENU, STATEMENT, PICKER, GAME_BOX = "menu", "statement", "picker", \
+    "game_box"
 
 
 def claims(state):
-    """57 / 58 are HD's only with DIPL on the wire (open fix 47)."""
+    """57 / 58 are HD's only with DIPL on the wire (open fix 47); 85 only
+    with open fix 109's TPOP kind 25."""
+    if getattr(state, "current_screen", None) == geom.PICKER_SCREEN_ID:
+        from . import aupicker
+        return aupicker.popup_of(state) is not None
     return getattr(state, "audience", None) is not None
 
 
@@ -32,9 +42,21 @@ class View:
     """One snapshot's reading of the audience."""
 
     def __init__(self, state):
+        from . import aupicker
+        #: the snapshot this reading is of: the picker draws its fields and
+        #: stars from it, never from a newer one
+        self.game_state = state
         self.audience = getattr(state, "audience", None)
+        self.picker = aupicker.popup_of(state)
         self.fields = [f for f in (getattr(state, "fields", None) or [])
                        if f.index != 0]
+        self.title_field, self.item_fields = None, []
+        if self.picker is not None:
+            # the room's race and mode as the picker keeps them (args[4],
+            # args[5]): DIPL is written only under 57 / 58
+            self.state, self.reason = PICKER, ""
+            self.race = _race_of(state, self.picker["args"][4])
+            return
         self.race = _race(state, self.audience)
         lists = sorted((f for f in self.fields
                         if f.field_type == geom.TYPE_LIST), key=lambda f: f.y)
@@ -57,13 +79,23 @@ class View:
 
     @property
     def draws(self):
-        return self.state in (MENU, STATEMENT)
+        return self.state in (MENU, STATEMENT, PICKER)
 
     @property
     def refused(self):
         """The ambassador is not drawn when the audience is refused
         (`_ambassador_option` 0, dip_scrn_main.cpp:1562)."""
+        if self.picker is not None:
+            return self.picker["args"][5] == 0
         return self.audience is not None and self.audience["option"] == 0
+
+    @property
+    def statement(self):
+        """The words the room prints: DIPL's, or the picker's TPOP text
+        (the same `diplomacy_message`)."""
+        if self.picker is not None:
+            return self.picker.get("text") or ""
+        return self.audience["text"] if self.audience is not None else ""
 
     def items(self):
         """[(item dict, its field)] top to bottom."""
@@ -76,9 +108,12 @@ def _race(state, audience):
     """The ambassador's race (`s_player.race` @37), or None."""
     if audience is None:
         return None
+    return _race_of(state, audience["ambassador"])
+
+
+def _race_of(state, i):
     from core.structs import player as player_spec
     raws = getattr(state, "player_raw", None) or []
-    i = audience["ambassador"]
     if not 0 <= i < len(raws) or raws[i] is None:
         return None
     try:
