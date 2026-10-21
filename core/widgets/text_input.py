@@ -61,7 +61,7 @@ class TextInput:
         """Consume a KEYDOWN event. Returns True if handled."""
         if not self.focused or event.type != pygame.KEYDOWN:
             return False
-        if event.key == pygame.K_RETURN:
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
             if self.on_submit:
                 self.on_submit(self.value)
             return True

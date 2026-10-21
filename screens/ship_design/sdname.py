@@ -34,7 +34,8 @@ as it was). Nothing of the original's picture is shown at any point.
 """
 import logging
 
-from core.injection import InjectionChain, name_keys, paced_keys
+from core.injection import (InjectionChain, game_accepts, name_keys,
+                            paced_keys)
 from core.widgets.text_input import TextInput
 
 from . import sdgeom as geom, sdwire
@@ -77,11 +78,6 @@ def clear_count(design_name, last_sent=None):
 
 #: The chain waits this long for the page's list before it gives up.
 STEP_TIMEOUT_S = 10.0
-
-
-def game_accepts(ch):
-    """The characters the continuous input takes (fields.cpp:1206)."""
-    return len(ch) == 1 and 0x20 <= ord(ch) <= 0x7E and ch != "_"
 
 
 def is_page(fields):

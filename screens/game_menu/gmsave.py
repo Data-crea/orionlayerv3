@@ -25,7 +25,8 @@ reads as a slot-field cancel and leaves for the menu (loadsave.cpp:
 """
 import logging
 
-from core.injection import InjectionChain, name_keys, paced_keys
+from core.injection import (InjectionChain, game_accepts, name_keys,
+                            paced_keys)
 from core.widgets.text_input import TextInput
 from screens.game_menu import gmdraw, nodes
 
@@ -41,11 +42,6 @@ NAME_MAX = 29
 #: How long the chain holds the watchdog while the keys go out and the
 #: game writes the file: saving has no input loop.
 SAVE_STEP_TIMEOUT_S = 30.0
-
-
-def game_accepts(ch):
-    """The characters the continuous input takes (fields.cpp:1206)."""
-    return len(ch) == 1 and 0x20 <= ord(ch) <= 0x7E and ch != "_"
 
 
 def is_save(fields):

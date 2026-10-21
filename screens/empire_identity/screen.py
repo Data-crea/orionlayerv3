@@ -33,7 +33,7 @@ from core.screen_base import ScreenBase
 from core.widgets.text_input import TextInput
 from core.injection import (InjectionChain, is_name_dialog,
                             is_banner_dialog, type_name, click_banner,
-                            LONG_STEP_TIMEOUT_S)
+                            game_accepts, LONG_STEP_TIMEOUT_S)
 from screens.empire_identity import renderer
 from screens.empire_identity.renderer import (
     draw_thin_box, draw_title_hint, draw_centered,
@@ -105,10 +105,12 @@ class EmpireIdentityScreen(ScreenBase):
         self._ruler = TextInput(
             value="", max_len=self._data.get("ruler_max_len", 15),
             placeholder="The game's proposal", font_ref=30,
+            allowed=game_accepts,
             on_submit=lambda v: self._accept(), on_cancel=self._cancel)
         self._home = TextInput(
             value=home_default, max_len=self._data.get("home_max_len", 12),
             placeholder="Home system", font_ref=30,
+            allowed=game_accepts,
             on_submit=lambda v: self._accept(), on_cancel=self._cancel)
         self._focus = "ruler"
         self._set_focus("ruler")

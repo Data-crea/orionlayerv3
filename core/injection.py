@@ -147,6 +147,17 @@ def describe(fields):
 
 # ── Actions ──────────────────────────────────────────────
 
+def game_accepts(ch):
+    """The characters the game's continuous string input takes: the test in
+    `Get_Input_` is `chr >= 0x20 && chr <= 0x7E && chr != 0x5F` (fields.cpp,
+    the branch that appends to `continuous_string`; the underscore is the
+    cursor). One predicate for every HD text field that types into such a
+    field — the save dialog, the ship's name, Empire Identity — where each
+    kept its own copy, and the one that was missed let "Müller" arrive as
+    "Mller" and showed an underscore the game refuses."""
+    return len(ch) == 1 and 0x20 <= ord(ch) <= 0x7E and ch != "_"
+
+
 def name_keys(text, clear=CLEAR_KEYS):
     """The keycodes that clear a string field, type `text` and Enter.
 

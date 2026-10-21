@@ -278,7 +278,10 @@ class MultiplayerScreen(ScreenBase):
             if self.app.connected and value.strip():
                 self._chain = InjectionChain(self.app.client, [
                     ("chat", is_turn, run, 10.0)])
+        # what `name_keys` sends and no more: a character outside it was
+        # shown in the field and then dropped on the way to the game
         self._endpoint = TextInput(value="", max_len=59,
+                                   allowed=lambda c: 0x20 <= ord(c) <= 0x7E,
                                    on_submit=send,
                                    on_cancel=self._cancel_endpoint)
 
