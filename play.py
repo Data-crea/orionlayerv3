@@ -166,6 +166,35 @@ Starts the game (orion2re) and OrionLayer together. --engine and --game are
 saved in your OrionLayer settings, so they are needed once."""
 
 
+#: How long the client is given to end itself after Ctrl+C before it is
+#: asked to, and then made to.
+INTERRUPT_GRACE_S = 5.0
+
+
+def run_client(argv, **kwargs):
+    """Run the client and return its exit code.
+
+    `subprocess.call` kills its child (SIGKILL) when the caller is
+    interrupted, and Ctrl+C reaches both: the client was ending itself —
+    its last word (`core/lastword.py`) and its log flushed — while play.py
+    killed it from under that. Here an interrupt waits for the client,
+    then asks (SIGTERM), and only then kills."""
+    proc = subprocess.Popen(argv, **kwargs)
+    try:
+        return proc.wait()
+    except KeyboardInterrupt:
+        for step in (lambda: proc.wait(INTERRUPT_GRACE_S), proc.terminate,
+                     lambda: proc.wait(INTERRUPT_GRACE_S), proc.kill):
+            try:
+                step()
+                if proc.poll() is not None:
+                    break
+            except subprocess.TimeoutExpired:
+                continue
+        proc.wait()
+        raise
+
+
 def main(argv=None, out=print):
     if argv and any(a in ("-h", "--help") for a in argv):
         out(USAGE)
@@ -188,8 +217,8 @@ def main(argv=None, out=print):
         return 1
     rc = None
     try:
-        rc = subprocess.call([sys.executable, os.path.join(ROOT, "main.py")],
-                             cwd=ROOT, env=client_env(pid=pid, log=LOG))
+        rc = run_client([sys.executable, os.path.join(ROOT, "main.py")],
+                        cwd=ROOT, env=client_env(pid=pid, log=LOG))
         return rc
     finally:
         out(ending(rc))

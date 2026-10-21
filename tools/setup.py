@@ -40,6 +40,7 @@ command. The script reports their state and moves on.
 """
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 
@@ -491,14 +492,22 @@ def main():
     # there is nothing to switch on and nothing to verify, and that is
     # not a failure — the clone is complete for playing and modding.
     developer = os.path.isdir(os.path.join(ROOT, HOOKS_PATH))
-    hooks = subprocess.run(["git", "config", "--get", "core.hooksPath"],
-                           cwd=ROOT, capture_output=True, text=True)
+    # ONLY WHERE THERE ARE HOOKS TO ASK ABOUT, and only if git exists: a
+    # player's ZIP download has neither, and `subprocess.run` of a program
+    # that is not there raises FileNotFoundError — which stopped the whole
+    # install at this line, before it said anything about the pictures.
+    hooks = None
+    if developer and shutil.which("git"):
+        hooks = subprocess.run(["git", "config", "--get", "core.hooksPath"],
+                               cwd=ROOT, capture_output=True, text=True)
     _missing = [h for h in HOOKS if developer
                 if not os.access(os.path.join(ROOT, HOOKS_PATH, h), os.X_OK)]
     if _missing:
         print(f"  Git hooks: MISSING OR NOT EXECUTABLE — {', '.join(_missing)}")
     if not developer:
         print("  Git hooks: none — the developer's gate is not shipped\n")
+    elif hooks is None:
+        print("  Git hooks: git is not installed, nothing to switch on\n")
     elif hooks.stdout.strip() == HOOKS_PATH:
         print(f"  Git hooks: ok ({HOOKS_PATH}) — pre-commit runs the fast "
               f"tier, pre-push the full suite\n")

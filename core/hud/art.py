@@ -17,6 +17,7 @@ import pygame
 
 from core import resources
 from core.hud import glyphs
+from core.hud import lru
 from core.hud import style as hudstyle
 from core.hud import tint
 
@@ -42,9 +43,15 @@ PIECES = (tuple("icon_" + k for k in ICONS) + (TITLE_PLATE,)
           + tuple("icon_" + k for k in MASKS))
 
 _raw = {}
-_scaled = {}
+#: BOUNDED, like the shapes and the glass (`core/hud/lru.py`): a window
+#: dragged through fifty widths made fifty sizes of the title plate, and
+#: nothing cleared them — a resize does not run `clear` — so a session's
+#: memory only grew (measured: 500 widths, about 300 entries, ~98 MB).
+#: The least recently used size goes first; the newest always stays.
+_SCALED_MAX, _SCALED_BYTES = 300, 96 * 1024 * 1024
+_scaled = lru.Cache(_SCALED_MAX, _SCALED_BYTES)
 #: The scaled pieces before tinting — they do not change with the colour.
-_plain = {}
+_plain = lru.Cache(_SCALED_MAX, _SCALED_BYTES)
 _warned = set()
 
 
@@ -93,11 +100,12 @@ def mask(key, height, colour):
     if img is None:
         return None
     ck = ("mask", key, img.get_size(), tuple(colour[:3]))
-    if ck not in _scaled:
+    out = _scaled.get(ck)
+    if out is None:
         out = img.copy()
         out.fill(tuple(colour[:3]) + (255,), special_flags=pygame.BLEND_RGBA_MULT)
-        _scaled[ck] = out
-    return _scaled[ck]
+        _scaled.put(ck, out)
+    return out
 
 
 def fit(name, height, width=None):
@@ -112,17 +120,19 @@ def fit(name, height, width=None):
     if width is None:
         width = max(1, round(iw * height / ih))
     key = (name, int(width), int(height))
-    if key not in _scaled:
+    out = _scaled.get(key)
+    if out is None:
         # SCALED FIRST, THEN TINTED (work order 253): tinting the piece at
         # the HUD's own size cost 0.6 s after every change of the frame
         # colour (the title plate is 4780 px wide); the scaled copy is kept
         # untinted, so a new colour only tints the few pixels on screen.
         plain = ("plain",) + key
-        if plain not in _plain:
-            _plain[plain] = pygame.transform.smoothscale(
-                img, (int(width), int(height)))
-        _scaled[key] = _tinted(name, _plain[plain])
-    return _scaled[key]
+        small = _plain.get(plain)
+        if small is None:
+            small = _plain.put(plain, pygame.transform.smoothscale(
+                img, (int(width), int(height))))
+        out = _scaled.put(key, _tinted(name, small))
+    return out
 
 
 def _tinted(name, img):

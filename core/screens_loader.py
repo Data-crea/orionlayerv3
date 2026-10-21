@@ -18,8 +18,10 @@ name, the mod's class replaces the base one.
 Folders starting with "_" (e.g. _template) are skipped.
 """
 import os
+import sys
 import inspect
 import importlib
+import importlib.machinery
 import importlib.util
 import logging
 
@@ -36,18 +38,47 @@ def _load_module(screen_name, screen_py, from_mod):
     module_name = f"screens_{mod_tag}_{screen_name}"
     try:
         if from_mod:
-            spec = importlib.util.spec_from_file_location(
-                module_name, screen_py)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return module
+            return _load_mod_package(module_name, screen_py)
         # Base screens import as normal packages so their own
         # relative imports (renderer.py etc.) keep working.
         return importlib.import_module(f"screens.{screen_name}.screen")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — one screen must not end the start
+        # WITH THE TRACEBACK: a NameError or a bad import in a base screen
+        # used to be one line of its message, after which the screen was
+        # simply absent and the game fell back to the original's picture —
+        # which reads as a gap in the protocol, not as the fault it is.
         log.error("Failed to load screen '%s' (%s): %s",
-                  screen_name, screen_py, e)
+                  screen_name, screen_py, e, exc_info=True)
         return None
+
+
+def _load_mod_package(package_name, screen_py):
+    """A mod's screen folder as a package, so that what a real screen is
+    made of — `from .helper import X` beside its screen.py — loads.
+
+    Loaded as a bare file there is no parent package and the first
+    relative import fails; every base screen is a package of sibling
+    modules, so a mod that replaces one would have had to be a single
+    file. The folder becomes the package `package_name` and screen.py its
+    submodule `screen`; both leave `sys.modules` again when the import
+    fails, so a second try is not answered by a half-built module."""
+    folder = os.path.dirname(screen_py)
+    package = importlib.util.module_from_spec(importlib.machinery.ModuleSpec(
+        package_name, None, is_package=True))
+    package.__path__ = [folder]
+    sub_name = package_name + ".screen"
+    sys.modules[package_name] = package
+    try:
+        spec = importlib.util.spec_from_file_location(sub_name, screen_py)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[sub_name] = module
+        spec.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(sub_name, None)
+        sys.modules.pop(package_name, None)
+        raise
+    package.screen = module
+    return module
 
 
 def _find_screen_class(module, screen_name):

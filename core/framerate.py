@@ -71,6 +71,17 @@ class _Mode(ctypes.Structure):
                 ("driverdata", ctypes.c_void_p)]
 
 
+def _is_sdl(basename):
+    """True for the file name of the SDL2 library itself. The system's is
+    `libSDL2-2.0.so.0.*`; the one a pip wheel carries is renamed by
+    auditwheel to `libSDL2-2-<hash>.0.so.0.*` (pygame.libs/), which a
+    match on `libSDL2-2.0.so` never found — so the monitor's rate was 60
+    for every pip install, and the fallback below loaded a SECOND SDL when
+    the system had one. `libSDL2_image`, `_ttf` and `_mixer` have an
+    underscore where the dash is and do not match."""
+    return basename.startswith("libSDL2-2") and ".so" in basename
+
+
 def _sdl():
     """The libSDL2 pygame runs on — the one already in this process, so the
     display it reports is the one pygame opened."""
@@ -78,7 +89,7 @@ def _sdl():
         with open("/proc/self/maps", encoding="utf-8") as fh:
             for line in fh:
                 path = line.split()[-1]
-                if os.path.basename(path).startswith("libSDL2-2.0.so"):
+                if _is_sdl(os.path.basename(path)):
                     return ctypes.CDLL(path)
     except OSError:
         pass
