@@ -183,15 +183,23 @@ def run_client(argv, **kwargs):
     try:
         return proc.wait()
     except KeyboardInterrupt:
-        for step in (lambda: proc.wait(INTERRUPT_GRACE_S), proc.terminate,
-                     lambda: proc.wait(INTERRUPT_GRACE_S), proc.kill):
-            try:
-                step()
-                if proc.poll() is not None:
-                    break
-            except subprocess.TimeoutExpired:
-                continue
-        proc.wait()
+        try:
+            for step in (lambda: proc.wait(INTERRUPT_GRACE_S),
+                         proc.terminate,
+                         lambda: proc.wait(INTERRUPT_GRACE_S), proc.kill):
+                try:
+                    step()
+                    if proc.poll() is not None:
+                        break
+                except subprocess.TimeoutExpired:
+                    continue
+        finally:
+            # also when the player presses it again while we wait: the
+            # engine is stopped next, and a client left running under it
+            # is an orphan
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait()
         raise
 
 

@@ -396,7 +396,8 @@ def parse_state(data: bytes) -> GameState:
                 # OVER: left where it stood the scalars' end is mistaken
                 # for the next tag and every block after FLTS is lost
                 wire_protocol.refused(
-                    "FLTS", f"{_n} records for {_flt['icons']} icons")
+                    "FLTS", "records do not match the icons",
+                    f"{_n} records for {_flt['icons']} icons")
                 pos += 3 * _n
 
     # The Leaders screen's view state — OPTIONAL block after FSEL, open

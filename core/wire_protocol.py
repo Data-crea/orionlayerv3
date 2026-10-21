@@ -27,7 +27,7 @@ log = logging.getLogger("wire")
 _REFUSED = set()
 
 
-def refused(tag, why):
+def refused(tag, why, detail=""):
     """Say once that a block of the snapshot was refused.
 
     The optional blocks carry a tag and no length, and `parse_state` reads
@@ -35,12 +35,17 @@ def refused(tag, why):
     refuses its block (another version, a count that does not fit) cannot
     step over it, so every block after it reads as absent — the battle, the
     message box, the turn popups — with nothing in the log. Until the
-    engine writes a length with each block (`doc/orion2re_open_fixes.md`),
-    the refusal is at least said, once per tag and reason."""
+    engine writes a length with each block (dev:doc/orion2re_open_fixes.md),
+    the refusal is at least said, once per tag and reason.
+
+    `why` is the rule that failed and names no number that changes from one
+    snapshot to the next; `detail` carries those, in the message only — a
+    key that held them was new every snapshot and logged every one."""
     if (tag, why) not in _REFUSED:
         _REFUSED.add((tag, why))
-        log.warning("block %s refused (%s): the blocks after it in this "
-                    "snapshot are not read", tag, why)
+        log.warning("block %s refused (%s%s): the blocks after it in this "
+                    "snapshot are not read", tag, why,
+                    f"; {detail}" if detail else "")
 
 MAGIC = 0x4F325845          # "O2XE"
 PROTO_VERSION = 1

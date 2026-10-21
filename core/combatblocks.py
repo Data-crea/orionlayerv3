@@ -79,16 +79,20 @@ def _cmbt(data, pos):
     size, units = _st.unpack_from("<Hh", data, at)
     at += 4
     if size != combat_struct.UNIT_SPEC.resolved()[0] or not 0 <= units <= 210:
-        wire_protocol.refused("CMBT", f"unit record {size}, {units} units")
+        wire_protocol.refused("CMBT", "unit record size or count",
+                              f"record {size}, {units} units")
         return None, pos
-    if units == 0 or out["cur_ship"] >= units:
+    if out["cur_ship"] >= units:
         # `units[cur_ship]` is read by every part of the screen. -1 is the
-        # engine's own "no ship acts" (combat1.cpp:418, :1862) and passes
-        # while a unit exists — it indexes the last one, a fault of its own
-        # and listed as open — but a value past the end, or a battle with
-        # no unit at all, would raise in every frame that follows.
-        wire_protocol.refused(
-            "CMBT", f"{units} units, acting {out['cur_ship']}")
+        # engine's own "no ship acts" (combat1.cpp:418, :1862) and passes —
+        # while a unit exists it indexes the last one, a fault of its own
+        # and listed as open — and so does a block of no unit at all (the
+        # engine writes CMBT whenever a battle is live, also while it sets
+        # up or ends, ext_api.cpp), which refusing would cost every block
+        # after it. A value past the end would raise in every frame that
+        # follows.
+        wire_protocol.refused("CMBT", "acting unit past the end",
+                              f"{units} units, acting {out['cur_ship']}")
         return None, pos
     out["units"] = []
     for _ in range(units):

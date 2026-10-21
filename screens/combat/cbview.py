@@ -19,6 +19,14 @@ WORLD_W, WORLD_H = GRID_W * CELL, GRID_H * CELL
 ZOOM_STEP = 1.15
 
 
+def fit_area(area):
+    """`area` with at least one pixel each way — what a Camera keeps, and
+    what the screen must compare a new area with, or a window with no area
+    would make a camera every frame."""
+    x, y, w, h = area
+    return (x, y, max(1, w), max(1, h))
+
+
 @dataclass
 class Camera:
     area: tuple                  # window rect (x, y, w, h) the field is drawn in
@@ -31,8 +39,7 @@ class Camera:
         # would make `min_scale` 0 and `rungs` take log(0), and `to_world`
         # and `pan` divide by it; a one-pixel area draws nothing and breaks
         # nothing, and the next resize gives the real one back.
-        x, y, w, h = self.area
-        self.area = (x, y, max(1, w), max(1, h))
+        self.area = fit_area(self.area)
 
     def min_scale(self):
         """The whole field fits."""

@@ -19,6 +19,7 @@ Folders starting with "_" (e.g. _template) are skipped.
 """
 import os
 import sys
+import zlib
 import inspect
 import importlib
 import importlib.machinery
@@ -36,6 +37,12 @@ def _load_module(screen_name, screen_py, from_mod):
     # Unique module name so a mod screen never collides with base
     mod_tag = "mod" if from_mod else "base"
     module_name = f"screens_{mod_tag}_{screen_name}"
+    if from_mod:
+        # ONE PACKAGE PER FOLDER: two mods that both replace a screen would
+        # share `screens_mod_<name>`, and the second one's `from .renderer
+        # import …` would be answered by the first one's cached module
+        module_name += "_%08x" % (zlib.crc32(os.path.dirname(
+            os.path.abspath(screen_py)).encode("utf-8")) & 0xFFFFFFFF)
     try:
         if from_mod:
             return _load_mod_package(module_name, screen_py)
@@ -52,6 +59,13 @@ def _load_module(screen_name, screen_py, from_mod):
         return None
 
 
+def _forget(package_name):
+    """Drop a mod package and every module imported under it."""
+    for key in [k for k in sys.modules
+                if k == package_name or k.startswith(package_name + ".")]:
+        del sys.modules[key]
+
+
 def _load_mod_package(package_name, screen_py):
     """A mod's screen folder as a package, so that what a real screen is
     made of — `from .helper import X` beside its screen.py — loads.
@@ -63,6 +77,7 @@ def _load_mod_package(package_name, screen_py):
     submodule `screen`; both leave `sys.modules` again when the import
     fails, so a second try is not answered by a half-built module."""
     folder = os.path.dirname(screen_py)
+    _forget(package_name)           # a second discovery starts clean
     package = importlib.util.module_from_spec(importlib.machinery.ModuleSpec(
         package_name, None, is_package=True))
     package.__path__ = [folder]
@@ -74,8 +89,7 @@ def _load_mod_package(package_name, screen_py):
         sys.modules[sub_name] = module
         spec.loader.exec_module(module)
     except BaseException:
-        sys.modules.pop(sub_name, None)
-        sys.modules.pop(package_name, None)
+        _forget(package_name)       # siblings that did import, too
         raise
     package.screen = module
     return module

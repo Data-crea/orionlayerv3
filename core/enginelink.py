@@ -155,6 +155,7 @@ class Link:
         knows = hasattr(client, "lost")
         if knows and not self._started:
             self._started = True
+            self._reconnected = getattr(client, "reconnected", 0)
             if self.pid and not app.connected and client.lost is None:
                 # play.py's engine, not reached at the start (WO 322 C13)
                 client.lost = "no connection at the start"

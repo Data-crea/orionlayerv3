@@ -528,6 +528,11 @@ mods/my_mod/screens/galaxy_map/screen.py     replaces the base screen
 Screens are auto-discovered in `screens/` and in every active mod.
 A folder with the same name as a base screen replaces it entirely.
 
+A mod's screen folder is loaded as a package, one per folder: its files may
+import each other relatively (`from .helper import X`), as the base screens
+do. A screen that fails to import is logged with its traceback and left
+out, and the base screen of that name stays.
+
 ---
 
 ## Galaxy map star sprites

@@ -318,7 +318,7 @@ class CombatScreen(CombatInput, ScreenBase):
         win_w, win_h = surface.get_size()
         c = self._shown()
         band = cbpanel.Panel.area(win_w, win_h)
-        area = (0, 0, win_w, band.y)
+        area = cbview.fit_area((0, 0, win_w, band.y))
         if self._cam is None or tuple(self._cam.area) != area:
             old = self._cam
             self._cam = cbview.Camera(area)

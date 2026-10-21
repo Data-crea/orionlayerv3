@@ -221,6 +221,11 @@ class ColonyScreen(ScreenBase):
         self.carry.put_back()     # TRANSCRIPTION `put_back`: nothing was sent
         self.transfer.clear()
         self.message = ""
+        # a move left half sent: no snapshot reaches an inactive screen, so
+        # its tracker would never finish — and it blocks every click on the
+        # next visit until it does — and what it expected would be drawn
+        self.send_ = None
+        self.carry.sent = None
         super().exit()
 
     # ── The dispatcher's and the gate's questions ────────────────────
