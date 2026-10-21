@@ -211,6 +211,18 @@ class ColonyScreen(ScreenBase):
         self._move_words = (self.app.res.load_json(
             "screens/colony_summary/layout.json", {}) or {}).get("move", {})
 
+    def exit(self):
+        """What this visit left must not be the next visit's: a refused
+        drop's message stayed drawn, at the hover line, until the first
+        click of a later colony, and a hand the game's own screen change
+        took us away from stayed full. Only the keys and buttons that
+        leave from here put the hand back and cleared the move; the
+        game leaving on its own went by neither."""
+        self.carry.put_back()     # TRANSCRIPTION `put_back`: nothing was sent
+        self.transfer.clear()
+        self.message = ""
+        super().exit()
+
     # ── The dispatcher's and the gate's questions ────────────────────
 
     def claims(self, game_state):

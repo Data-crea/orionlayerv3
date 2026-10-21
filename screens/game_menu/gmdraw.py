@@ -156,7 +156,12 @@ def slots_for(screen, node):
     (tools/version_check.py); None is only the tick between the field list
     and the slot message that follows it."""
     slots = getattr(screen.state, "save_slots", None)
-    if slots and slots.get("screen_data") == SCREEN_DATA.get(node):
+    if slots and slots.get("screen_data") == SCREEN_DATA.get(node) and \
+            len(slots["slots"]) >= nodes.SLOTS:
+        # all ten or none: the dialog indexes `slots[i]` for each of its
+        # ten rows, so a short message (the count byte is the wire's) is
+        # the same tick-between-messages case as no message — drawn as
+        # such — and not an IndexError in every frame after it
         return slots["slots"]
     return None
 

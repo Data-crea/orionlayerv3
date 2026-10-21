@@ -26,6 +26,14 @@ class Camera:
     ox: float = 0.0              # world px at the area's left edge
     oy: float = 0.0              # world px at the area's top edge
 
+    def __post_init__(self):
+        # A window shrunk until the field's area has no width or height
+        # would make `min_scale` 0 and `rungs` take log(0), and `to_world`
+        # and `pan` divide by it; a one-pixel area draws nothing and breaks
+        # nothing, and the next resize gives the real one back.
+        x, y, w, h = self.area
+        self.area = (x, y, max(1, w), max(1, h))
+
     def min_scale(self):
         """The whole field fits."""
         return min(self.area[2] / WORLD_W, self.area[3] / WORLD_H)
