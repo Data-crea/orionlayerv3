@@ -17,6 +17,7 @@ nothing and `gs.fleet_move` stays None — the map then draws no preview line
 """
 import struct as _st
 
+from core import wire_protocol
 from core.structs import combat as combat_struct
 
 #: s_ship_move_info, whole: `core/structs/combat.py` (it follows the
@@ -36,6 +37,8 @@ def parse(gs, data, pos):
     body = pos + 8
     if version != 1 or size != SPEC.resolved()[0] or n < 0 or \
             body + n * size > len(data):
+        wire_protocol.refused("FMOV", f"version {version}, record {size}, "
+                              f"{n} records, {len(data) - body} bytes left")
         return pos
     verdicts = [combat_struct.record(SPEC, data[body + i * size:
                                                 body + (i + 1) * size])

@@ -33,6 +33,7 @@ September 2026 for letting the engine run ahead of HD's animations.
 """
 import struct as _st
 
+from core import wire_protocol
 from core.structs import combat as combat_struct
 
 GRID_W, GRID_H = 81, 68
@@ -64,6 +65,7 @@ def _cmbt(data, pos):
     head = _st.unpack_from(CMBT_HEAD, data, at)
     at += CMBT_HEAD_SIZE
     if head[0] != 1:
+        wire_protocol.refused("CMBT", f"version {head[0]}")
         return None, pos
     keys = ("serial", "turn", "attacker", "defender", "initiative",
             "auto_attacker", "auto_defender", "cur_ship", "cur_ptr",
@@ -77,6 +79,16 @@ def _cmbt(data, pos):
     size, units = _st.unpack_from("<Hh", data, at)
     at += 4
     if size != combat_struct.UNIT_SPEC.resolved()[0] or not 0 <= units <= 210:
+        wire_protocol.refused("CMBT", f"unit record {size}, {units} units")
+        return None, pos
+    if units == 0 or out["cur_ship"] >= units:
+        # `units[cur_ship]` is read by every part of the screen. -1 is the
+        # engine's own "no ship acts" (combat1.cpp:418, :1862) and passes
+        # while a unit exists — it indexes the last one, a fault of its own
+        # and listed as open — but a value past the end, or a battle with
+        # no unit at all, would raise in every frame that follows.
+        wire_protocol.refused(
+            "CMBT", f"{units} units, acting {out['cur_ship']}")
         return None, pos
     out["units"] = []
     for _ in range(units):

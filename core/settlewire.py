@@ -24,6 +24,8 @@ the same star from the colony screen.
 """
 import struct as _st
 
+from core import wire_protocol
+
 HEAD = "<BHhhBBBBB"
 #: `s_settler_settle_result` (orion2.h), member for member — the bytes
 #: STLR sends, in this order.
@@ -54,6 +56,7 @@ def parse(gs, data, pos):
     (version, seq, source, dest, listed, settled, stop, job_refusal,
      extra) = _st.unpack_from(HEAD, data, pos + 4)
     if version != 1:
+        wire_protocol.refused("STLR", f"version {version}")
         return pos
     at = pos + 4 + _st.calcsize(HEAD)
     result = dict(zip(RESULT_FIELDS, data[at:at + len(RESULT_FIELDS)]))

@@ -117,6 +117,7 @@ class Link:
         self._start = None
         self._started = False       # the start's failed connect looked at
         self._await = None          # the STATE count a reconnect waits past
+        self._reconnected = 0       # the client's reconnects already taken
         self._notice = None
         if pid:
             self._start = process_state(pid, proc)[1]
@@ -173,6 +174,17 @@ class Link:
             return False
         if not knows or self.state == GONE:
             return app.connected
+        again = getattr(client, "reconnected", 0)
+        if again != self._reconnected:
+            # THE CLIENT RECONNECTED ITSELF within the poll (a close, then
+            # a connect that worked): `connected` never went False, so the
+            # branch below would not see a loss and the App would keep
+            # acting on the old connection's snapshot, its pointer gates
+            # unspoilt. It is a loss all the same; the way back is the
+            # documented one — the new connection's first snapshot.
+            self._reconnected = again
+            if app.connected and client.connected:
+                self._went_down(app, client, "reconnected at once")
         if not client.connected:
             if app.connected or self.state is None:
                 if client.lost is None and not app.connected:
@@ -201,7 +213,7 @@ class Link:
                 app.connected = True
         return app.connected
 
-    def _went_down(self, app, client):
+    def _went_down(self, app, client, why=None):
         app.connected = False
         self._notice, self._await = None, None
         # a press that was down is spoilt: its release cancels (C5)
@@ -215,7 +227,7 @@ class Link:
         self.state = LOST
         self._next = self.clock() + RETRY_EVERY
         log.warning("the connection to orion2re was lost (%s); retrying "
-                    "every %.0f s", client.lost, RETRY_EVERY)
+                    "every %.0f s", why or client.lost, RETRY_EVERY)
 
     def _gone(self):
         self.state, self._notice = GONE, None

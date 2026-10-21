@@ -32,6 +32,13 @@ log = logging.getLogger("game_client")
 
 # Connection health
 RECV_BUF_SIZE = 4 * 1024 * 1024   # 4 MB OS receive buffer
+#: A frame's length counts the 8 bytes after the first 8 (message type,
+#: flags, sequence number): at least that header, and never more than the
+#: largest the engine builds — the 640x480 framebuffer and its palette are
+#: under 400 KB, a snapshot under a few MB. 64 MB leaves room for every
+#: block yet stops a corrupt length from being waited for.
+MIN_FRAME = 8
+MAX_FRAME = 64 * 1024 * 1024
 
 # Seconds without data after which the client says so in the log — and
 # nothing else (work order 322 C).
@@ -212,6 +219,11 @@ class GameClient:
         # start, which is not a loss). `core/enginelink.py` reads it, paces
         # `retry` and tells the player.
         self.lost = None
+        #: How many losses `_lost` has already reconnected at once. The
+        #: link counts them: a reconnect that works leaves `connected`
+        #: True and `lost` None, so without the count nothing outside
+        #: would ever learn that the snapshot it holds is the old one's.
+        self.reconnected = 0
         self._silence_logged = False
         # WHAT CAME THAT CAN CHANGE A PICTURE (work order 273,
         # `core/drawgate.py`): the engine sends the whole snapshot — and the
@@ -243,9 +255,13 @@ class GameClient:
             self.sock = socket.socket(socket.AF_INET,
                                       socket.SOCK_STREAM)
             self.sock.settimeout(timeout)
-            self.sock.connect((self.host, self.port))
+            # BEFORE connect: the TCP window scale is fixed by the SYN, so
+            # a buffer asked for afterwards cannot widen the window the
+            # engine sees — and the engine drops a client whose buffer
+            # stays full for a second (ext_server.cpp, kMaxWaitMs)
             self.sock.setsockopt(socket.SOL_SOCKET,
                                 socket.SO_RCVBUF, RECV_BUF_SIZE)
+            self.sock.connect((self.host, self.port))
             _keepalive(self.sock)
             # HELLO is sent here, not through `_send_message`, whose failure
             # is a loss and would reconnect from inside the connect; and
@@ -352,6 +368,17 @@ class GameClient:
                                "out of step")
                     return False
 
+                # a header out of step must not make the client buffer the
+                # stream (framebuffer and state, ~20 MB/s) while it waits
+                # for a frame that never completes, nor read the next
+                # frame's header as this one's body
+                if not MIN_FRAME <= length <= MAX_FRAME:
+                    log.error(f"Bad frame length: {length}")
+                    self._recv_buf.clear()
+                    self._lost("a frame of impossible length: the stream "
+                               "is out of step")
+                    return False
+
                 total = 8 + length
                 if len(self._recv_buf) < total:
                     break
@@ -406,6 +433,17 @@ class GameClient:
         self._hold_until = float("inf")
         log.info("shutdown expected: the watchdog is disarmed")
 
+    def _parse_failed(self, kind, exc):
+        """One line for the first message of a kind that does not parse,
+        then one in a hundred: the engine sends a snapshot every tick, and
+        a layout the client cannot read made the log a line per snapshot —
+        many a second — that buried the one that mattered."""
+        key = kind + "_errors"
+        self.stats[key] = self.stats.get(key, 0) + 1
+        if self.stats[key] == 1 or self.stats[key] % 100 == 0:
+            log.error("%s parse error: %s (%d so far)", kind, exc,
+                      self.stats[key])
+
     def _lost(self, reason):
         """The connection closed or broke: end, or reconnect once now.
 
@@ -421,6 +459,8 @@ class GameClient:
         log.warning(reason)
         self.lost = reason
         self._reconnect(timeout=RETRY_TIMEOUT)
+        if self.connected:
+            self.reconnected += 1
 
     def retry(self):
         """One more connect after a loss — `_reconnect` with a short
@@ -648,7 +688,7 @@ class GameClient:
                 self.state.save_slots = old_slots
                 self._carry_combat_events()
             except Exception as e:
-                log.error(f"State parse error: {e}")
+                self._parse_failed("state", e)
 
         elif msg_type == MSG_FIELDS:
             self.stats["fields"] += 1
@@ -658,7 +698,7 @@ class GameClient:
                 # it belongs to, so a list with none has no slots.
                 self.state.save_slots = None
             except Exception as e:
-                log.error(f"Fields parse error: {e}")
+                self._parse_failed("fields", e)
 
         elif msg_type == MSG_VISUAL:
             self.stats["visual"] += 1
@@ -667,13 +707,13 @@ class GameClient:
                 self.state.framebuffer = fb
                 self.state.palette = pal
             except Exception as e:
-                log.error(f"Visual parse error: {e}")
+                self._parse_failed("visual", e)
 
         elif msg_type == MSG_SAVE_SLOTS:
             try:
                 self.state.save_slots = parse_save_slots(payload)
             except Exception as e:
-                log.error(f"Save slot parse error: {e}")
+                self._parse_failed("slots", e)
 
         elif msg_type == MSG_EVENT:
             if len(payload) >= 4:

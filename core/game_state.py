@@ -382,14 +382,22 @@ def parse_state(data: bytes) -> GameState:
         _flt["relocate_mode"] = read_u8()
         _flt["merging_relocations"] = read_u8() != 0
         _n = read_i16()
-        if 0 <= _n == _flt["icons"] and pos + 3 * _n <= len(data):
-            _ships, _sel = [], []
-            for _ in range(_n):
-                _ships.append(read_i16())
-                _sel.append(read_u8() != 0)
-            _flt["ship_idx"] = _ships
-            _flt["ship_selected"] = _sel
-            gs.fleet_screen = _flt
+        if 0 <= _n and pos + 3 * _n <= len(data):
+            if _n == _flt["icons"]:
+                _ships, _sel = [], []
+                for _ in range(_n):
+                    _ships.append(read_i16())
+                    _sel.append(read_u8() != 0)
+                _flt["ship_idx"] = _ships
+                _flt["ship_selected"] = _sel
+                gs.fleet_screen = _flt
+            else:
+                # the block says how many records follow, so it is stepped
+                # OVER: left where it stood the scalars' end is mistaken
+                # for the next tag and every block after FLTS is lost
+                wire_protocol.refused(
+                    "FLTS", f"{_n} records for {_flt['icons']} icons")
+                pos += 3 * _n
 
     # The Leaders screen's view state — OPTIONAL block after FSEL, open
     # fix 30 (doc/ext_officer_screen_state.patch). Written only while
