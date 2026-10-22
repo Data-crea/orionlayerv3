@@ -11,12 +11,17 @@ galaxy map behind a popup.
 """
 import logging
 
-from core import handover, msgbox, namebox, rightinfo, shipview, turnpopup
+from core import filmview, handover, msgbox, namebox, rightinfo, shipview
+from core import turnpopup
 
 log = logging.getLogger("orionlayer")
 
 
 class Overlays:
+    #: The film that plays — a class default too, so an Overlays built
+    #: without `__init__` (a check's stand-in) answers "none".
+    film = None
+
     def __init__(self, app):
         self.app = app
         #: The box / popup that is up this frame, or None.
@@ -32,6 +37,10 @@ class Overlays:
         #: 317, `core/shipview.py`), or None.
         self.ship = None
         self.ship_view = None
+        #: The film that plays (open fix 112, work order 320,
+        #: `core/filmview.py`), or None.
+        self.film = None
+        self.film_view = filmview.View()
         #: The last box answered: a second click before it has gone would
         #: land in whatever comes after it (decision 65's reasoning).
         self.box_sent = None
@@ -39,6 +48,8 @@ class Overlays:
             "assets/shared/msgbox/labels.json", {}) or {}
         self.popup_labels = app.res.load_json(
             "assets/shared/turnpopup/labels.json", {}) or {}
+        self.film_labels = app.res.load_json(
+            "assets/shared/fallback/labels.json", {}) or {}
 
     # ── which one is up ───────────────────────────────────────────────
     def update(self):
@@ -48,6 +59,9 @@ class Overlays:
         self.box = over[1] if over and over[0] == "box" else None
         self.popup = over[1] if over and over[0] == "popup" else None
         self.ship = over[1] if over and over[0] == "ship" else None
+        self.film = over[1] if over and over[0] == "film" else None
+        if self.film is None:
+            self.film_view.reset()
         if self.box is None:
             self.box_sent = None
         if self.popup is None:
@@ -59,13 +73,17 @@ class Overlays:
     @property
     def active(self):
         return self.box is not None or self.popup is not None or \
-            self.name is not None or self.ship is not None
+            self.name is not None or self.ship is not None or \
+            self.film is not None
 
     # ── drawing ───────────────────────────────────────────────────────
     def render(self, surface):
         """Draw what is up over the held surface; True if it drew."""
         app = self.app
         drew = False
+        if self.film is not None:   # the film's own frames (decision 101)
+            self.film_view.render(surface, app, self.film, self.film_labels)
+            return True
         if self.name is not None:
             self.name_base = msgbox.dimmed_base(
                 surface, self.name_base, msgbox.DIM_ALPHA, self.backdrop)
@@ -181,6 +199,9 @@ class Overlays:
         :215-223); a popup answers as `turnpopup.View.right_at` says."""
         if not down or not self.active:
             return
+        if self.film is not None:   # any button ends a film (film_skip)
+            self.film_view.skip(self.app.client, self.film)
+            return
         host = self.help_host()
         if host is not None and host.help.visible:
             host.help.close()
@@ -205,6 +226,9 @@ class Overlays:
                                rightinfo.opener(host))
 
     def click(self, x, y):
+        if self.film is not None:
+            self.film_view.skip(self.app.client, self.film)
+            return
         host = self.help_host()
         if host is not None and host.help.visible:
             host.help.close()         # the help over a popup takes the click
@@ -224,6 +248,9 @@ class Overlays:
             self.answer_popup(self.popup_view.action_at(x, y))
 
     def key(self, event):
+        if self.film is not None:   # any key ends a film (film_skip)
+            self.film_view.skip(self.app.client, self.film, event)
+            return
         host = self.help_host()
         if host is not None and host.help.visible:
             host.help.close()

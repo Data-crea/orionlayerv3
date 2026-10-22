@@ -305,6 +305,11 @@ def finishing(app):
     screen, no picture of the game's. F12 is the player's own mode."""
     if getattr(app, "render_mode", "hd") == "original":
         return False
+    # a film plays now (open fix 112): the battle's last events wait for it,
+    # or the film would be hidden behind a replay that outlasts it
+    from core import filmblock
+    if filmblock.for_state(getattr(app.client, "state", None)) is not None:
+        return False
     top = app.dispatcher.top
     ask = getattr(top, "finishing", None)
     return ask is not None and bool(ask(app.client.state))
@@ -312,8 +317,9 @@ def finishing(app):
 
 def overlay_for(app):
     """What HD draws OVER the held frame instead of any picture (work order
-    188, open fixes 29 and 49): `("box", box)` while a generic message box
-    is up (MSGB), `("ship", view)` while the ship detail view is (SHPV, open
+    188, open fixes 29 and 49): `("film", film)` while a film plays (FILM,
+    open fix 112: the film's own frames, decision 101), `("box", box)`
+    while a generic message box is up (MSGB), `("ship", view)` while the ship detail view is (SHPV, open
     fix 106), `("popup", popup)` while a turn-time popup is (TPOP),
     None otherwise — and None on F12, the player's own mode. The box wins
     over a popup: it is the one taking input (a confirmation over the
@@ -323,6 +329,12 @@ def overlay_for(app):
             not getattr(app, "connected", False):
         return None
     state = app.client.state
+    # a film first: it is what the engine plays now, over whatever box or
+    # popup opened it (decision 101, open fix 112, work order 320)
+    from core import filmblock
+    film = filmblock.for_state(state)
+    if film is not None:
+        return ("film", film)
     name = name_box_for(state, getattr(getattr(app, "dispatcher", None),
                                        "top", None))
     if name is not None:

@@ -1,0 +1,79 @@
+From 3096e0ee94201987254808a382408d1948953306 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Wed, 21 Oct 2026 09:27:54 +0200
+Subject: [PATCH] OrionLayer Open Fix 112, amended: the right button ends a
+ film as the left does, and FILM's frame named as it is
+ (MSG_INJECT_RIGHT_CLICK's release is held while a film plays and pushed when
+ it ends, as INJECT_CLICK's, so Mouse_Button sees the press,
+ smack.cpp:114-116; the docs' INJECT_RIGHT_CLICK row says so. FILM's frame is
+ Get_Smacker_Animation_Frame read after the draw, which decodes the next frame
+ (smckplay.cpp:236-241): the frames drawn so far, the last drawn plus one,
+ where the comment said the last drawn)
+
+OrionLayer, open fix 112, amended.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/extension-api.md |  2 +-
+ src/ext/ext_api.cpp   | 14 +++++++++++---
+ src/ext/ext_api.h     |  2 +-
+ 3 files changed, 13 insertions(+), 5 deletions(-)
+
+diff --git a/docs/extension-api.md b/docs/extension-api.md
+index 8fa80f4f..7d6e0f9f 100644
+--- a/docs/extension-api.md
++++ b/docs/extension-api.md
+@@ -163,7 +163,7 @@ palette (256 x RGB).
+ | `SET_JOBS` 0x84 | int16 colony, uint8 n, n x (uint8 pop, uint8 job) | sets colonists' jobs in one colony |
+ | `SELECT_SHIP` 0x85 | int16 ship, uint8 selected | selects a ship in the open fleet box |
+ | `SHOW_WINDOW` 0x86 | uint8 show | shows or hides the engine's own window |
+-| `INJECT_RIGHT_CLICK` 0x87 | int16 x, y | a right click at a point |
++| `INJECT_RIGHT_CLICK` 0x87 | int16 x, y | a right click at a point; while a film plays, the release follows when the film ends |
+ | `COMBAT_COMMAND` 0x88 | uint16 serial, int16 unit, uint8 op, int16 a, b, c | one battle action |
+ | `SET_SPIES` 0x89 | uint8 n, n x (player, spies, mission), uint8 pool | the Races screen's spies |
+ | `INJECT_RAW_KEY` 0x8A | uint16 code | F1-F10, Alt+F1-F10, Alt+letter |
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 7a70130a..4af4a880 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2721,8 +2721,10 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     // 37. The film that plays: "FILM", written ONLY while a FilmGuard lives
+     //     (SMACK::Play_Cinematic, smack.cpp:45), LAST. OrionLayer, open fix
+     //     112. A version byte, the length of the film's file name and its
+-    //     bytes (as the caller named it, e.g. "PLNTDFIN.LBX"), the frame
+-    //     smckplay last drew (0-based) and the film's total frames. The
++    //     bytes (as the caller named it, e.g. "PLNTDFIN.LBX"), the frames
++    //     drawn so far (Get_Smacker_Animation_Frame after the draw: the
++    //     draw decodes the next frame, smckplay.cpp:236-241, so the last
++    //     frame drawn, 0-based, plus one) and the film's total frames. The
+     //     picture itself is MSG_VISUAL's, as for every screen.
+     if (g_film.active) {
+         buf.push_back((uint8_t)'F');
+@@ -3544,7 +3546,13 @@ static void ProcessInput() {
+                 up.button.x = wx;
+                 up.button.y = wy;
+                 up.button.down = false;
+-                SDL_PushEvent(&up);
++                // OrionLayer, open fix 112, amended. The right button ends a film as the left does (FilmGuard).
++                if (g_film.active) {
++                    g_film_release = up;
++                    g_film_release_pending = true;
++                } else {
++                    SDL_PushEvent(&up);
++                }
+             }
+             break;
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 95772d0c..7f0ba466 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -538,7 +538,7 @@ bool Take_Demolish_Field(int16_t input_field);
+ /// tick shorter than the frame's slack costs the film nothing.
+ ///
+ /// The skip is the original's own test. A key reaches Keyboard_Status as
+-/// any key does. A click is pushed as a press and a release, and both are
++/// any key does. A click (left or right) is pushed as a press and a release, and both are
+ /// applied in the same Pump_Game_Input_Queue, so Mouse_Button, which reads
+ /// the button state (mouse.cpp:34-41), would see the release only; while a
+ /// film plays the release is held back and pushed when the film ends, as a

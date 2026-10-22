@@ -1,0 +1,251 @@
+From da87ff511b22c51d73c2de31f5badc97660f8d8a Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Wed, 21 Oct 2026 07:22:49 +0200
+Subject: [PATCH] OrionLayer Open Fix 111: the colony screen's demolish,
+ addressed by id (MSG_DEMOLISH 0x8C: int16 colony, int16 building;
+ CAP_DEMOLISH 0x0002 in HELLO_REPLY. On SCREEN_COLONY, for the colony on
+ screen and the player's, outside the planet view, a building it has: the
+ satellite slot first, as Evaluate_Input asks satellites first
+ (colony.cpp:1323-1324), else the first cell of Check_Bldg_Fields' own walk
+ that holds it, is activated as MSG_ACTIVATE does; for a cell
+ ext::Take_Demolish_Field makes the walk read that field as the scanned one
+ and the pointer as on no polygon, so the hidden window's pointer cannot claim
+ the click at an earlier cell (:1999-2011). The rest is the original's,
+ unchanged: the buildings it ignores, the once-a-turn refusal (E 0x243), the
+ confirmation (E 0x107) in the colony screen's own loop, reaching a client as
+ MSGB, the rubble, the removal, the recalculation, the refund)
+
+OrionLayer, open fix 111.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/extension-api.md  |  6 ++--
+ src/ext/ext_api.cpp    | 76 ++++++++++++++++++++++++++++++++++++++++++
+ src/ext/ext_api.h      |  7 ++++
+ src/ext/ext_server.cpp | 13 +++++++-
+ src/ext/ext_server.h   |  4 +++
+ src/game/colony.cpp    | 16 +++++++++
+ 6 files changed, 119 insertions(+), 3 deletions(-)
+
+diff --git a/docs/extension-api.md b/docs/extension-api.md
+index 22198197..ce57bcf2 100644
+--- a/docs/extension-api.md
++++ b/docs/extension-api.md
+@@ -47,7 +47,8 @@ Every message is one frame:
+    `0x04` the 640x480 picture and palette, `0x08` events.
+ 2. The server answers `HELLO_REPLY` (0x01): `uint16 protocol version,
+    uint16 capabilities`. Capability bit `0x0001` (`CAP_LAYOUT`) means a
+-   `LAYOUT` message follows at once.
++   `LAYOUT` message follows at once; bit `0x0002` (`CAP_DEMOLISH`) means
++   the server takes `DEMOLISH`.
+ 3. The server sends `LAYOUT` (0x15), then the current field list, and from
+    then on whatever the client subscribed to.
+ 
+@@ -167,10 +168,11 @@ palette (256 x RGB).
+ | `SET_SPIES` 0x89 | uint8 n, n x (player, spies, mission), uint8 pool | the Races screen's spies |
+ | `INJECT_RAW_KEY` 0x8A | uint16 code | F1-F10, Alt+F1-F10, Alt+letter |
+ | `SETTLE_POPS` 0x8B | int16 from, int16 to, uint8 n, n x pop | colonists to another colony at the same star |
++| `DEMOLISH` 0x8C | int16 colony, int16 building | the colony screen's demolish of one building: the original's own click on it, its refusals, confirmation box and refund |
+ 
+ An input is applied the next time the game reads its input, never in the
+ middle of its logic. The commands that change game data directly
+-(`SET_JOBS`, `SELECT_SHIP`, `SET_SPIES`, `SETTLE_POPS`, `COMBAT_COMMAND`)
++(`SET_JOBS`, `SELECT_SHIP`, `SET_SPIES`, `SETTLE_POPS`, `COMBAT_COMMAND`, `DEMOLISH`)
+ check the game's own conditions first and write nothing when one fails.
+ 
+ ## Environment variables
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 31cc9805..a44acb97 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -3313,6 +3313,78 @@ static void Set_Spies_(const std::vector<uint8_t>& p) {
+     BILL::Set_My_Agent_Number((uint8_t)agents);
+ }
+ 
++// OrionLayer, open fix 111. The building field MSG_DEMOLISH activated, for
++// Take_Demolish_Field; 0 when none waits.
++static int16_t g_demolish_field = 0;
++
++/// OrionLayer, open fix 111: the colony screen's demolish, addressed by id.
++///
++/// The original demolishes a building when the player LEFT-clicks it on the
++/// colony screen: a satellite in orbit through its own field
++/// (`Check_Satellite_Fields`, colony.cpp:1563-1589), a building of the scene
++/// through its hidden field or, on the full-screen field, through the
++/// building polygon under the real pointer (`Check_Bldg_Fields`,
++/// colony.cpp:1932-1971). Its walk over the scene's 36 cells also tests the
++/// pointer's polygon and the scanned field at every cell BEFORE the clicked
++/// one and returns there (:1999-2011), so an activated field alone lands
++/// wherever the hidden window's pointer happens to be.
++///
++/// This finds the field the original would have been clicked on - the
++/// satellite slot first, as `Evaluate_Input` asks satellites first
++/// (:1323-1324), then the first cell of the walk's own order that holds the
++/// building - and activates it as MSG_ACTIVATE does (g_pending_field). For a
++/// cell it also arms Take_Demolish_Field, which makes the walk read the
++/// pointer as on no polygon. Everything after is the original's, unchanged:
++/// the buildings it ignores (:1942-1950), the once-a-turn refusal (E 0x243),
++/// the confirmation (E 0x107: the name and half the cost), the rubble, the
++/// removal, the recalculation and the refund. Its boxes run in the colony
++/// screen's own loop, not in this handler, and reach a client as MSGB.
++///
++/// Refused, writing nothing: another screen; a colony that is not the one
++/// on screen or not the player's; a building it does not have or that has
++/// no field (the original draws at most 18, colony_main.cpp:538); the planet
++/// view (drawing_display 2), in which Evaluate_Input skips the walk
++/// (colony.cpp:1319); an activation that is still waiting.
++static void Demolish_(int16_t colony_idx, int16_t building) {
++    if (MOX::current_screen != SCREEN_COLONY || colony_idx != COLONY::colony_handle ||
++            colony_idx < 0 || colony_idx >= MOX::NUM_COLONIES ||
++            building <= BUILDING_NO_BUILDING || building >= BUILDING_COUNT ||
++            COLONY::drawing_display == 2 || g_pending_field > 0) {
++        return;
++    }
++    const s_colony& colony = MOX::colony[colony_idx];
++    if (colony.owner != MOX::PLAYER_NUM || colony.buildings[building] == 0) {
++        return;
++    }
++    auto live = [](int16_t field) { return field > 0 && field < fields::fields_count; };
++    for (int i = 0; i < 10; ++i) {
++        if (COLONY::colony_satellites[i] == building && live(COLONY::colony_satellite_fields[i])) {
++            g_pending_field = COLONY::colony_satellite_fields[i];
++            g_pending_checked = false;
++            return;
++        }
++    }
++    for (int cell = 0; cell < 36; ++cell) {
++        const int16_t field = COLONY::colony_bldg_fields[cell];
++        if (COLONY::colony_bldgs[cell / 6].buildings[cell % 6] == building && live(field)) {
++            g_pending_field = field;
++            g_pending_checked = false;
++            g_demolish_field = field;
++            return;
++        }
++    }
++}
++
++bool Take_Demolish_Field(int16_t input_field) {
++    // Only the activation Get_Input returned in this pass (g_activated_input,
++    // fields.cpp:190-194): a field id that a later real click happens to
++    // share is not armed.
++    const bool armed = g_demolish_field > 0 && input_field == g_demolish_field &&
++        g_activated_input == input_field;
++    g_demolish_field = 0;
++    return armed;
++}
++
+ static void ProcessInput() {
+     InputCommand cmd;
+     while (g_server.PopInput(cmd)) {
+@@ -3457,6 +3529,10 @@ static void ProcessInput() {
+             Set_Spies_(cmd.pairs);  // OrionLayer, open fix 64.
+             break;
+ 
++        case MSG_DEMOLISH:
++            Demolish_(cmd.param1, cmd.param2);  // OrionLayer, open fix 111.
++            break;
++
+         case MSG_INJECT_RAW_KEY:
+             // OrionLayer, open fix 89. Straight into the key queue, as platform.cpp queues a translated key (Queue_Key_Code, :416-418).
+             key::Push_Key_Code((uint32_t)(uint16_t)cmd.param1, (uint32_t)((uint16_t)cmd.param1 >> 8));
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index aee6355d..73b8f1f8 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -515,4 +515,11 @@ struct ColsumListGuard {
+     ~ColsumListGuard();
+ };
+ 
++/// OrionLayer, open fix 111. True once for the building field MSG_DEMOLISH
++/// activated, when COLONY::Check_Bldg_Fields takes it as its input: the walk
++/// then reads that field as clicked and the pointer as on no polygon of the
++/// scene (colony.cpp:1928-2012), so the hidden window's pointer, wherever it
++/// is, cannot claim the click for another building. Cleared by the call.
++bool Take_Demolish_Field(int16_t input_field);
++
+ } // namespace ext
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index a5db7f9f..e3b4d02b 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -189,7 +189,7 @@ void Server::HandleClientMessage(Client& client) {
+         // OrionLayer, open fix 93. HELLO_REPLY, then the layout of every raw record (CAP_LAYOUT):
+         // a client finds each member by name, so a record that grows or
+         // moves in the engine needs no change in the client.
+-        uint16_t reply[2] = { PROTO_VERSION, CAP_LAYOUT };
++        uint16_t reply[2] = { PROTO_VERSION, CAP_LAYOUT | CAP_DEMOLISH };  // OrionLayer, open fix 111: CAP_DEMOLISH.
+         SendFrame(client.fd, MSG_HELLO_REPLY, 0,
+                   client.sequence++, (uint8_t*)reply, sizeof(reply));
+         const std::vector<uint8_t>& layout = LayoutTable();
+@@ -292,6 +292,17 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_DEMOLISH: {
++        // OrionLayer, open fix 111. int16 colony, int16 building; shorter is dropped, never guessed.
++        if (payload_len >= 4) {
++            InputCommand cmd{};
++            cmd.type = MSG_DEMOLISH;
++            memcpy(&cmd.param1, payload, 2);
++            memcpy(&cmd.param2, payload + 2, 2);
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_SET_SPIES: {
+         // OrionLayer, open fix 64. The whole list (2 + 3n bytes, n <= 8), or nothing.
+         if (payload_len >= 2 && payload[0] <= 8 && payload_len == (size_t)2 + 3 * payload[0]) {
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index 69f1093b..c5b34896 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -32,6 +32,8 @@ constexpr uint16_t MSG_LAYOUT        = 0x15;
+ 
+ // HELLO_REPLY's second word: what this server sends beyond protocol 1.
+ constexpr uint16_t CAP_LAYOUT        = 0x0001;
++// OrionLayer, open fix 111. The server takes MSG_DEMOLISH; a client offers the demolish only then.
++constexpr uint16_t CAP_DEMOLISH      = 0x0002;
+ 
+ // Client → Server message types
+ constexpr uint16_t MSG_HELLO         = 0x01;
+@@ -60,6 +62,8 @@ constexpr uint16_t MSG_INJECT_RAW_KEY = 0x8A;
+ // OrionLayer, open fix 92. Colonists of the colony screen's colony to another colony at the same star: int16 source colony, int16 destination colony, uint8 n, n x uint8 pop index; all or nothing.
+ // OrionLayer, open fix 103. Two more bytes after the pop list - uint8 answers (bit 0: YES to "go on past the limit?", bit 1: YES to "unavailable for N turns, are you sure?"), int8 job (-1 keeps it) - make it the original's Send_Cluster to any colony of the player: the colony screen or the Colonies list, any star, colonist by colonist up to the first that may not go; its outcome is "STLR".
+ constexpr uint16_t MSG_SETTLE_POPS = 0x8B;
++// OrionLayer, open fix 111. Demolish one building of the colony the colony screen shows, through the original's own click on it: int16 colony, int16 building id. The game's refusals, its confirmation box and its refund stay its own (colony.cpp:1563-1589, :1932-1971); a command whose colony or building is not on screen writes nothing.
++constexpr uint16_t MSG_DEMOLISH = 0x8C;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+diff --git a/src/game/colony.cpp b/src/game/colony.cpp
+index 90a541ab..54070227 100755
+--- a/src/game/colony.cpp
++++ b/src/game/colony.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 111. Take_Demolish_Field.
++#endif
+ 
+ namespace COLONY {
+     bool Can_Scrap_Building(const s_colony& colony, uint16_t stardate) {
+@@ -1906,6 +1909,19 @@ namespace COLONY {
+         int16_t mouse_x = mouse::Pointer_X();
+         int16_t mouse_y = mouse::Pointer_Y();
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 111. A building's field activated by MSG_DEMOLISH
++        // is a click on that field: the field under the pointer is the clicked
++        // one, and no polygon of the scene holds the pointer, so the walk below
++        // passes every earlier cell and demolishes the named one as a click on
++        // its field does (ext_api.h).
++        if (ext::Take_Demolish_Field(*input_field)) {
++            mouse_x = -1000;
++            mouse_y = -1000;
++            *scan_field = *input_field;
++        }
++#endif
++
+         char buffer[1000];
+ 
+         for (int row = 0; row < 6; ++row) {

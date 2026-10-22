@@ -610,6 +610,7 @@
     "orion2re is no longer running, so OrionLayer stops trying.": "orion2re läuft nicht mehr, darum versucht OrionLayer es nicht weiter.",
     "The game's log is": "Das Protokoll des Spiels ist",
     "Close OrionLayer and start it again: python play.py": "OrionLayer schließen und neu starten: python play.py",
+    "Click or press a key to skip": "Klicken oder eine Taste drücken zum Überspringen",
     "Build Outpost": "Außenposten bauen",
     "Colonize Planet": "Planet kolonisieren",
     "Engage Enemy Forces": "Feindliche Kräfte stellen",

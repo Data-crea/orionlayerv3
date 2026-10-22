@@ -19,6 +19,7 @@ from core.wire_protocol import (
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
     MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND, MSG_SET_SPIES,
     MSG_INJECT_RAW_KEY, MSG_SETTLE_POPS, MSG_LAYOUT, CAP_LAYOUT,
+    MSG_DEMOLISH, CAP_DEMOLISH,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -196,6 +197,9 @@ class GameClient:
         self.port = 17362
         self.sock = None
         self.connected = False
+        #: HELLO_REPLY's capability bits of the engine connected now; 0
+        #: before the reply and for an engine that sends none.
+        self.capabilities = 0
         self.state = GameState()
         self._recv_buf = bytearray()
         self._last_recv_time = 0.0
@@ -302,6 +306,8 @@ class GameClient:
                 pass
         self.sock = None
         self.connected = False
+        # the next engine says its own (open fix 111's CAP_DEMOLISH)
+        self.capabilities = 0
         self.changes += 1
         self._last_state = None
         self._last_of = {}
@@ -587,6 +593,21 @@ class GameClient:
             payload += struct.pack('<Bb', int(answers) & 0xFF, int(job))
         self._send_message(MSG_SETTLE_POPS, payload)
 
+    @property
+    def can_demolish(self):
+        """The engine takes MSG_DEMOLISH (open fix 111, CAP_DEMOLISH)."""
+        return bool(getattr(self, "capabilities", 0) & CAP_DEMOLISH)
+
+    def demolish(self, colony_index, building):
+        """Start the original's demolish of one building of the colony the
+        colony screen shows (`MSG_DEMOLISH`, open fix 111,
+        `doc/ext_building_demolish.patch`). The engine refuses, writing
+        nothing, unless that colony is on screen and has the building; what
+        follows — the refusal box, the confirmation, the refund — is the
+        game's and comes back as MSGB."""
+        self._send_message(MSG_DEMOLISH,
+                           struct.pack('<hh', colony_index, building))
+
     def select_ship(self, ship_index, selected):
         """Select or deselect ONE ship in the open fleet box.
 
@@ -657,6 +678,7 @@ class GameClient:
             caps = struct.unpack_from("<H", payload, 2)[0] \
                 if len(payload) >= 4 else 0
             log.info("HELLO_REPLY received (capabilities 0x%04X)", caps)
+            self.capabilities = caps
             # A LAYOUT follows the reply when the engine says so (decision
             # 97); a snapshot read before it would be read at the specs'
             # own offsets, which are another engine's. An engine without

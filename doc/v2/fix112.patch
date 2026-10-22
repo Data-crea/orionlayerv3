@@ -1,0 +1,230 @@
+From ca4ea2e562f61663ae8662714d954ab9a5545854 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Wed, 21 Oct 2026 07:25:49 +0200
+Subject: [PATCH] OrionLayer Open Fix 112: the films on the wire, and their
+ skip (SMACK::Play_Cinematic's frame loop calls no Get_Input, so nothing was
+ sent while a film played and an injected click or key was never applied.
+ ext::FilmGuard lives for the whole of Play_Cinematic: it reports the
+ synthetic screen id 86 (SCREEN_EXT_FILM) and the film's file name, copied.
+ ext::Film_Frame, once per pass of the loop after the frame is presented,
+ records the frame and runs ext::Tick at most every 50 ms (k_film_tick_ms), so
+ the client gets the film's picture (VISUAL) and the block "FILM", written
+ last while a film plays: a version byte (1), uint8 the name's length and its
+ bytes, int16 the frame smckplay last drew, int16 the total frames. The skip
+ stays the original's own test, Keyboard_Status and Mouse_Button
+ (smack.cpp:109-116): an injected key reaches the key queue as any key does;
+ an injected click's release is held back while a film plays and pushed when
+ the film ends, because both halves applied in one Pump_Game_Input_Queue leave
+ Mouse_Button reading the release only. The film keeps its pacing: smckplay
+ schedules each frame from the last frame's target, so a tick shorter than the
+ frame's slack costs it nothing)
+
+OrionLayer, open fix 112.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/extension-api.md |  2 +-
+ src/ext/ext_api.cpp   | 65 ++++++++++++++++++++++++++++++++++++++++++-
+ src/ext/ext_api.h     | 41 +++++++++++++++++++++++++++
+ src/game/smack.cpp    |  9 ++++++
+ 4 files changed, 115 insertions(+), 2 deletions(-)
+
+diff --git a/docs/extension-api.md b/docs/extension-api.md
+index ce57bcf2..8fa80f4f 100644
+--- a/docs/extension-api.md
++++ b/docs/extension-api.md
+@@ -158,7 +158,7 @@ palette (256 x RGB).
+ |---|---|---|
+ | `ACTIVATE` 0x80 | int16 field index [, int16 x, y, x_end, y_end] | activates a field as if clicked; with the rectangle, only if the field there still is the one the client saw |
+ | `INJECT_KEY` 0x81 | int16 key | a key press |
+-| `INJECT_CLICK` 0x82 | int16 x, y | a left click at a point of the 640x480 screen |
++| `INJECT_CLICK` 0x82 | int16 x, y | a left click at a point of the 640x480 screen; while a film plays, the release follows when the film ends |
+ | `CANCEL_FIELD` 0x83 | int16 field index | the right-button form of `ACTIVATE` |
+ | `SET_JOBS` 0x84 | int16 colony, uint8 n, n x (uint8 pop, uint8 job) | sets colonists' jobs in one colony |
+ | `SELECT_SHIP` 0x85 | int16 ship, uint8 selected | selects a ship in the open fleet box |
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index a44acb97..7a70130a 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -27,6 +27,9 @@ int16_t g_activated_input = 0;
+ static bool g_pending_checked = false;
+ static int16_t g_pending_rect[4] = {0, 0, 0, 0};
+ bool g_injected_mouse_pending = false;
++// OrionLayer, open fix 112. An injected click's release, held while a film plays (FilmGuard).
++static SDL_Event g_film_release{};
++static bool g_film_release_pending = false;
+ 
+ static Server g_server;
+ static int16_t g_last_screen = -99;
+@@ -2714,6 +2717,25 @@ static void SerializeState(std::vector<uint8_t>& buf,
+             Write16(buf, COLSUM::list_buy_fields[i]);
+         }
+     }
++
++    // 37. The film that plays: "FILM", written ONLY while a FilmGuard lives
++    //     (SMACK::Play_Cinematic, smack.cpp:45), LAST. OrionLayer, open fix
++    //     112. A version byte, the length of the film's file name and its
++    //     bytes (as the caller named it, e.g. "PLNTDFIN.LBX"), the frame
++    //     smckplay last drew (0-based) and the film's total frames. The
++    //     picture itself is MSG_VISUAL's, as for every screen.
++    if (g_film.active) {
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'I');
++        buf.push_back((uint8_t)'L');
++        buf.push_back((uint8_t)'M');
++        Write8(buf, 1);                                   // block version
++        const size_t n = strnlen(g_film.name, sizeof(g_film.name));
++        Write8(buf, (uint8_t)n);
++        WriteBytes(buf, g_film.name, n);
++        Write16(buf, g_film.frame);
++        Write16(buf, g_film.total);
++    }
+ }
+ 
+ // ── Field list ───────────────────────────────────────────
+@@ -3451,7 +3473,13 @@ static void ProcessInput() {
+                 up.button.x = wx;
+                 up.button.y = wy;
+                 up.button.down = false;
+-                SDL_PushEvent(&up);
++                // OrionLayer, open fix 112. A film's loop reads the button state, not a click: the release waits for the film's end (FilmGuard).
++                if (g_film.active) {
++                    g_film_release = up;
++                    g_film_release_pending = true;
++                } else {
++                    SDL_PushEvent(&up);
++                }
+             }
+             break;
+ 
+@@ -3619,6 +3647,41 @@ ScreenOverride::~ScreenOverride() {
+     g_screen_override = previous;
+ }
+ 
++// OrionLayer, open fix 112. The film that plays (ext_api.h).
++FilmView g_film = {false, {0}, 0, 0};
++static uint64_t g_film_last_tick = 0;
++
++FilmGuard::FilmGuard(const char* name)
++    : previous(g_film), previous_screen(g_screen_override) {
++    g_film.active = true;
++    SDL_strlcpy(g_film.name, name != nullptr ? name : "", sizeof(g_film.name));
++    g_film.frame = 0;
++    g_film.total = 0;
++    g_film_last_tick = 0;
++    g_screen_override = SCREEN_EXT_FILM;
++}
++
++FilmGuard::~FilmGuard() {
++    if (g_film_release_pending) {
++        g_film_release_pending = false;
++        g_injected_mouse_pending = true;
++        SDL_PushEvent(&g_film_release);
++    }
++    g_film = previous;
++    g_screen_override = previous_screen;
++}
++
++void Film_Frame(int16_t frame, int16_t total) {
++    g_film.frame = frame;
++    g_film.total = total;
++    const uint64_t now = SDL_GetTicks();
++    if (g_film_last_tick != 0 && now - g_film_last_tick < k_film_tick_ms) {
++        return;
++    }
++    g_film_last_tick = now;
++    Tick(MOX::current_screen);
++}
++
+ // OrionLayer, open fix 110. The Colonies screen's list while it exists (ext_api.h).
+ const int16_t* g_colsum_list = nullptr;
+ 
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 73b8f1f8..95772d0c 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -105,6 +105,7 @@ constexpr int16_t SCREEN_EXT_COMBAT = 65;
+ constexpr int16_t SCREEN_EXT_COMBAT_SCAN = 66;
+ constexpr int16_t SCREEN_EXT_SHIP_VIEW = 81;  // OrionLayer, open fix 106. The same view outside a battle.
+ constexpr int16_t SCREEN_EXT_COMBAT_BOARD = 67;
++constexpr int16_t SCREEN_EXT_FILM = 86;  // OrionLayer, open fix 112. A film plays (FilmGuard).
+ extern bool g_combat_live;
+ extern uint16_t g_combat_serial;
+ 
+@@ -522,4 +523,44 @@ struct ColsumListGuard {
+ /// is, cannot claim the click for another building. Cleared by the call.
+ bool Take_Demolish_Field(int16_t input_field);
+ 
++/// OrionLayer, open fix 112. A film is playing. SMACK::Play_Cinematic
++/// (smack.cpp:45) runs its own frame loop (smack.cpp:108-130): it tests
++/// Keyboard_Status and Mouse_Button, draws the next frame and presents, and
++/// calls no Get_Input, so no Tick ran while a film played: nothing was sent,
++/// and an injected click or key was never applied (ProcessInput runs only
++/// inside Tick). FilmGuard lives for the whole of Play_Cinematic: it reports
++/// SCREEN_EXT_FILM and the film's name (copied: E_Strings hands out a
++/// shared buffer). Film_Frame, called once per frame of the loop, records
++/// the frame and ticks at most every k_film_tick_ms, so a client gets the
++/// film's picture (MSG_VISUAL), the "FILM" block and the chance to answer.
++/// The film keeps its pacing: smckplay schedules each frame from the last
++/// frame's target, not from when it was drawn (smckplay.cpp:244-251), so a
++/// tick shorter than the frame's slack costs the film nothing.
++///
++/// The skip is the original's own test. A key reaches Keyboard_Status as
++/// any key does. A click is pushed as a press and a release, and both are
++/// applied in the same Pump_Game_Input_Queue, so Mouse_Button, which reads
++/// the button state (mouse.cpp:34-41), would see the release only; while a
++/// film plays the release is held back and pushed when the film ends, as a
++/// real button is held for longer than a frame. What is SENT, plus the
++/// input the original takes; nothing the game reads.
++constexpr uint32_t k_film_tick_ms = 50;
++
++struct FilmView {
++    bool active;
++    char name[32];
++    int16_t frame;
++    int16_t total;
++};
++extern FilmView g_film;
++
++struct FilmGuard {
++    FilmView previous;
++    int16_t previous_screen;
++    explicit FilmGuard(const char* name);
++    ~FilmGuard();
++};
++
++void Film_Frame(int16_t frame, int16_t total);
++
+ } // namespace ext
+diff --git a/src/game/smack.cpp b/src/game/smack.cpp
+index bf2c3f54..e767086e 100755
+--- a/src/game/smack.cpp
++++ b/src/game/smack.cpp
+@@ -1,4 +1,7 @@
+ #include "pch.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 112. FilmGuard, Film_Frame.
++#endif
+ 
+ namespace SMACK {
+     s_mouse_list smack_mouse = {0, 0, 0, 0, 639, 479};
+@@ -45,6 +48,9 @@ namespace SMACK {
+         int32_t animation_height;
+         int16_t total_frames;
+         int16_t current_frame;
++#ifdef ORION2RE_EXT
++        const ext::FilmGuard ext_film(smacker_name);  // OrionLayer, open fix 112. The film is reported while it plays.
++#endif
+ 
+         buffer::Free_Buffer_Space();
+         video::Set_Page_Off();
+@@ -115,6 +121,9 @@ namespace SMACK {
+             RUSS::Mox_Update();
+ 
+             current_frame = smckplay::Get_Smacker_Animation_Frame();
++#ifdef ORION2RE_EXT
++            ext::Film_Frame(current_frame, total_frames);  // OrionLayer, open fix 112. The frame just presented goes out; an answer reaches the next pass's tests.
++#endif
+             if (total_frames - current_frame == 1) {
+                 exit_requested = 1;
+             }

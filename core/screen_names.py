@@ -195,6 +195,13 @@ SCREENS = {
     #: screen 6 under the audience's 57 / 58 without the fix: the audience
     #: screen draws it over the room (`screens/audience/aupicker.py`).
     85: ("(synthetic)",     "audience"),       # the diplomacy system picker
+    #: 86, synthetic, ON THE WIRE ONLY WITH OPEN FIX 112 (work order 320):
+    #: a film (`SMACK::Play_Cinematic`, smack.cpp:42) — the defeat, the
+    #: victories, a planet destroyed, the Amoeba, Orion taken, the
+    #: dimensional portal, the Antarans' attack. The App shows the film's
+    #: own frames over the held frame (decision 101, `core/filmview.py`);
+    #: without the fix the film runs under its caller's id.
+    86: ("(synthetic)",     None),             # a film
 }
 
 #: The last value of orion2re's own SCREEN enum:

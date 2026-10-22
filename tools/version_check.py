@@ -197,6 +197,8 @@ FIX_NUMBERS = {
     "doc/ext_dragon_bribe.patch": (108,),
     "doc/ext_system_picker.patch": (109,),
     "doc/ext_colsum_block.patch": (110,),
+    "doc/ext_building_demolish.patch": (111,),
+    "doc/ext_films.patch": (112,),
 }
 
 

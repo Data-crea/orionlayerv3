@@ -112,6 +112,13 @@ MSG_INJECT_RAW_KEY = 0x8A
 #: the original's Send_Cluster_ to any colony, from the colony screen or the
 #: Colonies list, colonist by colonist; its outcome is STLR.
 MSG_SETTLE_POPS = 0x8B
+#: Open fix 111 (work order 325): demolish one building of the colony the
+#: colony screen shows — int16 colony, int16 building id. The engine starts
+#: the original's own click on that building (its satellite field, or its
+#: cell's field with the pointer read as on no polygon); the refusals, the
+#: confirmation box and the refund stay the game's and arrive as MSGB. Sent
+#: only to an engine whose HELLO_REPLY carries CAP_DEMOLISH.
+MSG_DEMOLISH = 0x8C
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an
@@ -154,6 +161,8 @@ MSG_SAVE_SLOTS    = 0x14
 MSG_LAYOUT        = 0x15
 #: HELLO_REPLY's second word, bit 0: the server sends MSG_LAYOUT.
 CAP_LAYOUT        = 0x0001
+#: HELLO_REPLY's second word, bit 1: the server takes MSG_DEMOLISH (open fix 111).
+CAP_DEMOLISH      = 0x0002
 
 #: One slot record in MSG_SAVE_SLOTS: int8 status, int8 game type,
 #: char[37] description, char[25] stardate, char[25] date.

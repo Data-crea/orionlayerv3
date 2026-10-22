@@ -155,6 +155,9 @@ class GameState:
     #: The Colonies list's numbers, open fix 110 (work order 322 B2): None
     #: without the block (`core/colsumblock.py` names every key).
     colony_list_numbers: Optional[dict] = None  # "CSUM", fix 110
+    #: The film that plays, open fix 112 (work order 320): None without
+    #: the block (`core/filmblock.py` names every key).
+    film: Optional[dict] = None              # "FILM", fix 112
     #: The ship detail view outside a battle, open fix 106 (work order
     #: 317): None without the block (`core/shipviewwire.py` names every key).
     ship_view: Optional[dict] = None         # "SHPV", fix 106
@@ -505,7 +508,9 @@ def parse_state(data: bytes) -> GameState:
     from core import settlewire
     pos = settlewire.parse(gs, data, pos)     # STLR, open fix 103
     from core import colsumblock
-    pos = colsumblock.parse(gs, data, pos)    # CSUM, open fix 110, LAST
+    pos = colsumblock.parse(gs, data, pos)    # CSUM, open fix 110
+    from core import filmblock
+    pos = filmblock.parse(gs, data, pos)      # FILM, open fix 112, LAST
     return gs
 
 

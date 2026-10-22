@@ -584,6 +584,18 @@ LOCAL_PATCHES = {
         "the engine does not send the Colonies list's numbers (open fix "
         "110): no turn suffix, and no BUY on a row outside the game's "
         "window"),
+    # Work order 325: on the fork's branch `orionlayer` only, da87ff51.
+    "doc/ext_building_demolish.patch": (
+        os.path.join("src", "game", "colony.cpp"),
+        "OrionLayer, open fix 111.",
+        "the engine does not take the colony screen's demolish (open fix "
+        "111): a click on a building in the list demolishes nothing"),
+    # Work order 320: on the fork's branch `orionlayer` only, ca4ea2e5.
+    "doc/ext_films.patch": (
+        os.path.join("src", "game", "smack.cpp"),
+        "OrionLayer, open fix 112.",
+        "the engine does not send the films (open fix 112): HD holds its "
+        "last frame while a film plays, and nothing can skip it"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

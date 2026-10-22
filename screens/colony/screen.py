@@ -79,9 +79,14 @@ this engine and not built (OMISSION `galaxy_inset`).
 
 A right click on a row of the building list asks the game for that
 building's description (TRANSCRIPTION `building_info`, `colright`, work
-order 200). Everything else is not sent: a building's demolish (its
-handler reads the real pointer — OMISSION `building_actions`), recalculation ([5] is a cheat
-with `_cheats`), and any key not listed.
+order 200); a left click starts the game's own demolish of it through open
+fix 111 (TRANSCRIPTION `building_demolish`, `coldemolish`, work order 325;
+UNVERIFIED `building_demolish_live`). OMISSION `building_actions`: on an
+engine without fix 111 a left click on a row sends nothing, because the
+game's handler reads the real pointer's polygon and an activated field
+lands wherever that pointer is (`coldemolish.offered` is the gate).
+Everything else is not sent: recalculation ([5] is a cheat with
+`_cheats`), and any key not listed.
 """
 import logging
 
@@ -98,8 +103,8 @@ from screens.colony_summary import (colonylist, colonymove, colonypick,
                                     colonysend)
 from core import nativedraw as nd
 
-from . import (coldraw, colgeom as geom, colright, colsettle, coltransfer,
-               colwire, colwords)
+from . import (coldemolish, coldraw, colgeom as geom, colright, colsettle,
+               coltransfer, colwire, colwords)
 
 log = logging.getLogger("colony")
 
@@ -453,6 +458,10 @@ class ColonyScreen(ScreenBase):
                 if self.send(f, key) and key in LEAVES:
                     self.carry.put_back()
                 return None
+        # a row of the building list: the game's demolish (open fix 111;
+        # TRANSCRIPTION `building_demolish`), colonists in hand stay in hand
+        if coldemolish.click(self, screen_x, screen_y):
+            return None
         for native in list(geom.PROD_ROWS.values()) + [geom.MORALE]:
             if nd.rect(self.layout, native).collidepoint(screen_x, screen_y):
                 self.send(self._field((geom.TYPE_HIDDEN,) + native[:2]),

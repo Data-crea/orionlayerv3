@@ -23,8 +23,9 @@ else (decision 97).
 Read WHOLE or left None (`core/colonyblocks.py`'s rule): an engine without
 the fix writes none, and the list keeps drawing no suffix and BUY only for
 the rows the game's window shows. A refused block leaves `pos` where it
-was, so a block after it would be misread — harmless while CSUM is the
-last block of the snapshot (`core/game_state.py`).
+was, so a block after it would be misread — harmless: the one block after
+it, FILM (open fix 112, `core/filmblock.py`), is written only under the
+film's own id 86, never with the Colonies screen up.
 
 OMISSION `autobuild_line`: under autobuild the original prints E 0x5C
 "%sAutobuilding%s\n%s - %dt" (E 0x5D without a count, plus " [Q%d]" for a
