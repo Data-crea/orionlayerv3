@@ -343,17 +343,20 @@ class GalaxyMapScreen(ScreenBase):
             # reports screen 0, where the gate is the identity.
             self._viewctl.park_game(self.app, game_state, zoom_out.index)
 
-        raw_nebulas = getattr(game_state, "nebulas_raw", None) or []
-        raws = getattr(game_state, "player_raw", None) or []
-        raw_ships = getattr(game_state, "ships_raw", None) or []
+        neb_src = getattr(game_state, "nebulas_raw", None)
+        pl_src = getattr(game_state, "player_raw", None)
+        sh_src = getattr(game_state, "ships_raw", None)
+        raw_nebulas, raws, raw_ships = neb_src or [], pl_src or [], sh_src or []
         # PARSED ONCE PER SNAPSHOT, NOT PER FRAME (work order 324, UNVERIFIED
         # live): `update` runs every loop pass (the draw gate only skips
         # drawing), while `GameClient` makes a new state per snapshot and
         # the engine repeats an unchanged one every tick. The key is the
         # state plus the identity of the three raw arrays, so a stand-in
-        # that swaps an array is still re-parsed. Everything below that
-        # depends on time or on the player stays per call.
-        parse_key = (game_state, raw_nebulas, raws, raw_ships)
+        # that swaps an array is still re-parsed. The key holds the arrays
+        # as the state holds them: `or []` is a new list every pass, so an
+        # empty one (no nebulae) would miss every time. Everything below
+        # that depends on time or on the player stays per call.
+        parse_key = (game_state, neb_src, pl_src, sh_src)
         seen = self._parse_key
         if (seen is None or any(a is not b for a, b in
                                 zip(seen, parse_key))):
