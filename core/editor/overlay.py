@@ -45,7 +45,7 @@ def render(ed, surface):
                  C_GLO_ACT if gk else C_SEL), (10, 10))
     if ed._save_flash and time.monotonic() - ed._save_flash < 2:
         sf = ed.app.style.get_font(L.font_size(18))
-        surface.blit(sf.render(f"SAVED [{res}]", True, C_ASN),
+        surface.blit(sf.render((getattr(ed, "_save_note", "") or f"SAVED [{res}]"), True, C_ASN),
                      (10, 38))
 
 
@@ -148,7 +148,8 @@ def draw_info(ed, surface, L):
         scr = ed.app.dispatcher.top
         stored = []
         if scr and scr._screen_dir:
-            stored = get_stored_resolutions(scr._screen_dir)
+            stored = get_stored_resolutions(
+                getattr(scr, "_boxes_dir", None) or scr._screen_dir)
         res_key = f"{ed.app.win_w}x{ed.app.win_h}"
         if stored:
             src = "own" if res_key in stored else "fallback"

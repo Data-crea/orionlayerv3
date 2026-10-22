@@ -32,7 +32,7 @@ from core import banner as bn
 from core.screen_base import ScreenBase
 from core.widgets.text_input import TextInput
 from core.injection import (InjectionChain, is_name_dialog,
-                            is_banner_dialog, type_name, click_banner,
+                            is_banner_dialog, name_keys, paced_keys, click_banner,
                             game_accepts, LONG_STEP_TIMEOUT_S)
 from screens.empire_identity import renderer
 from screens.empire_identity.renderer import (
@@ -98,7 +98,7 @@ class EmpireIdentityScreen(ScreenBase):
         # B5): the engine draws a ruler name from RACENAME.LBX at random
         # inside `Naming_Popup_` (racesel.cpp:796-803) and keeps it when
         # the input comes back empty (:822-826) — which is what HD's chain
-        # sends for an empty field (`type_name` clears, types nothing,
+        # sends for an empty field (`name_keys` clears, types nothing,
         # Enter). The name itself is in the engine's input buffer, on no
         # wire, so the field says that the game's proposal stands
         # (proposed open fix 73).
@@ -383,13 +383,23 @@ class EmpireIdentityScreen(ScreenBase):
         # racesel.cpp at all. Race selection returns first, the game
         # generates the galaxy, and only then does the naming popup
         # appear — silence in between, with no field list published.
+        #
+        # ONE KEY PER TICK (work order 324, UNVERIFIED live): a name is up
+        # to 24 Backspaces + 15 characters + Enter, and the game's key ring
+        # holds TEN (`key::g_last_key_pressed[10]`, key.cpp:5;
+        # `Push_Key_Code_` overwrites without moving the read index,
+        # key.cpp:67-72; `Pump_Game_Input_Queue_` drains the whole queue
+        # into it in one call, platform.cpp:1482), so a burst wrapped.
+        # Save dialog and ship name already pace; `paced_keys` with no
+        # first send, since no strip needs activating here.
         self._chain = InjectionChain(self.app.client, [
             ("ruler name", is_name_dialog,
-             lambda c, f: type_name(c, ruler)),
+             lambda c, f: paced_keys(None, name_keys(ruler))),
             ("banner", is_banner_dialog,
              lambda c, f: click_banner(c, f, color, order)),
             ("home star", is_name_dialog,
-             lambda c, f: type_name(c, home), LONG_STEP_TIMEOUT_S),
+             lambda c, f: paced_keys(None, name_keys(home)),
+             LONG_STEP_TIMEOUT_S),
         ])
 
     def _cancel(self):

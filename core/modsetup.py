@@ -18,6 +18,8 @@ the restart the switch asks for anyway (decision 18).
 what), ("done", failed names) — and the row prints "can take a while"
 while it runs.
 """
+import contextlib
+import importlib
 import logging
 import os
 import shlex
@@ -35,9 +37,41 @@ PLACEHOLDER = "/path/to/"
 KIT = (("the mod kit", ["tools/mod_template.py"]),
        ("the frame templates", ["tools/frame_template.py"]))
 
+#: HD EXTENSION `setup_job_timeout` (work order 324 b, UNVERIFIED live): the longest one
+#: extractor may run. An extractor that hangs held the state at "running"
+#: for ever and every later `start()` refused.
+RUN_TIMEOUT = 1800
+
 _lock = threading.Lock()
-_state = {"phase": "idle", "i": 0, "n": 0, "what": "", "failed": []}
+_state = {"phase": "idle", "i": 0, "n": 0, "what": "", "failed": [],
+          "error": ""}
 _thread = None
+
+
+@contextlib.contextmanager
+def tools_on_path():
+    """`tools/` at the front of `sys.path` for the length of an import and
+    not a moment longer: its `basepack.py` is not `core/basepack.py`, and
+    `tools/setup.py` itself puts the tree and `tools/` at the front. The
+    path is put back as it was, and the tool modules the import brought
+    in leave `sys.modules` with it (their functions keep what they need)."""
+    tools = os.path.join(BASE_DIR, "tools")
+    saved_path, before = list(sys.path), set(sys.modules)
+    sys.path.insert(0, tools)
+    try:
+        yield
+    finally:
+        sys.path[:] = saved_path
+        for name in set(sys.modules) - before:
+            file = getattr(sys.modules[name], "__file__", None) or ""
+            if os.path.dirname(os.path.abspath(file)) == tools:
+                del sys.modules[name]
+
+
+def import_tool(name):
+    """The module `tools/<name>.py`, imported under `tools_on_path`."""
+    with tools_on_path():
+        return importlib.import_module(name)
 
 
 def plan(entries=None):
@@ -57,11 +91,7 @@ def plan(entries=None):
 
 def _from_game():
     """`tools/setup.from_game()` — the one registry of extracted files."""
-    tools = os.path.join(BASE_DIR, "tools")
-    if tools not in sys.path:
-        sys.path.insert(0, tools)
-    import setup as _setup
-    return _setup.from_game()
+    return import_tool("setup").from_game()
 
 
 def state():
@@ -80,9 +110,18 @@ def start(steps=None, runner=None):
     with _lock:
         if _state["phase"] == "running":
             return False
-        steps = plan() if steps is None else steps
-        _state.update(phase="running", i=0, n=len(steps), what="",
-                      failed=[])
+        _state.update(phase="running", i=0, n=len(steps or ()), what="",
+                      failed=[], error="")
+    if steps is None:
+        # The import and the registry walk are LONG; the lock is not held
+        # for them (the state row reads it every frame).
+        try:
+            steps = plan()
+        except Exception as err:
+            _fail(f"could not plan: {err}")
+            return True
+        with _lock:
+            _state["n"] = len(steps)
     _thread = threading.Thread(target=_work, args=(steps, runner or _run),
                                name="modsetup", daemon=True)
     _thread.start()
@@ -94,9 +133,27 @@ def wait(timeout=None):
         _thread.join(timeout)
 
 
-def _run(argv):
-    proc = subprocess.run([sys.executable] + argv, cwd=BASE_DIR,
-                          capture_output=True, text=True)
+def _fail(reason):
+    """End the job as done-with-an-error: the state is never left
+    "running" by a step that raised."""
+    log.warning("mod setup: %s", reason)
+    with _lock:
+        _state.update(phase="done", what="", error=reason)
+
+
+def _run(argv, timeout=None):
+    env = dict(os.environ, SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy")
+    try:
+        # errors="replace": an extractor's output is only read for the
+        # log, and a byte that is not UTF-8 must not kill the thread.
+        proc = subprocess.run([sys.executable] + argv, cwd=BASE_DIR,
+                              capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", env=env,
+                              timeout=timeout or RUN_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        log.warning("mod setup: %s timed out after %ss", " ".join(argv),
+                    timeout or RUN_TIMEOUT)
+        return False
     if proc.returncode != 0:
         tail = (proc.stderr or proc.stdout).strip().splitlines()[-3:]
         log.warning("mod setup: %s failed: %s", " ".join(argv),
@@ -105,19 +162,25 @@ def _run(argv):
 
 
 def _work(steps, runner):
-    for i, (what, argv) in enumerate(steps, 1):
-        with _lock:
-            _state.update(i=i, what=what)
-        log.info("mod setup %d/%d: %s", i, len(steps), what)
-        try:
-            ok = runner(argv)
-        except OSError as err:
-            log.warning("mod setup: %s: %s", what, err)
-            ok = False
-        if not ok:
+    try:
+        for i, (what, argv) in enumerate(steps, 1):
             with _lock:
-                _state["failed"].append(what)
+                _state.update(i=i, what=what)
+            log.info("mod setup %d/%d: %s", i, len(steps), what)
+            try:
+                ok = runner(argv)
+            except Exception as err:      # one step never ends the job
+                log.warning("mod setup: %s: %s", what, err)
+                ok = False
+                with _lock:
+                    _state["error"] = f"{what}: {err}"
+            if not ok:
+                with _lock:
+                    _state["failed"].append(what)
+    except Exception as err:
+        _fail(f"stopped: {err}")
+        return
     with _lock:
         _state.update(phase="done", what="")
-    log.info("mod setup done (%d step(s), %d failed)", len(steps),
-             len(_state["failed"]))
+        failed = len(_state["failed"])
+    log.info("mod setup done (%d step(s), %d failed)", len(steps), failed)

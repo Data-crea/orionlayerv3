@@ -2,7 +2,6 @@
 Constants, paths, reference resolution.
 Nothing here changes at runtime.
 """
-import json
 import os
 
 # --- Reference resolution ---
@@ -41,10 +40,14 @@ ORION2RE_VERSION = "2.0.0"
 
 
 def load_settings():
-    """Load settings.json. Returns defaults if not found."""
+    """Load settings.json. Returns defaults if it is absent, will not
+    parse or is not an object (work order 324 c: one log line, never an
+    exception out of the start)."""
     if os.path.exists(SETTINGS_PATH):
-        with open(SETTINGS_PATH, "r") as f:
-            return json.load(f)
+        from core import safejson
+        data = safejson.read(SETTINGS_PATH, dict)
+        if data is not None:
+            return data
     return {
         # Cursor height as a share of window height. 4.38 % is the
         # original's own proportion (21 of 480 lines); the artwork is

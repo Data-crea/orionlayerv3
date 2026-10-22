@@ -50,6 +50,7 @@ from core import mapcoords as mc
 from core import mouse as mouse_input
 from core import palette
 from core import zoomtables as zt
+from core.hud import lru
 from core.screen_base import ScreenBase
 from core.structs import nebula as nebula_struct
 from core.structs import planet as planet_struct
@@ -115,6 +116,8 @@ class GalaxyMapScreen(ScreenBase):
         self._nebulas = []
         self._players = []
         self._ships = []
+        self._labels = lru.TextCache()  # star names, rendered once
+        self._parse_key = None      # update(): the snapshot last parsed
         self._tints = ship_icons.TintCache()
         self._wormholes = rnd.WormholeLayer()
         self._local = None
@@ -286,6 +289,7 @@ class GalaxyMapScreen(ScreenBase):
         # blitting last resolution's icons.
         self._tints.clear()
         self._wormholes.clear()
+        self._labels.clear()
         # Ring radii are HD pixels; every cached one is now wrong.
         self._ping.clear_cache()
         self._scale_map_background()
@@ -295,11 +299,13 @@ class GalaxyMapScreen(ScreenBase):
         self._cache.clear_scaled()
         self._tints.clear()
         self._wormholes.clear()
+        self._labels.clear()
         self._ping.cancel()
 
     def update(self, game_state=None):
-        """Cache the parsed state. Nebulas and players are parsed
-        here rather than per frame — they only change per turn.
+        """Cache the parsed state. Nebulas, players and ships are parsed
+        here, once per snapshot (not per frame, and not per call — this
+        runs every loop pass).
 
         Reads every array defensively: a snapshot that arrives
         mid-transition (or a caller passing a stub) must not take
@@ -338,19 +344,30 @@ class GalaxyMapScreen(ScreenBase):
             self._viewctl.park_game(self.app, game_state, zoom_out.index)
 
         raw_nebulas = getattr(game_state, "nebulas_raw", None) or []
-        self._nebulas = [nebula_struct.parse(r) for r in raw_nebulas
-                         if len(r) >= nebula_struct.SIZE]
-
         raws = getattr(game_state, "player_raw", None) or []
-        self._players = [player_struct.parse(r) for r in raws
-                         if len(r) >= player_struct.SIZE]
-
-        # Only needed as the fallback owner source for ship icons; the
-        # ext patch makes this redundant but not wrong. Parsed here,
-        # not per frame — the array can be thousands of records.
         raw_ships = getattr(game_state, "ships_raw", None) or []
-        self._ships = [ship_struct.parse(r) for r in raw_ships
-                       if len(r) >= ship_struct.SIZE]
+        # PARSED ONCE PER SNAPSHOT, NOT PER FRAME (work order 324, UNVERIFIED
+        # live): `update` runs every loop pass (the draw gate only skips
+        # drawing), while `GameClient` makes a new state per snapshot and
+        # the engine repeats an unchanged one every tick. The key is the
+        # state plus the identity of the three raw arrays, so a stand-in
+        # that swaps an array is still re-parsed. Everything below that
+        # depends on time or on the player stays per call.
+        parse_key = (game_state, raw_nebulas, raws, raw_ships)
+        seen = self._parse_key
+        if (seen is None or any(a is not b for a, b in
+                                zip(seen, parse_key))):
+            self._parse_key = parse_key
+            self._nebulas = [nebula_struct.parse(r) for r in raw_nebulas
+                             if len(r) >= nebula_struct.SIZE]
+            self._players = [player_struct.parse(r) for r in raws
+                             if len(r) >= player_struct.SIZE]
+            # Only needed as the fallback owner source for ship icons;
+            # the ext patch makes this redundant but not wrong. The array
+            # can be thousands of records, which is why it is not parsed
+            # per frame.
+            self._ships = [ship_struct.parse(r) for r in raw_ships
+                           if len(r) >= ship_struct.SIZE]
         idx = getattr(game_state, "player_num", 0)
         self._local = (self._players[idx]
                        if 0 <= idx < len(self._players) else None)
@@ -529,6 +546,10 @@ class GalaxyMapScreen(ScreenBase):
 
         player_num = getattr(self._state, "player_num", 0)
         omniscient = self._omniscient
+        # BUILT ONCE FOR THE FRAME (work order 324): the lines, the eta
+        # and the fleets read the same state, and the anchor was built
+        # for each of them.
+        anchor = self._icon_anchor()
 
         rnd.render_nebulas(surface, ctx, self._nebulas,
                            self._cache, self._data.get("nebula_forms", []))
@@ -544,14 +565,14 @@ class GalaxyMapScreen(ScreenBase):
         # (mainscr_main.cpp:965, before Draw_Stars_).
         maplines.render_destination_lines(
             surface, ctx, self._state, self._ships, self._stars,
-            self._game_zoom(), self._icon_anchor(), pygame.time.get_ticks())
+            self._game_zoom(), anchor, pygame.time.get_ticks())
         # The preview to the hovered star (open fix 48, HD EXTENSION
         # `hover_line`), right after them, as the original draws it.
         maplines.render_hover_preview(self, surface, ctx)
         # "eta N" right after the lines, as Do_Ship_Destination_Lines_
         # prints it (ships.cpp:470-475).
         mapeta.render(surface, ctx, self._state, self._ships, self._stars,
-                      self._players, self._icon_anchor(), self.style,
+                      self._players, anchor, self.style,
                       boxdraw._texts(self), self._eta_lock, self._eta_cache)
         heights.update(rnd.render_stars(surface, ctx, self._stars,
                                         self._cache, black_holes=False))
@@ -576,7 +597,9 @@ class GalaxyMapScreen(ScreenBase):
             # replaces with a watermark — the parentheses around a
             # Galactic Lore name, and the digit 4. render_text falls
             # back per character.
-            return self.style.render_text(text, name_size, colour)
+            # CACHED (work order 324): a name is the same picture every
+            # frame; render_star_names only blits what it is given.
+            return self._labels.render(self.style, text, name_size, colour)
 
         rnd.render_star_names(surface, ctx, self._stars, heights,
                               render_label,
@@ -586,7 +609,7 @@ class GalaxyMapScreen(ScreenBase):
                           self._players, self._cache, self._tints,
                           cfg=self._data.get("ship_icons") or {},
                           ships=self._ships,
-                          anchor=self._icon_anchor(),
+                          anchor=anchor,
                           nodes=ship_icons.wire_nodes(self._state),
                           me=player_num,
                           settings=getattr(self.app, "user_settings", None))

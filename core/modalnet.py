@@ -26,12 +26,24 @@ import logging
 
 log = logging.getLogger("modalnet")
 
-#: How long an unknown list must stand before the net takes over: `check`
-#: runs once per FRAME (the screens' per-frame `update`), so here it is
-#: five frames — measured in work order 186 part 4, where this comment still
-#: said "snapshots". The hand-over gate counts the same number in SNAPSHOTS
-#: for a modal box's early release (`handover.MODAL_SETTLE`, work order 187).
+#: How long an unknown list must stand before the net takes over, in
+#: SNAPSHOTS (decision 21: the engine's own beat, never the frame rate).
+#: Work order 186 part 4 measured it in frames because `check` runs once
+#: per frame, and during an engine silence a transition's half-built list
+#: then looked like an unknown modal after ~80 ms (work order 324 e). The
+#: snapshots are counted off the client (`snapshots`); a stand-in client
+#: with no `stats` keeps the frame count. The hand-over gate counts the
+#: same number in SNAPSHOTS for a modal box's early release
+#: (`handover.MODAL_SETTLE`, work order 187).
 SETTLE = 5
+
+
+def snapshots(client):
+    """The client's count of state snapshots received, or None for a
+    client that keeps none (a stand-in in a check)."""
+    stats = getattr(client, "stats", None)
+    n = stats.get("state") if isinstance(stats, dict) else None
+    return n if isinstance(n, int) and not isinstance(n, bool) else None
 
 
 def live(fields):
@@ -53,12 +65,14 @@ def signature(fields):
 class Net:
     """One screen's net. `own(fields)` and each of `known` are predicates
     over a live field list; `check(state, screen_id)` answers "hand over
-    now?" and is called once per snapshot."""
+    now?" and is called once per frame; `client` (optional) makes the
+    streak count the snapshots that arrived and not the frames."""
 
     def __init__(self, name, own, known=(), settle=SETTLE):
         self.name, self.own, self.known = name, own, tuple(known)
         self.settle = settle
         self._streak = 0
+        self._last_snap = None
         self._logged = set()
         self.unknown_signature = None
         #: The screen's own list was seen since its id came up — so an
@@ -78,9 +92,10 @@ class Net:
                 return name
         return None
 
-    def check(self, state, screen_id):
+    def check(self, state, screen_id, client=None):
         if state is None or getattr(state, "current_screen", None) != screen_id:
             self._streak = 0
+            self._last_snap = None
             self.own_seen = False
             return False
         kind = self.classify(getattr(state, "fields", None))
@@ -88,9 +103,19 @@ class Net:
             self.own_seen = True
         if kind is not None:
             self._streak = 0
+            self._last_snap = None
             self.unknown_signature = None
             return False
-        self._streak += 1
+        seen = snapshots(client)
+        if seen is None:
+            self._streak += 1                   # no counter: frames
+        else:
+            # the first unknown list counts one; after it only what the
+            # engine sent since (a counter that went back is a new link)
+            self._streak += 1 if self._streak == 0 or \
+                self._last_snap is None or seen < self._last_snap else \
+                seen - self._last_snap
+            self._last_snap = seen
         if self._streak < self.settle:
             return False
         sig = signature(state.fields)

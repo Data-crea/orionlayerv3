@@ -67,6 +67,7 @@ class StyleRenderer:
         self._asset_cache = {}
         self._font_path = font_path
         self._font_cache = {}
+        self._width_cache = {}    # text_width: (text, size) -> px
         self._blocked = None      # lazily detected substitution glyphs
         self.frame = None
         self._skin_dir = skin_dir
@@ -214,6 +215,34 @@ class StyleRenderer:
             x += surf.get_width()
         return out
 
+    def text_width(self, text, size):
+        """The width `render_text(text, size, ...)` would give, without
+        drawing it (work order 324, UNVERIFIED live; a check holds it
+        equal to the rendered width).
+
+        The same split as `render_text`, font by font, so a string that
+        mixes the display and the proportional font (decision 30) is
+        measured with both and a plain `font.size` is never the answer
+        here. Cached per (translated text, size); the cache goes with the
+        fonts in `clear_caches`."""
+        size = max(8, size)
+        text = lang.tr(text)
+        key = (text, size)
+        hit = self._width_cache.get(key)
+        if hit is not None:
+            return hit
+        runs = self.split_runs(text)
+        if len(runs) <= 1 and not (runs and runs[0][0]):
+            width = self.get_font(size).size(text)[0]
+        else:
+            main, alt = self.get_font(size), self.get_prop_font(size)
+            width = max(1, sum((alt if blocked else main).size(run)[0]
+                               for blocked, run in runs))
+        if len(self._width_cache) >= 20000:
+            self._width_cache.clear()
+        self._width_cache[key] = width
+        return width
+
     # -- Public drawing API --
 
     def draw_button(self, surface, rect, label="", hover=False,
@@ -312,3 +341,4 @@ class StyleRenderer:
         """Clear all caches (on resolution change)."""
         self._asset_cache.clear()
         self._font_cache.clear()
+        self._width_cache.clear()

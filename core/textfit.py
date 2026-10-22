@@ -7,7 +7,11 @@ many words — *"This is the SECOND word-wrap in the tree, after
 shared helper rather than pasted again"* — and the colony summary's
 move message is the third. Both originals now call this.
 
-**MEASURED BY RENDERING, NEVER BY `font.size()`.**
+**MEASURED AS RENDERED, NEVER BY A PLAIN `font.size()`.** `measure` below
+is the one cheap way: `Style.text_width` splits the string into the same
+runs `render_text` does and sums each run's own font, cached per (text,
+size), so a wrap or an ellipsis loop no longer draws a picture per trial
+(work order 324). A style without it is measured by rendering.
 `Style.render_text` can mix two fonts inside one string wherever a
 glyph is substituted (decision 30), so a single font's metrics are
 not the width that reaches the screen. That is the one rule this
@@ -24,6 +28,16 @@ of steps (`BILL::Squeeze_Print_Paragraph_`).
 from core import lang
 
 
+def measure(style, text, size):
+    """The width in px `style.render_text(text, size, ...)` would have —
+    without drawing it. Decision 30: the width of what reaches the screen,
+    glyph substitution included."""
+    fast = getattr(style, "text_width", None)
+    if fast is not None:
+        return fast(text, size)
+    return style.render_text(text, size, (255, 255, 255)).get_width()
+
+
 def wrap_text(style, text, size, width):
     """One source string into lines that each fit `width` if they can.
 
@@ -32,13 +46,12 @@ def wrap_text(style, text, size, width):
     WHOLE first (`core.lang.tr`, work order 200 C), then cut.
     """
     text = lang.tr(text)
-    if style.render_text(text, size, (255, 255, 255)).get_width() <= width:
+    if measure(style, text, size) <= width:
         return [text]
     lines, current = [], ""
     for word in text.split():
         trial = f"{current} {word}".strip()
-        if current and style.render_text(
-                trial, size, (255, 255, 255)).get_width() > width:
+        if current and measure(style, trial, size) > width:
             lines.append(current)
             current = word
         else:

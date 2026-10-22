@@ -103,11 +103,13 @@ class ShipNames:
     `name`, verified), a design `_player[owner].ship_designs[-50 - id]
     .name` (colbldg.h:37-39, player.py `ship_designs`, verified)."""
 
-    def __init__(self, state, player_num):
+    def __init__(self, state, player_num, player=None):
         self._ships = getattr(state, "ships_raw", None) or []
         raws = getattr(state, "player_raw", None) or []
-        self._player = None
-        if 0 <= int(player_num) < len(raws):
+        # `player` is the caller's own parse of that record (work order
+        # 324: the colony rows parse every player once)
+        self._player = player
+        if player is None and 0 <= int(player_num) < len(raws):
             from core.structs import player as player_struct
             self._player = player_struct.parse(raws[int(player_num)])
 

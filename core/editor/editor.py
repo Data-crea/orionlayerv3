@@ -5,6 +5,7 @@ overlay.py. Public API unchanged: Editor(app), .toggle(),
 .handle_event(event), .render(surface), .active.
 """
 import logging
+import os
 import time
 import pygame
 from core import mouse as mouse_input
@@ -27,6 +28,7 @@ class Editor:
         self.show_help = False
         self._glow_idx = -1
         self._save_flash = 0.0
+        self._save_note = ""
         #: Why the last handle was refused, for the info bar. Cleared
         #: on the next click that is not a refusal, so it reads as an
         #: answer to what was just tried and not as a standing state.
@@ -359,11 +361,23 @@ class Editor:
     def _save(self):
         scr = self.app.dispatcher.top
         if not scr: return
-        save_boxes(scr._screen_dir, scr.boxes,
+        # Where the boxes were LOADED from (work order 324 d): a mod's
+        # file when a mod supplied it, else the base folder.
+        target = getattr(scr, "_boxes_dir", None) or scr._screen_dir
+        base = os.path.abspath(scr._screen_dir)
+        where = "base" if os.path.abspath(target) == base else \
+            f"mod {target}"
+        if not os.path.isdir(target):
+            self._save_note = "NOT SAVED: no folder " + target
+            self._save_flash = time.monotonic()
+            log.warning("editor: %s", self._save_note)
+            return
+        save_boxes(target, scr.boxes,
                    self.app.win_w, self.app.win_h)
         res_key = f"{self.app.win_w}x{self.app.win_h}"
-        log.info("Saved %d boxes for %s -> %s",
-                 len(scr.boxes), res_key, scr._screen_dir)
+        self._save_note = f"SAVED [{res_key}] -> {where}"
+        log.info("Saved %d boxes for %s -> %s (%s)",
+                 len(scr.boxes), res_key, target, where)
         if hasattr(scr, "save_races"):
             scr.save_races()
             log.info("Saved races.json (portrait crops)")

@@ -5,9 +5,13 @@ in 1080p reference space, an optional field_id, and an
 optional anchor for widescreen positioning.
 """
 import json
+import logging
 import os
 import pygame
+from core import safejson
 from core.config import REF_W
+
+log = logging.getLogger("box")
 
 
 class Box:
@@ -284,28 +288,53 @@ def load_boxes(source, win_w=1920, win_h=1080):
         path = os.path.join(source, "boxes.json")
     else:
         path = source
+    boxes = read_boxes(path, win_w, win_h)
+    return boxes if boxes is not None else []
+
+
+def _entries_ok(path, entries):
+    """The entries of one resolution that a Box can be made of. HD
+    EXTENSION (work order 324 c, UNVERIFIED live): an entry with no name
+    or a rect that is not four numbers is dropped with one line, so one
+    bad box of a mod does not take the screen down with it."""
+    good = []
+    for entry in entries:
+        rect = entry.get("rect") if isinstance(entry, dict) else None
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str) \
+                and (rect is None or (
+                    isinstance(rect, (list, tuple)) and len(rect) == 4
+                    and all(isinstance(v, (int, float))
+                            and not isinstance(v, bool) for v in rect))):
+            good.append(entry)
+        else:
+            safejson._say(path, "a box entry has no name or no 4-number "
+                                "rect — skipped")
+    return good
+
+
+def read_boxes(path, win_w=1920, win_h=1080):
+    """The boxes of `path` for this window, `[]` for a file that holds
+    none for it, and None for a file that is absent or damaged (so a
+    caller with a base file to fall back on can tell the two apart)."""
     if not path or not os.path.exists(path):
-        return []
-    with open(path, "r") as f:
-        raw = json.load(f)
+        return None
+    raw = safejson.read(path, (dict, list))
+    if raw is None:
+        return None
 
     # Legacy format: plain list → treat as 1920x1080
     if isinstance(raw, list):
-        key = _resolution_key(win_w, win_h)
-        if key == "1920x1080":
-            return [Box(entry) for entry in raw]
-        # Fallback: scale from legacy data as starting point
-        return [Box(_copy_entry(entry)) for entry in raw]
+        return [Box(_copy_entry(entry)) for entry in _entries_ok(path, raw)]
 
     # New format: dict keyed by resolution
     key = _resolution_key(win_w, win_h)
-    if key in raw:
-        return [Box(entry) for entry in raw[key]]
-
-    # Fallback: find closest resolution
-    fallback = closest_resolution(raw, win_w, win_h)
-    if fallback and raw[fallback]:
-        return [Box(_copy_entry(entry)) for entry in raw[fallback]]
+    if not isinstance(raw.get(key), list):
+        key = closest_resolution(
+            {k: v for k, v in raw.items() if isinstance(v, list)},
+            win_w, win_h)
+    if key and raw.get(key):
+        return [Box(_copy_entry(entry))
+                for entry in _entries_ok(path, raw[key])]
     return []
 
 
@@ -321,9 +350,12 @@ def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080):
     # Load existing data to preserve other resolutions
     res_dict = {}
     if os.path.exists(path):
-        with open(path, "r") as f:
-            raw = json.load(f)
-        if isinstance(raw, list):
+        raw = safejson.read(path, (dict, list))
+        if raw is None:
+            # a damaged file is moved aside, never overwritten unseen
+            os.replace(path, path + ".corrupt")
+            log.warning("%s was damaged — moved to %s.corrupt", path, path)
+        elif isinstance(raw, list):
             # Migrate legacy list → dict under "1920x1080"
             res_dict["1920x1080"] = raw
         elif isinstance(raw, dict):
@@ -332,7 +364,7 @@ def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080):
     # Write current resolution
     res_dict[key] = [b.to_dict() for b in boxes]
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         json.dump(res_dict, f, indent=2)
         # THE TREE'S JSON CONVENTION ENDS A FILE WITH A NEWLINE, and
         # this writer dropped it — so every F3 save left boxes.json
@@ -350,8 +382,7 @@ def get_stored_resolutions(screen_dir):
     path = os.path.join(screen_dir, "boxes.json")
     if not os.path.exists(path):
         return []
-    with open(path, "r") as f:
-        raw = json.load(f)
+    raw = safejson.read(path, (dict, list))
     if isinstance(raw, list):
         return ["1920x1080"]
     if isinstance(raw, dict):

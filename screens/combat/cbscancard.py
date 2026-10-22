@@ -46,7 +46,7 @@ Geometry in reference px, scaled by the window's `k` as the scan.
 """
 import pygame
 
-from core import lang
+from core import lang, textfit
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from . import cbscan, cbscanparts as cp
@@ -263,7 +263,7 @@ def hull_rows(style, k, card):
     room = round(VALUE_W * k) - 2 * max(9, int(PAD * k))
     # a name the head would cut stands whole as the first line: the card is
     # also what a cut name in the row shows (rule 13, work order 297)
-    width = lambda t, n: style.render_text(t, n, (255, 255, 255)).get_width()
+    width = lambda t, n: textfit.measure(style, t, n)
     head = room - width(total, max(9, int(TOTAL * k))) - max(9, int(12 * k))
     if width(rows.title, max(9, int(TITLE * k))) > head:
         for line in wrap(style, str(title), size, room):
@@ -422,7 +422,7 @@ def wrap(style, text, size, room):
     where it can; anything else, and a list item wider than the room,
     breaks at its spaces (work order 302: a card's sentences)."""
     text = str(text)
-    width = lambda t: style.render_text(t, size, (255, 255, 255)).get_width()
+    width = lambda t: textfit.measure(style, t, size)
     listed = ", " in text and not text.rstrip().endswith(".")
     words = []
     if listed:

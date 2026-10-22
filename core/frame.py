@@ -13,9 +13,9 @@ regions are the screen shell's (`core/hud/screenframe.py`,
 
 A skin may replace the frame directory with its own 9slice.json.
 """
-import json
 import os
 import logging
+from core import safejson
 
 log = logging.getLogger("frame")
 
@@ -35,16 +35,22 @@ class FrameRenderer:
         """Load the metadata from the frame directory."""
         meta_path = os.path.join(frame_dir, "9slice.json")
         if os.path.exists(meta_path):
-            with open(meta_path, "r") as f:
-                meta = json.load(f)
+            meta = safejson.read(meta_path, dict)
+            if meta is None:
+                return
             ci = meta.get("content_inset", {})
+            sz = meta.get("source_size", [0, 0])
+            if not isinstance(ci, dict) or not isinstance(sz, list) \
+                    or len(sz) != 2:
+                safejson._say(meta_path, "content_inset / source_size "
+                                         "have the wrong shape")
+                return
             self.content_inset = (
                 ci.get("left", 0), ci.get("right", 0),
                 ci.get("top", 0), ci.get("bottom", 0),
             )
             # `slice_margins_px`, `title_bar` and `button_font_scale`
             # were read for the drawing and went with it (work order 189).
-            sz = meta.get("source_size", [0, 0])
             self.source_w, self.source_h = sz
             self._loaded = True
             log.info("Frame geometry loaded: %s", meta_path)

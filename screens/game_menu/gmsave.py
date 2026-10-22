@@ -15,7 +15,7 @@ shape): TextInput edits it and the game hears nothing until SAVE,
 Enter or a second click on the same row. Then one paced chain step
 sends the strip activation and the keys through `core.injection` — the
 Empire Identity mechanism, not a second injector — ONE PER TICK,
-because the game's key ring holds ten (`injection.type_name`).
+because the game's key ring holds ten (`injection.paced_keys`).
 
 **ESC WHILE EDITING LANDS IN THE MENU**, as in the original: the key
 returns `-field` (fields.cpp:1165-1174), which `Do_Save_Game_Popup_`

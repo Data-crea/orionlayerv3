@@ -5,7 +5,7 @@ Identity mechanism): HD holds the name in a local `TextInput` — the field,
 the cursor and the typed text are HD's — and the engine hears nothing until
 Enter. Then ONE paced `core.injection` step sends the field's opening input,
 the clearing Backspaces and the keys, one per tick (the game's key ring holds ten,
-`injection.type_name`).
+`injection.paced_keys`).
 
 **THE OPENING INPUT IS A CLICK, NOT AN ACTIVATION** — measured in work order
 186 part 3 (part 09, "A continuous string field (type 11) is opened only by

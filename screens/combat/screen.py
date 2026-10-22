@@ -222,8 +222,7 @@ class CombatScreen(CombatInput, ScreenBase):
         return self._play.shown
 
     def _acting(self):
-        c = self._shown()
-        return c["units"][c["cur_ship"]] if c else None
+        return cb.acting_unit(self._shown())
 
     def _human_acting(self):
         """The battle on its own screen, nothing playing, the live acting
@@ -233,7 +232,7 @@ class CombatScreen(CombatInput, ScreenBase):
         live = getattr(self._state, "combat", None)
         return (c is not None and live is not None and not self._tail and
                 not self._play.busy()
-                and live["units"][live["cur_ship"]]["owner"] == self._me()
+                and (cb.acting_unit(live) or {}).get("owner") == self._me()
                 and self._state.current_screen == GAME_SCREEN_ID)
 
     def _own_turn(self):
@@ -266,8 +265,8 @@ class CombatScreen(CombatInput, ScreenBase):
         teleporter, so the gate opens and nothing is drawn, as in the
         original."""
         live = getattr(self._state, "combat", None)
-        if not (self._human_acting() and not self._computer(live) and
-                c["cur_ship"] != 0 and
+        if not (unit is not None and self._human_acting() and
+                not self._computer(live) and c["cur_ship"] != 0 and
                 cbopts.flag(self._state, "legal_moves")):
             return False
         if unit["movement_left"] > 0:
@@ -325,8 +324,20 @@ class CombatScreen(CombatInput, ScreenBase):
             if old is None:
                 self._hold_painted()
             if old is None and c is not None:
-                u = c["units"][c["cur_ship"]]
-                self._cam.frame_original(u["x"], u["y"])
+                u = cb.acting_unit(c)
+                if u is not None:
+                    self._cam.frame_original(u["x"], u["y"])
+                else:
+                    # TRANSCRIPTION `no_acting_view` (work order 324,
+                    # UNVERIFIED live): no unit to snap to
+                    # (`Snap_Center_Combat_Screen_` is the acting unit's,
+                    # combinit.cpp:2240), so the engine's own window
+                    # (`cur_combat_x/y`, the grid offset of
+                    # cmbtdrw1.cpp:733) is framed
+                    vw, vh = cbview.VIEW_CELLS
+                    self._cam.frame_original(
+                        int(c.get("view_x", 0)) + vw // 2,
+                        int(c.get("view_y", 0)) + vh // 2)
             elif old is not None:
                 self._cam.scale, self._cam.ox, self._cam.oy = \
                     old.scale, old.ox, old.oy
@@ -336,7 +347,10 @@ class CombatScreen(CombatInput, ScreenBase):
         if c is not None:
             self._follow(c)
         clock = ship_frame(time.monotonic() - self._clock0)
-        unit = c["units"][c["cur_ship"]] if c is not None else None
+        # None while no unit acts (`cb.acting_index`): no cursor, no
+        # acting-unit panel, no orders, as the original's guards
+        # (cmbtdrw1.cpp:608, :713)
+        unit = cb.acting_unit(c)
         cbdraw.draw_background(surface, cam, art,
                                bool(c and c.get("in_nebula")), self._cache)
         if c is None:
@@ -355,10 +369,12 @@ class CombatScreen(CombatInput, ScreenBase):
         if cbopts.flag(self._state, "grid"):
             cbopts.draw_grid(surface, cam, art)
         frame = self._frame_cell()
-        if frame is not None:           # TRANSCRIPTION `footprint_frame`
+        if frame is not None and unit is not None:
+            # TRANSCRIPTION `footprint_frame`
             cbdraw.draw_footprint(surface, cam, art, frame,
                                   unit["size_class"])
-        if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"]:
+        if cbopts.flag(self._state, "shield_arcs") and c["cur_ship"] and \
+                unit is not None:
             cbopts.draw_shield_arcs(surface, cam, art, unit, cbdraw.centre(
                 unit), self.style, self._language)
         self._play.colours = cbdraw.player_colours(self._state)
@@ -367,14 +383,19 @@ class CombatScreen(CombatInput, ScreenBase):
         self._fades.update(c["units"], now)
         cbdraw.draw_units(surface, cam, art, c, self._play.colours, clock,
                           self._cache, self._play.planet,
-                          phased_shown=unit["owner"] == self._me(),
+                          phased_shown=unit is not None and
+                          unit["owner"] == self._me(),
                           fades=self._fades, now=now, fast=self._play.fast)
         # TRANSCRIPTION `cursor_hidden` (work order 222): not while the
         # acting unit is moved, turned, teleported or fades (cloak), the
         # original's `_dont_draw_ship` (cmbtdrw1.cpp:815-819; Draw_Cloak_,
         # cmbtspec.cpp:95) — HD drew it on the cell the move left
         cur = c["cur_ship"]
-        if not self._computer(c) and self._play.dont_draw() != cur and \
+        # TRANSCRIPTION `no_cursor` (work order 324): none with no acting
+        # unit (cmbtdrw1.cpp:713 draws the cursor's box only for
+        # `cur_ship >= 0`)
+        if unit is not None and not self._computer(c) and \
+                self._play.dont_draw() != cur and \
                 self._fades.step(cur, now, self._play.fast) is None:
             cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
         cbdraw.draw_ordnance(surface, cam, art, self._play.ordnance,
@@ -387,13 +408,14 @@ class CombatScreen(CombatInput, ScreenBase):
                 if self._own_turn() and (k != "options" or cbopts.options(
                     self._state)) and (k == "board" or field_by_hotkey(
                     getattr(self._state, "fields", None), hk))}
-        pic = cbdraw.unit_picture(self._art, self._play.colours, unit, 0)
+        pic = cbdraw.unit_picture(self._art, self._play.colours, unit, 0) \
+            if unit is not None else None
         self._panel_unit = unit
         self._panel.log_open = self._logwin.open
         self._panel.draw(surface, self.style, unit, self._names, self._ken,
-                         [w["active"] for w in (self._state.combat["units"][
-                             c["cur_ship"]] if self._state.combat else unit)[
-                             "weapons"]],
+                         [w["active"] for w in (
+                             cb.acting_unit(self._state.combat) or unit
+                             or {}).get("weapons", ())],
                          self._board or self._pops.scan_mode and "scan", live,
                          self.layout.scale, pic, self._specials,
                          self._computer(self._state.combat or c),
@@ -427,9 +449,11 @@ class CombatScreen(CombatInput, ScreenBase):
         or at its edge."""
         turn = (c["serial"], c["turn"], c["cur_ship"])
         at = None
+        acting = cb.acting_unit(c)
         if turn != self._turn_seen:
             self._turn_seen = turn
-            at = cbdraw.centre(c["units"][c["cur_ship"]])
+            if acting is not None:      # nothing to snap to otherwise
+                at = cbdraw.centre(acting)
         focus, busy = self._play.focus(), self._play.busy()
         self._home = self._home or busy
         if focus is not None:
@@ -439,7 +463,7 @@ class CombatScreen(CombatInput, ScreenBase):
             # its turn is ready (the original snaps to the acting unit,
             # combinit.cpp:2240)
             self._home = False
-            at = cbdraw.centre(c["units"][c["cur_ship"]])
+            at = cbdraw.centre(acting) if acting is not None else None
         if at is not None and not self._cam.shows(*at):
             self._cam.centre_on(*at)
 
@@ -479,7 +503,7 @@ class CombatScreen(CombatInput, ScreenBase):
     def _status_of(self, c, unit):
         """What the panel's status picture needs (`cbstatus`), None for
         the planet (unit 0, OMISSION `status_planet`)."""
-        if not c["cur_ship"]:
+        if not c["cur_ship"] or unit is None:
             return None
         owner = unit["previous_owner"] if unit["previous_owner"] <= 7 \
             else unit["owner"]

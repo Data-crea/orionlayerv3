@@ -67,6 +67,7 @@ import time
 
 import pygame
 
+from core import combatblocks as cbk
 from core import lang
 from core.hud import blocks as hud
 from core.hud import style as hudstyle
@@ -240,7 +241,9 @@ class Panel:
     def switch(self, row, state, client):
         """A click on weapon row `row`: the original's own field, once the
         last switch's change is on the wire. True when it was sent."""
-        live = state.combat["units"][state.combat["cur_ship"]]
+        live = cbk.acting_unit(state.combat)
+        if live is None:
+            return False            # no acting unit, no weapon to switch
         w = self._row_wait
         if w and (live["weapons"][w[0]]["active"] != w[1] or
                   time.monotonic() - w[2] > ROW_WAIT):
@@ -354,6 +357,11 @@ class Panel:
             for key in ("weapons", "buttons", "systems"):
                 cbstatus.tile(surface, wins[key].inflate(-2 * ins, -2 * ins),
                               stars)
+        # the reduced map is drawn with or without an acting unit
+        # (TRANSCRIPTION `map_always`, work order 324:
+        # `Draw_Reduced_Combat_Map` after the guarded block,
+        # cmbtdrw1.cpp:608-636)
+        self.map = cbmap.rect_for(wins["map"].inflate(-2 * ins, -2 * ins))
         if unit is None:
             return
         # the unit's name over its picture and bars, as the original's
@@ -435,7 +443,6 @@ class Panel:
             draw_shields(surface, box, unit, picture)
         # the reduced map in its window at the right end (work order 209
         # B1, `cbmap`), the original's 121:102
-        self.map = cbmap.rect_for(wins["map"].inflate(-2 * ins, -2 * ins))
         mid = wins["weapons"].inflate(-2 * ins, -2 * ins)
         self.left, self.mid, self.facts = left, mid, wins["systems"]
         right = wins["buttons"].inflate(-2 * ins, -2 * ins)

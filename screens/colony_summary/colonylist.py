@@ -576,12 +576,12 @@ def _fit(text, style, px, room, cfg):
     measured against a name that could be typed and the game's own
     cap makes it narrower — see `NAME_BOUND_NOTE`.
     """
-    if style.render_text(text, px, ROW_NAME).get_width() <= room:
+    # MEASURED, NOT RENDERED (work order 324): one width per trial, cached.
+    if textfit.measure(style, text, px) <= room:
         return text
     dots = cfg.get("ellipsis", "…")
     cut = text
-    while cut and style.render_text(
-            cut + dots, px, ROW_NAME).get_width() > room:
+    while cut and textfit.measure(style, cut + dots, px) > room:
         cut = cut[:-1]
     return (cut + dots) if cut else text
 

@@ -135,6 +135,15 @@ MOVE_TEXT = palette.col("colony_summary", "move_text", (206, 216, 238))
 NATIVE_W, NATIVE_H = colonyempire.NATIVE_W, colonyempire.NATIVE_H
 
 
+def _same_key(a, b):
+    """Two input tuples agree: scalars by value, everything else (the
+    snapshot, its arrays, the order list) by identity, so comparing the
+    key never walks a record array."""
+    return len(a) == len(b) and all(
+        x is y or (isinstance(x, (str, tuple, int)) and x == y)
+        for x, y in zip(a, b))
+
+
 class ColonySummaryScreen(ScreenBase):
     SCREEN_NAME = "colony_summary"
     #: Its picture moves only with input, the game and the window: a frame
@@ -170,6 +179,10 @@ class ColonySummaryScreen(ScreenBase):
         # selected — a colony index and never a row index, which is
         # `colonyselect`'s whole subject.
         self._selection = colonyselect.Selection()
+        self._rows_key = None       # _rebuild_rows: the inputs of the rows
+        self._cols_key = None       # _list_view: the inputs of sync_columns
+        self._players_key = None    # update: the snapshot players parsed from
+        self._players_parsed = []
         # Which slice of those rows is on screen. VIEWING ONLY —
         # nothing on this screen sends it anywhere (decision 46).
         self._window = colonyselect.Window()
@@ -268,8 +281,16 @@ class ColonySummaryScreen(ScreenBase):
                 self._jump = None
         self._rebuild_rows()
         raws = getattr(game_state, "player_raw", None) or []
-        players = [player_struct.parse(r) for r in raws
-                   if len(r) >= player_struct.SIZE]
+        # PARSED ONCE PER SNAPSHOT (work order 324, UNVERIFIED live):
+        # this runs every loop pass and the engine repeats an unchanged
+        # snapshot every tick; only `player_num` is read per call.
+        if (self._players_key is None
+                or self._players_key[0] is not game_state
+                or self._players_key[1] is not raws):
+            self._players_key = (game_state, raws)
+            self._players_parsed = [player_struct.parse(r) for r in raws
+                                    if len(r) >= player_struct.SIZE]
+        players = self._players_parsed
         idx = getattr(game_state, "player_num", 0)
         self._local = players[idx] if 0 <= idx < len(players) else None
 
@@ -292,12 +313,41 @@ class ColonySummaryScreen(ScreenBase):
         selection as well as from `update`, because the hover has to
         hit-test the rows that were drawn.
         """
-        self._selection.rebuild(self._state, self._sort_key,
-                                colonybuild.names_for(self),
-                                held=self._move.held(), resort=resort)
+        names = colonybuild.names_for(self)
+        held = self._move.held()
+        sel = self._selection
+        # THE ROWS ARE A FUNCTION OF `_rows_inputs` AND NOTHING ELSE (work
+        # order 324, UNVERIFIED live; read off `Selection.rebuild` and
+        # `colonyrows.build_rows`). `update` runs every loop pass and the
+        # engine repeats an unchanged snapshot every tick, so an unchanged
+        # key reuses the rows. A sort click passes `resort` and always
+        # rebuilds.
+        if (resort or self._rows_key is None
+                or not _same_key(self._rows_key,
+                                 self._rows_inputs(names, held))):
+            sel.rebuild(self._state, self._sort_key, names, held=held,
+                        resort=resort)
+            # Taken AFTER the rebuild: it replaces the order list, and
+            # that new object is what the next call must find unchanged.
+            self._rows_key = self._rows_inputs(names, held)
+        else:
+            sel.reseat()
         # BUY from the game's own field list (work order 322 B1).
         colonybuy.annotate(self._rows, self._state, self._sort_key,
                            self._selection.order_known)
+
+    def _rows_inputs(self, names, held):
+        """The snapshot and its arrays, the sort key, the name resolver
+        (object, state, language), the held cluster, and the order the
+        selection keeps (its list object, key and known-flag)."""
+        state, sel = self._state, self._selection
+        return (state, self._sort_key, names, getattr(names, "state", None),
+                (getattr(self.app, "settings", None) or {}).get("language"),
+                None if held is None else (held[0], tuple(held[1])),
+                sel.order, sel.order_key, sel.order_known,
+                getattr(state, "colonies_raw", None),
+                getattr(state, "planets_raw", None),
+                getattr(state, "player_raw", None))
 
     @property
     def _rows(self):
@@ -339,7 +389,20 @@ class ColonySummaryScreen(ScreenBase):
         clicking alike, which is the only place decision 5 is
         actually enforceable.
         """
-        colonyheader.sync_columns(self)
+        # ONLY WHEN ITS INPUTS CHANGED (work order 324, UNVERIFIED live):
+        # the boxes (the list is replaced by a resize), each one's rect
+        # (the F3 editor drags in place) and the `list` block the table is
+        # bound into. This is called by every reader, several per frame.
+        boxes = self.boxes
+        cols_key = (id(boxes), id(self._data.get("list")),
+                    tuple((id(b), tuple(b.ref_rect or ()))
+                          for b in boxes))
+        if cols_key != self._cols_key:
+            colonyheader.sync_columns(self)
+            # Taken after the sync: it may move a column box's rect.
+            self._cols_key = (id(boxes), id(self._data.get("list")),
+                              tuple((id(b), tuple(b.ref_rect or ()))
+                                    for b in boxes))
         box = self.box_rect("list_area")
         return (pygame.Rect(*self.layout.rect(box)) if box
                 else pygame.Rect(0, 0, 0, 0),

@@ -239,7 +239,9 @@ class MainMenuScreen(ScreenBase):
             # would hold the first snapshot's for ever.
             self._slots_now = getattr(game_state, "save_slots", None)
             self._load_dialog(game_state)
-            self._net_on = self._net.check(game_state, self.GAME_SCREEN_ID)
+            self._net_on = self._net.check(
+                game_state, self.GAME_SCREEN_ID,
+                getattr(self.app, "client", None))
         if not self._credits:
             return
         now = time.monotonic()

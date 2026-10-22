@@ -170,28 +170,16 @@ def name_keys(text, clear=CLEAR_KEYS):
     return keys
 
 
-def type_name(client, text):
-    """Clear the focused string field and type `text`, then Enter.
-    All keys go into one SDL burst so the order is preserved.
-
-    **A BURST ONLY SURVIVES WHILE IT IS SHORT.** The game keeps typed
-    keys in a ring of TEN (`key::g_last_key_pressed[10]`, key.cpp:5),
-    `Push_Key_Code_` overwrites without moving the read index
-    (key.cpp:67-72), and `Pump_Game_Input_Queue_` moves everything
-    queued so far into that ring in one call (platform.cpp:1482).
-    A burst longer than ten keys therefore wraps, and what is read back
-    is whatever the wrap left between the read and write positions.
-    Found 14 September 2026 reading the path for save names, which run
-    to 29 characters; Empire Identity still bursts, and its 24
-    backspaces put its own names inside that limit only by luck of
-    their length. Names that must survive go through `paced_keys`.
-    """
-    for code in name_keys(text):
-        client.inject_key(code)
-
-
 def paced_keys(first, keys):
     """Sends for an `InjectionChain` step that must arrive ONE PER TICK.
+
+    A BURST ONLY SURVIVES WHILE IT IS SHORT. The game keeps typed keys
+    in a ring of TEN (`key::g_last_key_pressed[10]`, key.cpp:5),
+    `Push_Key_Code_` overwrites without moving the read index
+    (key.cpp:67-72), and `Pump_Game_Input_Queue_` moves everything
+    queued so far into that ring in one call (platform.cpp:1482); a
+    burst longer than ten keys wraps. Every name goes through here
+    (the one-burst `type_name` was removed in work order 324).
 
     `first` is a callable(client) sent before any key — the save
     dialog's strip activation, which must reach `Get_Input_` before the

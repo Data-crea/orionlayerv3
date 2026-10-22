@@ -122,8 +122,10 @@ class Selection:
         """Rebuild the rows and keep the selection pointing at a
         colony that is still in them.
 
-        Called when the snapshot changes and when the sort key does,
-        rather than once per frame in the renderer. The hover has to
+        Called from every path that can change the rows, and from
+        `update` every loop pass — where the screen's `_rebuild_rows`
+        calls it only when the key of the rows' inputs changed (work
+        order 324), not once per frame in the renderer. The hover has to
         hit-test the SAME list the renderer drew, and two lists built
         from one snapshot agree today but would stop agreeing the
         first time anything about the build depended on when it ran.

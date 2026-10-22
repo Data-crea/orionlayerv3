@@ -21,8 +21,8 @@ relative path:
 Rules:
   - File-level override: first mod that has the file wins.
   - Skins are resolved as whole directories (skin_dir()).
-  - Writes (editor saves) always go to the base project,
-    never into a mod folder.
+  - Writes (the editor's boxes) go where the boxes were LOADED from:
+    a mod's file when a mod supplied it, else the base (work order 324 d).
 
 Usage: core.resources.init(settings) once at startup, then
 use the module-level helpers or the `res` singleton.
@@ -30,7 +30,7 @@ use the module-level helpers or the `res` singleton.
 import os
 import json
 import logging
-from core import basepack, usermod
+from core import basepack, safejson, usermod
 from core.config import BASE_DIR, MODS_DIR
 
 log = logging.getLogger("resources")
@@ -145,17 +145,35 @@ class Resources:
     def font(self, filename="Aldrich-Regular.ttf"):
         return self.shared("fonts", filename)
 
-    def load_json(self, relpath, default=None):
-        """Load a JSON file through mod resolution."""
-        path = self.resolve(relpath)
-        if not path:
-            return default
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (ValueError, OSError) as e:
-            log.warning("Bad JSON %s: %s", relpath, e)
-            return default
+    def candidates(self, relpath):
+        """Every existing file of `relpath` in priority order (what
+        `resolve` returns first, then the rest of the tree): a damaged
+        mod file must leave the base file to fall back on (work order
+        324 c)."""
+        first = self.resolve(relpath)
+        found = [first] if first else []
+        for mod_dir in self.mod_dirs:
+            p = os.path.join(mod_dir, relpath)
+            if os.path.exists(p) and p not in found:
+                found.append(p)
+        for base in (BASE_DIR, basepack.base_dir()):
+            p = os.path.join(base, relpath)
+            if os.path.exists(p) and p not in found:
+                found.append(p)
+        return found
+
+    def load_json(self, relpath, default=None, shape=None):
+        """Load a JSON file through mod resolution; the first file of
+        `candidates` that loads AND has the right top-level kind wins
+        (`shape`, else the kind of `default` when that is a dict or a
+        list), a bad one is logged once (`core.safejson`)."""
+        if shape is None and isinstance(default, (dict, list)):
+            shape = type(default)
+        for path in self.candidates(relpath):
+            data = safejson.read(path, shape)
+            if data is not None:
+                return data
+        return default
 
     def screen_roots(self):
         """All screens/ directories, mods first, then base.

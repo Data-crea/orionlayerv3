@@ -788,8 +788,11 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     me = game_state.player_num
     traits = None
     planning = False
+    # EVERY PLAYER IS PARSED ONCE (work order 324): the local one for the
+    # traits first and unguarded as before, the others for the race map.
+    parsed = {}
     if 0 <= me < len(game_state.player_raw):
-        _me = player_struct.parse(game_state.player_raw[me])
+        _me = parsed[me] = player_struct.parse(game_state.player_raw[me])
         traits = player_struct.traits(_me)
         planning = city_planning(_me)
     # PLAYER INDEX -> RACE INDEX, for the figures.
@@ -803,18 +806,19 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     races = {}
     for _pi, _raw in enumerate(game_state.player_raw):
         try:
-            races[_pi] = int(player_struct.parse(_raw).race)
+            _p = parsed.get(_pi)
+            if _p is None:
+                _p = player_struct.parse(_raw)
+            races[_pi] = int(_p.race)
         except (AttributeError, ValueError, TypeError):
             continue
 
     # The ship branches' names, off the wire (work order 196 C3: the
     # list never passed them, and every ship read "not on the wire").
-    ships = prodname.ShipNames(game_state, me)
+    ships = prodname.ShipNames(game_state, me, player=parsed.get(me))
     rows = []
     for index, raw in enumerate(game_state.colonies_raw):
         col = colony_struct.parse(raw)
-        _producing = (names.name(col.producing[0], ships=ships)
-                      if names is not None else (None, "missing"))
         # TRANSCRIBED, both halves. `Build_Global_Colony_List_`
         # (colxport.cpp:91-99) walks the colony array in order and
         # keeps the ones whose `owner` is the local player and whose
@@ -840,6 +844,10 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
         # alternative is a traceback inside a render path.
         if not 0 <= col.planet < len(planets):
             continue
+        # RESOLVED ONLY FOR A ROW THAT IS KEPT (work order 324): it used to
+        # run for every colony of every player before the owner filter.
+        _producing = (names.name(col.producing[0], ships=ships)
+                      if names is not None else (None, "missing"))
         planet = planet_struct.parse(planets[col.planet])
         morale, morale_applies = colony_morale(col, traits)
         jobs = [0, 0, 0]

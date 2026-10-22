@@ -26,8 +26,9 @@ No help entry: HELP.LBX has none for a button the original lacks.
 """
 import pygame
 
-from core import palette
+from core import lang, palette
 from core.hud import blocks as hud
+from core.hud import lru
 
 TEXT = (214, 214, 200)
 DIM = (140, 140, 150)
@@ -167,6 +168,35 @@ class LogWindow:
         self.open, self.first, self.rect = False, None, None
         self.close_rect = self.list_rect = None
         self._rows = 1
+        #: work order 324 (UNVERIFIED live): `body` and the cell pictures
+        #: are kept; `draw` ran both for every visible cell every frame.
+        self._body_key, self._body_rows = None, None
+        self._pics = lru.TextCache()
+
+    def _body(self, log, colours):
+        """`body`, rebuilt only when the log grew or was replaced, or the
+        colours changed — the lines are appended and never edited, and a
+        new battle's log is a reset list with another length or serial."""
+        key = (log, log.serial, len(log.lines), id(log.lines),
+               tuple(sorted((colours or {}).items())))
+        seen = self._body_key
+        if seen is None or seen[0] is not key[0] or seen[1:] != key[1:]:
+            self._body_rows = self.body(log, colours)
+            self._body_key = key
+        return self._body_rows
+
+    def _picture(self, style, text, size, rgb, room, squeeze):
+        """The cell's picture: the text, squeezed to `room` px wide when
+        it outruns it (a head is never squeezed)."""
+        def build():
+            img = style.render_text(text, size, rgb)
+            if squeeze and img.get_width() > room:
+                img = pygame.transform.smoothscale(
+                    img, (max(1, room), img.get_height()))
+            return img
+        return self._pics.fetch((id(style), lang.state_key(), text, size,
+                                 tuple(rgb), room if squeeze else None, squeeze),
+                                 build)
 
     def toggle(self):
         self.open, self.first = not self.open, None
@@ -252,7 +282,7 @@ class LogWindow:
         self.list_rect = lr = pygame.Rect(r.x + pad, top,
                                           r.w - 3 * pad - bar_w,
                                           self.close_rect.y - pad - top)
-        rows = self.body(log, colours)
+        rows = self._body(log, colours)
         self._rows = visible = max(1, lr.h // line_h)
         last_first = max(0, len(rows) - visible)
         if self.first is None:                  # opened: the newest lines
@@ -269,10 +299,8 @@ class LogWindow:
                     continue
                 x0 = lr.x + int(lr.w * COLUMNS[n])
                 x1 = lr.x + int(lr.w * COLUMNS[n + 1]) - pad // 2
-                img = style.render_text(text, size, rgb)
-                if img.get_width() > x1 - x0 and role != "head":
-                    img = pygame.transform.smoothscale(
-                        img, (max(1, x1 - x0), img.get_height()))
+                img = self._picture(style, text, size, rgb, x1 - x0,
+                                    role != "head")
                 right = n >= 4 and role != "head"
                 surface.blit(img, (x1 - img.get_width() if right else x0,
                                    y + (line_h - img.get_height()) // 2))

@@ -15,7 +15,7 @@ import time
 import pygame
 
 from core.pressfeedback import Pressed
-from core.box import load_boxes
+from core.box import load_boxes, read_boxes
 from core.screenhelp import HelpMixin
 from core import backgrounds
 from core.hud import screenframe
@@ -61,6 +61,8 @@ class ScreenBase(HelpMixin):
         self.boxes = []
         self.active = False
         self._screen_dir = ""
+        #: Where the boxes were loaded from — the editor saves there.
+        self._boxes_dir = ""
         self._btn_flash = None   # ("left"|"right", start_time)
         self.pressed = Pressed()  # a held press on a word (pressfeedback)
 
@@ -109,10 +111,13 @@ class ScreenBase(HelpMixin):
     def enter(self, game_state=None):
         """Screen becomes active. Load boxes, background, assets."""
         self.active = True
-        # Base project dir — editor saves ALWAYS go here, never to mods
+        # The screen's BASE folder: what the screens' own data files
+        # (`races.json`, `layout_reference.json`) are read from. The
+        # editor's boxes go to `_boxes_dir` instead (work order 324 d).
         self._screen_dir = os.path.join(
             self.app.screens_dir, self.SCREEN_NAME
         )
+        self._boxes_dir = self._screen_dir
         self._reload_boxes()
         self._update_box_layout()
         self.build_native_map()
@@ -129,9 +134,24 @@ class ScreenBase(HelpMixin):
 
     def _reload_boxes(self):
         """Load boxes.json through mod resolution."""
-        path = self.asset_path(self.BOXES_FILE)
-        self.boxes = load_boxes(path, self.app.win_w,
-                                self.app.win_h) if path else []
+        # HD EXTENSION `boxes_dir` (work order 324 c/d, UNVERIFIED live): the first
+        # file that loads wins — a mod's damaged boxes.json leaves the
+        # base file, with one log line — and the folder it came from is
+        # where the F3 editor saves, so a mod's geometry never lands in
+        # the base tree.
+        rel = os.path.join("screens", self.SCREEN_NAME, self.BOXES_FILE)
+        self.boxes = []
+        self._boxes_dir = self._screen_dir
+        res = self.app.res
+        paths = res.candidates(rel) if hasattr(res, "candidates") else \
+            [p for p in (self.asset_path(self.BOXES_FILE),) if p]
+        for path in paths:
+            loaded = read_boxes(path, self.app.win_w, self.app.win_h)
+            if loaded is not None:
+                self.boxes = loaded
+                if self.BOXES_FILE == "boxes.json":
+                    self._boxes_dir = os.path.dirname(path)
+                break
         # A button box's glyph, by the screen's and the box's names
         # (work order 179; `core.hud.glyphs`).
         from core.hud import glyphs

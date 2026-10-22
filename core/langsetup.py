@@ -15,7 +15,6 @@ one. Nothing drawn changes before the restart the switch asks for.
 import logging
 import os
 import shlex
-import sys
 import threading
 
 from core import modsetup
@@ -24,18 +23,15 @@ from core.config import BASE_DIR
 log = logging.getLogger("langsetup")
 
 _lock = threading.Lock()
-_state = {"phase": "idle", "i": 0, "n": 0, "made": 0}
+_state = {"phase": "idle", "i": 0, "n": 0, "made": 0, "error": ""}
 
 
 def plan(language, entries=None):
     """[(path, argv)]: the absent derived files of `language` with their
     extractor (the commands `setup.from_game` gives for that language)."""
     if entries is None:
-        tools = os.path.join(BASE_DIR, "tools")
-        if tools not in sys.path:
-            sys.path.insert(0, tools)
-        import setup as _setup
-        entries = _setup.from_game({"language": language})
+        entries = modsetup.import_tool("setup").from_game(
+            {"language": language})
     steps, seen = [], set()
     for path, _what, command in entries:
         if not path.endswith(f"_{language}.json") or os.path.exists(path) \
@@ -56,10 +52,7 @@ def plan_from(language, folder):
     """[(path, argv)] against the other install the player named
     (`language_dir`, `tools/language_files.py`): every extractor of the
     language, its files read from there."""
-    tools = os.path.join(BASE_DIR, "tools")
-    if tools not in sys.path:
-        sys.path.insert(0, tools)
-    import language_files
+    language_files = modsetup.import_tool("language_files")
     return [(os.path.join(BASE_DIR, "assets", "shared", "names"), argv)
             for argv in language_files.steps(language, folder)]
 
@@ -72,9 +65,22 @@ def start(language, steps=None, runner=None, folder=None):
     with _lock:
         if _state["phase"] == "running":
             return False
-        if steps is None:
-            steps = plan_from(language, folder) if folder else plan(language)
-        _state.update(phase="running", i=0, n=len(steps), made=0)
+        _state.update(phase="running", i=0, n=len(steps or ()), made=0,
+                      error="")
+    if steps is None:
+        # Planning imports tools/setup and walks the registry: not under
+        # the lock the language row reads every frame (work order 324 b).
+        try:
+            steps = plan_from(language, folder) if folder else \
+                plan(language)
+        except Exception as err:
+            log.warning("language setup: could not plan: %s", err)
+            with _lock:
+                _state.update(phase="done", made=0,
+                              error=f"could not plan: {err}")
+            return True
+        with _lock:
+            _state["n"] = len(steps)
     threading.Thread(target=_work, args=(steps, runner or modsetup._run),
                      name="langsetup", daemon=True).start()
     return True
@@ -82,17 +88,26 @@ def start(language, steps=None, runner=None, folder=None):
 
 def _work(steps, runner):
     made = 0
-    for i, (path, argv) in enumerate(steps, 1):
+    try:
+        for i, (path, argv) in enumerate(steps, 1):
+            with _lock:
+                _state.update(i=i)
+            ok = False
+            try:
+                ok = runner(argv)
+            except Exception as err:      # one step never ends the job
+                log.warning("language setup: %s: %s", " ".join(argv), err)
+                with _lock:
+                    _state["error"] = f"{' '.join(argv)}: {err}"
+            # a step against the named folder writes where its extractor
+            # says: it counts by its own success; a planned file by being
+            # there
+            made += bool(ok) if os.path.isdir(path) else \
+                os.path.exists(path)
+    except Exception as err:
+        log.warning("language setup stopped: %s", err)
         with _lock:
-            _state.update(i=i)
-        ok = False
-        try:
-            ok = runner(argv)
-        except OSError as err:
-            log.warning("language setup: %s: %s", " ".join(argv), err)
-        # a step against the named folder writes where its extractor says:
-        # it counts by its own success; a planned file by being there
-        made += bool(ok) if os.path.isdir(path) else os.path.exists(path)
+            _state["error"] = f"stopped: {err}"
     with _lock:
         _state.update(phase="done", made=made)
     log.info("language setup done: %d of %d file(s) written", made,

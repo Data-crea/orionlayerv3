@@ -146,6 +146,8 @@ class CombatInput:
         hit area of `cbtarget.missile_under` (TRANSCRIPTION
         `missile_field`), any owner's."""
         targets = getattr(self._state, "targets", None)
+        if cb.acting_index(c) is None:
+            return None             # no acting unit, no verdict for it
         if self._pointer is None or self._cam is None or not targets or \
                 targets.get("unit") != c["cur_ship"] or \
                 not self._cam.on_field(*self._pointer):
@@ -219,7 +221,9 @@ class CombatInput:
         if self._opts.up(self._state) or self._pops.showing(self._state):
             return None
         c = self._shown()
-        u = c["units"][c["cur_ship"]]
+        u = cb.acting_unit(c)
+        if u is None:
+            return None
         cell = move_target(self._cam, point[0], point[1], u["size_class"])
         if cell is None or not cb.legal(c["legal"], *cell):
             return None
@@ -256,7 +260,11 @@ class CombatInput:
         player's unit, a monster's, or the side under AUTO (`_auto_combat`
         is the acting side's flag, :1564-1566). HD runs single-player
         battles, so the human is this client's player."""
-        unit = c["units"][c["cur_ship"]]
+        unit = cb.acting_unit(c)
+        if unit is None:
+            # UNVERIFIED: nobody acts, so no human's orders — the
+            # computer's side of every question asked here
+            return True
         side = "auto_attacker" if unit["owner"] == c["attacker"] else \
             "auto_defender"
         return unit["owner"] != self._me() or bool(c.get(side))
@@ -324,7 +332,9 @@ class CombatInput:
         if cell is None:
             return None
         c = self._shown()
-        me, cur = self._me(), c["cur_ship"]
+        me, cur = self._me(), cb.acting_index(c)
+        if cur is None:
+            return None
         missile = cbtarget.missile_under(self._play.ordnance, self._cam,
                                          screen_x, screen_y)
         move = self._move_cell((screen_x, screen_y))
@@ -606,7 +616,8 @@ class CombatInput:
             getattr(ev, "mod", 0) & pygame.KMOD_ALT
         if key == pygame.K_c and self._cam is not None and self._shown():
             u = self._acting()
-            self._cam.centre_on(*cbdraw.centre(u))    # the original's C
+            if u is not None:
+                self._cam.centre_on(*cbdraw.centre(u))    # the original's C
         elif key == pygame.K_ESCAPE:
             self._board_off()
             self._pops.scan_mode = False

@@ -90,6 +90,14 @@ WORDS = {"climate", "size", "gravity", "mineral", "job", "screen"}
 _FIELD = re.compile(r"\{(\w+)\}|%[sd]")
 
 
+def state_key():
+    """Everything `tr` depends on, as a value to key a cache of rendered
+    text on (work order 324): the language, the verbatim switch and the
+    table that was configured. Two renders of one string under an equal
+    key are the same picture."""
+    return (_state["language"], _state["verbatim"], id(_state["table"]))
+
+
 def current():
     return _state["language"]
 

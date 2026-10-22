@@ -143,7 +143,8 @@ class Modal:
             log.info("galaxy map: the home star name dialog (prefilled %r)",
                      self.text)
         self.kind = kind
-        self.fallback = self.net.check(state, 0)
+        self.fallback = self.net.check(
+            state, 0, getattr(self.screen.app, "client", None))
 
     @property
     def active(self):

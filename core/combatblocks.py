@@ -60,6 +60,31 @@ def legal(bits, x, y):
     return bool(bits[i >> 3] >> (i & 7) & 1)
 
 
+def acting_index(combat):
+    """The index of the unit that acts, or None while none does.
+
+    TRANSCRIPTION (work order 324): the engine sets `cur_ship = -1` at
+    the end of a side's turn and at the end of the combat
+    (combat1.cpp:418, :1862) and every one of its own readers asks first
+    — the drawing of the cursor box and the hover block
+    (cmbtdrw1.cpp:713 `cur_ship >= 0`), the status of the acting unit
+    (:608 `!= -1`), the legal boxes and the internals (:532, :568
+    `> -1`), the side wait (combat1.cpp:1659, :1985) and the serializer
+    (ext_api.cpp:2117). A bare `units[cur_ship]` takes -1 for the LAST
+    unit, so no HD site indexes with it: each asks here.
+    """
+    if not combat:
+        return None
+    cur, units = combat.get("cur_ship", -1), combat.get("units") or ()
+    return cur if 0 <= cur < len(units) else None
+
+
+def acting_unit(combat):
+    """The acting unit (`acting_index`), None while none acts."""
+    cur = acting_index(combat)
+    return None if cur is None else combat["units"][cur]
+
+
 def _cmbt(data, pos):
     at = pos + 4
     head = _st.unpack_from(CMBT_HEAD, data, at)
@@ -83,10 +108,9 @@ def _cmbt(data, pos):
                               f"record {size}, {units} units")
         return None, pos
     if out["cur_ship"] >= units:
-        # `units[cur_ship]` is read by every part of the screen. -1 is the
-        # engine's own "no ship acts" (combat1.cpp:418, :1862) and passes —
-        # while a unit exists it indexes the last one, a fault of its own
-        # and listed as open — and so does a block of no unit at all (the
+        # -1 is the engine's own "no ship acts" (combat1.cpp:418, :1862)
+        # and passes — the screen asks `acting_unit`, never the list with
+        # it (work order 324) — and so does a block of no unit at all (the
         # engine writes CMBT whenever a battle is live, also while it sets
         # up or ends, ext_api.cpp), which refusing would cost every block
         # after it. A value past the end would raise in every frame that

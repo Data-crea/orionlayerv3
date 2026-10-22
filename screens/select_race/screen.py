@@ -147,8 +147,9 @@ class SelectRaceScreen(ScreenBase):
         click (game moves to 50) or ESC.
         """
         if game_state is not None and getattr(self.app, "connected", False):
-            self._net_on = self._modal_net().check(game_state,
-                                                   self.GAME_SCREEN_ID)
+            self._net_on = self._modal_net().check(
+                game_state, self.GAME_SCREEN_ID,
+                getattr(self.app, "client", None))
         if self._pending_picture_mode:
             screen = game_state.current_screen if game_state else -1
             if screen == self.GAME_SCREEN_ID:

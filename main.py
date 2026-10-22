@@ -30,6 +30,7 @@ from core import overlays
 from core import pointergate
 from core import frameguard
 from core import enginelink
+from core.resizeexpect import ResizeExpect
 from core import drawgate
 
 logging.basicConfig(level=logging.INFO,
@@ -147,7 +148,7 @@ class App:
         self.clock = pygame.time.Clock()
         self.running = True
         self._fullscreen = False
-        self._ignore_resize = False
+        self._resize = ResizeExpect()   # work order 324 a
         self._fs_surface = None
         self._fs_offset = None
         mouse_input.set_offset(None)
@@ -312,9 +313,7 @@ class App:
                 lastword.ended("the window was closed")
                 self.running = False
             elif event.type == pygame.VIDEORESIZE:
-                if self._ignore_resize:
-                    self._ignore_resize = False
-                else:
+                if not self._resize.is_ours(event.w, event.h):
                     self._on_resize(event.w, event.h)
             elif event.type == pygame.KEYDOWN:
                 # HD's own keys (`core/hdkeys.py`, work order 231 D): never
@@ -662,8 +661,8 @@ class App:
         which is one of the four sizes F7 offers — is granted
         3440x1371. **No `VIDEORESIZE` event is delivered for any of
         them**, so nothing downstream can notice on its own, and
-        `_ignore_resize` (which exists to swallow the event a
-        deliberate resolution change provokes) was never even reached.
+        the expectation `core.resizeexpect` keeps for the event a
+        deliberate resolution change may provoke was never even met.
 
         `win_w`/`win_h` used to be the numbers we asked for, and
         `Layout`, every box, the cursor and the frame plate are all
@@ -761,7 +760,6 @@ class App:
 
     def _toggle_fullscreen(self):
         """F11: toggle fullscreen with black bars at current F7 resolution."""
-        self._ignore_resize = True
         self._fullscreen = not self._fullscreen
         if self._fullscreen:
             # Get native monitor resolution
@@ -801,19 +799,21 @@ class App:
             self._fs_offset = ((native_w - w) // 2, (native_h - h) // 2)
             mouse_input.set_offset(self._fs_offset)
             self._after_resolution_change()
+            self._resize.expect((native_w, native_h))
         else:
             self._fs_surface = None
             self._fs_offset = None
             mouse_input.set_offset(None)
             w, h, label = self._resolutions[self._res_index]
             self._apply_resolution(w, h, caption=label)
+            self._resize.expect((w, h), (self.win_w, self.win_h))
 
     def _cycle_resolution(self):
         """F7: cycle window resolution (`core/hdkeys.py`)."""
         self._res_index = (self._res_index + 1) % len(self._resolutions)
         w, h, label = self._resolutions[self._res_index]
-        self._ignore_resize = True
         self._apply_resolution(w, h, caption=label)
+        self._resize.expect((w, h), (self.win_w, self.win_h))
 
 
 if __name__ == "__main__":

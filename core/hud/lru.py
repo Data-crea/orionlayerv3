@@ -63,3 +63,40 @@ class Cache:
     def clear(self):
         self._items.clear()
         self.bytes = 0
+
+
+class TextCache:
+    """Rendered text kept by the picture's whole key — work order 324
+    (UNVERIFIED live). A label that is the same every frame (a star's
+    name, a log cell) was rendered every frame; this renders it once.
+
+    The key is everything that changes the picture: the style (its fonts),
+    the language state (`lang.state_key`, which `render_text` translates
+    through), the text, the size and the colour. **A cached surface is
+    shared: callers blit it and never draw on it.** Bounded by count and
+    by bytes like every cache here (`Cache`)."""
+
+    def __init__(self, max_items=768, max_bytes=24 * 1024 * 1024):
+        self._cache = Cache(max_items, max_bytes)
+        #: how many pictures were really rendered (a check counts it)
+        self.built = 0
+
+    def __len__(self):
+        return len(self._cache)
+
+    def render(self, style, text, size, rgb):
+        from core import lang
+        return self.fetch((id(style), lang.state_key(), text, size,
+                           tuple(rgb)),
+                          lambda: style.render_text(text, size, tuple(rgb)))
+
+    def fetch(self, key, build):
+        """The picture for `key`, built by `build()` the first time."""
+        hit = self._cache.get(key)
+        if hit is None:
+            hit = self._cache.put(key, build())
+            self.built += 1
+        return hit
+
+    def clear(self):
+        self._cache.clear()
