@@ -49,9 +49,9 @@ from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
-from core import researchnative as nat
+from core import nativeview as nat
 from screens.fleets import fltart, fltrows
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import refart, refdraw, refgeom as geom, refwords
 

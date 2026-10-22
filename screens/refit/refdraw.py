@@ -1,7 +1,7 @@
 """Drawing Refit's two lists in the HUD style — work order 223.
 
 Everything at the HD image of its native rectangle (`refgeom`, through
-`screens/leaders/ldrdraw`), every panel, field and button the shared look
+`core/nativedraw`), every panel, field and button the shared look
 (decision 71 as amended): no colour of this screen's own.
 
   TRANSCRIPTION  the ship list: the cells, each ship's picture in its
@@ -24,7 +24,7 @@ from core.hud import blocks as hud
 from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from screens.colony.coldraw import font, text
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import refgeom as geom
 

@@ -63,7 +63,7 @@ import pygame
 
 from core import palette
 from core import researchlist
-from core import researchnative as geom_mod
+from core import nativeview as geom_mod
 from core import researchband
 from core.researchpanel import _blit_text, _fit, col, draw_box
 

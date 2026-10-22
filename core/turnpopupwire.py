@@ -6,7 +6,7 @@ is `doc/ext_turn_popups.patch`'s header, byte by byte.
 """
 import struct as _st
 
-from core import lang
+from core.blockreader import Reader
 
 KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          4: "planet_choice", 5: "discovery", 6: "leader_level", 7: "gnn",
@@ -54,23 +54,8 @@ def parse(gs, data, pos):
     gs.turn_popup = None
     if data[pos:pos + 4] != b"TPOP":
         return pos
-    at = pos + 4
-
-    def take(fmt):
-        nonlocal at
-        size = _st.calcsize("<" + fmt)
-        if at + size > len(data):
-            raise ValueError("short")
-        vals = _st.unpack_from("<" + fmt, data, at)
-        at += size
-        return vals
-
-    def text():
-        (n,) = take("h")
-        if n < 0:
-            raise ValueError("length")
-        (raw,) = take(f"{n}s")
-        return lang.wire_text(raw)
+    r = Reader(data, pos + 4)
+    take, text = r.take, r.text16
     try:
         version, kind, n = take("BBh")
         if version != 1 or kind not in KINDS or not 0 <= n <= 16:
@@ -125,7 +110,7 @@ def parse(gs, data, pos):
     except ValueError:
         return pos
     gs.turn_popup = popup
-    return at
+    return r.pos
 
 
 def build(kind, args=(), title=None, text=None, messages=None, system=None,

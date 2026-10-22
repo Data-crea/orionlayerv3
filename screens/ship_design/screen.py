@@ -40,7 +40,7 @@ from core import rightinfo
 from core import hestrings, kentext, techdesc
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import sddraw, sdgeom as geom, sdname, sdwire
 

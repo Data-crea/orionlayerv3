@@ -42,7 +42,7 @@ from core.hud import blocks as hud
 from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from screens.colony.coldraw import font, text
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import bqwire as w
 

@@ -2,7 +2,7 @@
 work order 225 (decisions 86-92, "How the transcribed screens are handled").
 
 A transcribed screen draws and hits everything at the HD image of its
-native 640x480 rectangle: `core.researchnative.to_hd` puts the 640x480
+native 640x480 rectangle: `core.nativeview.to_hd` puts the 640x480
 picture into the 4:3 island of the reference area, and `Layout.rect` takes
 it to the window. The shell wants the screen's panels in ONE content
 rectangle instead (`core.hud.shell`), so each transcribed screen names its
@@ -20,7 +20,7 @@ point of a native region into that region's panel and back:
 So the drawing code and the hit test, which only ever ask the layout,
 place and hit every native rectangle in its panel, through ONE function
 each way (decision 5); nothing in the shared native helpers
-(`researchnative`, `ldrdraw`) changes, and a screen that has no map is
+(`nativeview`, `nativedraw`) changes, and a screen that has no map is
 drawn exactly as before. A click resolves to the native pixel the drawing
 put there, so it reaches the same field as before (decision 35: the wire
 coordinates are still the game's own rectangles).
@@ -52,14 +52,14 @@ import pygame
 from core.config import REF_H, REF_W
 from core.layout import Layout
 
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 
 #: A reference point no native pixel answers to (left of the island).
 NOWHERE = (-1.0e6, -1.0e6)
 
 
 def _island():
-    """`researchnative._scale`'s numbers, for the reference area: the
+    """`nativeview._scale`'s numbers, for the reference area: the
     native picture's scale and offset inside 1920x1080."""
     k = min(REF_W / NATIVE_W, REF_H / NATIVE_H)
     return k, (REF_W - NATIVE_W * k) / 2.0, (REF_H - NATIVE_H * k) / 2.0
@@ -140,7 +140,7 @@ class PanelMap(Layout):
                    if r.hit and r.sprites)
 
     # The native picture's reference coordinates (what `to_hd` returns)
-    # and back — exact inverses of `researchnative`'s arithmetic.
+    # and back — exact inverses of `nativeview`'s arithmetic.
     @staticmethod
     def _native_of(ref_x, ref_y):
         """Back to the native picture. `to_hd` rounded each edge to a

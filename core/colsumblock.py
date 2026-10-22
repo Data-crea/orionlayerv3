@@ -34,6 +34,8 @@ colony screen (COLS); HD prints the name and "- Nt" alone.
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 HEAD = "<Bhh"
 ROW = "<hhiihB"
 ROW_SIZE = _st.calcsize(ROW)
@@ -53,29 +55,24 @@ def parse(gs, data, pos):
     """Read CSUM at `pos` into `gs.colony_list_numbers` (None when absent,
     short or of another version, else a dict). Returns the new position."""
     gs.colony_list_numbers = None
-    if data[pos:pos + 4] != b"CSUM":
+    r = Reader(data, pos)
+    if not r.enter(b"CSUM") or not r.fits(_st.calcsize(HEAD)):
         return pos
-    at = pos + 4
-    if at + _st.calcsize(HEAD) > len(data):
+    version, first, n = r.take(HEAD)
+    if version != 1 or not 0 <= n <= MAX_COLONIES or \
+            not r.fits(n * ROW_SIZE + 2 * BUY_FIELDS):
         return pos
-    version, first, n = _st.unpack_from(HEAD, data, at)
-    end = at + _st.calcsize(HEAD) + n * ROW_SIZE + 2 * BUY_FIELDS
-    if version != 1 or not 0 <= n <= MAX_COLONIES or end > len(data):
-        return pos
-    at += _st.calcsize(HEAD)
     rows = []
     for _ in range(n):
-        colony, producing, cost, buy_cost, turns, can_buy = \
-            _st.unpack_from(ROW, data, at)
+        colony, producing, cost, buy_cost, turns, can_buy = r.take(ROW)
         rows.append({"colony": colony, "producing": producing,
                      "cost": cost, "buy_cost": buy_cost, "turns": turns,
                      "can_buy": bool(can_buy)})
-        at += ROW_SIZE
-    buy_fields = list(_st.unpack_from(f"<{BUY_FIELDS}h", data, at))
+    buy_fields = list(r.take(f"{BUY_FIELDS}h"))
     gs.colony_list_numbers = {
         "first": first, "rows": rows, "buy_fields": buy_fields,
-        "by_colony": {r["colony"]: r for r in rows}}
-    return end
+        "by_colony": {row["colony"]: row for row in rows}}
+    return r.pos
 
 
 def build(first=0, rows=(), buy_fields=None):

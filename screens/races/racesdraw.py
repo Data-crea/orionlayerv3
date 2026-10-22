@@ -1,6 +1,6 @@
 """Drawing the Races screen — every piece at the HD image of its native
-rectangle (`racesgeom`, through `core/researchnative`, the helpers the
-Leaders screen already uses: `screens/leaders/ldrdraw`).
+rectangle (`racesgeom`, through `core/nativeview`, the helpers the
+Leaders screen already uses: `core/nativedraw`).
 
 WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
 
@@ -40,7 +40,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import hover
 from core.hud import text as hudtext
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import racesband
 from . import racesgeom as geom

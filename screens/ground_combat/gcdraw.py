@@ -39,7 +39,7 @@ import pygame
 
 from core.hestrings import printf
 from screens.colony import colart
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import gcart, gcgeom as geom
 

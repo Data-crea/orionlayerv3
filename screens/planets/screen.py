@@ -48,7 +48,7 @@ from . import monsterpanel, planetdraw, planetrows, planetsend, planetwords
 
 log = logging.getLogger("planets")
 
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 #: The native box the inset stars are computed for (plntsum.cpp:1351).
 INSET_NATIVE = (443, 17, 180, 116)
 KEY_ESC = 27

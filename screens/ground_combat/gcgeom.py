@@ -27,7 +27,7 @@ under the top line, :1424-1470).
 """
 import pygame
 
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 
 #: `Draw_Summary_Box_ATK_` / `_DEF_` (colgcbt.cpp:279-296, :363-384): the
 #: frame COLGCBT.LBX 21 at (1, 40) / (0x17A, 0x28), darkened inside
@@ -80,7 +80,7 @@ def _cut(area, layout, band_h):
 
 def scale_for(layout, width):
     """The field's integer scale: the native picture's scale at this window
-    (`researchnative`'s, 2.25 at 1920 x 1080) to the step below it — 2 at
+    (`nativeview`'s, 2.25 at 1920 x 1080) to the step below it — 2 at
     1920 x 1080, 4 at 3840 x 2160, 3 at 3440 x 1440 — and no more than its
     640 native pixels fit `width` less the panel's inset (at least 1)."""
     from core.hud import shell

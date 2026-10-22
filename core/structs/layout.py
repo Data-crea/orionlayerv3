@@ -19,9 +19,25 @@ that engine's bytes.
 
 Nothing outside `core/structs/` and `core/game_state.py` reads a position;
 a screen asks a spec for a member by name.
+
+**HAZARD (work order 324, documented, not redesigned): THE INSTALLED LAYOUT
+IS PROCESS-GLOBAL.** `_state` below is one dict per process, so every
+`GameClient` in it shares the layout of whichever engine connected last
+(`install` replaces it, `current()` reads it), and a spec asks it for a
+position at parse time rather than being handed one. It is so because
+OrionLayer runs one engine and one client per process, and because every
+spec would otherwise need the layout threaded through `parse_state` and
+each screen (decision 97 makes this module the one place a position is
+learned). What it costs: two clients in one
+process (a test that connects two fake engines, a reconnect to an engine of
+another version before the old client is gone) read each other's offsets,
+silently — a wrong byte position raises nothing. A caller that needs two
+must `install` before each parse, or this has to become a per-client object
+handed to `parse_state`.
 """
 import logging
-import struct
+
+from core.blockreader import BlockError, Reader
 
 log = logging.getLogger("layout")
 
@@ -87,22 +103,14 @@ class Layout:
 def parse(payload):
     """A LAYOUT message's payload -> Layout. Raises ValueError on one that is
     short or of a version this reader does not know."""
-    pos = 0
+    r = Reader(payload)
+    take = r.take
 
-    def take(fmt):
-        nonlocal pos
-        vals = struct.unpack_from("<" + fmt, payload, pos)
-        pos += struct.calcsize("<" + fmt)
-        return vals
-
-    def text():
-        nonlocal pos
-        (n,) = take("B")
-        raw = payload[pos:pos + n]
-        if len(raw) != n:
+    def ascii_name():
+        n = r.one("B")
+        if not r.fits(n):
             raise ValueError("LAYOUT: a name runs past the message")
-        pos += n
-        return raw.decode("ascii")
+        return r.raw(n).decode("ascii")
 
     try:
         version, n_records = take("HH")
@@ -111,22 +119,23 @@ def parse(payload):
                              f"{VERSION}")
         records = {}
         for _ in range(n_records):
-            name = text()
+            name = ascii_name()
             size, n_members = take("IH")
             members = {}
             for _ in range(n_members):
-                mname = text()
+                mname = ascii_name()
                 offset, msize, element, kind = take("IIIB")
                 members[mname] = Member(mname, offset, msize, element, kind,
-                                        text())
+                                        ascii_name())
             records[name] = Record(name, size, members)
         constants = {}
         (n_constants,) = take("H")
         for _ in range(n_constants):
-            cname = text()
+            cname = ascii_name()
             (constants[cname],) = take("i")
-    except struct.error as err:
-        raise ValueError(f"LAYOUT: short message ({err})") from None
+    except BlockError:
+        raise ValueError(f"LAYOUT: short message (a read at byte {r.pos} of "
+                         f"{len(payload)})") from None
     return Layout(version, records, constants)
 
 

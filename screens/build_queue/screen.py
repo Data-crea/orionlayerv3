@@ -32,7 +32,7 @@ from core.hud import shell
 from core.estrings import EStrings
 from core.screen_base import ScreenBase
 from screens.colony_summary import colonyrows
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import bqdraw, bqwire as w
 

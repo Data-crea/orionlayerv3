@@ -4,6 +4,7 @@
 Split out of `core/game_state.py` so that file stays under the 300-line
 guideline; `parse_state` calls `parse` right after the INFS block.
 """
+from core.blockreader import Reader
 
 
 def parse(gs, data, pos):
@@ -14,28 +15,8 @@ def parse(gs, data, pos):
     would draw a colony's screen from half its data without saying so.
     An engine without the fixes writes none of them, and every key stays
     None — the state the screens fall back on (the safety net)."""
-    import struct as _st
-
-    def take(fmt):
-        nonlocal pos
-        size = _st.calcsize("<" + fmt)
-        if pos + size > len(data):
-            raise ValueError("short")
-        vals = _st.unpack_from("<" + fmt, data, pos)
-        pos += size
-        return vals
-
-    def block(tag, reader):
-        nonlocal pos
-        if data[pos:pos + 4] != tag:
-            return None
-        start = pos
-        pos += 4
-        try:
-            return reader()
-        except ValueError:
-            pos = start
-            return None
+    r = Reader(data, pos)
+    take, block = r.take, r.block
 
     gs.colony_screen = block(b"COLS", lambda: dict(zip(
         ("star", "orbit", "colony", "drawing_display", "field_mode",
@@ -70,7 +51,7 @@ def parse(gs, data, pos):
                                  take("4h"))) for _ in range(7)]
         return out
     gs.build_lists = block(b"BLDL", _bldl)
-    return pos
+    return r.pos
 
 
 def parse_refit(gs, data, pos):
@@ -79,13 +60,14 @@ def parse_refit(gs, data, pos):
     (`COLREFIT::_first_ship`) and the list's length. Read whole or left
     None; an engine without the fix writes none, and the refit screen then
     draws no cell it cannot place (decision 46)."""
-    import struct as _st
     gs.refit_list = None
-    if data[pos:pos + 4] != b"RFIT" or pos + 9 > len(data):
+    r = Reader(data, pos)
+    if not r.at_tag(b"RFIT") or not r.fits(9):
         return pos
-    version, first, count = _st.unpack_from("<Bhh", data, pos + 4)
+    r.pos += 4
+    version, first, count = r.take("Bhh")
     if version != 1:
         return pos
     gs.refit_list = {"first": first, "count": count}
-    return pos + 9
+    return r.pos
 

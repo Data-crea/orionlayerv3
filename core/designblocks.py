@@ -25,9 +25,8 @@ The layout is the patch's, field for field; the smoke test holds this
 reader to a block built by the same field list, and the live recording of
 work order 185 part 6 to the scratch engine's own bytes.
 """
-import struct as _st
-
 from core import lang
+from core.blockreader import Reader
 
 #: `WEAPON_MOD_COUNT` (orion2_consts.h:1057, and its static_assert at
 #: :1391): the modification statuses DSBX carries.
@@ -47,31 +46,8 @@ def parse(gs, data, pos):
     """Read DSGN and DSBX at `pos` into `gs.ship_design` / `gs.design_box`
     (None each when absent or short). Returns the new position."""
 
-    def take(fmt):
-        nonlocal pos
-        size = _st.calcsize("<" + fmt)
-        if pos + size > len(data):
-            raise ValueError("short")
-        vals = _st.unpack_from("<" + fmt, data, pos)
-        pos += size
-        return vals
-
-    def text():
-        (n,) = take("B")
-        (raw,) = take(f"{n}s")
-        return lang.wire_text(raw)
-
-    def block(tag, reader):
-        nonlocal pos
-        if data[pos:pos + 4] != tag:
-            return None
-        start = pos
-        pos += 4
-        try:
-            return reader()
-        except ValueError:
-            pos = start
-            return None
+    r = Reader(data, pos)
+    take, text, block = r.take, r.text8, r.block
 
     def dsgn():
         version, slot, refit, cost, space_avail = take("BhBii")
@@ -125,4 +101,4 @@ def parse(gs, data, pos):
 
     gs.ship_design = block(b"DSGN", dsgn)
     gs.design_box = block(b"DSBX", dsbx)
-    return pos
+    return r.pos

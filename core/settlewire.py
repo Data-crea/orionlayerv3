@@ -24,7 +24,7 @@ the same star from the colony screen.
 """
 import struct as _st
 
-from core import wire_protocol
+from core.blockreader import Reader
 
 HEAD = "<BHhhBBBBB"
 #: `s_settler_settle_result` (orion2.h), member for member — the bytes
@@ -51,20 +51,21 @@ def parse(gs, data, pos):
     """Read STLR at `pos` into `gs.settle_outcome` (None when absent or
     short, else a dict). Returns the new position."""
     gs.settle_outcome = None
-    if data[pos:pos + 4] != b"STLR" or pos + 4 + SIZE > len(data):
+    r = Reader(data, pos)
+    if not r.at_tag(b"STLR") or not r.fits(4 + SIZE):
         return pos
+    r.pos += 4
     (version, seq, source, dest, listed, settled, stop, job_refusal,
-     extra) = _st.unpack_from(HEAD, data, pos + 4)
+     extra) = r.take(HEAD)
     if version != 1:
-        wire_protocol.refused("STLR", f"version {version}")
+        r.refuse("STLR", f"version {version}")
         return pos
-    at = pos + 4 + _st.calcsize(HEAD)
-    result = dict(zip(RESULT_FIELDS, data[at:at + len(RESULT_FIELDS)]))
+    result = dict(zip(RESULT_FIELDS, r.raw(len(RESULT_FIELDS))))
     gs.settle_outcome = {
         "seq": seq, "source": source, "dest": dest, "listed": listed,
         "settled": settled, "stop": stop, "job_refusal": job_refusal,
         "extra_notice": bool(extra), "result": result}
-    return pos + 4 + SIZE
+    return r.pos
 
 
 def build(seq=0, source=-1, dest=-1, listed=0, settled=0, stop=STOP_LIST,

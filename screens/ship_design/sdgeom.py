@@ -5,7 +5,7 @@ own calls (`DESIGN::Print_Current_Design_`, `Add_Design_Buttons_`,
 design_main.cpp) and checked against the field list recorded live on a
 scratch engine (work order 185, `dev:doc/ship_designer_reading.md` section
 10). The drawing, the hit test and a native screenshot therefore speak the
-same coordinates (decision 5), mapped to the window by `ldrdraw` as the
+same coordinates (decision 5), mapped to the window by `nativedraw` as the
 colony and Leaders screens map theirs.
 """
 GAME_SCREEN_ID = 3                       # SCREEN_DESIGN (orion2_consts.h)

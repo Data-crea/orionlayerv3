@@ -3,6 +3,21 @@ Parsed game state from orion2re Extension API.
 
 Entpackt die binären Struct-Arrays in Python-Objekte.
 Struct-Größen kommen aus orion2re sizes.h.
+
+**HAZARD (work order 324, documented, not redesigned): PARSING IS NOT PURE.**
+`parse_state` notes the engine's language (`lang.engine_settings`, from the
+settings bytes it has just read) in `core.lang`'s process-global state, so
+that every text it reads next (`lang.wire_text`) is decoded in that
+language's slots; and the record positions come from the process-global
+layout (`core/structs/layout.py`). It is so because the texts of the blocks
+after the settings must be decoded with the language the same snapshot
+names, and a global is the one place the block readers (`core/blockreader.py`
+and every `*wire.py`) can ask without a parameter each. What it costs: two
+snapshots of two engines parsed in one process, or a snapshot parsed only to
+look at it (a diagnostic tool, a check), CHANGES the language the live
+client decodes with, and the next live text can be decoded wrongly until
+its own snapshot is parsed. The module imports no pygame (checked by
+`090zzzzzs`): a parser needs no display.
 """
 import struct
 from core import lang, wire_protocol
@@ -452,14 +467,14 @@ def parse_state(data: bytes) -> GameState:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
 
     from core import colonyblocks, designblocks, diplblocks, moveblocks
-    from core import msgbox
+    from core import msgboxwire
     pos = diplblocks.parse(gs, data, pos)
     pos = colonyblocks.parse(gs, data, pos)
     pos = designblocks.parse(gs, data, pos)
     pos = moveblocks.parse(gs, data, pos)     # FMOV, open fix 48
-    pos = msgbox.parse(gs, data, pos)         # MSGB, open fix 29
-    from core import turnpopup
-    pos = turnpopup.parse(gs, data, pos)      # TPOP, open fix 49
+    pos = msgboxwire.parse(gs, data, pos)     # MSGB, open fix 29
+    from core import turnpopupwire
+    pos = turnpopupwire.parse(gs, data, pos)  # TPOP, open fix 49
     from core import hofblocks
     pos = hofblocks.parse(gs, data, pos)      # HOFM, open fix 50
     from core import mpblocks
@@ -478,9 +493,9 @@ def parse_state(data: bytes) -> GameState:
     pos = combatoptions.parse(gs, data, pos)  # COPT, open fix 68
     pos = helplist.parse(gs, data, pos)       # HLPL, open fix 69
     pos = colonyblocks.parse_refit(gs, data, pos)   # RFIT, open fix 85
-    from core import fleetbuttons, namebox, systemwindow, textfields
+    from core import fleetbuttons, nameboxwire, systemwindow, textfields
     pos = fleetbuttons.parse(gs, data, pos)   # FBTN, open fix 86
-    pos = namebox.parse(gs, data, pos)        # INBX, open fix 87
+    pos = nameboxwire.parse(gs, data, pos)    # INBX, open fix 87
     pos = textfields.parse(gs, data, pos)     # TXTF, open fix 88
     pos = systemwindow.parse(gs, data, pos)   # SYSW, open fix 90
     from core import planetsblock

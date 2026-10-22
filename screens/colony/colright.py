@@ -19,7 +19,7 @@ colony.cpp:1731-1758) — and the game's `Text_Box_` comes back as HD's
 message box (`core/rightinfo`).
 """
 from core import rightinfo
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import colgeom as geom
 

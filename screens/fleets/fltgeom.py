@@ -34,7 +34,7 @@ of another shape puts the star boxes off the stars.
 """
 
 #: The original's screen, and the reference space HD lays out in.
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 
 #: `SCREEN_FLEET = 4`, orion2_consts.h:465.
 GAME_SCREEN_ID = 4

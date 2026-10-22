@@ -96,7 +96,7 @@ from core import prodname
 from core.screen_base import ScreenBase
 from screens.colony_summary import (colonylist, colonymove, colonypick,
                                     colonysend)
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import (coldraw, colgeom as geom, colright, colsettle, coltransfer,
                colwire, colwords)

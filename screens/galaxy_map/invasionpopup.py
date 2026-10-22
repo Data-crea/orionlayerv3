@@ -50,7 +50,7 @@ import pygame
 from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import text as hudtext
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 log = logging.getLogger("galaxy_map.invasion_popup")
 

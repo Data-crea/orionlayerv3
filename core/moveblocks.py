@@ -17,7 +17,7 @@ nothing and `gs.fleet_move` stays None — the map then draws no preview line
 """
 import struct as _st
 
-from core import wire_protocol
+from core.blockreader import Reader
 from core.structs import combat as combat_struct
 
 #: s_ship_move_info, whole: `core/structs/combat.py` (it follows the
@@ -31,22 +31,20 @@ def parse(gs, data, pos):
     """Read FMOV at `pos` into `gs.fleet_move` (None when absent or short).
     Returns the new position."""
     gs.fleet_move = None
-    if data[pos:pos + 4] != b"FMOV" or pos + 8 > len(data):
+    r = Reader(data, pos)
+    if not r.at_tag(b"FMOV") or not r.fits(8):
         return pos
-    version, n, size = _st.unpack_from("<BhB", data, pos + 4)
-    body = pos + 8
+    r.pos += 4
+    version, n, size = r.take("BhB")
     if version != 1 or size != SPEC.resolved()[0] or n < 0 or \
-            body + n * size > len(data):
-        wire_protocol.refused(
-            "FMOV", f"version {version}" if version != 1 else
-            "record size or count", f"record {size}, {n} records, "
-            f"{len(data) - body} bytes left")
+            not r.fits(n * size):
+        r.refuse("FMOV", f"version {version}" if version != 1 else
+                 "record size or count", f"record {size}, {n} records, "
+                 f"{r.left()} bytes left")
         return pos
-    verdicts = [combat_struct.record(SPEC, data[body + i * size:
-                                                body + (i + 1) * size])
-                for i in range(n)]
+    verdicts = [combat_struct.record(SPEC, r.raw(size)) for _ in range(n)]
     gs.fleet_move = {"version": version, "verdicts": verdicts}
-    return body + n * size
+    return r.pos
 
 
 def build(verdicts):

@@ -29,7 +29,7 @@ original's own field and this module never touches it.
 import pygame
 
 from core import researchlist
-from core import researchnative as geom_mod
+from core import nativeview as geom_mod
 
 #: The band's height in the original's own pixels, the same for every
 #: row — see `researchlist.BAND_H` for why it is derived and not typed.

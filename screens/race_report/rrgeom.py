@@ -1,7 +1,7 @@
 """The race report's native geometry — racerprt.cpp:9-155 (work order 223).
 
 Every rectangle is the original's 640 x 480 one; the drawing maps it
-through `core/researchnative` as the Races and Info screens do.
+through `core/nativeview` as the Races and Info screens do.
 """
 #: The report has no id of its own: the game shows it under Races' 6
 #: (racescrn.cpp, `Race_Report_Screen_` is called from the Races loop).

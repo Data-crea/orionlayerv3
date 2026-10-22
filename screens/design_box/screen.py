@@ -39,7 +39,7 @@ import logging
 import pygame
 
 from core.screen_base import ScreenBase
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 from screens.ship_design import sdart
 from screens.ship_design.screen import Names
 

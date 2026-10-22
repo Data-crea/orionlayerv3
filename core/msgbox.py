@@ -36,16 +36,14 @@ right- or centre-justified one up to the column the next X names: the
 boarding result's two sides side by side (cmbtfir2.cpp:1650-1666). The words on the buttons are artwork in the original
 and typed in `assets/shared/msgbox/labels.json` (decision 15).
 """
-import struct as _st
-
 import pygame
 
 from core import helpformat, lang
+from core.msgboxwire import (  # noqa: F401 — the names callers use
+    KINDS, parse, build)
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
-KINDS = {1: "text", 2: "timed", 3: "message", 4: "warning",
-         5: "confirmation"}
 DEFAULT_WORDS = {"yes": "YES", "no": "NO", "close": "CLOSE"}
 #: Reference geometry (1080 px tall), scaled by `win_h / 1080`.
 REF_W = 900
@@ -56,58 +54,6 @@ REF_FONT, REF_TITLE_FONT = 30, 38
 REF_BUTTON = (220, 60)
 #: The held frame's dim under the box (as the F12 notice's).
 DIM_ALPHA = 110
-
-
-def parse(gs, data, pos):
-    """Read MSGB at `pos` into `gs.message_box` (None when absent or short).
-    Returns the new position."""
-    gs.message_box = None
-    if data[pos:pos + 4] != b"MSGB" or pos + 12 > len(data):
-        return pos
-    version, kind, fa, fb, ticks = _st.unpack_from("<BBhhh", data, pos + 4)
-    at = pos + 12
-    texts = []
-    for _ in range(2):
-        if at + 2 > len(data):
-            return pos
-        (n,) = _st.unpack_from("<h", data, at)
-        at += 2
-        if n < 0 or at + n > len(data):
-            return pos
-        texts.append(lang.wire_text(data[at:at + n]))
-        at += n
-    items = {}
-    if version == 2:
-        # the values of the text's item codes (open fix 67): a count, then
-        # an index byte and an int32 each
-        if at >= len(data) or at + 1 + data[at] * 5 > len(data):
-            return pos
-        for k in range(data[at]):
-            idx, val = _st.unpack_from("<Bi", data, at + 1 + 5 * k)
-            items[idx] = val
-        at += 1 + data[at] * 5
-    if version not in (1, 2) or kind not in KINDS:
-        return pos
-    gs.message_box = {"kind": KINDS[kind], "field_a": fa, "field_b": fb,
-                      "ticks": ticks, "title": texts[0] or None,
-                      "text": texts[1], "items": items}
-    return at
-
-
-def build(kind, text, title=None, field_a=1, field_b=-1, ticks=0,
-          items=None):
-    """The block as the engine writes it — for the checks' stand-ins;
-    version 2 (open fix 67) when `items` are given."""
-    code = {v: k for k, v in KINDS.items()}[kind]
-    out = b"MSGB" + _st.pack("<BBhhh", 1 if items is None else 2, code,
-                             field_a, field_b, ticks)
-    for s in (title or "", text):
-        raw = s.encode("latin-1")
-        out += _st.pack("<h", len(raw)) + raw
-    if items is not None:
-        out += bytes([len(items)]) + b"".join(
-            _st.pack("<Bi", k, v) for k, v in items.items())
-    return out
 
 
 def answers(box, fields):

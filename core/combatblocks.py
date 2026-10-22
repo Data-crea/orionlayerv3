@@ -34,6 +34,7 @@ September 2026 for letting the engine run ahead of HD's animations.
 import struct as _st
 
 from core import wire_protocol
+from core.blockreader import Reader
 from core.structs import combat as combat_struct
 
 GRID_W, GRID_H = 81, 68
@@ -86,9 +87,8 @@ def acting_unit(combat):
 
 
 def _cmbt(data, pos):
-    at = pos + 4
-    head = _st.unpack_from(CMBT_HEAD, data, at)
-    at += CMBT_HEAD_SIZE
+    r = Reader(data, pos + 4)
+    head = r.take(CMBT_HEAD)
     if head[0] != 1:
         wire_protocol.refused("CMBT", f"version {head[0]}")
         return None, pos
@@ -97,12 +97,9 @@ def _cmbt(data, pos):
             "view_x", "view_y", "in_nebula", "colony", "scan_flag",
             "board_flag", "super_fast")
     out = dict(zip(keys, head[1:]))
-    (n_order,) = _st.unpack_from("<B", data, at)
-    at += 1
-    out["turn_order"] = list(_st.unpack_from(f"<{n_order}h", data, at))
-    at += 2 * n_order
-    size, units = _st.unpack_from("<Hh", data, at)
-    at += 4
+    n_order = r.one("B")
+    out["turn_order"] = list(r.take(f"{n_order}h"))
+    size, units = r.take("Hh")
     if size != combat_struct.UNIT_SPEC.resolved()[0] or not 0 <= units <= 210:
         wire_protocol.refused("CMBT", "unit record size or count",
                               f"record {size}, {units} units")
@@ -120,17 +117,9 @@ def _cmbt(data, pos):
         return None, pos
     out["units"] = []
     for _ in range(units):
-        rec = data[at:at + size]
-        if len(rec) != size:
-            return None, pos
-        out["units"].append(unit(rec))
-        at += size
-    nbytes = (GRID_W * GRID_H + 7) // 8
-    bits = data[at:at + nbytes]
-    if len(bits) != nbytes:
-        return None, pos
-    out["legal"] = bytes(bits)
-    return out, at + nbytes
+        out["units"].append(unit(r.raw(size)))
+    out["legal"] = bytes(r.raw((GRID_W * GRID_H + 7) // 8))
+    return out, r.pos
 
 
 #: `s_missile`, whole: `core/structs/combat.py` (it follows the layout).
@@ -140,21 +129,19 @@ MISSILE_SIZE = combat_struct.MISSILE_SPEC.size
 def _cmsl(data, pos):
     """CMSL: version, serial, the record size, n, n x (int16 index, the
     live `s_missile` — type above 0)."""
-    version, serial, size, n = _st.unpack_from("<BHBh", data, pos + 4)
-    at = pos + 10
+    r = Reader(data, pos + 4)
+    version, serial, size, n = r.take("BHBh")
     want = combat_struct.MISSILE_SPEC.resolved()[0]
     if version != 1 or size != want or not 0 <= n <= 300 or \
-            at + n * (2 + size) > len(data):
+            not r.fits(n * (2 + size)):
         return None, pos
     missiles = []
     for _ in range(n):
-        (index,) = _st.unpack_from("<h", data, at)
-        m = combat_struct.record(combat_struct.MISSILE_SPEC,
-                                 data[at + 2:at + 2 + size])
+        index = r.one("h")
+        m = combat_struct.record(combat_struct.MISSILE_SPEC, r.raw(size))
         m["index"] = index
         missiles.append(m)
-        at += 2 + size
-    return {"serial": serial, "missiles": missiles}, at
+    return {"serial": serial, "missiles": missiles}, r.pos
 
 
 CRES_HEAD = "<BHHBhhhhhhhih"
@@ -165,12 +152,12 @@ CRES_UNIT_SIZE = _st.calcsize(CRES_UNIT)
 def _cres(data, pos):
     """CRES: how the last battle ended — kept by the engine until the next
     battle starts, so a client tells results apart by `number`."""
-    head = _st.unpack_from(CRES_HEAD, data, pos + 4)
-    at = pos + 4 + _st.calcsize(CRES_HEAD)
+    r = Reader(data, pos + 4)
+    head = r.take(CRES_HEAD)
     (version, number, serial, fought, winner, turn, star, colony, attacker,
      defender, pop_lost, stardate, units) = head
     if version != 1 or not 0 <= units <= 210 or \
-            at + units * CRES_UNIT_SIZE > len(data):
+            not r.fits(units * CRES_UNIT_SIZE):
         return None, pos
     out = {"number": number, "serial": serial, "fought": bool(fought),
            # 1 attacker, -1 defender (also after the 50-turn timeout: `turn`
@@ -182,10 +169,8 @@ def _cres(data, pos):
             "is_retreating", "is_captured", "structure_damage",
             "armor_remaining", "structure_max")
     for _ in range(units):
-        out["units"].append(dict(zip(keys, _st.unpack_from(CRES_UNIT, data,
-                                                           at))))
-        at += CRES_UNIT_SIZE
-    return out, at
+        out["units"].append(dict(zip(keys, r.take(CRES_UNIT))))
+    return out, r.pos
 
 
 def _ctgt(data, pos):
@@ -193,23 +178,20 @@ def _ctgt(data, pos):
     missile one byte, bit k = weapon slot k can hit it now (arc, ammunition,
     range, legality: what Fire_Ship_ tests; not whether the player has the
     slot switched on, which CMBT's `active` says)."""
-    version, serial, source, units = _st.unpack_from("<BHhh", data, pos + 4)
-    at = pos + 11
-    if version != 1 or not 0 <= units <= 210 or at + units + 2 > len(data):
+    r = Reader(data, pos + 4)
+    version, serial, source, units = r.take("BHhh")
+    if version != 1 or not 0 <= units <= 210 or not r.fits(units + 2):
         return None, pos
-    masks = list(data[at:at + units])
-    at += units
-    (n,) = _st.unpack_from("<h", data, at)
-    at += 2
-    if not 0 <= n <= 300 or at + 3 * n > len(data):
+    masks = list(r.raw(units))
+    n = r.one("h")
+    if not 0 <= n <= 300 or not r.fits(3 * n):
         return None, pos
     missiles = {}
     for _ in range(n):
-        index, mask = _st.unpack_from("<hB", data, at)
+        index, mask = r.take("hB")
         missiles[index] = mask
-        at += 3
     return {"serial": serial, "unit": source, "units": masks,
-            "missiles": missiles}, at
+            "missiles": missiles}, r.pos
 
 
 #: The event kinds (ext_api.h, `CombatEventType`) and what their eight
@@ -292,19 +274,18 @@ def _cmev(data, pos):
     `first` — a first above the client's next number is a GAP (the ring
     holds 1024, or no client was connected). An unknown kind is kept by its
     number: a newer engine's event must not end the stream."""
-    version, first, n = _st.unpack_from("<BIH", data, pos + 4)
-    at = pos + 11
-    if version != 1 or at + n * EVENT_SIZE > len(data):
+    r = Reader(data, pos + 4)
+    version, first, n = r.take("BIH")
+    if version != 1 or not r.fits(n * EVENT_SIZE):
         return None, pos
     events = []
     for k in range(n):
-        serial, kind, *args = _st.unpack_from(EVENT_FORMAT, data, at)
+        serial, kind, *args = r.take(EVENT_FORMAT)
         name, keys = EVENTS.get(kind, (f"kind_{kind}", ()))
         ev = {"seq": first + k, "serial": serial, "kind": name}
         ev.update({key: args[i] for i, key in enumerate(keys)})
         events.append(ev)
-        at += EVENT_SIZE
-    return {"first": first, "events": events}, at
+    return {"first": first, "events": events}, r.pos
 
 
 def build_cmsl(missiles, serial=1):
@@ -332,7 +313,7 @@ def parse_events_after(gs, data, pos):
             data[pos:pos + 4] == b"CMEV":
         try:
             value, end = _cmev(data, pos)
-        except (_st.error, IndexError):
+        except (_st.error, IndexError, ValueError):
             return pos
         if value is not None:
             gs.combat_events = value
@@ -346,7 +327,7 @@ def cut(data, at, tag):
     reader, _attr = PARSERS[tag]
     try:
         value, end = reader(data, at)
-    except (_st.error, IndexError):
+    except (_st.error, IndexError, ValueError):
         return None
     return None if value is None else bytes(data[at:end])
 
@@ -377,7 +358,7 @@ def parse(gs, data, pos):
             continue
         try:
             value, end = reader(data, pos)
-        except (_st.error, IndexError):
+        except (_st.error, IndexError, ValueError):
             value = None
         if value is not None:
             setattr(gs, attr, value)

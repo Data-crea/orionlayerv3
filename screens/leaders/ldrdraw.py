@@ -1,7 +1,8 @@
 """Drawing the Leaders screen: the rows, the buttons, the strips, the boxes.
 
 Everything is placed at the HD image of its native rectangle
-(`ldrgeom`, through `core/researchnative`), so the drawing, the hit test
+(`ldrgeom`, through `core/nativeview`; the shared drawing helpers
+are `core/nativedraw`'s), so the drawing, the hit test
 and a native screenshot all speak the original's coordinates.
 
 WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
@@ -34,14 +35,10 @@ from core.hud import blocks as hud
 from core.hud import text as hudtext
 
 from core import leaderportraits
-from core import palette
-from core import researchnative as nat
-from core.config import REF_H, REF_W
+from core import nativedraw
 
 from . import ldrgeom as geom
 from . import ldrpics
-
-MIN_FONT = 8
 
 #: The row text colours as the ORIGINAL names them — palette indices
 #: (`_normal_text_colors` 68, `_selected_text_colors` 71, `_red_colors`
@@ -92,50 +89,10 @@ def status_words(row):
     (mockup 2's "OFFIZIERSSTAB"); the game's words otherwise."""
     return (row.status or "").upper()
 
-#: The inner boxes: the research screens' two colours, read from the
-#: sections that own them (work order 166 C) — not copied here.
-BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 #: The galaxy box is NOT black any more (work order 175): the original
 #: draws its stars over the black of OFFICER.LBX 0 there, and Data's
 #: screenshot showed that black as a hole in the HUD. It is a glass
 #: panel like every other box — DEVIATION `map_glass`.
-
-#: DEVIATION `hd_font`: the text heights in the original's own pixels,
-#: chosen from the line pitch each text sits on (the skill lines step
-#: 0x11 = 17; the cost column's two lines share one text line's height).
-NATIVE_TEXT = {"name": 10, "cost": 7, "status": 8, "skill": 9,
-               "strip": 9, "button": 9, "note": 8}
-
-
-def native_scale(layout):
-    """Window pixels per native pixel — `researchnative`'s own scale."""
-    return layout.scale * min(REF_W / geom.NATIVE_W, REF_H / geom.NATIVE_H)
-
-
-def rect(layout, native):
-    return pygame.Rect(*nat.window_rect(native, layout))
-
-
-def field_hit(layout, f, x, y):
-    """Is window point (x, y) on live field `f`, drawn where the layout
-    maps its native rectangle — the panel map's click test (work order
-    225), one home since work order 228 (four screens had a copy)."""
-    return rect(layout, (f.x, f.y, f.x_end, f.y_end)).collidepoint(x, y)
-
-
-def field_slant_hit(layout, f, x, y):
-    """`field_hit` for a field drawn as the shell's slanted button: its
-    own shape (`core.hud.shell.hit`)."""
-    from core.hud import shell
-    return shell.hit(rect(layout, (f.x, f.y, f.x_end, f.y_end)), x, y)
-
-
-def point(layout, x, y):
-    return nat.window_point((x, y), layout)
-
-
-def font_px(layout, key):
-    return max(MIN_FONT, int(round(NATIVE_TEXT[key] * native_scale(layout))))
 
 
 def text_colour(art, key):
@@ -143,38 +100,6 @@ def text_colour(art, key):
     value read off that palette for work order 167."""
     rgb = art.palette_rgb(TEXT_INDEX[key]) if art is not None else None
     return tuple(rgb) if rgb else TEXT_FALLBACK[key]
-
-
-def fit(style, text, max_w, size):
-    """The largest size at or below `size` whose RENDER fits `max_w`
-    (measured by rendering, `core/textfit`'s rule)."""
-    while size > MIN_FONT and style.render_text(text, size,
-                                                (255, 255, 255)).get_width() > max_w:
-        size -= 1
-    return size
-
-
-def blit_text(surface, style, text, x, y, max_w, size, colour, align="left"):
-    """One line, shrunk to fit `max_w`, anchored `left`/`right`/`center`
-    at window `x`. Returns the drawn rect or None."""
-    if not text:
-        return None
-    size = fit(style, text, max(1, max_w), size)
-    surf = style.render_text(text, size, colour)
-    if align == "right":
-        x -= surf.get_width()
-    elif align == "center":
-        x -= surf.get_width() // 2
-    surface.blit(surf, (x, y))
-    return pygame.Rect(x, y, surf.get_width(), surf.get_height())
-
-
-def draw_box(surface, screen, native):
-    """One inner box: fill and plate. DEVIATION `inner_boxes_drawn`."""
-    r = rect(screen.layout, native)
-    # A HUD panel since decision 71 (work order 169).
-    hud.panel(surface, r, screen.layout.scale)
-    return r
 
 
 def strip_rect(layout, native):
@@ -185,8 +110,8 @@ def strip_rect(layout, native):
     the view box's centre (300-629) — 10 window px uneven at 3840x2160 once
     the panel holds the view box edge to edge. HD = the same width, centred;
     nothing is hit there."""
-    r = rect(layout, native)
-    r.centerx = rect(layout, geom.VIEW_BOX).centerx
+    r = nativedraw.rect(layout, native)
+    r.centerx = nativedraw.rect(layout, geom.VIEW_BOX).centerx
     return r
 
 
@@ -196,34 +121,6 @@ def draw_strip_box(surface, screen, native):
     r = strip_rect(screen.layout, native)
     hud.panel(surface, r, screen.layout.scale)
     return r
-
-
-#: How far a sprite may overhang the scale it stands at (work order 225):
-#: in a shell panel the scale is the panel's (`PanelMap.sprite_scale`),
-#: 1.91 for the Leaders rows at 1080p, and a strict floor would halve the
-#: portraits there; 5 % keeps the step the island gave (2) while the
-#: portrait still ends above its row's status line.
-STEP_SLACK = 1.05
-
-
-def magnified(sprite, layout):
-    """HD EXTENSION `sprite_scale`: the largest integer factor that does
-    not exceed the native-to-window scale — in a shell panel the panel's
-    own (`core.panelmap`), within `STEP_SLACK`."""
-    fitted = getattr(layout, "sprite_scale", None)
-    step = max(1, int(fitted * STEP_SLACK) if fitted is not None
-               else int(native_scale(layout)))
-    if step == 1:
-        return sprite
-    return pygame.transform.scale_by(sprite, step)
-
-
-def stretched(sprite, window_rect):
-    """HD EXTENSION `sprite_scale`: nearest-neighbour to the exact HD
-    rectangle of the sprite's native one (`transform.scale` does not
-    blend), so an art's painted cells land under the fields they belong
-    to."""
-    return pygame.transform.scale(sprite, window_rect.size)
 
 
 # ── The inner boxes ───────────────────────────────────────
@@ -246,20 +143,20 @@ def draw_frame_boxes(surface, screen, slots=None, art=None):
     picture, an empty one the empty slot's — else every row as before."""
     layout = screen.layout
     for i in range(geom.ROWS):
-        r = rect(layout, row_box(i))
+        r = nativedraw.rect(layout, row_box(i))
         row = slots.get(i) if slots is not None else None
         if slots is None or not ldrpics.draw_box(
                 surface, r, layout.scale,
                 ldrpics.slot_place(i, row is not None),
                 word_zones(screen, i, row, art),
                 words=slot_of(screen, row).text_area if row else None):
-            draw_box(surface, screen, row_box(i))
+            nativedraw.draw_box(surface, screen, row_box(i))
     from . import ldrsystem
     if not ldrsystem.draw_box(surface, screen, art):
-        draw_box(surface, screen, geom.VIEW_BOX)
-    if not ldrpics.draw_box(surface, rect(layout, geom.GALAXY_BOX),
+        nativedraw.draw_box(surface, screen, geom.VIEW_BOX)
+    if not ldrpics.draw_box(surface, nativedraw.rect(layout, geom.GALAXY_BOX),
                             layout.scale, "minimap", map_zones(screen)):
-        draw_box(surface, screen, geom.GALAXY_BOX)
+        nativedraw.draw_box(surface, screen, geom.GALAXY_BOX)
     draw_strip_box(surface, screen, geom.VIEW_STRIP)
     draw_strip_box(surface, screen, geom.MAP_STRIP)
 
@@ -337,7 +234,7 @@ def map_zones(screen):
     the contrast it has there (measured, work order 237: the nebula's core
     took one star from 4.2 : 1 to 1.7 : 1 before this)."""
     from core.hud import fill
-    r = rect(screen.layout, geom.GALAXY_BOX)
+    r = nativedraw.rect(screen.layout, geom.GALAXY_BOX)
     return [(r, ldrpics.ground(fill.member("panel")))]
 
 
@@ -364,7 +261,7 @@ def caption_lines(screen, slot):
     if view is not None and view.hire_mode:
         return [], []
     layout, style = screen.layout, screen.style
-    box = rect(layout, row_box(slot))
+    box = nativedraw.rect(layout, row_box(slot))
     tab = "colony" if view is not None and \
         view.view == geom.VIEW_COLONY else "ship"
     room = box.right - (box.x + int(box.w * CAPTION_X)) - box.h // 6
@@ -372,9 +269,9 @@ def caption_lines(screen, slot):
     for key, role, top, cap in CAPTION:
         words = modtexts.text(f"leaders.empty.{tab}.{key}") or ""
         ink = hudtext.colour(role)
-        size = max(MIN_FONT, int(round(
+        size = max(nativedraw.MIN_FONT, int(round(
             cap * box.h / hudtext.cap_ratio(style))))
-        size = fit(style, words, max(1, room), size)
+        size = nativedraw.fit(style, words, max(1, room), size)
         surf = style.render_text(words, size, ink)
         ink_top = surf.get_bounding_rect().y
         at = (box.x + int(box.w * CAPTION_X),
@@ -408,7 +305,8 @@ def draw_rows(surface, screen, rows, art, lit=()):
 def _cap_size(style, cap_px):
     """The font size whose capitals are `cap_px` tall (the empty caption's
     rule, `caption_lines`)."""
-    return max(MIN_FONT, int(round(cap_px / hudtext.cap_ratio(style))))
+    return max(nativedraw.MIN_FONT,
+               int(round(cap_px / hudtext.cap_ratio(style))))
 
 
 def _render_cap(style, text, cap_px, colour, max_w=None):
@@ -416,7 +314,7 @@ def _render_cap(style, text, cap_px, colour, max_w=None):
     and the y of its capitals' top inside it."""
     size = _cap_size(style, cap_px)
     if max_w is not None:
-        size = fit(style, text or " ", max(1, max_w), size)
+        size = nativedraw.fit(style, text or " ", max(1, max_w), size)
     surf = style.render_text(text or " ", size, colour)
     cap_top = style.render_text("H", size, colour).get_bounding_rect().y
     return surf, cap_top
@@ -475,7 +373,7 @@ def slot_of(screen, row):
     ground and both right clicks use (decision 5)."""
     from . import ldrslot
     layout = screen.layout
-    box = rect(layout, row_box(row.slot))
+    box = nativedraw.rect(layout, row_box(row.slot))
     inner = hud.panel_inner(box, layout.scale)
     slot = ldrslot.Slot(box, inner, len(row.skills))
     size = _cap_size(screen.style, slot.px(ldrslot.SKILL_CAP))
@@ -541,7 +439,8 @@ def _draw_row(surface, screen, row, art, lit):
         surface.blit(pic, at)
     else:
         at = slot.portrait_rect(plate_size(slot))
-        screen.style.draw_plate(surface, at, screen.layout.scale, BOX_OUTLINE)
+        screen.style.draw_plate(surface, at, screen.layout.scale,
+                                nativedraw.BOX_OUTLINE)
     cost_left = _draw_cost(surface, screen, row, inks, slot)
     room = cost_left - slot.text_x - slot.px(ldrslot.NAME_CAP)
     # The name at the top of the text column (:3624-3634's words).
@@ -652,21 +551,6 @@ def skill_line_rects(screen, row):
     return [line for line, _icon, _cy in slot_of(screen, row).skill_lines()]
 
 
-def skill_icon(icon, size):
-    """A skill icon in its `size` square: the original's drawing at the
-    largest integer step that fits (HD EXTENSION `sprite_scale`), a painted
-    one larger than the square scaled down smoothly to it (work order 255:
-    a redrawn icon from the mod folder, `core.blobart`, is drawn at the
-    slot's size, never magnified)."""
-    w, h = icon.get_size()
-    if w > size or h > size:
-        k = min(size / w, size / h)
-        return pygame.transform.smoothscale(
-            icon, (max(1, round(w * k)), max(1, round(h * k))))
-    step = max(1, min(size // max(1, w), size // max(1, h)))
-    return pygame.transform.scale_by(icon, step) if step > 1 else icon
-
-
 #: INVENTION `skill_ground` (Data's readability tests of 16 Oct 2026):
 #: one dark ground behind a row's whole skill list — icons, names and
 #: values — so they read on any slot picture, with no box to be seen; the
@@ -743,7 +627,7 @@ def _draw_skills(surface, screen, row, art, inks, slot):
         icon = art.skill_icon(sid) if art is not None and art.available \
             else None
         if icon is not None:
-            pic = skill_icon(icon, icon_r.h)
+            pic = nativedraw.skill_icon(icon, icon_r.h)
             surface.blit(pic, pic.get_rect(center=icon_r.center))
         top = cy - cap_px // 2
         name_ink, value_ink = skill_inks(inks, name, value)
@@ -786,10 +670,10 @@ def tab_rects(screen):
     place. Drawn and hit in this one rect (decision 5)."""
     from core.hud import shell
     layout = screen.layout
-    band = rect(layout, row_box(0))
+    band = nativedraw.rect(layout, row_box(0))
     x, y = geom.TAB_DRAW[TAB_ORDER[0]]
     w, h = geom.BUTTON_SIZE[TAB_ORDER[0]]
-    tall = rect(layout, (x, y, x + w - 1, y + h - 1))
+    tall = nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1))
     gap = shell.element_gap(layout)
     widths = [geom.BUTTON_SIZE[n][0] for n in TAB_ORDER]
     first = round((band.w - gap) * widths[0] / sum(widths))
@@ -818,7 +702,7 @@ def draw_button(surface, screen, art, name, frame=0, dull=False,
     else:
         x, y = at or geom.BUTTONS[name][0]
         w, h = geom.BUTTON_SIZE[name]
-        r = rect(layout, (x, y, x + w - 1, y + h - 1))
+        r = nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1))
     state = "disabled" if dull else ("active" if frame else "normal")
     hud.small_button(surface, r, layout.scale, state)
     colour = hudtext.colour("button")
@@ -827,9 +711,9 @@ def draw_button(surface, screen, art, name, frame=0, dull=False,
     word = BUTTON_WORDS[name]
     # NO GLYPH (work order 225, decision 91): the word alone, capitals.
     cx = r.centerx
-    blit_text(surface, screen.style, word, cx,
-              r.y + (r.h - font_px(layout, "button")) // 2, r.w - 4,
-              font_px(layout, "button"), colour, "center")
+    nativedraw.blit_text(surface, screen.style, word, cx,
+              r.y + (r.h - nativedraw.font_px(layout, "button")) // 2, r.w - 4,
+              nativedraw.font_px(layout, "button"), colour, "center")
     return r
 
 
@@ -844,18 +728,18 @@ def draw_strip(surface, screen, native, text, art):
         return
     from core import textfit
     r = strip_rect(screen.layout, native)
-    size = font_px(screen.layout, "strip")
+    size = nativedraw.font_px(screen.layout, "strip")
     ink = text_colour(art, "normal")
     room = r.w - 6
     if screen.style.render_text(text, size, ink).get_width() <= room:
-        blit_text(surface, screen.style, text, r.centerx,
+        nativedraw.blit_text(surface, screen.style, text, r.centerx,
                   r.y + (r.h - size) // 2, room, size, ink, "center")
         return
-    size = font_px(screen.layout, "note")
+    size = nativedraw.font_px(screen.layout, "note")
     lines = textfit.wrap_text(screen.style, text, size, room)
     lines = lines[:1] + [" ".join(lines[1:])] if len(lines) > 2 else lines
     step = r.h // max(1, len(lines))
     for k, line in enumerate(lines):
-        blit_text(surface, screen.style, line, r.centerx,
+        nativedraw.blit_text(surface, screen.style, line, r.centerx,
                   r.y + k * step + (step - size) // 2, room, size, ink,
                   "center")

@@ -5,7 +5,7 @@
 `orionlayer-local` 9ab84230 (the colony sources unchanged since
 `b44cbf76`, work order 180 B1), read in `dev:doc/colony_screen_reading.md`
 and re-read for this module. The HD screen draws each thing at the HD
-image of its native rectangle (`core/researchnative`), so the drawing,
+image of its native rectangle (`core/nativeview`), so the drawing,
 the hit test and a native screenshot speak one coordinate system.
 
 The button rectangles come from the ART (`Add_Button_Field_` reads the
@@ -16,7 +16,7 @@ the list it is sending into, so a different art size moves the button's
 field, never HD's idea of it.
 """
 
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 
 #: `SCREEN_COLONY` (orion2_consts.h:463).
 GAME_SCREEN_ID = 1

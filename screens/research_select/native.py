@@ -1,9 +1,9 @@
 """Select mode's rectangles — one binding of the shared geometry.
 
-Everything here is `core.researchnative`, configured for select mode.
+Everything here is `core.nativeview`, configured for select mode.
 The module exists because a screen folder is where a screen's own
 things live (decision 7) and because the names below have callers; the
-numbers are in `core/researchnative.py`, once, for both modes.
+numbers are in `core/nativeview.py`, once, for both modes.
 
 **THE GEOMETRY IS TRANSCRIBED, NOT DESIGNED** — every rectangle carries
 the tech.cpp line it comes from, in the shared module.
@@ -23,7 +23,7 @@ transcribe. Chosen inside the top band — the only strip of the panel
 with nothing in it, since the radios start at y 30 and the entry blocks
 at y 48. Marked in screen.py and held by a check.
 """
-from core.researchnative import (            # noqa: F401  (re-exported)
+from core.nativeview import (            # noqa: F401  (re-exported)
     NATIVE_H, NATIVE_W, Geometry, from_hd_point, seat, to_hd, to_hd_point,
     window_point, window_rect, window_width)
 

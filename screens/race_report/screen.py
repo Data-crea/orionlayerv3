@@ -33,7 +33,7 @@ from core.estrings import EStrings
 from screens.info import infodraw, infoview
 from screens.info.screen import InfoScreen, TECH
 from screens.info import infogeom as igeom
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 from screens.races import racesart
 
 from . import rrdraw, rrgeom as geom

@@ -32,7 +32,7 @@ assigns the selected officer, :1004-1034).
 """
 import logging
 
-from core import researchnative as nat
+from core import nativeview as nat
 from core import shipstacks
 from core import skildesc
 

@@ -33,6 +33,7 @@ a truncated block leaves the position where it was.
 import struct as _st
 
 from core import combatblocks, lang
+from core.blockreader import Reader
 from core.structs import combat as combat_struct
 
 #: The synthetic id the view reports outside a battle (open fix 106).
@@ -65,27 +66,25 @@ def parse(gs, data, pos):
     """Read SHPV at `pos` into `gs.ship_view` (None when absent, short or of
     another version or record size). Returns the new position."""
     gs.ship_view = None
-    if data[pos:pos + 4] != b"SHPV" or pos + 4 + HEAD_SIZE + 1 > len(data):
+    r = Reader(data, pos)
+    if not r.at_tag(b"SHPV") or not r.fits(4 + HEAD_SIZE + 1):
         return pos
-    version, ship, subject, name_field, exit_field = _st.unpack_from(
-        HEAD, data, pos + 4)
-    at = pos + 4 + HEAD_SIZE
-    n = data[at]
-    if at + 1 + n + 2 > len(data):
+    r.pos += 4
+    version, ship, subject, name_field, exit_field = r.take(HEAD)
+    n = r.one("B")
+    if not r.fits(n + 2):
         return pos                          # truncated
-    name = lang.wire_text(data[at + 1:at + 1 + n])
-    at += 1 + n
-    (size,) = _st.unpack_from("<h", data, at)
-    at += 2
-    if size < 0 or at + size > len(data):
+    name = lang.wire_text(r.raw(n))
+    size = r.one("h")
+    if size < 0 or not r.fits(size):
         return pos                          # truncated
     if version != 1 or n > 15 or \
             size != combat_struct.UNIT_SPEC.resolved()[0]:
-        return at + size                    # refused, stepped over
+        return r.pos + size                 # refused, stepped over
     gs.ship_view = {"ship_idx": ship, "subject": subject,
                     "name_field": name_field, "exit_field": exit_field,
-                    "name": name, "unit": combatblocks.unit(data[at:at + size])}
-    return at + size
+                    "name": name, "unit": combatblocks.unit(r.raw(size))}
+    return r.pos
 
 
 def build(ship_idx, record, name="", subject=0, name_field=-1, exit_field=-1,

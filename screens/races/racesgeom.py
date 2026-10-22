@@ -4,7 +4,7 @@
 ldrgeom.py`): each number is a literal in `src/game/racescrn.cpp` at
 orion2re's `orionlayer-local` (work order 175), and the HD screen draws
 each thing at the HD image of its native rectangle through
-`core/researchnative`, so the hit test and the drawing read one table
+`core/nativeview`, so the hit test and the drawing read one table
 (decision 5).
 
 The button sizes are the art's own header sizes (RACES.LBX 6-9, 60), the
@@ -14,7 +14,7 @@ on this disk's RACES.LBX for work order 175 and held to the live list by
 `raceswire`, which refuses a list that disagrees.
 """
 
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 
 #: `SCREEN_RACE` (orion2_consts.h:466).
 GAME_SCREEN_ID = 6

@@ -44,7 +44,7 @@ from core.hud import blocks as hud
 from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from screens.colony import coldraw
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 from screens.ship_design import sdart
 
 from . import dbgeom as geom
@@ -53,7 +53,7 @@ from . import dbgeom as geom
 def _t(surface, screen, words, x, y, w, key="value", role="value",
        align="left"):
     """`x` is the anchor the original prints at; right / centre alignment
-    are anchored there (`ldrdraw.blit_text`), as its `Print_Right_` /
+    are anchored there (`nativedraw.blit_text`), as its `Print_Right_` /
     `Print_Centered_` are; `w` is the width a word is fitted to."""
     return coldraw.text(surface, screen, words, x, y, w, key, role,
                         align=align)

@@ -40,9 +40,9 @@ the rows meet. Without the block nothing opens.
 import logging
 
 from core import helplist
-from core import researchnative as nat
+from core import nativeview as nat
 from core.screen_base import ScreenBase
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import audraw, auwire
 

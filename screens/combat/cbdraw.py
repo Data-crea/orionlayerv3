@@ -624,6 +624,6 @@ def draw_ordnance(surface, cam, art, ordnance, font_px, style, cache,
         if pic is not None:
             surface.blit(scaled(pic, cam.scale, cache), (x, y))
         if count > 1 and style is not None:
-            from screens.leaders import ldrdraw as nd
+            from core import nativedraw as nd
             nd.blit_text(surface, style, f"{count}", int(x), int(y),
                          200, font_px, (230, 230, 120))

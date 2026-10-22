@@ -39,8 +39,8 @@ class Pictures:
             else None
         if icon is None:
             return None
-        from screens.leaders import ldrdraw
-        return ldrdraw.skill_icon(icon, size)
+        from core import nativedraw
+        return nativedraw.skill_icon(icon, size)
 
 
 class Sources:

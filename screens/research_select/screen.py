@@ -145,7 +145,7 @@ class ResearchSelectScreen(ResearchPanelScreen):
     def build_native_map(self):
         """The two regions' panels are the shell's split of the content
         rectangle, not boxes: every box of this screen is SEATED from the
-        geometry's own table (`researchnative.seat`), which refuses a box it
+        geometry's own table (`nativeview.seat`), which refuses a box it
         has no native rectangle for."""
         from core import panelmap
         from core.hud import shell

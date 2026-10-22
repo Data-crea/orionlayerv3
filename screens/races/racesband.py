@@ -48,7 +48,7 @@ import pygame
 from core.hud import fill as boxfill
 from core.hud import glass
 from core.hud import style as hudstyle
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 #: The fade-in at the band's top, as a share of the word's line height:
 #: ours (decision 53), chosen on 316's renders — a hard top edge read as a
@@ -271,8 +271,8 @@ def draw(surface, rect, word_rect, ink, fade_top=0, side=0):
 
 def line_rect(style, text, x, y, max_w, size, align="left"):
     """Where `nd.blit_text` will draw `text` — the same fit, render and
-    anchor (ldrdraw.py:157-169), so the band is laid before the word; a
-    smoke check holds the two equal. None for no text."""
+    anchor (`core/nativedraw.blit_text`), so the band is laid before the
+    word; a smoke check holds the two equal. None for no text."""
     if not text:
         return None
     size = nd.fit(style, text, max(1, max_w), size)

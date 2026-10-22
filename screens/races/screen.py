@@ -34,8 +34,8 @@ from core.billtext import BillText
 from core.estrings import EStrings
 from core.hud import shell
 from core.screen_base import ScreenBase
-from core import researchnative as nat
-from screens.leaders import ldrdraw as nd
+from core import nativeview as nat
+from core import nativedraw as nd
 
 from . import racesart, racesdraw, racesgeom, racesrows, racesspies, raceswire
 

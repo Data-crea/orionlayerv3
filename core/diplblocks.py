@@ -13,9 +13,7 @@ left None — `core/colonyblocks.py`'s rule. An engine without the fixes
 writes nothing and the key stays None: the audience then keeps the game's
 own picture, as it does today. The layout is the patch's, field for field.
 """
-import struct as _st
-
-from core import lang
+from core.blockreader import Reader
 
 #: The synthetic ids open fix 46 reports.
 AUDIENCE_IDS = {57: "player", 58: "ai"}
@@ -27,21 +25,9 @@ def parse(gs, data, pos):
     gs.audience = None
     if data[pos:pos + 4] != b"DIPL":
         return pos
-    start, pos = pos, pos + 4
-
-    def take(fmt):
-        nonlocal pos
-        size = _st.calcsize("<" + fmt)
-        if pos + size > len(data):
-            raise ValueError("short")
-        vals = _st.unpack_from("<" + fmt, data, pos)
-        pos += size
-        return vals
-
-    def text():
-        (n,) = take("B")
-        (raw,) = take(f"{n}s")
-        return lang.wire_text(raw)
+    start = pos
+    r = Reader(data, pos + 4)
+    take, text = r.take, r.text8
 
     try:
         version, mode, ambassador, option, response = take("BBBBh")
@@ -62,4 +48,4 @@ def parse(gs, data, pos):
     except ValueError:
         return start
     gs.audience = out
-    return pos
+    return r.pos

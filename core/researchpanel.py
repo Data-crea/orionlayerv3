@@ -30,7 +30,7 @@ from core.hud import glyphs
 from core import palette
 from core import researchband
 from core import researchlist
-from core import researchnative as geom_mod
+from core import nativeview as geom_mod
 
 #: The smallest the shrink may go before it gives up and clips.
 MIN_FONT = 8

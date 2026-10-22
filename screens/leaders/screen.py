@@ -56,6 +56,7 @@ from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 
 from . import ldrart, ldrdialog, ldrdraw, ldrgeom, ldrinput, ldrmap
+from core import nativedraw
 from . import ldrpics, ldrright, ldrrows, ldrwire
 
 log = logging.getLogger("leaders")
@@ -317,7 +318,7 @@ class LeadersScreen(ScreenBase):
         w, h = ldrgeom.HIRE_PANEL_SIZE
         # A glass panel where the original draws OFFICER.LBX 17 (work
         # order 175, DEVIATION `view_box_glass`'s reason: decision 71).
-        ldrdraw.draw_box(surface, self, (x, y, x + w - 1, y + h - 1))
+        nativedraw.draw_box(surface, self, (x, y, x + w - 1, y + h - 1))
         if self._hover is None or self._view is None:
             return
         from core import leaderskills as ls
@@ -332,11 +333,11 @@ class LeadersScreen(ScreenBase):
         text = hestrings.printf(template, cost) if upkeep == 0 else \
             hestrings.printf(template, cost, upkeep)
         tx, ty = ldrgeom.HIRE_COST_AT
-        at = ldrdraw.point(self.layout, tx, ty)
-        fit_w = ldrdraw.rect(self.layout,
+        at = nativedraw.point(self.layout, tx, ty)
+        fit_w = nativedraw.rect(self.layout,
                              (tx, ty, tx + ldrgeom.HIRE_COST_FIT_W - 1, ty)).w
-        ldrdraw.blit_text(surface, self.style, text, at[0], at[1], fit_w,
-                          ldrdraw.font_px(self.layout, "cost"),
+        nativedraw.blit_text(surface, self.style, text, at[0], at[1], fit_w,
+                          nativedraw.font_px(self.layout, "cost"),
                           ldrdraw.text_colour(art, "normal"))
 
     def _draw_strips(self, surface):

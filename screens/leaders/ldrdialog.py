@@ -40,6 +40,7 @@ from core import leaderportraits
 from core import textfit
 
 from . import ldrdraw as draw
+from core import nativedraw
 from . import ldrgeom as geom
 from . import ldrpopup
 from . import ldrrows
@@ -61,14 +62,14 @@ def popup_rects(screen):
     """`[(key, window rect)]` of the popup's two answers — the drawing's
     and the hit test's (decision 5)."""
     layout = screen.layout
-    return [("reject", draw.rect(layout, ldrpopup.REJECT_RECT)),
-            ("hire", draw.rect(layout, ldrpopup.HIRE_RECT))]
+    return [("reject", nativedraw.rect(layout, ldrpopup.REJECT_RECT)),
+            ("hire", nativedraw.rect(layout, ldrpopup.HIRE_RECT))]
 
 
 def draw_popup(surface, screen, view, rows_words, art, game_state):
     """The hire popup, HD-drawn when its leader is known."""
     layout = screen.layout
-    box = draw.rect(layout, ldrpopup.popup_rect())
+    box = nativedraw.rect(layout, ldrpopup.popup_rect())
     popup = view.popup
     if popup is None:
         return
@@ -89,7 +90,7 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
         if crop is not None:
             surface.blit(pygame.transform.scale(crop, box.size), box.topleft)
         else:
-            draw.draw_box(surface, screen, ldrpopup.popup_rect())
+            nativedraw.draw_box(surface, screen, ldrpopup.popup_rect())
         return
     # The HUD popup block (decision 71, work order 169): every dialog
     # wears it; the MAINPUPS.LBX 0x39-0x3B popup pictures are not drawn —
@@ -103,39 +104,40 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
     # original's drawing there.
     px, py = ldrpopup.PORTRAIT_AT
     nw, nh = leaderportraits.NATIVE_SIZE
-    cell = draw.rect(layout, (px, py, px + nw - 1, py + nh - 1))
+    cell = nativedraw.rect(layout, (px, py, px + nw - 1, py + nh - 1))
     hd = leaderportraits.picture(rec, cell.size)
     sprite = art.portrait(rec.pict_num) if hd is None and art is not None \
         and art.available else None
     if hd is not None:
         surface.blit(hd, hd.get_rect(center=cell.center))
     elif sprite is not None:
-        surface.blit(draw.magnified(sprite, layout), draw.point(layout, px, py))
+        surface.blit(nativedraw.magnified(sprite, layout),
+                     nativedraw.point(layout, px, py))
     words = rows_words["words"]
     level, title_word, the_word = rows_words["name_parts"](rec, idx)
     ink = draw.text_colour(art, "normal")
     x, y, w, h = ldrpopup.TITLE_RECT
-    title_rect = draw.rect(layout, (x, y, x + w - 1, y + h - 1))
+    title_rect = nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1))
     from core import leaderskills as ls
     name = ls.leader_name(rec, title_word or "", the_word)
     _paragraph(surface, screen, name, title_rect, ink,
-               draw.font_px(layout, "name"))
+               nativedraw.font_px(layout, "name"))
     _popup_skills(surface, screen, rec, level, words, art, ink)
     question = ldrpopup.question(view, idx, words.h, title_word or "",
                                  the_word)
     x, y, w, h = ldrpopup.MESSAGE_RECT
     _paragraph(surface, screen, question or "",
-               draw.rect(layout, (x, y, x + w - 1, y + h - 1)), ink,
-               draw.font_px(layout, "strip"))
+               nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1)), ink,
+               nativedraw.font_px(layout, "strip"))
     for key, sprite_name, native in (
             ("reject", "popup_reject", ldrpopup.REJECT_RECT),
             ("hire", "popup_hire", ldrpopup.HIRE_RECT)):
-        r = draw.rect(layout, native)
+        r = nativedraw.rect(layout, native)
         # HUD small buttons with their words (decision 71).
         hud.small_button(surface, r, layout.scale)
-        draw.blit_text(surface, screen.style, key.upper(), r.centerx,
+        nativedraw.blit_text(surface, screen.style, key.upper(), r.centerx,
                        r.y + r.h // 4, r.w - 4,
-                       draw.font_px(layout, "button"), ink, "center")
+                       nativedraw.font_px(layout, "button"), ink, "center")
 
 
 def _popup_skills(surface, screen, rec, level, words, art, ink):
@@ -143,8 +145,8 @@ def _popup_skills(surface, screen, rec, level, words, art, ink):
     (officer.cpp:3747-3837 with the popup's arguments, ldrpopup)."""
     from core import leaderskills as ls
     layout = screen.layout
-    size = draw.font_px(layout, "skill")
-    right = draw.point(layout, ldrpopup.TEXT_X + ldrpopup.RIGHT_COLUMN
+    size = nativedraw.font_px(layout, "skill")
+    right = nativedraw.point(layout, ldrpopup.TEXT_X + ldrpopup.RIGHT_COLUMN
                        - geom.VALUE_RIGHT_INSET, 0)[0]
     y = ldrpopup.TEXT_Y
     for sid in ls.displayed_skills(rec):
@@ -153,18 +155,19 @@ def _popup_skills(surface, screen, rec, level, words, art, ink):
         if icon is not None:
             # the original's 16 px square at the screen's step; a painted
             # icon from the mod folder is fitted into it (work order 255)
-            side = draw.magnified(pygame.Surface(
+            side = nativedraw.magnified(pygame.Surface(
                 (geom.SKILL_ICON_SIZE, geom.SKILL_ICON_SIZE)), layout)
-            pic = draw.skill_icon(icon, side.get_width())
-            at = draw.point(layout, ldrpopup.TEXT_X + 2, y - 4)
+            pic = nativedraw.skill_icon(icon, side.get_width())
+            at = nativedraw.point(layout, ldrpopup.TEXT_X + 2, y - 4)
             surface.blit(pic, pic.get_rect(center=(
                 at[0] + side.get_width() // 2,
                 at[1] + side.get_height() // 2)))
-        at = draw.point(layout, ldrpopup.TEXT_X + geom.SKILL_NAME_DX, y)
+        at = nativedraw.point(layout, ldrpopup.TEXT_X + geom.SKILL_NAME_DX, y)
         value = ldrrows.skill_value(sid, level, words.unit)
-        drawn = draw.blit_text(surface, screen.style, value, right, at[1],
-                               right - at[0], size, ink, "right")
-        draw.blit_text(surface, screen.style,
+        drawn = nativedraw.blit_text(surface, screen.style, value, right,
+                                     at[1], right - at[0], size, ink,
+                                     "right")
+        nativedraw.blit_text(surface, screen.style,
                        words.estring(ls.SKILL_NAME_ESTRINGS[sid]) or "",
                        at[0], at[1], (drawn.x if drawn else right) - at[0] - 4,
                        size, ink)
@@ -177,7 +180,7 @@ def _paragraph(surface, screen, text, r, colour, size):
     squeezes, HD shrinks — `core/textfit`)."""
     if not text:
         return
-    sizes = list(range(size, draw.MIN_FONT - 1, -1))
+    sizes = list(range(size, nativedraw.MIN_FONT - 1, -1))
     lines, _size = textfit.squeeze_lines(screen.style, text, r.w, r.h,
                                          sizes, colour)
     total = textfit.block_height(lines)
@@ -190,14 +193,15 @@ def _paragraph(surface, screen, text, r, colour, size):
 def skill_help_rect(screen, title, body):
     """The help box's window rect for this text (textbox.cpp:40-88)."""
     layout = screen.layout
-    size = draw.font_px(layout, "strip")
-    width = draw.rect(layout, (0, 0, TEXTBOX_TEXT_W - 1, 0)).w
+    size = nativedraw.font_px(layout, "strip")
+    width = nativedraw.rect(layout, (0, 0, TEXTBOX_TEXT_W - 1, 0)).w
     lines = textfit.wrap_text(screen.style, body or "", size, width)
     line_h = screen.style.render_text("Ag", size, (0, 0, 0)).get_height()
-    native_h = int(round(len(lines) * line_h / draw.native_scale(layout)))
+    native_h = int(round(len(lines) * line_h
+                         / nativedraw.native_scale(layout)))
     h = min(TEXTBOX_PAD_H + native_h, geom.NATIVE_H - 8)
     y = (geom.NATIVE_H - h) // 2
-    return draw.rect(layout, (TEXTBOX_X, y, TEXTBOX_X + TEXTBOX_W - 1,
+    return nativedraw.rect(layout, (TEXTBOX_X, y, TEXTBOX_X + TEXTBOX_W - 1,
                               y + h - 1)), lines, size
 
 
@@ -207,10 +211,10 @@ def draw_skill_help(surface, screen, title, body, art):
     hud.popup(surface, r, screen.layout.scale)
     ink = draw.text_colour(art, "normal")
     head = draw.text_colour(art, "selected")
-    scale = draw.native_scale(screen.layout)
-    draw.blit_text(surface, screen.style, title, r.centerx,
+    scale = nativedraw.native_scale(screen.layout)
+    nativedraw.blit_text(surface, screen.style, title, r.centerx,
                    r.y + int(8 * scale), r.w - int(20 * scale),
-                   draw.font_px(screen.layout, "name"), head, "center")
+                   nativedraw.font_px(screen.layout, "name"), head, "center")
     y = r.y + int(TEXTBOX_TEXT_DY * scale)
     x = r.x + int(TEXTBOX_TEXT_DX * scale)
     for line in lines:

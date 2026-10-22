@@ -3,7 +3,7 @@
 The Leaders and Races rule: each number is a literal in
 `src/game/info.cpp` (orion2re `orionlayer-local`, work order 175 D), and
 HD draws each thing at the HD image of its native rectangle through
-`core/researchnative`. Button sizes are INFO.LBX's own header sizes, the
+`core/nativeview`. Button sizes are INFO.LBX's own header sizes, the
 number `Add_Button_Field_` reads (fields.cpp:405-406), measured on this
 disk for work order 175.
 """

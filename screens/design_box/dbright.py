@@ -23,7 +23,7 @@ help box is not on the wire); a description is the game's own
 that row's or button's field (`core/rightinfo`).
 """
 from core import rightinfo
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 SHIELD, COMPUTER = 2, 8          # TECH_APPLICATION_TYPE_* (orion2_consts.h)
 GENERIC = {SHIELD: {"clear": 683, "ok": 682, "box": 681, "none": 692},

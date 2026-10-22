@@ -1,6 +1,6 @@
 """Drawing the Info screen, in the HUD style — every piece at the HD image
 of its native rectangle (`infogeom`, through the Leaders screen's
-`ldrdraw` helpers), every text through `core/modtexts` and `infobox`.
+`nativedraw` helpers), every text through `core/modtexts` and `infobox`.
 
   OMISSION     `outer_frame` — INFO.LBX 0 (the frame with the tabs, the
                drop areas and the chart painted in) and the interlaced
@@ -21,7 +21,7 @@ from core import modtexts
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import infobox, infogeom as geom, infopages as pages
 

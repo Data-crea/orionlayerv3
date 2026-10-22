@@ -24,6 +24,8 @@ none, and the send buttons stay HD's display only, as before.
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 NO_FIELD = -1000
 ROWS_SHOWN = 8
 
@@ -34,16 +36,8 @@ def parse(gs, data, pos):
     gs.planets_screen = None
     if data[pos:pos + 4] != b"PLSM":
         return pos
-    at = pos + 4
-
-    def take(fmt):
-        nonlocal at
-        size = _st.calcsize("<" + fmt)
-        if at + size > len(data):
-            raise ValueError("short")
-        vals = _st.unpack_from("<" + fmt, data, at)
-        at += size
-        return vals
+    r = Reader(data, pos + 4)
+    take = r.take
     try:
         (version,) = take("B")
         if version != 1:
@@ -81,7 +75,7 @@ def parse(gs, data, pos):
         "try": {"turns": turns, "moving": bool(moving),
                 "out_of_range": bool(out_of_range),
                 "blocked": bool(bh), "no_fuel": bool(fuel)}}
-    return at
+    return r.pos
 
 
 def build(b):

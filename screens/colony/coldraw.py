@@ -1,7 +1,7 @@
 """Drawing the single-colony screen in the HUD style (decision 71).
 
 Everything sits at the HD image of its native rectangle (`colgeom`,
-through `core/researchnative` as `screens/leaders/ldrdraw` wraps it), so
+through `core/nativeview` as `core/nativedraw` wraps it), so
 the drawing, the hit test and a native screenshot speak the original's
 coordinates. Panels are the HUD's glass panels, buttons its slanted
 buttons, over the universal background.
@@ -55,7 +55,7 @@ from screens.colony_summary import colonyfigures, colonyoutputicons
 from screens.colony_summary import colonyrows, colonysurfaces
 from screens.colony_summary.colonyplanets import painted as painted_planet
 from screens.colony_summary.colonyplanets import set_for as planet_set_for
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import colart
 from . import colsurface

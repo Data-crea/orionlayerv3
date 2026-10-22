@@ -44,7 +44,7 @@ from core.estrings import EStrings
 from core.infotext import InfoText
 from core.screen_base import ScreenBase
 from core.technames import TechNames
-from core import researchnative as nat
+from core import nativeview as nat
 
 from . import infobox, infodraw, infogeom as geom, infopages as pages
 from . import infotexts, infoview

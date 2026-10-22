@@ -32,6 +32,7 @@ from core.structs import star as star_struct
 from screens.galaxy_map import sysorbits
 
 from . import ldrdraw
+from core import nativedraw
 from . import ldrgeom as geom
 from . import ldrpics
 
@@ -87,9 +88,9 @@ def draw_box(surface, screen, art):
     if not shows(screen):
         return False
     layout = screen.layout
-    r = ldrdraw.rect(layout, geom.VIEW_BOX)
+    r = nativedraw.rect(layout, geom.VIEW_BOX)
     from core.hud import fill
-    size = ldrdraw.font_px(layout, "strip")
+    size = nativedraw.font_px(layout, "strip")
     band = pygame.Rect(r.x, r.y, r.w, int(size * 2.2))
     ceil = ldrpics.ceiling(ldrdraw.text_colour(art, "normal"),
                            fill.member("panel"))
@@ -101,12 +102,12 @@ def frame_at(screen):
     """(scale, centre x, centre y): the original's view fitted into the
     box, the rings' centre on the picture's star where it has one, the
     whole system under the star's name and above the box's foot (`fit`)."""
-    r = ldrdraw.rect(screen.layout, geom.VIEW_BOX)
+    r = nativedraw.rect(screen.layout, geom.VIEW_BOX)
     s, cx, cy = sysorbits.frame(r)
     sun = ldrpics.sun_centre(PLACE, r.size)
     if sun is not None:
         cx, cy = r.x + sun[0], r.y + sun[1]
-    size = ldrdraw.font_px(screen.layout, "strip")
+    size = nativedraw.font_px(screen.layout, "strip")
     gap = int(size * NAME_GAP)
     top = r.y + size // 2 + int(size * 1.2) + gap      # the name's foot
     return fit(s, cy, top, r.bottom - gap), cx, cy
@@ -161,7 +162,7 @@ def draw(surface, screen, game_state, art, star):
     if not 0 <= star < len(stars):
         return []
     layout = screen.layout
-    r = ldrdraw.rect(layout, geom.VIEW_BOX)
+    r = nativedraw.rect(layout, geom.VIEW_BOX)
     width = max(2, int(round(layout.scale * 2)))
 
     def planet(p, centre, side):
@@ -180,8 +181,8 @@ def draw(surface, screen, game_state, art, star):
 
     hits = sysorbits.draw(surface, r, model(game_state, star), planet,
                           at=frame_at(screen), colours=ring_colours())
-    size = ldrdraw.font_px(layout, "strip")
-    ldrdraw.blit_text(surface, screen.style, stars[star].name, r.centerx,
+    size = nativedraw.font_px(layout, "strip")
+    nativedraw.blit_text(surface, screen.style, stars[star].name, r.centerx,
                    r.y + size // 2, r.w - 8, int(size * 1.2),
                    ldrdraw.text_colour(art, "normal"), "center")
     return hits

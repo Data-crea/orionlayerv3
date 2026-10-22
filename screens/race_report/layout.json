@@ -1,5 +1,5 @@
 {
-  "_comment": "The race report (shown under Races' id 6), work order 223. Everything sits at the HD image of its native rectangle (rrgeom, through core/researchnative), the right half is Info's Tech Review (screens/info), so this file carries only the markings, each also stated in the module that performs it and held by the smoke group.",
+  "_comment": "The race report (shown under Races' id 6), work order 223. Everything sits at the HD image of its native rectangle (rrgeom, through core/nativeview), the right half is Info's Tech Review (screens/info), so this file carries only the markings, each also stated in the module that performs it and held by the smoke group.",
   "marks": {
     "hd_state": "BUILT, NOT ACCEPTED (work order 223).",
     "hd_state_report_player": "HD STATE \u2014 which race the report is about is a parameter of Race_Report_Screen_ and never on the wire; Races remembers the race HD picked after REPORT, and only that report is drawn (a report opened on F12 keeps the F12 notice).",

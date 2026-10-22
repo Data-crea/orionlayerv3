@@ -20,7 +20,7 @@ race the report is about.
 from core.hud import blocks as hud
 from screens.info import infodraw
 from screens.info import infopages as pages
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 from screens.races import racesdraw, racesleaders
 
 from . import rrgeom as geom

@@ -11,7 +11,7 @@ in the original, entered two ways:
 
 So this is one class with two configurations, which is what work order
 165 asks for and what the redundancy audit's lesson asks for. The
-geometry is `core.researchnative.Geometry`, the drawing is
+geometry is `core.nativeview.Geometry`, the drawing is
 `core.researchpanel`, and both take the mode the same way.
 
 WHAT DRIVES THE GAME FROM HERE, and how (decision 20):
@@ -42,7 +42,7 @@ import logging
 
 import pygame
 
-from core import billtext, research, researchlist, researchnative
+from core import billtext, research, researchlist, nativeview
 from core import researchpanel, researchprepare, researchstate
 from core.hud import blocks as hud
 from core import researchtechlist
@@ -76,7 +76,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
 
     `TECH::_Tech_Select_(changing_tech)` is ONE function in the
     original and this is one class: the differences are the four
-    attributes below plus what `core.researchnative.Geometry` derives
+    attributes below plus what `core.nativeview.Geometry` derives
     from the mode. A subclass sets them and adds nothing else.
     """
 
@@ -134,7 +134,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         #: TRAIT_CREATIVE off the wire. It decides whether the current
         #: field's rows are ALL marked (`researchpanel.marks_every_row`).
         self._creative = False
-        self.geom = researchnative.Geometry(self.MODE)
+        self.geom = nativeview.Geometry(self.MODE)
         self._box_native = self.geom.box_native()
 
     # ── The three questions the two modes answer differently ──
@@ -208,7 +208,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         for box in self.boxes:
             if box.name == "title":
                 box.style["label"] = self._data.get("title", "")
-        unseated = researchnative.seat(self.boxes, self.layout,
+        unseated = nativeview.seat(self.boxes, self.layout,
                                        self._box_native)
         assert not unseated, (
             f"{unseated} are in boxes.json and not in the geometry's "
@@ -252,7 +252,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         # map (the source's own Fill_), now as the one glass fill — the
         # background picture, dimmed, never the map behind.
         from core.hud import glass
-        glass.draw(surface, pygame.Rect(*researchnative.window_rect(
+        glass.draw(surface, pygame.Rect(*nativeview.window_rect(
             self.geom.panel_rect, self.layout)))
 
     def update(self, game_state=None):
@@ -447,7 +447,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         # lit EDGE — a panel with no fill, so the panel's own content
         # stays visible — and not the nine-slice cut from the Fleets
         # artwork (`researchframe`, removed by work order 190).
-        hud.panel(surface, pygame.Rect(*researchnative.window_rect(
+        hud.panel(surface, pygame.Rect(*nativeview.window_rect(
             self.geom.panel_rect, self.layout)), self.layout.scale,
             lit=True, filled=False)
 
@@ -482,7 +482,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         popup — the product's own placement, never arithmetic of a
         caller's (decision 5).
         """
-        return researchnative.from_hd_point(
+        return nativeview.from_hd_point(
             self.layout.to_ref(screen_x, screen_y), self.layout)
 
     def row_at(self, screen_x, screen_y):

@@ -1,7 +1,7 @@
 """Drawing the Ship Designer's page in the HUD style (decision 71).
 
 Every value sits at the HD image of the native anchor the original prints
-it at (`sdgeom`, through `ldrdraw` as the colony screen maps its own), in
+it at (`sdgeom`, through `nativedraw` as the colony screen maps its own), in
 the colony screen's text helper (`coldraw.text`: one line at a native
 anchor, fitted to a native width). What is drawn and where it comes from:
 
@@ -33,7 +33,7 @@ from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import hover as hud_hover
 from screens.colony import coldraw
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import sdart, sdgeom as geom, sdwire
 

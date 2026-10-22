@@ -3,7 +3,7 @@
 **TRANSCRIBED, NOT DESIGNED.** Every number below is a literal in
 `src/game/officer.cpp` (or the file named beside it) at orion2re
 `e6199966`. The HD screen draws each thing at the HD image of its
-native rectangle through `core/researchnative.to_hd` — the one
+native rectangle through `core/nativeview.to_hd` — the one
 conversion that also places the fallback view's picture — so an HD
 screenshot lines up with a native one of the same save pixel for pixel
 at the proportion, and nothing here is measured off an asset.
@@ -17,12 +17,12 @@ itself reads — and not a measurement of an HD picture. The live field
 list carries the same rectangles on every snapshot; `ldrwire` compares
 the two and refuses a list that disagrees.
 
-`from core import researchnative` is where the conversion lives; this
+`from core import nativeview` is where the conversion lives; this
 module keeps the NUMBERS only, so the drawing and the hit test read one
 table (decision 5).
 """
 
-NATIVE_W, NATIVE_H = 640, 480
+from core.nativeview import NATIVE_W, NATIVE_H
 
 #: `SCREEN_OFFICERS` (orion2_consts.h:484).
 GAME_SCREEN_ID = 29

@@ -27,7 +27,7 @@ from core import lang
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from core.textfit import wrap_text
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import auart, augeom as geom
 

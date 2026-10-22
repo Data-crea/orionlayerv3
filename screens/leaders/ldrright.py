@@ -56,6 +56,7 @@ from core.structs import star as star_struct
 from screens.colony_summary import colonyrows
 
 from . import ldrdraw as draw
+from core import nativedraw
 from . import ldrgeom as geom
 from . import ldrmap
 
@@ -85,7 +86,7 @@ def draw_galaxy_box(surface, screen, game_state, art):
     if game_state is None:
         return
     layout = screen.layout
-    box = draw.rect(layout, geom.GALAXY_BOX)
+    box = nativedraw.rect(layout, geom.GALAXY_BOX)
     bx, by, bw, bh = geom.GALAXY_BOX_XYWH
     fx, fy = box.w / float(bw), box.h / float(bh)
     have_art = art is not None and art.available
@@ -97,7 +98,7 @@ def draw_galaxy_box(surface, screen, game_state, art):
         x, y = box.x + sx * fx, box.y + sy * fy
         sprite = art.star(colour) if have_art else None
         if sprite is not None:
-            big = draw.magnified(sprite, layout)
+            big = nativedraw.magnified(sprite, layout)
             step = big.get_width() // max(1, sprite.get_width())
             surface.blit(big, (int(x) + STAR_OFFSET[0] * step,
                                int(y) + STAR_OFFSET[1] * step))
@@ -113,7 +114,8 @@ def draw_galaxy_box(surface, screen, game_state, art):
 
     def picture(n):
         sprite = art.sprite(f"small_ship_{n}") if have_art else None
-        return draw.magnified(sprite, layout) if sprite is not None else None
+        return (nativedraw.magnified(sprite, layout)
+                if sprite is not None else None)
 
     def fallback(at, _icon):
         # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
@@ -122,17 +124,18 @@ def draw_galaxy_box(surface, screen, game_state, art):
     # the stacks: `core/shipstacks` (work order 248, shared with Fleets)
     for _i, icon, _at, big in shipstacks.draw_stacks(
             surface, game_state, picture,
-            lambda x, y: draw.point(layout, x, y), fallback):
+            lambda x, y: nativedraw.point(layout, x, y), fallback):
         if stack_head is not None and int(icon.node_idx) == stack_head:
             x, y = int(icon.x), int(icon.y)
             n = shipstacks.picture_index(game_state, icon)
             native = art.sprite(f"small_ship_{n}") if have_art and \
                 n is not None else None
             size = native.get_size() if native is not None else (2, 2)
-            r = draw.rect(layout, (x - 1, y - 1, x + size[0], y + size[1]))
+            r = nativedraw.rect(layout, (x - 1, y - 1, x + size[0],
+                                         y + size[1]))
             # LOOK EXCEPTION picture: the shown stack's flashing box in the original's colour (officer.cpp:765-767)
             pygame.draw.rect(surface, _box_colour(art, ldrmap.BOX_CHOSEN + 2),
-                             r, max(1, int(draw.native_scale(layout))))
+                             r, max(1, int(nativedraw.native_scale(layout))))
     _draw_star_boxes(surface, screen, game_state, art)
     surface.set_clip(previous)
 
@@ -140,7 +143,7 @@ def draw_galaxy_box(surface, screen, game_state, art):
 def _draw_star_boxes(surface, screen, game_state, art):
     view = screen._view
     block = view.block if view is not None else None
-    width = max(1, int(draw.native_scale(screen.layout)))
+    width = max(1, int(nativedraw.native_scale(screen.layout)))
     boxes = []
     if block is not None and view.view == geom.VIEW_COLONY:
         shown = int(block.get("star_displayed", -1))
@@ -155,7 +158,7 @@ def _draw_star_boxes(surface, screen, game_state, art):
         if r is not None:
             # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, _box_colour(art, colour),
-                             draw.rect(screen.layout, r), width)
+                             nativedraw.rect(screen.layout, r), width)
 
 
 def draw_view_box(surface, screen, view, game_state, art):
@@ -182,7 +185,7 @@ def _draw_scroll(surface, screen, block):
     rows = -(-len(ships) // geom.GRID_COLUMNS)
     if rows <= geom.GRID_ROWS:
         return
-    hud.scrollbar(surface, draw.rect(screen.layout, geom.SCROLL_TRACK),
+    hud.scrollbar(surface, nativedraw.rect(screen.layout, geom.SCROLL_TRACK),
                   screen.layout.scale, max(0, int(block.get("first_row", 0))),
                   geom.GRID_ROWS, rows)
 
@@ -197,10 +200,10 @@ def _draw_system(surface, screen, view, game_state, art, star):
         return
     from screens.colony_summary import colonyplanets, colonyrows
     layout = screen.layout
-    r = draw.rect(layout, (geom.SYSTEM_AT[0], geom.SYSTEM_AT[1],
+    r = nativedraw.rect(layout, (geom.SYSTEM_AT[0], geom.SYSTEM_AT[1],
                            geom.VIEW_BOX[2] - 8, geom.VIEW_BOX[3] - 8))
-    size = draw.font_px(layout, "strip")
-    draw.blit_text(surface, screen.style, stars[star].name, r.centerx,
+    size = nativedraw.font_px(layout, "strip")
+    nativedraw.blit_text(surface, screen.style, stars[star].name, r.centerx,
                    r.y + size // 2, r.w - 8, int(size * 1.2),
                    draw.text_colour(art, "normal"), "center")
     raws = getattr(game_state, "planets_raw", None) or []
@@ -209,7 +212,7 @@ def _draw_system(surface, screen, view, game_state, art, star):
                if 0 <= i < len(raws)]
     if not planets:
         return
-    note = draw.font_px(layout, "note")
+    note = nativedraw.font_px(layout, "note")
     cell = r.w // max(5, len(planets))
     top = r.y + size * 2
     disc_max = min(cell - 6, r.bottom - top - 3 * note)
@@ -228,7 +231,7 @@ def _draw_system(surface, screen, view, game_state, art, star):
                                centre, side // 2, max(1, side // 12))
         ink = draw.text_colour(art, "selected" if p.colony_index >= 0
                                else "normal")
-        draw.blit_text(surface, screen.style,
+        nativedraw.blit_text(surface, screen.style,
                        colonyrows.star_planet_name(stars[star], index),
                        centre[0], top + disc_max + note // 2, cell - 4,
                        note, ink, "center")
@@ -247,7 +250,7 @@ def _draw_grid(surface, screen, view, game_state, art, block):
     first = max(0, int(block.get("first_row", 0))) * geom.GRID_COLUMNS
     raws = getattr(game_state, "ships_raw", None) or []
     layout = screen.layout
-    size = draw.font_px(layout, "note")
+    size = nativedraw.font_px(layout, "note")
     ink = draw.text_colour(art, "normal")
     for slot in range(geom.GRID_COLUMNS * geom.GRID_ROWS):
         k = first + slot
@@ -257,11 +260,11 @@ def _draw_grid(surface, screen, view, game_state, art, block):
         if not 0 <= idx < len(raws):
             continue
         rec = ship_struct.SPEC.parse(raws[idx])
-        cell = draw.rect(layout, geom.grid_cell(slot))
+        cell = nativedraw.rect(layout, geom.grid_cell(slot))
         band = name_band(size)
         _draw_ship_picture(surface, screen, cell, rec, game_state,
                            picture_area(cell, band))
-        draw.blit_text(surface, screen.style, rec.name, cell.centerx,
+        nativedraw.blit_text(surface, screen.style, rec.name, cell.centerx,
                        cell.bottom - size - 2, cell.w - 4, size, ink,
                        "center")
         if int(block.get("picked_icon", -1)) == k:
@@ -313,7 +316,7 @@ def _draw_ship_picture(surface, screen, cell, rec, game_state, area=None):
                       owner=fltrows.MONSTER_SET if held is None else held)
     if sprite is None:
         return
-    step = max(1, int(draw.native_scale(layout)))
+    step = max(1, int(nativedraw.native_scale(layout)))
     if area is None:
         ox, oy = fltart.cell_offset(sprite.get_width(), sprite.get_height(),
                                     cell=geom.GRID_CELL)

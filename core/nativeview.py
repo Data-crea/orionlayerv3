@@ -1,4 +1,12 @@
-"""The research panel's own 640x480 rectangles, per mode, and the scale.
+"""The original's 640x480 plane in HD: the conversion every native-drawn
+screen uses (`to_hd`, `window_rect`, `window_point`, `from_hd_point`,
+`window_width`), and the research panel's own rectangles per mode.
+
+Named for what it is since work order 324; it carried the name of the
+research screens while only they used it, and by then audience, info,
+leaders, races and refit imported it for the conversion alone.
+
+The research panel's own 640x480 rectangles, per mode, and the scale.
 
 **THE GEOMETRY IS TRANSCRIBED, NOT DESIGNED** (work order 130 E), and
 it is the same geometry twice: `TECH::_Tech_Select_(changing_tech)`

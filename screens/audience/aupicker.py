@@ -49,7 +49,7 @@ from core import systempickerwire as wire
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from screens.colony_summary import colonyinset, colonyrows
-from screens.leaders import ldrdraw as nd
+from core import nativedraw as nd
 
 from . import augeom as geom
 

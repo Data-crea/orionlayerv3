@@ -11,7 +11,7 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
-from core import lang
+from core.blockreader import Reader
 
 PHASES = {1: "setup", 2: "online", 3: "game_name", 4: "load_list",
           5: "hotseat", 6: "hotseat_switch", 7: "host_init",
@@ -22,33 +22,13 @@ PHASES = {1: "setup", 2: "online", 3: "game_name", 4: "load_list",
 NONE = -1000
 
 
-class _Reader:
-    def __init__(self, data, pos):
-        self.data, self.pos = data, pos
-
-    def take(self, fmt):
-        size = _st.calcsize("<" + fmt)
-        if self.pos + size > len(self.data):
-            raise ValueError("short")
-        vals = _st.unpack_from("<" + fmt, self.data, self.pos)
-        self.pos += size
-        return vals if len(vals) > 1 else vals[0]
-
-    def s8(self):
-        n = self.take("B")
-        if self.pos + n > len(self.data):
-            raise ValueError("short")
-        raw = self.data[self.pos:self.pos + n]
-        self.pos += n
-        return lang.wire_text(raw)
-
-    def inp(self):
-        field, limit = self.take("hB")
-        buf = self.s8()
-        editing = self.take("B")
-        typed = self.s8() if editing else None
-        return {"field": field, "max": limit, "text": buf,
-                "editing": bool(editing), "typed": typed}
+def _inp(r):
+    field, limit = r.take("hB")
+    buf = r.text8()
+    editing = r.one("B")
+    typed = r.text8() if editing else None
+    return {"field": field, "max": limit, "text": buf,
+            "editing": bool(editing), "typed": typed}
 
 
 def _payload(r, phase):
@@ -58,22 +38,22 @@ def _payload(r, phase):
         p["fields"] = dict(zip(("network", "online", "hotseat", "cancel",
                                 "start", "load", "join", "setup"),
                                r.take("8h")))
-        p["endpoint"], p["game_name"] = r.s8(), r.s8()
+        p["endpoint"], p["game_name"] = r.text8(), r.text8()
     elif phase == "online":
-        p["input"] = r.inp()
+        p["input"] = _inp(r)
         p["ok"], p["cancel"] = r.take("hh")
     elif phase == "game_name":
-        p["input"] = r.inp()
-        p["cancel"] = r.take("h")
-        p["prompt"] = r.s8()
+        p["input"] = _inp(r)
+        p["cancel"] = r.one("h")
+        p["prompt"] = r.text8()
     elif phase == "load_list":
         p["game_type"], p["cancel"], n = r.take("BhB")
         p["slots"] = []
         for _ in range(n):
             field, valid = r.take("hB")
             p["slots"].append({"field": field, "valid": bool(valid),
-                               "description": r.s8(), "stardate": r.s8(),
-                               "date": r.s8()})
+                               "description": r.text8(), "stardate": r.text8(),
+                               "date": r.text8()})
     elif phase == "hotseat":
         p["players"], humans, p["join"], p["accept"], p["cancel"] = \
             r.take("bhhhh")
@@ -81,23 +61,23 @@ def _payload(r, phase):
         for _ in range(max(0, humans)):
             race, colour = r.take("BB")
             p["humans"].append({"race": race, "colour": colour,
-                                "name": r.s8(), "race_name": r.s8()})
+                                "name": r.text8(), "race_name": r.text8()})
     elif phase in ("hotseat_switch",):
-        n = r.take("B")
+        n = r.one("B")
         p["players"] = [dict(zip(("status", "row", "banner"), r.take("Bhh")))
                         for _ in range(n)]
     elif phase in ("host_init", "join_init", "join_wait"):
-        p["net_mode"] = r.take("B")
-        p["endpoint"], p["game_name"] = r.s8(), r.s8()
+        p["net_mode"] = r.one("B")
+        p["endpoint"], p["game_name"] = r.text8(), r.text8()
     elif phase in ("host_wait", "host_load_wait"):
         p["begin"], p["users"], p["players"] = r.take("hhb")
-        p["game_name"] = r.s8()
+        p["game_name"] = r.text8()
         if phase == "host_load_wait":
             p["needed"], p["joining"] = r.take("bi")
     elif phase == "host_race_info":
         p["with_race"], p["users"], p["connected"] = r.take("hhb")
     elif phase in ("host_send", "join_get"):
-        p["status"] = r.s8()
+        p["status"] = r.text8()
     elif phase in ("host_pick", "join_pick"):
         p["begin"], n = r.take("hB")
         p["players"] = [dict(zip(("shown", "taken", "row", "banner"),
@@ -108,18 +88,18 @@ def _payload(r, phase):
         for _ in range(n):
             field, cur, most, is_open = r.take("hhhB")
             p["games"].append({"field": field, "players": cur, "max": most,
-                               "open": bool(is_open), "name": r.s8()})
+                               "open": bool(is_open), "name": r.text8()})
     elif phase == "net_turn":
-        p["chat"] = r.inp()
-        p["c_field"] = r.take("h")
-        n = r.take("B")
+        p["chat"] = _inp(r)
+        p["c_field"] = r.one("h")
+        n = r.one("B")
         p["humans"] = [dict(zip(("player", "done"), r.take("BB")))
                        for _ in range(n)]
-        n = r.take("B")
+        n = r.one("B")
         p["lines"] = []
         for _ in range(n):
-            sender = r.take("B")
-            p["lines"].append({"sender": sender, "text": r.s8()})
+            sender = r.one("B")
+            p["lines"].append({"sender": sender, "text": r.text8()})
     return p
 
 
@@ -129,7 +109,7 @@ def parse(gs, data, pos):
     gs.multiplayer = None
     if data[pos:pos + 4] != b"MPLY":
         return pos
-    r = _Reader(data, pos + 4)
+    r = Reader(data, pos + 4)
     try:
         version, code = r.take("BB")
         if version != 1 or code not in PHASES:
