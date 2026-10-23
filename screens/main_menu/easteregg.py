@@ -36,6 +36,10 @@ log = logging.getLogger("main_menu.easter_egg")
 
 PANEL_FILE = "easter_egg_panel.png"
 DATA_FILE = "easter_egg.json"
+#: The text in another language the switch offers, beside it (work order
+#: 328): `easter_egg_<code>.json`, blocks only; read when that language is
+#: the one shown, English where it is missing or unusable.
+LANG_FILE = "easter_egg_{}.json"
 
 #: The panel's height as a share of the window, unless the width runs out
 #: first (a 5:4 window). Data's mockup shows it at 75 % of the screen; 80 %
@@ -51,38 +55,65 @@ PANEL_W_FRAC = 0.94
 COL_X0, COL_X1, RULE_X1 = 0.046, 0.58, 0.61
 TEXT_Y0, TEXT_Y1 = 0.035, 0.95
 #: The gold "spark" line stands on one line in the mockup, over the
-#: console, short of the mug; it may run this far.
-SPARK_X1 = 0.64
+#: console; it may run this far before it wraps — short of the mug, whose
+#: left edge is at 62 % of the panel's width (work order 328: the German
+#: line ran into it at 64 %).
+SPARK_X1 = 0.60
 
 #: CLOSE, where the mockup has it: x 1163..1326, y 843..890 of the panel.
 CLOSE_FRAC = (0.819, 0.900, 0.153, 0.062)
 
 #: Lines that stay one line, as in the mockup: when one does not fit its
-#: width, the text takes a smaller font factor instead of wrapping.
-ONE_LINE = ("welcome", "title", "subtitle", "spark", "thanks", "signature")
+#: width, the text takes a smaller font factor instead of wrapping. The gold
+#: key sentence is not one of them (work order 328): in English it stands on
+#: one line anyway at the size the column's height allows, and the German
+#: one, longer, would otherwise shrink the whole text to keep it there.
+ONE_LINE = ("welcome", "title", "subtitle", "thanks", "signature")
 #: The centred headline, fitted by its own factor (`_layout`).
 HEADLINE = ("welcome", "title", "subtitle")
-#: The most a paragraph gap grows by, as a share of the panel height.
-MAX_SPREAD = 0.012
+#: A line's step as a multiple of its font size, every role alike (work
+#: order 328): Aldrich's own line is 0.95 of its size, almost no leading,
+#: so lines set by their surface's height stood packed. The mockup's body
+#: runs at 1.2 (23 px for a 19 px font); the text is fitted to the column's
+#: height, so every bit of leading is font size given up, and Data's order
+#: 328 keeps the sizes: 1.1, and never less than LEAD_MIN of the size above
+#: the line's own height, so a small window's lines do not touch.
+LINE_STEP = 1.1
+LEAD_MIN = 0.08
+#: How much a gap may grow, relative to itself, from the height the text
+#: leaves free — every gap in proportion, so the hierarchy holds. The base
+#: gaps are the least a gap is, and the font factor is fitted with them
+#: alone, so they trade against the font: measured over 1280x720 ..
+#: 3840x2160 in both languages (work order 328), gaps of these sizes keep
+#: the body within 2 px of 327's (720p 13 for 15, 1080p 21 for 20, 4K 43
+#: for 45) and every paragraph clearly apart (11 px at 1080p); half of
+#: them kept 327's sizes and left 5 px, twice them took a tenth off the
+#: font. The free height then opens them up to twice.
+MAX_SPREAD = 1.0
 
 #: role -> (font size as a share of the panel height, colour key, centred,
-#: space before as a share of the panel height). Read off the mockup's
-#: glyph heights; each set (headline, the rest) is scaled by one factor.
+#: gap before, gap after). Sizes read off the mockup's glyph heights; each
+#: set (headline, the rest) is scaled by one factor. Gaps are in body
+#: line steps, before MAX_SPREAD opens them (work order 328): the gold key
+#: sentence set apart by almost twice a paragraph's gap either side, the
+#: thanks more, the heading's own text close under it, the signature close
+#: to the thanks and the hashtag under the name. A gap AFTER a role, where it has one, is the
+#: gap to whatever follows it.
 ROLES = {
-    "welcome": (0.040, "egg_title", True, 0.0),
-    "title": (0.064, "egg_title", True, 0.0),
-    "subtitle": (0.036, "egg_accent", True, 0.004),
-    "heading": (0.036, "egg_title", False, 0.018),
-    "body": (0.024, "egg_body", False, 0.012),
-    "line": (0.024, "egg_body", False, 0.0),
-    "spark": (0.025, "egg_title", False, 0.018),
-    "thanks": (0.036, "egg_title", False, 0.020),
-    "signature": (0.030, "egg_body", False, 0.008),
-    "hashtag": (0.024, "egg_accent", False, 0.0),
+    "welcome": (0.040, "egg_title", True, 0.0, None),
+    "title": (0.064, "egg_title", True, 0.0, None),
+    "subtitle": (0.036, "egg_accent", True, 0.1, None),
+    "heading": (0.036, "egg_title", False, 0.7, 0.22),
+    "body": (0.024, "egg_body", False, 0.45, None),
+    "line": (0.024, "egg_body", False, 0.0, None),
+    "spark": (0.025, "egg_title", False, 0.75, 0.75),
+    "thanks": (0.036, "egg_title", False, 0.9, 0.18),
+    "signature": (0.030, "egg_body", False, 0.18, 0.0),
+    "hashtag": (0.024, "egg_accent", False, 0.0, None),
 }
 
-#: The range that factor is fitted in (`_layout`).
-K_MIN, K_MAX = 0.5, 1.2
+#: The range that factor is fitted in (`_layout`), and its coarse step.
+K_MIN, K_MAX, K_COARSE = 0.5, 1.2, 0.05
 
 # Skin-overridable colours (colors.json section "main_menu"), picked off
 # the mockup: the gold headline, the blue "GetDaved" and hashtag, the body.
@@ -136,6 +167,21 @@ def _glow_sprite(radius, rgb):
     return pygame.surfarray.make_surface(arr)
 
 
+def _shadow_offset(size):
+    """How far a line's shadow lies down and right of it, in pixels."""
+    return max(1, size // 14)
+
+
+def _blocks(data):
+    """[(role, text)] of a data file's blocks: known roles with text only;
+    none at all is a fault, so the caller falls back."""
+    out = [(role, text) for role, text in data["blocks"]
+           if role in ROLES and isinstance(text, str) and text.strip()]
+    if not out:
+        raise ValueError("no text block with a known role")
+    return out
+
+
 class EasterEgg:
     """The hidden star and its panel, owned by the main menu screen."""
 
@@ -143,10 +189,10 @@ class EasterEgg:
         self.screen = screen
         self.open = False
         self.star = {}
-        self.blocks = []
+        self._blocks = {}             # language -> [(role, text)]
         self._panel_src = None
         self._panel_cache = None      # ((w, h), scaled picture)
-        self._text_cache = None       # ((w, h), [(surface, x, y)])
+        self._text_cache = None       # (((w, h), language), placed, span)
         self._glow_cache = None       # (radius, sprite)
         self._scrim_cache = None      # ((w, h), (shade, x, y))
         self._load()
@@ -163,15 +209,23 @@ class EasterEgg:
             # in the render path, every frame.
             self.star = {k: float(data["star"][k]) for k in
                          ("x", "y", "hit_radius", "glow_radius")}
-            self.blocks = [(role, text) for role, text in data["blocks"]
-                           if role in ROLES and isinstance(text, str)
-                           and text.strip()]
-            if not self.blocks:
-                raise ValueError("no text block with a known role")
+            self._blocks[lang.DEFAULT] = _blocks(data)
         except (TypeError, OSError, ValueError, KeyError) as err:
             log.warning("easter egg data %s not read (%s) — no star",
                         path, err)
             self.star = {}
+        for code in lang.LANGUAGES:
+            if code == lang.DEFAULT or not self.star:
+                continue
+            other = self.screen.asset_path("assets", LANG_FILE.format(code))
+            if not other:
+                continue
+            try:
+                with open(other, encoding="utf-8") as f:
+                    self._blocks[code] = _blocks(json.load(f))
+            except (TypeError, OSError, ValueError, KeyError) as err:
+                log.warning("easter egg text %s not read (%s) — English",
+                            other, err)
         pic = self.screen.asset_path("assets", PANEL_FILE)
         if pic:
             try:
@@ -179,6 +233,13 @@ class EasterEgg:
             except pygame.error as err:
                 log.warning("easter egg panel %s not read (%s) — the HUD "
                             "popup stands in", pic, err)
+
+    @property
+    def blocks(self):
+        """The text in the language shown now — the switch applies as you
+        go (decision 99), so it is asked at every layout."""
+        return self._blocks.get(lang.current()) or \
+            self._blocks.get(lang.DEFAULT, [])
 
     # ── the star ──
 
@@ -310,10 +371,11 @@ class EasterEgg:
 
     def _text(self, p):
         """[(surface, x, y)] relative to the panel, laid out for its size
-        and kept until the size changes, with the subtitle's span the gold
-        rules stop at."""
-        if self._text_cache is None or self._text_cache[0] != p.size:
-            self._text_cache = (p.size, *self._layout(p.w, p.h))
+        and the language shown, kept until either changes, with the
+        subtitle's span the gold rules stop at."""
+        key = (p.size, lang.current())
+        if self._text_cache is None or self._text_cache[0] != key:
+            self._text_cache = (key, *self._layout(p.w, p.h))
         return self._text_cache[1]
 
     def _layout(self, pw, ph):
@@ -326,30 +388,43 @@ class EasterEgg:
         avail = (TEXT_Y1 - TEXT_Y0) * ph
 
         def largest(fits):
-            lo, hi = K_MIN, K_MAX
+            # Coarse from the top down, then a bisection inside the first
+            # step that fits: a wrap that jumps makes "fits" not monotonic
+            # over the whole range (the German text fitted at 0.81 and at
+            # 0.87 but not between), so a bisection over all of it can
+            # settle on a lower plateau (work order 328).
+            hi = K_MAX
+            while hi > K_MIN and not fits(hi):
+                hi -= K_COARSE
+            if hi <= K_MIN:
+                return K_MIN
+            lo, hi = hi, min(K_MAX, hi + K_COARSE)
             if fits(hi):
                 return hi
-            for _ in range(9):
+            for _ in range(6):
                 k = (lo + hi) / 2
                 lo, hi = (k, hi) if fits(k) else (lo, k)
             return lo
 
         kh = largest(lambda k: self._flow(pw, ph, k, k, HEADLINE)[1] < 1e9)
         kb = largest(lambda k: self._flow(pw, ph, k, kh)[1] <= avail)
-        _placed, used, _span = self._flow(pw, ph, kb, kh)
-        # What the fonts leave free goes into the paragraph gaps, capped,
-        # so the signature stands near the panel's foot as in the mockup.
-        gaps = sum(1 for role, _t in self.blocks
-                   if role not in HEADLINE and ROLES[role][3] > 0)
-        spread = min(MAX_SPREAD * ph, max(0.0, avail - used) / max(1, gaps))
-        placed, _used, span = self._flow(pw, ph, kb, kh, spread=spread)
+        _placed, used, _span, gaps = self._flow(pw, ph, kb, kh)
+        # What the fonts leave free goes into the gaps, each in proportion
+        # to itself and capped, so the signature stands near the panel's
+        # foot as in the mockup and a larger gap stays the larger.
+        # Half a pixel a gap held back: each gap is rounded on its own.
+        n = sum(1 for role, _t in self.blocks if role not in HEADLINE)
+        spread = min(MAX_SPREAD, max(0.0, avail - used - 0.5 * n) / gaps) \
+            if gaps else 0.0
+        placed, _used, span, _gaps = self._flow(pw, ph, kb, kh, spread=spread)
         return placed, span
 
     def _flow(self, pw, ph, k, kh, roles=None, spread=0.0):
         """One top-to-bottom pass, the headline at font factor kh and the
-        rest at k, over `roles` (all by default): (placed, height used —
-        infinite when a one-line role overflows its width —, the
-        subtitle's (x0, x1, y) or None)."""
+        rest at k, over `roles` (all by default), every gap grown by
+        `spread` of itself: (placed, height used — infinite when a one-line
+        role overflows its width —, the subtitle's (x0, x1, y) or None, the
+        sum of the body's gaps in pixels)."""
         style = self.screen.style
         x0, x1 = round(COL_X0 * pw), round(COL_X1 * pw)
         centre = round((COL_X0 + RULE_X1) / 2 * pw)
@@ -359,38 +434,78 @@ class EasterEgg:
         span = None
         indent = 0
         overflow = False
+        gaps = 0.0
+        step = ROLES["body"][0] * ph * k * LINE_STEP   # one body line
+        after = None
         for role, text in self.blocks:
             if roles is not None and role not in roles:
                 continue
-            frac, colour, centred, before = ROLES[role]
+            frac, colour, centred, before, gap_after = ROLES[role]
             f = kh if role in HEADLINE else k
             size = max(8, int(frac * ph * f))
-            y += round(before * ph * f +
-                       (spread if before > 0 and role not in HEADLINE else 0))
+            gap = (before if after is None else after) * \
+                (step if role not in HEADLINE else frac * ph * f)
+            if placed:
+                if role not in HEADLINE:
+                    gaps += gap
+                    gap *= 1 + spread
+                y += round(gap)
+            after = gap_after
             lead = indent if role == "hashtag" else 0
             if centred:
                 width = round((RULE_X1 - COL_X0) * pw)
             else:
                 width = round((SPARK_X1 if role == "spark" else COL_X1)
                               * pw) - x0 - lead
+            # The shadow hangs out by its offset; a line is wrapped so that
+            # it fits WITH it, or a line that just fits counts as too wide.
             lines = [text] if role in ONE_LINE else \
-                self._wrap(text, size, width)
-            for line in lines:
+                self._wrap(text, size, width - _shadow_offset(size))
+            if role == "spark" and len(lines) > 1:
+                # One line, as the mockup sets it, if a little smaller
+                # does it; else two even lines at the size.
+                small = self._one_line_size(
+                    text, size, width,
+                    max(8, int(ROLES["body"][0] * ph * k)))
+                if small:
+                    size, lines = small, [text]
+                else:
+                    lines = self._balanced(text, size, lines,
+                                           width - _shadow_offset(size))
+            plain = self._plain_height(size)
+            line_step = max(round(size * LINE_STEP),
+                            plain + math.ceil(LEAD_MIN * size))
+            for i, line in enumerate(lines):
+                if i:
+                    y += line_step
                 surf = self._shadowed(line, size, COLOURS[colour])
                 if surf.get_width() > width:
                     overflow = True
                 x = centre - surf.get_width() // 2 if centred else x0 + lead
-                placed.append((surf, x, y))
+                # A capital umlaut makes the line taller ABOVE its baseline
+                # (the fallback font's ascent): drawn that much higher, so
+                # every line of a role sits on the same baseline step.
+                rise = max(0, surf.get_height() - plain)
+                placed.append((surf, x, y - rise))
                 if role == "subtitle":
                     span = (x, x + surf.get_width(),
-                            y + surf.get_height() // 2)
-                bottom = max(bottom, y + surf.get_height())
-                y += round(surf.get_height() * 0.98)
+                            y + plain // 2)
+                bottom = max(bottom, y + plain)
+            # The headline stacks tight, as the mockup sets it; any other
+            # block ends one full line step on, so a gap of 0 ("line")
+            # continues its paragraph at the same rhythm.
+            y += plain if role in HEADLINE else line_step
             if role == "signature":
                 # The hashtag stands under the name, not under the dash.
                 indent = style.render_text(
                     lang.Stored("— "), size, SHADOW).get_width()
-        return placed, (float("inf") if overflow else bottom - top), span
+        return (placed, (float("inf") if overflow else bottom - top), span,
+                gaps)
+
+    def _plain_height(self, size):
+        """A line's height at `size` with no fallback glyph in it, the
+        shadow's offset included (`_shadowed`)."""
+        return self._shadowed("Ag", size, SHADOW).get_height()
 
     def _wrap(self, text, size, width):
         style = self.screen.style
@@ -405,14 +520,40 @@ class EasterEgg:
                 cur = trial
         return lines + [cur] if cur else lines
 
+    def _one_line_size(self, text, size, width, body):
+        """The largest size down to the body's (`body`, never less: the key
+        sentence must not stand out less than the text around it) at which
+        `text` stands on one line in `width`, or None."""
+        for s in range(size, min(size, body) - 1, -1):
+            if self._shadowed(text, s, SHADOW).get_width() <= width:
+                return s
+        return None
+
+    def _balanced(self, text, size, lines, width):
+        """The key sentence's lines as even as they can be at the same
+        count: the narrowest width that still wraps it into as many lines
+        (a bisection on the width), so no word stands alone under it — the
+        German sentence left "zündet." on a line of its own."""
+        lo, hi = width // 2, width
+        best = lines
+        while hi - lo > 2:
+            mid = (lo + hi) // 2
+            trial = self._wrap(text, size, mid)
+            if len(trial) <= len(lines):
+                hi, best = mid, trial
+            else:
+                lo = mid
+        return best
+
     def _shadowed(self, text, size, colour):
         """The line with a soft dark shadow, so it holds over the stars and
-        the galaxy in Data's picture. English as written: `lang.Stored`
-        keeps the translation table off it (parked for Data)."""
+        the galaxy in Data's picture. Drawn as the data file has it:
+        `lang.Stored` keeps the UI's translation table off it — the file of
+        the language shown already is the translation (work order 328)."""
         style = self.screen.style
         fg = style.render_text(lang.Stored(text), size, colour)
         bg = style.render_text(lang.Stored(text), size, SHADOW)
-        off = max(1, size // 14)
+        off = _shadow_offset(size)
         out = pygame.Surface((fg.get_width() + off, fg.get_height() + off),
                              pygame.SRCALPHA)
         out.blit(bg, (off, off))

@@ -2,7 +2,7 @@
   "_comment": [
     "The main menu's easter egg (work order 327): a hidden star in the background; a click opens Data's thank-you to GetDaved.",
     "star: where the star is, as a fraction of the main menu background picture (assets/shared/backgrounds/main_menu.png, 1812 x 868: the four-pointed star's centre at 368, 444.5 px (pixel i spans i..i+1, as backgrounds.point reads a fraction), measured off the picture and confirmed to 1 px against Data's 2549 x 1440 screenshot of the running menu, the screenshot fitted onto the picture by its pixels). A mod that replaces the background moves the star by replacing this file. hit_radius and glow_radius are in that picture's pixels and scale with it.",
-    "blocks: the panel's text, transcribed from Data's mockup, top to bottom. role names the look (screens/main_menu/easteregg.py ROLES); 'line' continues the paragraph above without a gap. English only (parked for Data: a German session's translation)."
+    "blocks: the panel's text, transcribed from Data's mockup, top to bottom. role names the look (screens/main_menu/easteregg.py ROLES); 'line' continues the paragraph above without a gap. English; the German text is easter_egg_de.json (work order 328)."
   ],
   "star": {
     "x": 0.20309,
