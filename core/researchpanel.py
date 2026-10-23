@@ -28,6 +28,7 @@ from core.hud import blocks as hud
 from core.hud import glyphs
 
 from core import palette
+from core import researchart
 from core import researchband
 from core import researchlist
 from core import nativeview as geom_mod
@@ -245,6 +246,45 @@ def row_label(layout, style, entry, row, text):
                                           *entry.band_span())
 
 
+def _inks():
+    """Every ink the words over a box can take (`_draw_entry`)."""
+    return (col("field", (226, 234, 250)), col("row", (198, 212, 238)),
+            col("field_current", (250, 226, 150)),
+            col("row_current", (250, 226, 150)))
+
+
+def _box_fill():
+    """The plain box the words' floor is measured against (decision 94:
+    the player's fill)."""
+    from core.hud import fill
+    return fill.member("panel")
+
+
+def word_rects(layout, style, entry, words, names):
+    """The window rectangles the field name and the rows of an offered
+    entry are drawn in — measured by the same fit and render as
+    `_draw_entry`, so the picture under them is dimmed where they stand."""
+    out = []
+    name = names.field_name(entry.field) if names else None
+    if name:
+        name_x, name_y, name_w = entry.field_name_anchor()
+        size = _fit(style, name, geom_mod.window_width(
+            name_x, name_y, name_w, layout), layout.font_size(17))
+        surf = style.render_text(name, size, (255, 255, 255))
+        out.append(surf.get_rect(topleft=geom_mod.window_point(
+            (name_x, name_y), layout)))
+    for row in range(len(entry.apps)):
+        text = row_text(entry, row, words, names)
+        if not text:
+            continue
+        size, _width, _band = row_label(layout, style, entry, row, text)
+        label_x, label_y, _w = entry.app_label_anchor(row)
+        surf = style.render_text(text, size, (255, 255, 255))
+        out.append(surf.get_rect(topleft=geom_mod.window_point(
+            (label_x, label_y), layout)))
+    return tuple(out)
+
+
 def row_text(entry, row, words, names):
     """What the panel prints on a row — the placeholder or the name."""
     if entry.placeholder:
@@ -265,7 +305,20 @@ def draw(surface, layout, style, entries, hover, words, names, wording,
         # ALL EIGHT BOXES, offered or not: `Init_Entry_Data_` adds a
         # block field for every category and the original draws an
         # empty panel for one with nothing to offer (tech.cpp:225-231).
-        draw_box(surface, layout, style, entry.panel_box(BOX_MARGIN))
+        # HD EXTENSION `field_pictures` (work order 326 E): the
+        # category's picture from the mod folder fills the box, the words
+        # keeping their floor over it (`core.researchart`); without one,
+        # the panel as before.
+        native = entry.panel_box(BOX_MARGIN)
+        # the words are measured only for a box that has a picture
+        if researchart.source(entry.group) is None or \
+                not researchart.draw_box(
+                surface, geom_mod.window_rect(native, layout), layout.scale,
+                entry.group,
+                word_rects(layout, style, entry, words, names)
+                if entry.offered else (), _inks(), _box_fill(),
+                col("hover", (70, 104, 168, 90))):
+            draw_box(surface, layout, style, native)
     for entry in entries:
         if entry.offered:
             _draw_entry(surface, layout, style, entry, hover, words,

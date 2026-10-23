@@ -1,8 +1,9 @@
-"""The six Fleets boxes that have no hole, and the rule that places each.
+"""The Fleets boxes that have no hole, and the rule that places each.
 
 Thirty-two of this screen's boxes are CUTOUTS: `tools/frame_holes.py`
 reads them off the frame's alpha and the smoke test holds every one to
-its hole. Six are not. They have nothing in the artwork to be derived
+its hole. Six are not (seven since work order 326 added
+`ship_picture`). They have nothing in the artwork to be derived
 from, they were placed by hand once, and when the frame changed shape
 in work order 153 every one of them was left sitting over the old
 layout — which is the fault work order 151 paid for and the reason
@@ -55,9 +56,18 @@ from . import fltgeom
 #: reference px at the 2:1 the frame is drawn down by.
 PANEL_TEXT_INSET = 25
 
-#: The six, in the order they are written.
+#: The placed boxes, in the order they are written.
 NAMES = ("ship_panel_text", "icon_area", "button_band", "status_text",
-         "inset_hint", "status_hint")
+         "inset_hint", "status_hint", "ship_picture")
+
+#: Where the scanned ship's picture sits in the ship panel (work order 326,
+#: `fltshippic` carries its marking): (x, y, w, h) as
+#: fractions of `ship_panel`. Measured on Data's mockup.png (WO 326): the
+#: panel's gold frame at native x 4..935, y 697..983, the ship's drawn
+#: pixels at x 532..838, y 727..870 — a second read of the same picture
+#: (`research-B.md`, x 526..847, y 742..866) agrees within 1 % of the
+#: width. The mockup binds the ARRANGEMENT here (Data, WO 326).
+SHIP_PICTURE = (0.567, 0.105, 0.329, 0.500)
 
 #: The seven controls `button_band` is the union of — the union the
 #: original's own help table bounds (evanhelp.cpp:159-165) and which
@@ -84,7 +94,7 @@ def _fraction(inner, outer, box):
 
 
 def placed(boxes):
-    """`{name: rect}` for the six, from the derived boxes.
+    """`{name: rect}` for the placed boxes, from the derived boxes.
 
     `boxes` is `{name: reference rect}` and must hold all thirty-two
     cutouts; nothing here reads a file.
@@ -126,6 +136,11 @@ def placed(boxes):
                          ("status_hint", "status_band")):
         out[name] = _fraction(fltgeom.hint_rect(region),
                               fltgeom.REGIONS[region], boxes[region])
+
+    # 7. The scanned ship's picture: its mockup place in the ship panel.
+    fx, fy, fw, fh = SHIP_PICTURE
+    out["ship_picture"] = [px + int(round(fx * pw)), py + int(round(fy * ph)),
+                           int(round(fw * pw)), int(round(fh * ph))]
     return out
 
 
@@ -140,7 +155,8 @@ def placed(boxes):
 #: rather than sitting in one, so they are checked the other way
 #: round by `contained`.
 INSIDE = {"ship_panel_text": "ship_panel", "status_text": "status_band",
-          "inset_hint": "inset_map", "status_hint": "status_band"}
+          "inset_hint": "inset_map", "status_hint": "status_band",
+          "ship_picture": "ship_panel"}
 
 #: The unions, and what each must hold.
 HOLDS = {"icon_area": ("cell_00", "cell_19"),

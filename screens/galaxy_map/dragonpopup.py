@@ -36,6 +36,11 @@ from the engine (Data's decision of 20 October 2026: no live runs).
 OMISSION `dragon_scanned_name`: the original prints the hovered star's name
 under its map (`fonts::Print_Centered_(376, 254, …)`, :2606-2607); HD's map
 names its stars itself.
+OMISSION `dragon_picture_star_choice` (work order 326 F): the original's
+popup picture with its dragon stands beside its own map in this mode too
+(:2617); the strip draws no picture — Data's dragon is the offer's
+(`core.turnpopup._art`, HD EXTENSION `dragon_picture`) — so the map stays
+clear.
 """
 import pygame
 

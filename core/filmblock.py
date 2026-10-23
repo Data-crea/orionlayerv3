@@ -23,7 +23,7 @@ last frame (UNVERIFIED `film_live`: no live run has seen the block).
 """
 import struct as _st
 
-from core import lang
+from core import lang, wire_protocol
 
 #: The synthetic id a playing film reports (open fix 112): the next free one
 #: after 85 in both trees.
@@ -48,12 +48,17 @@ def parse(gs, data, pos):
     """Read FILM at `pos` into `gs.film` (None when absent, short or of
     another version). Returns the new position."""
     gs.film = None
-    if data[pos:pos + 4] != b"FILM" or pos + 6 > len(data):
+    if data[pos:pos + 4] != b"FILM":
+        return pos
+    if pos + 6 > len(data):
+        wire_protocol.refused("FILM", "short", f"{len(data) - pos} bytes")
         return pos
     version, n = data[pos + 4], data[pos + 5]
     at = pos + 6
     end = at + n + _st.calcsize(TAIL)
     if version != 1 or end > len(data):
+        wire_protocol.refused("FILM", "version or length",
+                              f"version {version}, name of {n} bytes")
         return pos
     # every string off the wire through one door, a file name too (ASCII:
     # the German font's slots leave it as it is)

@@ -5,7 +5,7 @@ HD EXTENSION `name_band`. WHAT THE ORIGINAL DOES: it prints the race's
 name at the portrait cell's foot (`Draw_Race_Text_`, racescrn.cpp:140-146:
 `Squeeze_Centered_Print_(x, y + 0x4C, name, 0x4C)`), IGNORED above it
 (:569-572) and, under the pointer, the relation word over the bar and the
-cell's right edge (:563-566) — each in an OUTLINED font,
+cell's right edge (:572-574) — each in an OUTLINED font,
 `Set_Font_Style_Outline` (fonts.cpp:812-815: style 4, the text printed
 first in the outline colour at its eight neighbours, :554-584), outline
 colour 177 (`Set_Outline_Color(177, 177)`, racescrn.cpp:794). That

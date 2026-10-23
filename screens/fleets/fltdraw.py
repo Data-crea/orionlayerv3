@@ -30,6 +30,7 @@ from core import palette
 from screens.galaxy_map import maplines
 
 from . import fltart
+from . import fltfonts
 from . import fltgeom
 
 #: Every colour this module uses, with the same names in
@@ -306,9 +307,11 @@ def draw_labels(surface, screen, words, enabled=None, art=None,
         # one label colour in every state. It was drawn green.
         if name in ("btn_leaders", "btn_return"):
             continue          # slanted: the block draws its word (flthud)
-        # CAPITALS, NO GLYPH (work order 225, decision 91).
+        # CAPITALS, NO GLYPH (work order 225, decision 91). This screen's
+        # own size, not the shared default (work order 326, `fltfonts`).
         icons.fitted_word(surface, screen.style, rect, text.upper(),
-                          hudtext.colour("button"), icon=None, dim=not live)
+                          hudtext.colour("button"), icon=None, dim=not live,
+                          share=fltfonts.CONTROL_SHARE)
 
 
 def draw_status(surface, screen, text, color=None):
@@ -322,7 +325,7 @@ def draw_status(surface, screen, text, color=None):
     if rect is None or not text:
         return
     icons.fitted_word(surface, screen.style, rect, text, color or col("label"),
-                      share=0.62)
+                      share=fltfonts.STATUS_SHARE)
 
 
 # ── The grid's content ────────────────────────────────────
@@ -543,7 +546,8 @@ def draw_cells(surface, screen, cells, art=None):
                 icons.fitted_word(surface, screen.style,
                                   pygame.Rect(rect.x, rect.bottom - band,
                                               rect.width, band),
-                                  cell.name, col("label"), share=0.8)
+                                  cell.name, col("label"),
+                                  share=fltfonts.CELL_NAME_SHARE)
             _mark_cell(surface, screen, cell, rect, hover)
             continue
         # The cell is split the way the original splits it: the picture
@@ -563,7 +567,8 @@ def draw_cells(surface, screen, cells, art=None):
             icons.fitted_word(surface, screen.style,
                               pygame.Rect(rect.x, rect.bottom - band,
                                           rect.width, band),
-                              cell.name, col("label"), share=0.8)
+                              cell.name, col("label"),
+                              share=fltfonts.CELL_NAME_SHARE)
         _mark_cell(surface, screen, cell, rect, hover)
 
 

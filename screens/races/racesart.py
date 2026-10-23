@@ -66,20 +66,26 @@ class RacesArt:
             if 0 <= int(race) < RACES else None
 
     def eliminated(self):
-        return self._sprite("eliminated")
+        """RACES.LBX 0x1F (racescrn.cpp:284, :309), or the PNG a mod painted
+        for it — that one even without the extraction (work order 326 D):
+        it is a picture of its own, read through no palette, so a player
+        with the mod folder and no MOO2 files still sees an eliminated race
+        marked. The caller tells the two apart by size (`racesdraw`)."""
+        return self._sprite("eliminated", painted_alone=True)
 
     def bar(self):
         """RACES.LBX 3, the relation bar — None where an extraction from
         before work order 223 has no `bar.bin` (the bar is then a field)."""
         return self._sprite("bar")
 
-    def _sprite(self, name):
-        if not self.available:
+    def _sprite(self, name, painted_alone=False):
+        """`painted_alone`: a mod's PNG counts without the extraction."""
+        if not self.available and not painted_alone:
             return None
         if name in self._cache:
             return self._cache[name]
         surface = self._src.painted(f"{name}.bin")
-        if surface is not None:
+        if surface is not None or not self.available:
             self._cache[name] = surface
             return surface
         try:

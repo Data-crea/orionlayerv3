@@ -22,6 +22,7 @@ import logging
 from core import textfit
 
 from . import fltrows
+from . import fltshippic
 from .fltdraw import _rect, col, content_rect
 
 #: `FLT2::_red_colors` (flt2.cpp:6): palette index 129, read as (196, 0, 0)
@@ -90,16 +91,17 @@ def panel_text_rect(screen):
 
     `ship_panel_text` when `boxes.json` has it; otherwise the hole's
     content rect inset by `PANEL_FALLBACK_INSET`, which is what the
-    panel did before the box existed.
+    panel did before the box existed. Either ends before the ship's
+    picture while one is drawn (work order 326, `fltshippic.text_limit`).
     """
     r = _rect(screen, PANEL_TEXT_BOX)
     if r is not None:
-        return r
+        return fltshippic.text_limit(screen, r)
     r = content_rect(screen, "ship_panel")
     if r is None:
         return None
     pad = max(1, int(round(PANEL_FALLBACK_INSET * screen.layout.scale)))
-    return r.inflate(-2 * pad, -2 * pad)
+    return fltshippic.text_limit(screen, r.inflate(-2 * pad, -2 * pad))
 
 
 def panel_font_px(screen):

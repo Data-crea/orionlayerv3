@@ -407,7 +407,19 @@
       "style": {
         "skin": "none",
         "font_size": 14,
-        "font_scale": 1.5
+        "font_scale": 1.4
+      }
+    },
+    {
+      "name": "ship_picture",
+      "rect": [
+        585,
+        799,
+        328,
+        146
+      ],
+      "style": {
+        "skin": "none"
       }
     },
     {
@@ -906,7 +918,19 @@
       "style": {
         "skin": "none",
         "font_size": 14,
-        "font_scale": 1.5
+        "font_scale": 1.4
+      }
+    },
+    {
+      "name": "ship_picture",
+      "rect": [
+        585,
+        799,
+        328,
+        146
+      ],
+      "style": {
+        "skin": "none"
       }
     },
     {

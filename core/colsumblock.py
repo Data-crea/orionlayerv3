@@ -57,11 +57,16 @@ def parse(gs, data, pos):
     short or of another version, else a dict). Returns the new position."""
     gs.colony_list_numbers = None
     r = Reader(data, pos)
-    if not r.enter(b"CSUM") or not r.fits(_st.calcsize(HEAD)):
+    if not r.enter(b"CSUM"):
+        return pos
+    if not r.fits(_st.calcsize(HEAD)):
+        r.refuse("CSUM", "short", f"{r.left()} bytes")
         return pos
     version, first, n = r.take(HEAD)
     if version != 1 or not 0 <= n <= MAX_COLONIES or \
             not r.fits(n * ROW_SIZE + 2 * BUY_FIELDS):
+        r.refuse("CSUM", "version, count or length",
+                 f"version {version}, {n} rows")
         return pos
     rows = []
     for _ in range(n):

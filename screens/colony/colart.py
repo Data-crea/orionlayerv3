@@ -20,6 +20,8 @@ TRANSCRIPTION, what the original draws and in which colours:
   the system   COLSYSDI.LBX `climate * 5 + size + 11` for a planet, 0x3E a
                gas giant, 0x3F an asteroid belt, 0x41 the orbit marker
                (colsysdi.cpp:4-45)
+  the rows     COLONY2.LBX 0..15, the production rows' symbols, and the
+               shortage's outline (`outlined`; work order 326, `colprod`)
 
 Measured: with this palette, sky and ground, the composed scene equals the
 native frame of a live colony screen pixel for pixel wherever no building
@@ -43,6 +45,8 @@ REL = "screens/colony/assets/gamedata"
 FORMAT_VERSION = 3
 HOW = "python tools/colony_art_extract.py"
 CLIMATES, BG_TYPES, SIZES = 10, 3, 5
+#: `Short_Anims_`'s outline colour, a palette index (colony.cpp:2173).
+SHORT_OUTLINE = 0xED
 
 
 class ColonyArt:
@@ -139,6 +143,49 @@ class ColonyArt:
                 del view
                 alpha = pygame.surfarray.pixels_alpha(surf)
                 alpha[...] = np.where(idx != 0, 255, 0).T
+                del alpha
+            self._cache[key] = surf
+        return self._cache[key]
+
+    def has(self, stem):
+        """The drawing is there, extracted or painted — asked without
+        reading it, so an older extraction is not a log line per name."""
+        return self.available and (
+            os.path.isfile(self._src.path(f"{stem}.bin"))
+            or os.path.isfile(self._src.path(f"{stem}_0.png")))
+
+    def outlined(self, stem, climate, bg, index=SHORT_OUTLINE):
+        """A drawing as `Short_Anims_` makes a shortage of it (colony.cpp:
+        2168-2176): laid one pixel in on a blank bitmap and outlined in
+        palette colour `index` (0xED) — every empty pixel left, right,
+        above or below an inked one (`Outline_Bitmap_Pixels_`, shear.cpp:
+        371-453, a horizontal and a vertical pass). One pixel larger on
+        every side, so it is drawn where the plain drawing would be and
+        its picture stands one pixel right and down, as the original's."""
+        if not self.available:
+            return None
+        key = ("outlined", stem, climate, bg, index)
+        if key not in self._cache:
+            pic = self.sprite(stem, climate, bg)
+            surf = None
+            if pic is not None:
+                w, h = pic.get_size()
+                ink = np.zeros((w + 2, h + 2), bool)
+                ink[1:-1, 1:-1] = pygame.surfarray.array_alpha(pic) > 0
+                ring = np.zeros_like(ink)
+                ring[1:, :] |= ink[:-1, :]
+                ring[:-1, :] |= ink[1:, :]
+                ring[:, 1:] |= ink[:, :-1]
+                ring[:, :-1] |= ink[:, 1:]
+                ring &= ~ink
+                surf = pygame.Surface((w + 2, h + 2), pygame.SRCALPHA)
+                surf.blit(pic, (1, 1))
+                rgb = self._lut(climate, bg)[index]
+                view = pygame.surfarray.pixels3d(surf)
+                view[ring] = rgb
+                del view
+                alpha = pygame.surfarray.pixels_alpha(surf)
+                alpha[ring] = 255
                 del alpha
             self._cache[key] = surf
         return self._cache[key]

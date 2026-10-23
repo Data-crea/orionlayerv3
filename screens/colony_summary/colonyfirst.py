@@ -36,6 +36,7 @@ dev:doc/ext_api_dokumentation_v3.md and the fundament). The steps
 therefore have to be sent one at a time and CONFIRMED, and this is
 what confirms them.
 """
+from core.nativeview import NATIVE_H, NATIVE_W
 
 #: Palette index of the thumb's fill, colsum.cpp:759.
 THUMB_FILL = 229
@@ -58,7 +59,7 @@ WINDOW = 10
 NOT_DRAWN = "not_drawn"
 
 
-def rows(framebuffer, width=640, height=480):
+def rows(framebuffer, width=NATIVE_W, height=NATIVE_H):
     """The framebuffer as indexable rows of palette indices.
 
     `read_first` wants `frame[y][x]`; the wire carries one flat

@@ -112,6 +112,17 @@ disappear (decision 61):
                 is the game's own (billtext 64 + group)
   DEVIATION     a name too wide is SHRUNK, where `Squeeze_Print_`
                 compresses the glyphs (`core/researchpanel.py`)
+
+NOT YET IN `MARKED` (work order 326 E — the set is held equal by smoke
+checks 080 and 080a, which this order's part may not change; the key is
+for the run that owns them):
+
+  HD EXTENSION  `field_pictures` — a painted picture per category in its
+                box, from the player's mod folder
+                (`files/assets/shared/research/<category>.png`), its left
+                side darkened and the words kept at decision 94's floor
+                (`core/researchart.py`); without one, the box as above.
+                Data's decision, work order 326 E, for both panels
 """
 from core.researchscreen import (            # noqa: F401  (re-exported)
     COST_SUFFIX, NAMES_MISSING, NO_PLAYER, READY, UNVALIDATED,

@@ -37,6 +37,9 @@ DOOM_STAR = 43
 #: The glow frame of a ship at rest (frame 0 has its engines off since work
 #: order 222; the livery window shows frame 1).
 AT_REST = 1
+#: The colony, outpost and transport ship pictures: no battle picture
+#: (`screens/galaxy_map/shippics.NON_COMBAT_PICTURES`).
+NON_COMBAT = (45, 46, 47)
 #: Player colours 0..7; anything else is the monster set (`fltrows`).
 COLOURS = 8
 #: How many fitted pictures are kept (a full Fleets grid at one size is 25).
@@ -97,8 +100,12 @@ def fitted(app, colour, picture, box, state=None, own=None, size=None):
     this ship, a colour that is no player's — and the caller draws the
     original's sprite. `own` is the local player's colour (his livery's
     second colour goes on his ships only), else read from `state`."""
-    if colour is None or not 0 <= int(colour) < COLOURS or box is None \
-            or not painted(picture, size):
+    if colour is None or not 0 <= int(colour) < COLOURS or box is None:
+        return None
+    if int(picture) in NON_COMBAT and not (
+            size is not None and int(size) == SHIP_SIZE_DOOM_STAR):
+        return _slot(colour, int(picture), box)
+    if not painted(picture, size):
         return None
     from core import livery, palette, usermod
     if own is None and state is not None:
@@ -121,6 +128,48 @@ def fitted(app, colour, picture, box, state=None, own=None, size=None):
         return None
     return pic, (box.x + (box.w - pic.get_width()) // 2,
                  box.y + (box.h - pic.get_height()) // 2)
+
+
+def _slot(colour, picture, box):
+    """(surface, topleft) of the galaxy map's ship-picture slot for a
+    colony, outpost or transport ship (`NON_COMBAT`), fitted into `box`,
+    or None. The battle has no picture 45-47 (`cmbtshp` holds 45 a colour,
+    so entry `colour * 45 + 47` is another colour's ship): the route above
+    would alias a wrong ship. The slot is the one place the player's mod
+    folder paints these — ONE ROUTE FOR EVERY PLACE, so the transport the
+    player painted reaches the Fleets grid, the Leaders ship view and the
+    Ship Designer as it reaches the map (HD EXTENSION `slot_ship_pictures`,
+    work order 326 C2; the original draws picture 47 on every one of those
+    screens, `KEN::Do_Get_Ship_Picture_Seg` ken.cpp:455-465). Never
+    enlarged, as the battle's pictures are not. DEVIATION of the map's slot
+    rule: a captured ship takes the HOLDER's colour here (`fitted` is given
+    the cell's ramp, not the builder's), the map takes the builder's own
+    `<colour>_<n>.png` first."""
+    from screens.galaxy_map import shippics
+    box = pygame.Rect(box)
+    key = ("slot", int(colour), picture, box.w, box.h,
+           usermod_generation())
+    if key not in _FITTED:
+        if len(_FITTED) >= KEEP:
+            _FITTED.clear()
+        surf = shippics.slot_picture(picture, int(colour))
+        vis = shippics.visible(surf)
+        if vis is not None and (vis.get_width() > box.w
+                                or vis.get_height() > box.h):
+            vis = shippics.fitted(vis, box.w, box.h)
+        _FITTED[key] = vis.copy() if vis is not None else None
+    pic = _FITTED[key]
+    if pic is None:
+        return None
+    return pic, (box.x + (box.w - pic.get_width()) // 2,
+                 box.y + (box.h - pic.get_height()) // 2)
+
+
+def usermod_generation():
+    """How many times the mod folder was read (`usermod.init`): the cache
+    key above must not outlive a rescan."""
+    from core import usermod
+    return usermod._state.get("generation", 0)
 
 
 def _art(cap):

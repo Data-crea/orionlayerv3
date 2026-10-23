@@ -27,25 +27,45 @@ log = logging.getLogger("wire")
 _REFUSED = set()
 
 
-def refused(tag, why, detail=""):
-    """Say once that a block of the snapshot was refused.
+def refused(tag, why, detail="", skipped=False):
+    """Say once that a block of the snapshot was refused — THE ONE RULE
+    for every refusal (work order 326 H1; `Reader.refuse` comes here).
 
     The optional blocks carry a tag and no length, and `parse_state` reads
     them one after another from where the last one ended. A parser that
-    refuses its block (another version, a count that does not fit) cannot
-    step over it, so every block after it reads as absent — the battle, the
-    message box, the turn popups — with nothing in the log. Until the
-    engine writes a length with each block (dev:doc/orion2re_open_fixes.md),
-    the refusal is at least said, once per tag and reason.
+    refuses its block (another version, a count that does not fit, a short
+    block) leaves the position at the block's start, so every block after
+    it reads as absent — the battle, the message box, the turn popups. A
+    block whose own count says where it ends (FLTS) is stepped over
+    instead, and the caller says so with `skipped`; the line names which of
+    the two happened. Until the engine writes a length with each block
+    (dev:doc/orion2re_open_fixes.md, row 113), the refusal is at least
+    said, once per tag and reason; what no parser said is said at the end
+    of the chain (`stopped_at`).
 
     `why` is the rule that failed and names no number that changes from one
     snapshot to the next; `detail` carries those, in the message only — a
     key that held them was new every snapshot and logged every one."""
     if (tag, why) not in _REFUSED:
         _REFUSED.add((tag, why))
-        log.warning("block %s refused (%s%s): the blocks after it in this "
-                    "snapshot are not read", tag, why,
-                    f"; {detail}" if detail else "")
+        log.warning("block %s refused (%s%s): %s", tag, why,
+                    f"; {detail}" if detail else "",
+                    "stepped over, the blocks after it are read" if skipped
+                    else "the blocks after it in this snapshot are not read")
+
+
+def stopped_at(data, pos):
+    """The chain's end (`parse_state`): bytes left over mean the block at
+    `pos` was not read and every one after it was lost with it. Said once
+    as that block's refusal unless its parser already said why, so every
+    refusal is in the log once, also the ones a parser gives back silently
+    (a short block raising inside `Reader.block`)."""
+    if pos >= len(data):
+        return
+    # a tag is four bytes, not wire text: each byte as its own character
+    tag = "".join(map(chr, data[pos:pos + 4]))
+    if not any(said == tag for said, _why in _REFUSED):
+        refused(tag, "not read", f"{len(data) - pos} bytes left")
 
 MAGIC = 0x4F325845          # "O2XE"
 PROTO_VERSION = 1

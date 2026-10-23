@@ -17,10 +17,16 @@ and each in `layout.json` `marks`, the status document and check 090p:
   HD EXTENSION   `surface_picture` — Data's picture of the colony's world,
                  by climate (decision 58), only where the original's
                  pictures are not extracted
-  DEVIATION      `label_number` — a production row is an icon and a number,
-                 a job row the figures of its pops; the original COUNTS
-                 with sprites (decision 56's deviation, the Colonies
-                 screen's)
+  TRANSCRIPTION  `prod_symbols` (work order 326): the four production rows
+                 count with the original's symbols (`colprod`)
+  HD EXTENSION   `row_end_number` (326): the row's value at its end
+  DEVIATION      `label_number` — without the extracted symbols a
+                 production row is an icon and a number; morale its mask
+                 and its value; a job row the figures of its pops; the
+                 original COUNTS with sprites (decision 56's deviation,
+                 the Colonies screen's)
+  DEVIATION      `figure_on_line` (326): a figure's ink stands on its
+                 cell's line, the original's canvas hangs from the row top
   DEVIATION      `building_list` — the colony's buildings are a list of
                  names; UNVERIFIED `building_placement` — open fix 36's
                  grid is read and not placed (see `_buildings`)
@@ -52,12 +58,13 @@ from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from core.structs import colony as colony_struct
 from screens.colony_summary import colonyfigures, colonyoutputicons
-from screens.colony_summary import colonyrows, colonysurfaces
+from screens.colony_summary import colonyrows, colonysurfaces, colonytrack
 from screens.colony_summary.colonyplanets import painted as painted_planet
 from screens.colony_summary.colonyplanets import set_for as planet_set_for
 from core import nativedraw as nd
 
 from . import colart
+from . import colprod
 from . import colsurface
 from . import colgeom as geom
 from . import colwire
@@ -69,7 +76,12 @@ ASTEROID, GAS_GIANT, PLANET = 1, 2, 3
 #: pixels, from the line pitch each text sits on — the title's font 4
 #: band (0..15), the system display's 7 px lines (colsysdi.cpp: two lines
 #: in a 24 px row), the build window's name paragraph.
-NATIVE_TEXT = {"title": 12, "line": 7, "value": 9, "button": 9, "small": 7}
+NATIVE_TEXT = {"title": 12, "line": 7, "value": 9, "button": 9, "small": 7,
+               "number": 17}
+#: "number": HD EXTENSION `row_end_number`'s size, measured off Data's
+#: numbers_mockup.png (work order 326): its digits are 26 px in a 65 px
+#: row, 0.4 of it; the HD font's digits are 0.7 of its size (21 px at
+#: 30, measured), so 0.4 / 0.7 of the 30 native px row: 17.
 #: Output icon master size — the Colonies screen's `output.icon_size`.
 ICON_MASTER = 31
 def font(layout, key):
@@ -386,14 +398,23 @@ def _centred(surface, screen, pic, native_x, native_y):
 
 
 def _production(surface, screen, view):
-    """DEVIATION `label_number`: the original's own net, as a number
-    beside its icon (`colonyrows.drawn_production`, coldraw.cpp:36-181)."""
+    """TRANSCRIPTION `prod_symbols` (work order 326): the BC, food,
+    industry and research rows count with the original's symbols, as many
+    and grouped as `Draw_Colony_Prod_Both_` draws them (coldraw.cpp:36-181,
+    `colprod`) — centred on the ruled cell (DEVIATION `row_cells`), where
+    the original stands them 0 or 2 px under its row's top — and
+    HD EXTENSION `row_end_number` puts the row's value at its right end
+    (Data's mockup). Without the extracted symbols, DEVIATION
+    `label_number`: the original's own net as a number beside Data's icon
+    (`colonyrows.drawn_production`)."""
     layout = screen.layout
     icons = _icons(screen)
-    for econ, native in geom.PROD_ROWS.items():
-        value = colonyrows.drawn_production(view.colony, econ)
-        name = colonyoutputicons.RESOURCE_NAMES[econ]
-        _icon_value(surface, screen, icons, name, native, value)
+    if not colprod.draw_rows(surface, screen, view, _bg_type(view),
+                             geom.PROD_ROWS, font(layout, "number")):
+        for econ, native in geom.PROD_ROWS.items():
+            value = colonyrows.drawn_production(view.colony, econ)
+            name = colonyoutputicons.RESOURCE_NAMES[econ]
+            _icon_value(surface, screen, icons, name, native, value)
     # Under Unification the original draws no marks at all, which is not
     # a morale of 0 — so nothing is drawn (`colony_morale`'s `applies`).
     morale, applies = colonyrows.colony_morale(view.colony,
@@ -460,16 +481,34 @@ def _jobs(surface, screen, view, state):
     """DEVIATION `label_number`'s pop half: each job's figures (see
     `job_cells`). Colonists in hand are not in their row — the view was
     built without them (TRANSCRIPTION `carry`) — and nothing marks the
-    row they came from, as the original marks nothing."""
+    row they came from, as the original marks nothing.
+
+    DEVIATION `figure_on_line` (work order 326, Data's pictures: the
+    Colonies screen's figures stand on their line, these floated): the
+    figure's last INKED row stands on the cell's bottom line, the
+    Colonies screen's rule (`colonytrack.figure_origin_y`, decision of
+    12 September 2026). The original puts the sprite's CANVAS TOP at the
+    row's top (`Do_Colony_Info_Pop_Stuff_For_Pop_`, coldraw.cpp:281-440,
+    rows `type * 30 + 62`, colony.cpp:1293-1309) and its band art draws
+    the rules, so its ink ends some px above the row's end."""
     size = figure_size(screen)
     if getattr(screen, "_fig_size", None) != size:
         screen._figures = colonyfigures.FigureSet(screen.app.res, size)
         screen._fig_size = size
     figures = screen._figures
+    # `figure_origin_y` assumes a one-px plate line; this cell's outline
+    # is `outline_width` thick (two px at 3840x2160), so the floor rises
+    # by the difference or the foot would stand IN the line.
+    thicker = hud.outline_width(screen.layout.scale) - \
+        colonytrack.PLATE_LINE
     for job, k, rect, cell in job_cells(screen, view):
         pic = figures.get(cell.figure) if figures.state != "missing" \
             else None
-        if pic is not None:
+        ink = figures.ink_bottom(cell.figure) if pic is not None else None
+        if ink is not None:
+            surface.blit(pic, (rect.x, colonytrack.figure_origin_y(
+                rect.y, rect.h, ink) - thicker))
+        elif pic is not None:
             surface.blit(pic, (rect.x, rect.bottom - pic.get_height()))
         else:
             pygame.draw.rect(surface, hudtext.colour("label"),

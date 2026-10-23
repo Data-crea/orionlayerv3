@@ -104,17 +104,13 @@ def _cmbt(data, pos):
         wire_protocol.refused("CMBT", "unit record size or count",
                               f"record {size}, {units} units")
         return None, pos
-    if out["cur_ship"] >= units:
-        # -1 is the engine's own "no ship acts" (combat1.cpp:418, :1862)
-        # and passes — the screen asks `acting_unit`, never the list with
-        # it (work order 324) — and so does a block of no unit at all (the
-        # engine writes CMBT whenever a battle is live, also while it sets
-        # up or ends, ext_api.cpp), which refusing would cost every block
-        # after it. A value past the end would raise in every frame that
-        # follows.
-        wire_protocol.refused("CMBT", "acting unit past the end",
-                              f"{units} units, acting {out['cur_ship']}")
-        return None, pos
+    # The acting unit is NOT a reason to refuse (work order 326 H1): -1 is
+    # the engine's own "no ship acts" (combat1.cpp:418, :1862), a block of
+    # no unit at all is written while a battle sets up or ends
+    # (ext_api.cpp), and a value past the end reads as "none acts" too —
+    # every HD reader asks `acting_index`, never the list with it, and the
+    # other uses only compare it with a unit number. A refusal here cost
+    # every block after CMBT, the film included.
     out["units"] = []
     for _ in range(units):
         out["units"].append(unit(r.raw(size)))
@@ -134,6 +130,9 @@ def _cmsl(data, pos):
     want = combat_struct.MISSILE_SPEC.resolved()[0]
     if version != 1 or size != want or not 0 <= n <= 300 or \
             not r.fits(n * (2 + size)):
+        wire_protocol.refused("CMSL", "version, record size, count or "
+                              "length", f"version {version}, record "
+                              f"{size}, {n} missiles")
         return None, pos
     missiles = []
     for _ in range(n):
@@ -158,6 +157,8 @@ def _cres(data, pos):
      defender, pop_lost, stardate, units) = head
     if version != 1 or not 0 <= units <= 210 or \
             not r.fits(units * CRES_UNIT_SIZE):
+        wire_protocol.refused("CRES", "version, count or length",
+                              f"version {version}, {units} units")
         return None, pos
     out = {"number": number, "serial": serial, "fought": bool(fought),
            # 1 attacker, -1 defender (also after the 50-turn timeout: `turn`
@@ -181,10 +182,14 @@ def _ctgt(data, pos):
     r = Reader(data, pos + 4)
     version, serial, source, units = r.take("BHhh")
     if version != 1 or not 0 <= units <= 210 or not r.fits(units + 2):
+        wire_protocol.refused("CTGT", "version, unit count or length",
+                              f"version {version}, {units} units")
         return None, pos
     masks = list(r.raw(units))
     n = r.one("h")
     if not 0 <= n <= 300 or not r.fits(3 * n):
+        wire_protocol.refused("CTGT", "missile count or length",
+                              f"{n} missiles")
         return None, pos
     missiles = {}
     for _ in range(n):
@@ -277,6 +282,8 @@ def _cmev(data, pos):
     r = Reader(data, pos + 4)
     version, first, n = r.take("BIH")
     if version != 1 or not r.fits(n * EVENT_SIZE):
+        wire_protocol.refused("CMEV", "version or length",
+                              f"version {version}, {n} events")
         return None, pos
     events = []
     for k in range(n):

@@ -48,6 +48,7 @@ from . import fltdraw
 from . import flthud
 from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltscan
 from . import fltwire
+from . import fltminimap, fltshippic
 
 log = logging.getLogger("fleets")
 
@@ -70,6 +71,7 @@ class FleetsScreen(ScreenBase):
         self._view = None        # fltwire.View: what may be believed
         self._cells = []         # fltrows.Cell per displayed slot
         self._panel = []         # the scanned ship's lines
+        self._panel_picture = None   # its picture this frame, fltshippic
         self._parts = None       # ship part names (shields, weapons, specials)
         self._hover_cell = None  # slot under the pointer, HD's own hover
         # HD's own `MOX::_scanned_big_ship`: WHICH ship the panel is
@@ -348,6 +350,7 @@ class FleetsScreen(ScreenBase):
         flthud.draw_hud(surface, self, self.enabled_buttons(),
                         self._filter_state())
         fltdraw.fill_inset(surface, self)
+        fltminimap.draw(surface, self)
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
         fltdraw.draw_slots(surface, self)
@@ -356,7 +359,11 @@ class FleetsScreen(ScreenBase):
         fltdraw.draw_labels(surface, self, self._words,
                             self.enabled_buttons(), self._art,
                             self._filter_state())
+        # Before the words: they make room for it (WO 326, `fltshippic`).
+        self._panel_picture = (fltshippic.picture(self) if self._panel
+                               else None)
         fltpanel.draw_panel(surface, self, self._panel, self._words)
+        fltshippic.draw(surface, self)
         _stars = self._inset_stars()
         fltdraw.draw_inset(surface, self, _stars, self._state, self._art)
         fltdraw.draw_relocation_lines(surface, self, self._state, _stars,

@@ -254,6 +254,7 @@
       "mod_wait": "Extracting the game's pictures \u2014 this can take a while ({i}/{n})",
       "mod_done": "Ready \u2014 restart to use the mod folder",
       "mod_failed": "{n} step(s) failed \u2014 see the log",
+      "mod_error": "Failed \u2014 see the log",
       "monsters": "Monster values",
       "monster_steps": {
         "on": "On",
@@ -264,12 +265,18 @@
         "on": "On",
         "off": "Off"
       },
+      "map_black": "Black map background",
+      "map_black_steps": {
+        "off": "Off",
+        "on": "On"
+      },
       "frame": "Frame colour",
       "reset": "Reset",
       "tone": "Frame tone",
       "language": "Language",
       "language_wait": "Reading game files ({i}/{n})",
       "language_done": "{made} game file(s) found",
+      "language_failed": "Failed \u2014 see the log ({made} file(s) found)",
       "_language_steps_note": "each language in its own words, as language switches name them (not translated)",
       "language_steps": {
         "en": "English",
@@ -428,6 +435,10 @@
     "orionlayer.map_ships": {
       "title": "MAP SHIP PICTURES",
       "body": "On: each of your stacks on the galaxy map shows its strongest ship \u2014 the Avenger first, then the largest hull, then the dearest design \u2014 in your colour, and every other empire's stack the ship the game puts at its head. A colony, outpost or transport stack shows its picture from the map's ship picture slot (MODDING.md); without one, and for a ship without a picture, the ship icon. Off: the ship icon for every stack, as the original draws it. Applied at once."
+    },
+    "orionlayer.map_black": {
+      "title": "BLACK MAP BACKGROUND",
+      "body": "On: the galaxy map's background picture is replaced by black. Only the picture changes: the point stars, nebulae, stars, fleets and the HUD are drawn as before, and a Map floor lift still lifts the black. Off: the background picture. Applied at once."
     },
     "orionlayer.frame": {
       "title": "FRAME COLOUR",

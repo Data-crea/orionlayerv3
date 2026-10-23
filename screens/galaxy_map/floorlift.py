@@ -38,6 +38,15 @@ player's settings (`core.usersettings`) on every frame, and the Game
 Settings screen behind the open popup shows it at once. The colours of
 the steps are the skin's (`galaxy_map` floor_lift_light / _haze), with
 their measurement next to them.
+
+HD EXTENSION `black_floor` (work order 326, Data's decision of 23 October
+2026, amending decision 71's "the galaxy map's own floor is untouched" for
+this option only): the setting `map_black_floor` "on" draws black where the
+floor's picture would be — the universal background or a mod's
+`backgrounds/galaxy_map.png`. Only the picture: the point stars below, and
+everything `_render_map` and the HUD draw after the floor, are unchanged,
+and the floor lift is still added (it lifts whatever the floor is). Off by
+default; read at draw time like the lift, so it applies at once.
 """
 import pygame
 
@@ -51,6 +60,15 @@ LIFT = {
     LIGHT: palette.require("galaxy_map", "floor_lift_light"),
     HAZE: palette.require("galaxy_map", "floor_lift_haze"),
 }
+
+
+BLACK_SETTING, BLACK_ON = "map_black_floor", "on"
+
+
+def black(app):
+    """True while the player chose the black background (`black_floor`)."""
+    settings = getattr(app, "user_settings", None)
+    return settings is not None and settings.get(BLACK_SETTING) == BLACK_ON
 
 
 def step(app):
@@ -96,7 +114,14 @@ def render_floor(screen, surface, px=None, ctx=None):
     import pygame
     whole = pygame.Rect(0, 0, screen.app.win_w, screen.app.win_h)
     scaled = screen._map_bg_scaled
-    if scaled is not None and scaled.get_size() == whole.size:
+    if black(screen.app):
+        # black with the lift added is the lift's own colour, so one fill
+        # gives `apply` on black byte for byte without its additive pass
+        # over the window, which cost a map frame before work order 184
+        #
+        # LOOK EXCEPTION picture: the black that replaces the floor's picture (HD EXTENSION black_floor)
+        surface.fill(tuple(LIFT[step(screen.app)][:3]), whole)
+    elif scaled is not None and scaled.get_size() == whole.size:
         lift = tuple(LIFT[step(screen.app)][:3])
         surface.blit(_lifted(scaled, lift, screen.app) if any(lift)
                      else scaled, (0, 0))

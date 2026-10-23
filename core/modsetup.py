@@ -15,8 +15,10 @@ points; never a MOO2 file, decision 72) and the frame templates
 the restart the switch asks for anyway (decision 18).
 
 `state()` is what the GAME menu's mod row shows: "idle", ("running", i, n,
-what), ("done", failed names) — and the row prints "can take a while"
-while it runs.
+what), a dict with phase, i, n, what, failed (names) and error — and the row prints "can take a
+while" while it runs, and a failure (a failed step, or an `error` from a
+plan that could not be made or a job that stopped) as a failure (work
+order 326 H1), never as "Ready".
 """
 import contextlib
 import importlib
@@ -113,8 +115,10 @@ def start(steps=None, runner=None):
         _state.update(phase="running", i=0, n=len(steps or ()), what="",
                       failed=[], error="")
     if steps is None:
-        # The import and the registry walk are LONG; the lock is not held
-        # for them (the state row reads it every frame).
+        # The import and the registry walk run here, on the caller's thread
+        # — the UI thread (`screens/game_menu/oldrop.py`), so the frame
+        # waits for them — and outside the lock: the job thread only
+        # starts after them and holds the lock just for its short updates.
         try:
             steps = plan()
         except Exception as err:

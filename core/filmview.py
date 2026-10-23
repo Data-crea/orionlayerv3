@@ -44,7 +44,7 @@ import logging
 
 import pygame
 
-from core import fallbacknote, filmblock
+from core import fallbacknote, filmblock, handover
 
 log = logging.getLogger("orionlayer")
 
@@ -80,7 +80,7 @@ class View:
         picture = app.original_view.render(surface, app.layout)
         # the engine's picture, not an HD frame: no hold may keep it (with
         # its hint) once the film has gone (`handover.render_hold`)
-        app._surface_hd = False
+        handover.surface_shows_engine(app)
         hint(surface, app.style, (labels or {}).get(
             "film_skip_hint", HINT_DEFAULT), picture)
         return picture

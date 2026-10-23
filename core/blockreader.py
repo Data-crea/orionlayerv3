@@ -17,9 +17,11 @@ THE CONTRACT (the smoke test holds it, `090zzzzzs`):
     format; both little-endian, both cached per format;
   * a refused block is said once through `wire_protocol.refused` and
     `refuse` gives back where the block ended — an int the caller may step
-    over — or None when it cannot be skipped (the blocks carry a tag and,
-    until the engine writes a length, often no size: the rest of the
-    snapshot then reads as absent, which is why it is said).
+    over, and the line then says it was stepped over — or None when it
+    cannot be skipped (the blocks carry a tag and, until the engine writes
+    a length, often no size: the rest of the snapshot then reads as
+    absent, which is why it is said). One rule with `wire_protocol.refused`
+    (work order 326 H1).
 
 No pygame, no drawing: the parsers that use this run in a process that has
 no display (decision 97's wire layer; `core.game_state` must import clean).
@@ -116,8 +118,9 @@ class Reader:
 
     @staticmethod
     def refuse(tag, why, detail="", end=None):
-        """Say once that `tag`'s block was refused (`wire_protocol.refused`).
-        Returns `end`, where the block ended when it is known and can be
-        stepped over, else None."""
-        wire_protocol.refused(tag, why, detail)
+        """Say once that `tag`'s block was refused (`wire_protocol.refused`,
+        the one rule). Returns `end`, where the block ended when it is
+        known and can be stepped over — then the line says it was stepped
+        over — else None, and the line says the rest is not read."""
+        wire_protocol.refused(tag, why, detail, skipped=end is not None)
         return end

@@ -29,6 +29,17 @@ WHAT IS TRANSCRIPTION AND WHAT IS OURS — each marked where it happens:
   HD EXTENSION    `name_band` — the name, IGNORED and the relation word
                   on a band of the HUD's glass, where the original prints
                   them in an outlined font (`racesband`, work order 316 C)
+  DEVIATION       `relation_word_on_knob` — the relation word and its
+                  band fitted inside the slider's knob and centred on
+                  it, where the original prints it at the bar's x + 4,
+                  one row under the slider's top (:572-574) (work order
+                  326 D, `relation_word`)
+  HD EXTENSION    `eliminated_painted` — a painted eliminated mark (a
+                  mod's `gamedata/eliminated_0.png`) fitted to the
+                  original banner's width, centred where the original's
+                  stamp stands (:259-264); the original's own 76 x 88
+                  stamp keeps `sprite_scale` (work order 326 D,
+                  `eliminated_mark`)
   OMISSION        `their_spies` — the original prints that race's spies
                   in the player's empire over its portrait when there are
                   any (`BILL::Get_Their_Spy_Number`, ROW_RACE_SPIES,
@@ -128,7 +139,9 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
         style.draw_plate(surface, cell.inflate(-4, -4), layout.scale,
                          nd.BOX_OUTLINE)
     if slot.eliminated and art is not None and art.eliminated() is not None:
-        over = nd.magnified(art.eliminated(), layout)
+        # over the portrait, before the frame, at the cell's place
+        # (`Draw_Race_Photos`, racescrn.cpp:259-264)
+        over = eliminated_mark(art.eliminated(), layout, cell)
         surface.blit(over, over.get_rect(center=cell.center))
     width = banner_frame(surface, layout, cell, slot.colour, art)
     if lit:
@@ -173,6 +186,43 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
                        slot.mission if mission is None else mission)
     else:
         _draw_missions(surface, screen, i, None)
+
+
+#: The original's red banner inside its 76 x 88 overlay (RACES.LBX 0x1F,
+#: the extracted `eliminated.bin` decoded): opaque x 2..73, y 35..52 — 72
+#: of the cell's 76 px wide, centred both ways on the cell.
+ELIMINATED_NATIVE = (76, 88)
+ELIMINATED_BANNER_W = 72
+_fitted_marks = {}
+
+
+def eliminated_mark(picture, layout, cell):
+    """The eliminated overlay as drawn over `cell`.
+
+    The original's sprite is the whole cell (76 x 88, transparent but for
+    the banner) and keeps `sprite_scale`'s integer magnification. A
+    picture of any other size is a PAINTED one (a mod's
+    `gamedata/eliminated_0.png`, Data's of work order 326): only the
+    banner, at its own proportion, so it is FITTED — scaled smoothly to
+    the original banner's share of the cell's width, never higher than
+    the cell, centred where the original's banner is centred.
+    HD EXTENSION `eliminated_painted` (work order 326 D): integer
+    magnification of a 2000-px painting would cover the screen."""
+    if picture.get_size() == ELIMINATED_NATIVE:
+        return nd.magnified(picture, layout)
+    pw, ph = picture.get_size()
+    w = max(1, round(cell.w * ELIMINATED_BANNER_W / ELIMINATED_NATIVE[0]))
+    h = max(1, round(w * ph / max(1, pw)))
+    if h > cell.h:
+        w, h = max(1, round(cell.h * pw / max(1, ph))), cell.h
+    key = (id(picture), w, h)
+    hit = _fitted_marks.get(key)
+    if hit is None:
+        if len(_fitted_marks) > 16:
+            _fitted_marks.clear()
+        hit = _fitted_marks[key] = pygame.transform.smoothscale(
+            picture, (w, h))
+    return hit
 
 
 def banner_frame(surface, layout, cell, colour, art):
@@ -255,17 +305,42 @@ def _draw_bar(surface, screen, i, relation, art):
 
 
 def relation_word(surface, screen, slot, art):
-    """On hover over the bar: the word, centred on the bar at the slider
-    (:563-566)."""
+    """On hover over the bar: the word at the slider (:572-574).
+
+    The original prints it centred at the bar's x + 4, one row under the
+    slider's top, in its outlined 2nd font — a line that fits the 25 x 13
+    slider. HD's word on its band is a line of the HD font: placed at the
+    original's anchor it stood wider than the knob and in the knob's upper
+    half (work order 326 D, Data's stimmungsslider.png; 87 x 17 px over a
+    78 x 30 knob at 1920 x 1080). DEVIATION `relation_word_on_knob` (work
+    order 326 D): the word and its band are fitted INSIDE the knob — its
+    width less the band's ends and the knob's edge, shrunk by the screen's
+    one rule (`nd.fit`) — and centred on the knob both ways, the ink of
+    the capitals on the knob's middle row. The knob's centre is one native
+    pixel left of the original's anchor (x 108 against 109)."""
     i = slot.index
-    at = nd.point(screen.layout, geom.BAR[i][0] + 4,
-                  geom.slider_y(i, slot.relation) + 1)
+    layout, style = screen.layout, screen.style
+    y = geom.slider_y(i, slot.relation)
+    sx = geom.SLIDER_X[i]
+    knob = nd.rect(layout, (sx, y, sx + geom.SLIDER_SIZE[0] - 1,
+                            y + geom.SLIDER_SIZE[1] - 1))
+    size = nd.font_px(layout, "status")
+    text = slot.relation_word
+    first = racesband.line_rect(style, text, knob.centerx, knob.y, knob.w,
+                                size, "center")
+    if first is None:
+        return None
+    edge = max(1, int(nd.native_scale(layout)))
+    pad = max(1, round(first.h * racesband.SIDE))
+    max_w = max(1, knob.w - 2 * (pad + edge))
+    size = nd.fit(style, text, max_w, size)
+    ink_box = style.render_text(text, size, (255, 255, 255)) \
+        .get_bounding_rect()
+    top = knob.centery - ink_box.centery
     # HD EXTENSION `name_band` (work order 316 C): on a band of the HUD's
     # glass, in place of the original's outlined font (`racesband.free`).
-    racesband.free(surface, screen.style, slot.relation_word, at[0], at[1],
-                   nd.rect(screen.layout, (0, 0, 120, 0)).w,
-                   nd.font_px(screen.layout, "status"), ink(art, "high"),
-                   "center")
+    return racesband.free(surface, style, text, knob.centerx, top, max_w,
+                          size, ink(art, "high"), "center")
 
 
 def draw_icons(surface, screen, box, count, race, art):

@@ -331,6 +331,13 @@ def from_game(settings=None):
          "Tech Review pictures — without them the Info screen's Tech Review "
          "shows an empty picture box",
          "python tools/info_art_extract.py"),
+        # THE STAR SYSTEM WINDOW'S FLEET PICTURES (work order 326 C). Checked
+        # by the first picture, as the population figures are: a .json here
+        # would also have to be on check 062's absent-allowed list.
+        (os.path.join(GM, "gamedata", "sysship_273.bin"),
+         "star system window fleet pictures — without them the window's "
+         "fleet bar shows the map's ship icon instead of the original's",
+         "python tools/sysship_art_extract.py"),
         # THE TACTICAL BATTLE (work order 197 C): ships, planets, ordnance,
         # effects and the battle palette.
         (os.path.join(ROOT, "screens", "combat", "assets", "gamedata",

@@ -21,6 +21,7 @@ its own snapshot is parsed. The module imports no pygame (checked by
 """
 import struct
 from core import lang, wire_protocol
+from core.nativeview import NATIVE_H, NATIVE_W
 from core.structs import layout
 from core.structs import settings as settings_struct
 from core.structs import star as star_struct
@@ -357,12 +358,15 @@ def parse_state(data: bytes) -> GameState:
     # The table is read, never rebuilt: Sort_Ships_In_Stack_ rewrites
     # ship_idx inside every chain (brief 119). Absent on an unpatched
     # engine and short on a revision-1 one (one byte per node, no chain):
-    # then `fleet_selection` stays None — a state, not an error.
+    # then `fleet_selection` stays None — a state, said once as a refusal
+    # because the blocks after it are lost with it (work order 326 H1).
     gs.fleet_selection = None
     if data[pos:pos + 4] == b"FSEL" and pos + 8 <= len(data):
+        _start = pos
         pos += 4
         stack = read_i16()
         nodes = read_i16()
+        chain = None
         if 0 <= nodes and pos + 3 * nodes + 2 <= len(data):
             ships, selected = [], []
             for _ in range(nodes):
@@ -371,11 +375,19 @@ def parse_state(data: bytes) -> GameState:
             length = read_i16()
             if 0 <= length and pos + 2 * length <= len(data):
                 chain = [read_i16() for _ in range(length)]
-                if all(0 <= n < nodes for n in chain) \
-                        and (stack >= 0 or not chain):
-                    gs.fleet_selection = {"stack": stack, "ships": ships,
-                                          "selected": selected,
-                                          "chain": chain}
+        if chain is None:
+            # a count outside the block has no end to step to: back to
+            # the start, said (FLTS's rule, work order 326 H1)
+            wire_protocol.refused("FSEL", "count outside the block",
+                                  f"{nodes} nodes")
+            pos = _start
+        elif all(0 <= n < nodes for n in chain) and (stack >= 0 or
+                                                     not chain):
+            gs.fleet_selection = {"stack": stack, "ships": ships,
+                                  "selected": selected, "chain": chain}
+        else:
+            wire_protocol.refused("FSEL", "chain outside the node table",
+                                  f"{nodes} nodes", skipped=True)
 
     # The fleet SCREEN's view state — OPTIONAL block after FSEL, open
     # fix 27 (doc/ext_fleet_screen_state.patch). Written by the engine
@@ -391,6 +403,7 @@ def parse_state(data: bytes) -> GameState:
     # draw a grid that is missing its last ships without saying so.
     gs.fleet_screen = None
     if data[pos:pos + 4] == b"FLTS" and pos + 4 + 26 + 2 <= len(data):
+        _start = pos
         pos += 4
         _flt = {}
         for _key in ("stack", "head_node", "owner", "icons", "icons_added",
@@ -400,23 +413,29 @@ def parse_state(data: bytes) -> GameState:
         _flt["relocate_mode"] = read_u8()
         _flt["merging_relocations"] = read_u8() != 0
         _n = read_i16()
-        if 0 <= _n and pos + 3 * _n <= len(data):
-            if _n == _flt["icons"]:
-                _ships, _sel = [], []
-                for _ in range(_n):
-                    _ships.append(read_i16())
-                    _sel.append(read_u8() != 0)
-                _flt["ship_idx"] = _ships
-                _flt["ship_selected"] = _sel
-                gs.fleet_screen = _flt
-            else:
-                # the block says how many records follow, so it is stepped
-                # OVER: left where it stood the scalars' end is mistaken
-                # for the next tag and every block after FLTS is lost
-                wire_protocol.refused(
-                    "FLTS", "records do not match the icons",
-                    f"{_n} records for {_flt['icons']} icons")
-                pos += 3 * _n
+        if _n < 0 or pos + 3 * _n > len(data):
+            # no end to step to: back to the block's start (the rule of
+            # every refused block, `wire_protocol.refused`) — left after
+            # the count, the next tag compare read the middle of the block
+            wire_protocol.refused("FLTS", "record count outside the block",
+                                  f"{_n} records")
+            pos = _start
+        elif _n == _flt["icons"]:
+            _ships, _sel = [], []
+            for _ in range(_n):
+                _ships.append(read_i16())
+                _sel.append(read_u8() != 0)
+            _flt["ship_idx"] = _ships
+            _flt["ship_selected"] = _sel
+            gs.fleet_screen = _flt
+        else:
+            # the block says how many records follow, so it is stepped
+            # OVER: left where it stood the scalars' end is mistaken for
+            # the next tag and every block after FLTS is lost
+            wire_protocol.refused(
+                "FLTS", "records do not match the icons",
+                f"{_n} records for {_flt['icons']} icons", skipped=True)
+            pos += 3 * _n
 
     # The Leaders screen's view state — OPTIONAL block after FSEL, open
     # fix 30 (doc/ext_officer_screen_state.patch). Written only while
@@ -426,6 +445,7 @@ def parse_state(data: bytes) -> GameState:
     # missing its last ships without saying so.
     gs.officer_screen = None
     if data[pos:pos + 4] == b"OFFS" and pos + 4 + 4 + 32 + 2 <= len(data):
+        _start = pos
         pos += 4
         _off = {}
         for _key in ("view", "mode", "selected", "scanned"):
@@ -446,6 +466,11 @@ def parse_state(data: bytes) -> GameState:
             _off["ship_idx"] = _ships
             _off["ship_selected"] = _sel
             gs.officer_screen = _off
+        else:
+            # FLTS's sibling (work order 326 H1): back to the start, said
+            wire_protocol.refused("OFFS", "record count outside the block",
+                                  f"{_n} records")
+            pos = _start
 
     # The Info screen's block — OPTIONAL, after OFFS's place, open fix 32
     # (doc/ext_info_screen_state.patch). Written only while screen 9 is up.
@@ -453,6 +478,7 @@ def parse_state(data: bytes) -> GameState:
     # the messages as `MSG_::sprintf_msg_` renders them. Whole or None.
     gs.info_screen = None
     if data[pos:pos + 4] == b"INFS" and pos + 4 + 12 + 2 <= len(data):
+        _start = pos
         pos += 4
         _bill = [read_i16() for _ in range(6)]
         _n = read_i16()
@@ -468,6 +494,11 @@ def parse_state(data: bytes) -> GameState:
             _msgs.append(read_bytes(_len))
         if _ok:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
+        else:
+            # FLTS's sibling (work order 326 H1): back to the start, said
+            wire_protocol.refused("INFS", "message count or length "
+                                  "outside the block", f"{_n} messages")
+            pos = _start
 
     from core import colonyblocks, designblocks, diplblocks, moveblocks
     from core import msgboxwire
@@ -511,6 +542,8 @@ def parse_state(data: bytes) -> GameState:
     pos = colsumblock.parse(gs, data, pos)    # CSUM, open fix 110
     from core import filmblock
     pos = filmblock.parse(gs, data, pos)      # FILM, open fix 112, LAST
+    # bytes left over: a block nobody read, said once (work order 326 H1)
+    wire_protocol.stopped_at(data, pos)
     return gs
 
 
@@ -570,7 +603,7 @@ def parse_fields(data: bytes) -> list:
 
 def parse_visual(data: bytes):
     """Parst einen VISUAL_FRAME Payload in Framebuffer + Palette."""
-    fb_size = 640 * 480
+    fb_size = NATIVE_W * NATIVE_H         # the plane, `core/nativeview`
     framebuffer = data[:fb_size]
     palette = []
     pos = fb_size

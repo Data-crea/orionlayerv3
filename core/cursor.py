@@ -33,12 +33,14 @@ import logging
 
 import pygame
 
+from core.nativeview import NATIVE_H
+
 log = logging.getLogger("cursor")
 
 #: Cursor height in native pixels, and the screen it was measured
 #: on. MEASURED — see the module docstring for the sweep.
 NATIVE_CURSOR_H = 21.0
-NATIVE_SCREEN_H = 480.0
+NATIVE_SCREEN_H = float(NATIVE_H)     # the plane, `core/nativeview`
 
 #: 4.38 % of the window height.
 HEIGHT_FRACTION = NATIVE_CURSOR_H / NATIVE_SCREEN_H

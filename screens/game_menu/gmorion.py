@@ -52,8 +52,8 @@ from . import gmfill, gmlang
 #: Every row, in Data's order of the tabs (`olwin.TABS`): what the right-
 #: click help regions name (help.json `orionlayer_band`).
 BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone", "floor",
-         "monsters", "map_ships", "frame_rate", "idle_rate", "painted",
-         "livery", "mods", "mod_files", "mod_open", "language")
+         "map_black", "monsters", "map_ships", "frame_rate", "idle_rate",
+         "painted", "livery", "mods", "mod_files", "mod_open", "language")
 
 #: the heading colour of the rows until work order 251, the livery
 #: window's labels since 220
@@ -308,6 +308,7 @@ def render(screen, surface):
     lx = geo["content"].x
     labels = {"colours": ("colours", "Player colours"),
               "floor": ("floor", "Map floor"),
+              "map_black": ("map_black", "Black map background"),
               "monsters": ("monsters", "Monster values"),
               "map_ships": ("map_ships", "Map ship pictures"),
               "frame_rate": ("frame_rate", "Frame rate"),
@@ -403,10 +404,15 @@ def _render_mod_files(screen, surface, geo, words, size):
     if job["phase"] == "running":
         note = words.get("mod_wait", "Extracting — this can take a while "
                          "({i}/{n})").format(i=job["i"], n=job["n"])
+    elif job["phase"] == "done" and job["failed"]:
+        note = words.get("mod_failed", "{n} step(s) failed — see the log"
+                         ).format(n=len(job["failed"]))
+    elif job["phase"] == "done" and job["error"]:
+        # a job that could not plan or stopped has no failed step and is
+        # still no success (work order 326 H1)
+        note = words.get("mod_error", "Failed — see the log")
     elif job["phase"] == "done":
-        note = (words.get("mod_failed", "{n} step(s) failed — see the log")
-                .format(n=len(job["failed"])) if job["failed"]
-                else words.get("mod_done", "Ready — restart to use it"))
+        note = words.get("mod_done", "Ready — restart to use it")
     elif selected(screen, "user_mod") == "on" and usermod.started_enabled():
         note = (words.get("mod_files", "{n} files").format(n=usermod.in_use())
                 if usermod.active() else words.get("mod_none", "no folder"))

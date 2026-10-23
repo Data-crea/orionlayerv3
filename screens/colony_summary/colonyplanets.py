@@ -32,6 +32,18 @@ many times the size it is drawn at, so it is cut to its ink and SMOOTHLY
 scaled down (decision 28 is about magnifying the game's pixel art, which
 these are not). Without them the discs stand as before; a list, which
 knows no size, takes LIST_PLANET_SIZE.
+
+**HD EXTENSION `planet_pictures` (Data, work order 326 F): THE PLANET
+CHART FIRST.** "Wherever the game shows a planet, these replace it": a
+picture per climate in the mod folder's own slot
+(`files/screens/colony_summary/assets/planet_pictures/<climate>.png`,
+`PICTURE`, the names of `NAMES`) wins over the painted battle planets in
+every place above, at every size — the chart has one picture per climate
+and no sizes, so the size is the place's own, as for the battle planets.
+The same rules hold (PAINTED_MIN, cut to its ink, smoothly scaled). The
+battle itself does not come through here (`screens/combat/cbart.py` reads
+its own slot), so the painted battle planets stay the battle's until Data
+decides (work order 326, parked).
 """
 import logging
 import os
@@ -60,6 +72,9 @@ NAMES = ("toxic", "radiated", "barren", "desert", "tundra",
 #: drawings are 56..150 px) and is left to the discs.
 PAINTED = "screens/combat/assets/gamedata/cmbtplnt/{}_0.png"
 PAINTED_MIN = 200
+#: The planet chart's slot (`planet_pictures`), by climate name; asked
+#: before PAINTED. A slot of `core.usermod.SLOTS`: nothing of ours is there.
+PICTURE = "screens/colony_summary/assets/planet_pictures/{}.png"
 #: The size a place that knows none draws (the lists): large.
 LIST_PLANET_SIZE = 3
 _painted_src = {}
@@ -103,7 +118,10 @@ def _painted_source(path):
         if max(img.get_size()) < PAINTED_MIN:
             img = None
         else:
-            img = img.subsurface(img.get_bounding_rect(min_alpha=8)).copy()
+            ink = img.get_bounding_rect(min_alpha=8)
+            # a picture with no visible pixel (a placeholder) is no picture:
+            # a 0 x 0 surface would divide by zero where it is fitted
+            img = img.subsurface(ink).copy() if ink.w and ink.h else None
     except (pygame.error, OSError, ValueError) as err:
         log.warning("planets: %s will not load (%s)", path, err)
         img = None
@@ -122,10 +140,16 @@ def painted(resources, climate, planet_size, side):
     climate, planet_size = int(climate), int(planet_size)
     if not (0 <= climate < len(NAMES) and 0 <= planet_size <= 4):
         return None
-    path = resources.resolve(PAINTED.format(climate * 6 + planet_size))
-    if not path or not path.lower().endswith(".png"):
-        return None
-    src = _painted_source(path)
+    src = None
+    # the chart's picture of the climate first, then the battle planet
+    # of climate and size (`planet_pictures`, `painted_planets`)
+    for slot in (PICTURE.format(NAMES[climate]),
+                 PAINTED.format(climate * 6 + planet_size)):
+        path = resources.resolve(slot)
+        if path and path.lower().endswith(".png"):
+            src = _painted_source(path)
+        if src is not None:
+            break
     if src is None:
         return None
     key = (path, _painted_src[path][0], side)

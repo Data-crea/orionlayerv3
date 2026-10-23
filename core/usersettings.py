@@ -89,6 +89,10 @@ DEFAULTS = {
     # The galaxy map's stacks as their strongest ship's picture (work order
     # 311, `screens/galaxy_map/shippics`), on or off; applied at once.
     "map_ship_pictures": "on",
+    # The galaxy map's background picture replaced by black (work order
+    # 326, Data's decision; `screens/galaxy_map/floorlift`), on or off;
+    # applied at once. Off: the picture, as decision 71 has it.
+    "map_black_floor": "off",
     # The HUD frame colour, a hue in degrees; None is the measured blue
     # (work order 170, `core.hud.tint`).
     "hud_hue": None,

@@ -109,9 +109,28 @@ SLOTS = ("screens/*/assets/frame.png",
          "screens/leaders/assets/pictures/slot_empty_background.png",
          "screens/leaders/assets/pictures/minimap_background.png",
          "screens/leaders/assets/pictures/view_background.png",
+         # WO 326 E: the research panel's eight category pictures, by
+         # exact name (`core/researchart.NAMES`), so a misspelt one says so
+         *(f"assets/shared/research/{_n}.png" for _n in (
+             "biology", "power", "physics", "construction", "force_fields",
+             "chemistry", "computers", "sociology")),
+         # WO 326 B: the Fleets map's picture (`screens/fleets/fltminimap`)
+         "screens/fleets/assets/pictures/minimap_background.png",
          ) + tuple(f"{SHIP_PICTURE_DIR}{c}_{n}.png"
                    for c in ("all", "[0-7]")
                    for n in ("[0-9]", "[1-3][0-9]", "4[0-7]"))
+#: Work order 326 F (HD EXTENSION, Data's pictures; neither tree nor base
+#: pack holds one): the Space Dragon's picture in the bribe popup
+#: (`core.turnpopupcontent.ART`), and the planet pictures, one per climate,
+#: that every place drawing a planet but the battle takes first
+#: (`screens/colony_summary/colonyplanets.PICTURE`). Exact names — the ten
+#: are PLANET_CLIMATE's (`colonyplanets.NAMES`, orion2_consts.h:362-374) —
+#: so a misspelt one is said, not silently unused.
+PLANET_PICTURE_DIR = "screens/colony_summary/assets/planet_pictures/"
+SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",) + tuple(
+    f"{PLANET_PICTURE_DIR}{n}.png" for n in (
+        "toxic", "radiated", "barren", "desert", "tundra",
+        "ocean", "swamp", "arid", "terran", "gaia"))
 #: The galaxy map's ship masters (work order 243, Data's decision): a whole
 #: master `files/<SHIP_MASTERS>/<kind>.png` replaces every icon cut from it
 #: (`core.shipcut`: the four steps and the Planets panel's picture), cut
@@ -205,7 +224,10 @@ def init(enabled=True, root=None):
     """Index the folder once. Returns the number of files that will be
     used; every file that will not says why, once."""
     _state.update(root=None, index={}, checked={}, texts={},
-                  enabled=bool(enabled))
+                  enabled=bool(enabled),
+                  # a number, not an address: a freed index's id can be
+                  # reused by the next one (work order 326 review)
+                  generation=_state.get("generation", 0) + 1)
     root = root or mod_dir()
     if not enabled:
         log.info("mod folder switched off (user_mod: off) — defaults only; "

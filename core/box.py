@@ -327,6 +327,10 @@ def read_boxes(path, win_w=1920, win_h=1080):
         return [Box(_copy_entry(entry)) for entry in _entries_ok(path, raw)]
 
     # New format: dict keyed by resolution
+    if any(not isinstance(v, list) for v in raw.values()):
+        # a resolution whose boxes are not a list is passed over like a
+        # bad entry, and said like one (work order 326 H3)
+        safejson._say(path, "a resolution's boxes are not a list — skipped")
     key = _resolution_key(win_w, win_h)
     if not isinstance(raw.get(key), list):
         key = closest_resolution(

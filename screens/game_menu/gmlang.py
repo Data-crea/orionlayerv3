@@ -24,6 +24,11 @@ def render_note(screen, surface, geo, words, size):
     if job["phase"] == "running":
         note = words.get("language_wait", "Reading game files "
                          "({i}/{n})").format(i=job["i"], n=job["n"])
+    elif job["phase"] == "done" and job["error"]:
+        # a job that could not plan, stopped or had a step raise is said
+        # as a failure, not as a count (work order 326 H1)
+        note = words.get("language_failed", "Failed — see the log "
+                         "({made} file(s) found)").format(made=job["made"])
     elif job["phase"] == "done":
         note = words.get("language_done", "{made} game file(s) "
                          "found").format(made=job["made"])

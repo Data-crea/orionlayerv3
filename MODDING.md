@@ -105,6 +105,27 @@ Painted race leaders: an optional download like the leader portraits, unpacked i
 Each fills the Races screen's portrait cell (476 x 409 at 3840 x 2160), cut
 centred, from the top.
 
+The mark over a race that has been wiped out is the game's own picture;
+a painted one goes to `files/screens/races/assets/gamedata/eliminated_0.png`
+(a PNG with transparency, only the banner). It is drawn over the portrait
+where the game draws its mark, as wide as the game's banner — 451 px at
+3840 x 2160, 225 px at 1920 x 1080 — at its own proportion, centred on the
+cell; it shows even without the game's extracted pictures.
+
+### The research panel's pictures
+
+Each of the eight research categories can have a picture in its box, on
+the research screen and on the research choice over the map alike:
+`files/assets/shared/research/<category>.png`, `<category>` one of
+`biology power physics construction force_fields chemistry computers
+sociology`. The picture fills the box at its own proportion, centred, the
+overflow cut (never stretched); the box is about 2.7 : 1 on the choice
+over the map (1004 x 374 at 3840 x 2160) and about 3.8 : 1 on the
+research screen (1319 x 345), so a picture of 1320 x 500 or more serves
+both. Its left side is darkened and the ground under the words is held
+dark enough to read them; a category without a picture keeps the plain
+box.
+
 ### The Leaders screen's pictures
 
 The Leaders screen has eight picture places, filled only from your mod
@@ -129,6 +150,25 @@ kept no brighter than the plain box, so every star stays as visible as
 without it. A picture that is missing or cannot be read leaves its box as
 it is without one; with the Mod folder Off the screen is as before.
 `NAMES.txt` lists the names.
+
+### The Fleets screen's map picture
+
+The Fleets screen's small galaxy map takes a painted background from your
+mod folder only (OrionLayer ships none):
+`files/screens/fleets/assets/pictures/minimap_background.png`. It fills
+the map's whole panel — 1992 x 1158 at 3840 x 2160, 996 x 579 at
+1920 x 1080 — under the stars, the fleets and the relocation lines. Paint
+it without a frame: OrionLayer draws the panel's edge over it and clips
+the picture to the panel's outline. Any size of roughly that shape works;
+it is scaled to fill, never stretched, the overflow cut evenly. Unlike the
+Leaders screen's galaxy box it is drawn as painted, not darkened, so keep
+it dark enough for the small stars to stand out. Missing, unreadable, or
+the Mod folder Off: the map is black, as before.
+
+The ship panel under it shows the scanned ship a second time, large, at
+its right: your painted ship (the battle's `cmbtshp` picture, see "The
+battle's pictures") when the folder holds one, otherwise the game's own
+ship picture. It needs no file of its own.
 
 ### The battle's pictures
 
@@ -303,6 +343,56 @@ the panel less its inset — `NAMES.txt` gives it at 1920 x 1080 and at
 window taller than 16:9 shows the panel taller and cuts the picture's
 sides). The picture is never stretched: at another shape it is cut to
 cover the panel. A climate without a picture shows the game's.
+Paint at 3728 x 1270 (about 2.94 : 1): that is the panel at 3840 x 2160,
+so the picture is sharp there and only scaled down at every smaller
+window (1864 x 635 at 1920 x 1080, 2484 x 846 at 2560 x 1440).
+
+### The colony screen's production symbols
+
+The BC, food, industry and research rows count with the game's own
+symbols, as the game does (one per unit, a second kind per ten), and end
+with the row's value as a number. The symbols come from your game files
+(`python tools/colony_art_extract.py`); without them each row shows one
+icon and the number. A PNG replaces a symbol, drawn at the game's size
+(16 x 23) and enlarged like the screen's other sprites:
+
+```
+files/screens/colony/assets/gamedata/prod_<type>_<tens>_0.png
+files/screens/colony/assets/gamedata/import_<type>_<tens>_0.png
+```
+
+`<type>` is 0 food, 1 industry, 2 research, 3 BC; `<tens>` is 0 for the
+ones and 1 for the tens. `import_…` are the imported goods (and, for
+industry, the pollution); a shortage is the import symbol with the
+game's red outline round it.
+
+### Planet pictures and the Space Dragon
+
+One picture per climate replaces the planet wherever OrionLayer draws one
+— the colony list, the Planets list, the star system windows (galaxy map
+and Leaders), the colony screen's system display and the invasion popup —
+at every planet size; the battle keeps its own pictures:
+
+```
+files/screens/colony_summary/assets/planet_pictures/<climate>.png
+```
+
+`<climate>` as above. A disc on transparency, 200 px or more (a smaller
+one is ignored): it is cut to its ink and smoothly scaled to each place's
+size. It wins over painted battle planets in the battle's slot
+(`files/screens/combat/assets/gamedata/cmbtplnt/`), which then show in the
+battle only.
+
+The Space Dragon's bribe shows your picture above its message, in the
+offer and when you cannot pay (not while you choose its new star on the
+map):
+
+```
+files/assets/shared/turnpopup/dragon_bribe.png
+```
+
+Any size; it is fitted whole, never stretched, into the panel's width and
+at most about half the window's height. Without it the popup is text only.
 
 ### Texts
 
@@ -728,7 +818,10 @@ grey, as for the battle's `all_` pictures, and it takes the owner's
 colour. `<colour>_47.png` (colour 0-7) is one colour's, drawn as
 painted. Facing right, any size; only the visible pixels count. Without
 a file a stack with no warship keeps the tinted icon. Restart after
-adding one.
+adding one. The same files paint these three ships in the lists too:
+the Fleets grid and its bottom panel, the Leaders ship view and the
+Ship Designer (never enlarged, aspect kept). The colony screen's build
+queue still draws the game's own picture.
 
 Which file wins: the builder's `<colour>_<picture>.png` before
 `all_<picture>.png` (a captured ship keeps its builder's shape and never

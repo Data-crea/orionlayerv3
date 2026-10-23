@@ -157,6 +157,15 @@ def panel_polygon(w, h, scale):
     return raster.chamfered(w, h, ch)
 
 
+def outline_width(scale):
+    """Whole device px of `outline`'s line at this scale — never under
+    one. Public because what stands ON a ruled cell's bottom line (the
+    colony screen's figures, work order 326) must know how far up its
+    floor is: two px at 3840x2160, one below."""
+    w = _px(hudstyle.get().get("separator.width"), scale)
+    return max(1, round(max(1.0, w)))
+
+
 def outline(surface, rect, scale, lit=False):
     """The thinnest block: a line round a cell or a plate INSIDE a
     panel, corners cut small. No fill, no glow — a separator that goes
@@ -180,7 +189,7 @@ def outline(surface, rect, scale, lit=False):
         # every edge of the drop rect" is how the colony list proves its
         # plate rect IS its drop rect (decision 5). The outer polygon is
         # filled with the colour and the inner one keyed out.
-        w = max(1, round(max(1.0, _px(st.get("separator.width"), scale))))
+        w = outline_width(scale)
         ch = min(_px(st.get("panel.chamfer"), scale) * 0.35,
                  min(rect.w, rect.h) / 4)
         key_col = (255, 0, 255)
@@ -233,7 +242,7 @@ def outline_inner(rect, scale):
     2 d >= ch + 1.42 w."""
     rect = pygame.Rect(rect)
     st = hudstyle.get()
-    w = max(1, round(max(1.0, _px(st.get("separator.width"), scale))))
+    w = outline_width(scale)
     ch = round(min(_px(st.get("panel.chamfer"), scale) * 0.35,
                    min(rect.w, rect.h) / 4))
     d = max(w, int(-(-(ch + 1.42 * w) // 2)))

@@ -7,12 +7,16 @@ Used as fallback for screens not yet rebuilt in HD.
 """
 import pygame
 
+from core.nativeview import NATIVE_H, NATIVE_W
+
 
 class OriginalView:
     """Renders the original framebuffer in the window."""
 
-    FB_W = 640
-    FB_H = 480
+    # the plane's size has one home (`core/nativeview`, work order 324;
+    # this spelling of it was found by work order 326 H3)
+    FB_W = NATIVE_W
+    FB_H = NATIVE_H
 
     def __init__(self):
         self._surface_8bit = pygame.Surface(

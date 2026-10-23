@@ -167,6 +167,10 @@ screens/colony/assets/gamedata/
 # COLONY2.LBX, CMBTPLNT.LBX, RACEICON.LBX and FONTS.LBX
 # (tools/invasion_art_extract.py, work order 232) — the same rule.
 screens/ground_combat/assets/gamedata/
+# The star system window's fleet pictures and the main palette out of the
+# player's BUFFER0.LBX and FONTS.LBX (tools/sysship_art_extract.py, work
+# order 326) — the same rule.
+screens/galaxy_map/assets/gamedata/
 
 # F8 screenshots (main.App._save_screenshot) go to the player's own folder
 # since work order 219; one here came from the working directory and is a

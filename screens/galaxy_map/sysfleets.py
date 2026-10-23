@@ -24,11 +24,18 @@ hulls and hull_plurals), then the colony ships (H 0x164 / 0x165), outposts
 (0x166 / 0x167) and transports (0x168 / 0x169) by `N_Ships_By_Type_In_
 Stack_` (:859-895).
 
-DEVIATION `fleet_icon_drawn`: the original's bar pictures (BUFFER0.LBX 0x111
-+ colour for a player, 0x119 and on for monsters, :988-1009) are not
-extracted; HD draws the owner's map icon, as the fleet box does for a ship
-with no picture of its own (since work order 312 a cell shows its own ship,
-`boxdraw.cell_picture`, HD EXTENSION `box_ship_picture`).
+TRANSCRIPTION `fleet_bar_picture` (work order 326 C, `sysshipart`): each
+icon is the original's own bar picture, BUFFER0.LBX 273 + the player's
+colour for a player, 281 for owner 8, (owner - 9) + 282 for a monster
+(`Buffer_Reload_System_Ships`, sys.cpp:1032-1052), drawn at the native size
+times the window's scale (`animate::Draw`, :1062-1094), extracted by
+`tools/sysship_art_extract.py`.
+DEVIATION `fleet_icon_drawn`, now only the fallback: while those pictures
+are not extracted the bar draws the owner's tinted map icon, as the fleet
+box does for a ship with no picture of its own (since work order 312 a cell
+shows its own ship, `boxdraw.cell_picture`, HD EXTENSION
+`box_ship_picture`; the fleet popup's cell is a SHIPS.LBX picture in the
+original, fleetpop.cpp:723-746, so the bar's picture is not its fallback).
 DEVIATION `fleet_stack`: the original counts the chain of the icon's own
 stack (`_system_display_ships[owner].ship_idx`); HD counts the owner's ships
 at the star by `Build_System_Popup_Ships_`'s condition — the same ships
@@ -189,11 +196,22 @@ def bar_cells(bar, bar_entries, s):
     return cells
 
 
+def bar_picture(screen, owner, cell, s):
+    """The bar's picture for `owner` in `cell` (`fleet_bar_picture`), the
+    tinted map icon while it is not extracted (`fleet_icon_drawn`)."""
+    from screens.galaxy_map import sysshipart
+    colour = ship_icons._player_color(getattr(screen, "_players", None),
+                                      owner)
+    img = sysshipart.load().scaled(sysshipart.entry(owner, colour), s,
+                                   cell.w, cell.h)
+    return img if img is not None else icon(screen, owner, cell.h * 8 // 10)
+
+
 def draw_bar(screen, surface, bar, bar_entries, s):
     """The icons left to right in `bar`; returns [(rect, owner, field)]."""
     hits = bar_cells(bar, bar_entries, s)
     for cell, owner, _field in hits:
-        img = icon(screen, owner, cell.h * 8 // 10)
+        img = bar_picture(screen, owner, cell, s)
         if img is not None:
             surface.blit(img, img.get_rect(center=cell.center))
     return hits

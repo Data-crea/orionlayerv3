@@ -29,6 +29,7 @@ CHOICES = {
     "colours": ("player_colors", "presets"),
     "glass": ("hud_glass_on", "glass_steps"),
     "floor": ("floor_lift", "floor_steps"),
+    "map_black": ("map_black_floor", "map_black_steps"),
     "monsters": ("monster_values", "monster_steps"),
     "map_ships": ("map_ship_pictures", "map_ships_steps"),
     "frame_rate": ("frame_rate", "frame_rate_steps"),
@@ -46,6 +47,9 @@ def values(screen, name):
         "colours": lambda: tuple(playercolors.names(screen.app.colors)),
         "glass": lambda: ("on", "off"),
         "floor": lambda: gmorion.FLOOR_STEPS,
+        # Data's black map background (work order 326; the map reads it
+        # in `galaxy_map/floorlift`), off by default
+        "map_black": lambda: ("off", "on"),
         "monsters": lambda: gmorion.MONSTER_STEPS,
         "map_ships": lambda: gmorion.MAP_SHIP_STEPS,
         "frame_rate": lambda: tuple(framerate.STEPS),

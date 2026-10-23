@@ -218,7 +218,7 @@ def content(popup, state, words, app=None):
     kind, a = popup["kind"], popup["args"]
     title = popup.get("title")
     lines, options, buttons = [], [], []
-    picture = leader_rec = None
+    picture = leader_rec = art = None
     # the right click (`RIGHT`): per option, per button, per table line,
     # else the popup's
     right_opts, right_buttons, line_right = [], [], []
@@ -405,7 +405,11 @@ def content(popup, state, words, app=None):
         # after it is pressed (the fields are added once, :522); whether
         # the original still draws it is not seen — HD does not offer it.
         # Mode 1's star click is `screens/galaxy_map/dragonpopup.py`'s
+        # HD EXTENSION `dragon_picture` (work order 326 F): Data's dragon
+        # where the original's popup picture shows one (MAINPUPS.LBX 0x48,
+        # drawn in every mode, :2617), from the mod folder only (`ART`)
         from core import dragonwire
+        art = ART["dragon_bribe"]
         if popup.get("text"):
             lines = [popup["text"]]
         if dragonwire.mode(popup) == dragonwire.OFFER:
@@ -425,7 +429,14 @@ def content(popup, state, words, app=None):
             "buttons": buttons, "right": right, "line_right": line_right,
             "right_help": RIGHT_HELP.get(kind),
             "picture": picture if kind in LEADER_CARDS else None,
-            "leader": leader_rec if kind in LEADER_CARDS else None}
+            "leader": leader_rec if kind in LEADER_CARDS else None,
+            "art": art}
+
+
+#: A popup's HD picture by kind: a tree path no file of OrionLayer's fills
+#: — a slot of `core.usermod.SLOTS`, so only the player's mod folder does;
+#: without it the popup is drawn as before (work order 326 F).
+ART = {"dragon_bribe": "assets/shared/turnpopup/dragon_bribe.png"}
 
 
 #: The kinds that draw a leader's card with its portrait.

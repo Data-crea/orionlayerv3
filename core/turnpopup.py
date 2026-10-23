@@ -59,6 +59,11 @@ from core.turnpopupcontent import (  # noqa: F401
 REF_W, REF_PAD, REF_FONT, REF_TITLE_FONT = 1000, 30, 28, 38
 REF_BUTTON = (220, 58)
 REF_OPTION_H = 46
+#: The most height a popup's HD picture takes (`c["art"]`), in reference
+#: px of 1080 — HD's choice: about half the screen, so the message and the
+#: buttons stand under it at every window (work order 326 F).
+REF_ART_H = 560
+_art_cache = {}
 
 
 # ── drawing and input ─────────────────────────────────────────────────
@@ -236,6 +241,54 @@ def _hd_portrait(rec, k):
     return canvas
 
 
+def _art(relpath, w, h):
+    """A popup's HD picture (`turnpopupcontent.ART`) fitted whole into
+    `w` x `h`, its proportion kept, or None — absent from the player's mod
+    folder (the tree holds none) or unreadable, which costs one log line.
+
+    HD EXTENSION `dragon_picture` (work order 326 F): the Space Dragon's
+    bribe draws Data's dragon where the original's popup picture
+    (MAINPUPS.LBX 0x48, `Load_Dragon_New_Star_Popup_`, mainpups.cpp:2151-
+    2156) shows its dragon: at the top of the popup, the message under it
+    (`animate::Draw_(0, 0, anims[37])`, :2617; the message box at (188,
+    271), :2635). The original draws it in all three modes; HD's star choice
+    (mode 1) is a strip over the map and draws none, so the map stays clear
+    (OMISSION `dragon_picture_star_choice`, `screens/galaxy_map/
+    dragonpopup.py`). Smoothly scaled: a painting, not the game's pixel art
+    (decision 28 is about magnifying that)."""
+    if not relpath or w <= 0 or h <= 0:
+        return None
+    import logging
+    import os
+    from core import resources
+    path = resources.res.resolve(relpath)
+    if not path:
+        return None
+    try:
+        stamp = os.stat(path).st_mtime_ns
+    except OSError:
+        return None
+    key = (path, stamp, w, h)
+    if key in _art_cache:
+        return _art_cache[key]
+    try:
+        src = pygame.image.load(path)
+        k = min(w / src.get_width(), h / src.get_height())
+        out = pygame.transform.smoothscale(
+            # convert_alpha: a cut-out dragon keeps its transparency
+            src.convert_alpha() if pygame.display.get_surface() else src,
+            (max(1, round(src.get_width() * k)),
+             max(1, round(src.get_height() * k))))
+    except (pygame.error, OSError, ValueError, ZeroDivisionError) as err:
+        logging.getLogger("turnpopup").warning(
+            "popup picture %s will not load (%s) — drawn without", path, err)
+        out = None
+    if len(_art_cache) > 8:
+        _art_cache.clear()
+    _art_cache[key] = out
+    return out
+
+
 def draw(surface, style, c):
     """The panel. Returns `([(rect, action)] for options and buttons,
     [action] of the buttons)`."""
@@ -280,8 +333,10 @@ def draw(surface, style, c):
     text_h = sum(step if r is not None else step // 2 for r in rows)
     if pic is not None:
         text_h = max(text_h, pic.get_height())
+    art = _art(c.get("art"), inner, int(REF_ART_H * s))
     h = pad + (title.get_height() + pad // 2 if title else 0) + text_h + \
-        (pad // 2 + opts_h if opts else 0) + pad + bh + pad
+        (pad // 2 + opts_h if opts else 0) + pad + bh + pad + \
+        (art.get_height() + pad // 2 if art is not None else 0)
     h = min(h, win_h - 2 * pad)
     panel = pygame.Rect((win_w - w) // 2, (win_h - h) // 2, w, h)
     hud.popup(surface, panel, s)
@@ -290,6 +345,9 @@ def draw(surface, style, c):
     if title:
         surface.blit(title, title.get_rect(midtop=(panel.centerx, y)))
         y += title.get_height() + pad // 2
+    if art is not None:              # above the message, as the original
+        surface.blit(art, art.get_rect(midtop=(panel.centerx, y)))
+        y += art.get_height() + pad // 2
     left = panel.x + pad
     if pic is not None:
         surface.blit(pic, (left, y))

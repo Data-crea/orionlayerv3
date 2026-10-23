@@ -297,6 +297,14 @@ def render_hold(app):
         app._surface_hd = True
 
 
+def surface_shows_engine(app):
+    """Say that the surface now holds the engine's picture, so the next
+    held frame draws the background instead of keeping it — the flag
+    `render_hold` reads, set from outside the App only through here (work
+    order 326 H1: `core/filmview` wrote the private attribute itself)."""
+    app._surface_hd = False
+
+
 def finishing(app):
     """True while the screen on top still plays what belongs to it although
     the game has moved on (work order 202 D, `ScreenBase.finishing`: a

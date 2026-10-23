@@ -48,6 +48,13 @@ WHAT IT TAKES (colony_main.cpp, colsysdi.cpp, colony.cpp):
   COLONY2.LBX
     7                    Trade Goods' BC stack (`Prod_Anims_(3, 1, 0)`,
                          colony.cpp:345-353; colbldg.cpp, TRADE_GOODS)
+    type + tens * 4      the production rows' symbols, 0..7: food, industry,
+                         research, BC, ones then tens (`Prod_Anims_`,
+                         colony.cpp:325-333, frame 0) — work order 326
+    type + tens * 4 + 8  their import / pollution symbols, 8..15
+                         (`Import_Anims_`, colony.cpp:2161-2166); the
+                         shortage symbol is one of these outlined at load
+                         (`Short_Anims_`, :2168-2176; `colart.outlined`)
   RACEICON.LBX
     0xA9                 the android a farmer, worker or scientist product
                          shows (`People_Anim_(0, 4, race)`, colony_main.cpp:
@@ -89,6 +96,8 @@ SCREEN_PALETTE, PALETTE_BYTES = 2, 256 * 4
 #: 5 * 6 - 5 + 5 (colony_main.cpp:229-236); COLONY.LBX's satellites
 #: 9..16 (colony.cpp:205-228: pictures 0..7); RACEICON's 13 races (13 entries each, then 0xA9, 0xAA).
 BUILDINGS, BLDG_CELL, SATELLITES, RACES = 49, 30, 8, 13
+#: ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH, ECON_BC (orion2_consts.h:119-122)
+PROD_TYPES = 4
 
 
 def wanted():
@@ -106,6 +115,14 @@ def wanted():
     for p in range(SATELLITES):
         out[f"satellite_{p}"] = ("COLONY.LBX", 9 + p)
     out["trade_goods"] = ("COLONY2.LBX", 7)
+    # the production rows' symbols (work order 326): `Prod_Anims_` and
+    # `Import_Anims_` at frame 0, the colony screen's (colony.cpp:325-333,
+    # :2161-2166); the frame-1 sets (+27, +0x23) are the Colonies list's
+    # (`Draw_Colony_Wee_Prod_`, coldraw.cpp:699-701, colsum.cpp:1352)
+    for t in range(PROD_TYPES):
+        for tens in (0, 1):
+            out[f"prod_{t}_{tens}"] = ("COLONY2.LBX", t + tens * 4)
+            out[f"import_{t}_{tens}"] = ("COLONY2.LBX", t + tens * 4 + 8)
     out["android"] = ("RACEICON.LBX", 0xA9)
     for r in range(RACES):
         out[f"spy_{r}"] = ("RACEICON.LBX", r * 13 + 11)

@@ -10,7 +10,8 @@ fails, and its file stays absent — `core/lang.source` then reads the English
 one. Nothing drawn changes before the restart the switch asks for.
 
 `state()` is what the language row shows: idle, running (i of n), done
-(how many German files exist now).
+(how many German files exist now) — or, when `error` is set (no plan, a
+step that raised, a job that stopped), a failure (work order 326 H1).
 """
 import logging
 import os
@@ -68,8 +69,10 @@ def start(language, steps=None, runner=None, folder=None):
         _state.update(phase="running", i=0, n=len(steps or ()), made=0,
                       error="")
     if steps is None:
-        # Planning imports tools/setup and walks the registry: not under
-        # the lock the language row reads every frame (work order 324 b).
+        # Planning imports tools/setup and walks the registry here, on the
+        # caller's thread — the UI thread (`screens/game_menu/oldrop.py`),
+        # so the frame waits for it — and outside the lock; the job thread
+        # starts after it (work orders 324 b, 326 H1).
         try:
             steps = plan_from(language, folder) if folder else \
                 plan(language)
@@ -99,6 +102,13 @@ def _work(steps, runner):
                 log.warning("language setup: %s: %s", " ".join(argv), err)
                 with _lock:
                     _state["error"] = f"{' '.join(argv)}: {err}"
+            if ok is False:
+                # an extractor that exited non-zero or timed out wrote
+                # nothing it can vouch for: a file left by an earlier run
+                # must not turn the count into "found" (work order 326)
+                with _lock:
+                    if not _state["error"]:
+                        _state["error"] = f"step failed: {' '.join(argv)}"
             # a step against the named folder writes where its extractor
             # says: it counts by its own success; a planned file by being
             # there
