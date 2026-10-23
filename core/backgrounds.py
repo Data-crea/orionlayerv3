@@ -87,14 +87,34 @@ def _load(path):
     return _sources[path]
 
 
+def _fit(iw, ih, w, h):
+    """(scaled w, scaled h, crop x, crop y) of an iw x ih picture covering
+    a w x h window — one home, so `point` lands where `cover` draws."""
+    scale = max(w / iw, h / ih)
+    sw, sh = max(w, round(iw * scale)), max(h, round(ih * scale))
+    return sw, sh, (sw - w) // 2, (sh - h) // 2
+
+
 def cover(img, w, h):
     """`img` filling a w x h window at its own aspect, centred, the
     overflow cropped. Exactly w x h."""
-    iw, ih = img.get_size()
-    scale = max(w / iw, h / ih)
-    sw, sh = max(w, round(iw * scale)), max(h, round(ih * scale))
+    sw, sh, cx, cy = _fit(*img.get_size(), w, h)
     big = pygame.transform.smoothscale(img, (sw, sh))
-    return big.subsurface(((sw - w) // 2, (sh - h) // 2, w, h)).copy()
+    return big.subsurface((cx, cy, w, h)).copy()
+
+
+def point(screen_name, w, h, fx, fy):
+    """(x, y, scale): the window point where the fraction (fx, fy) of the
+    picture this screen wears lands at w x h, and the device pixels per
+    picture pixel there — or None with no picture. Something anchored on a
+    feature of the picture (the main menu's easter egg star) follows the
+    crop exactly, at every window size and aspect."""
+    path = source_path(screen_name)
+    if path is None or w < 1 or h < 1:
+        return None
+    iw, ih = _sources[path].get_size()
+    sw, sh, cx, cy = _fit(iw, ih, int(w), int(h))
+    return fx * sw - cx, fy * sh - cy, sw / iw
 
 
 def scaled(screen_name, w, h, first=None):

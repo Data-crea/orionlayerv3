@@ -2,10 +2,11 @@
 import re
 import time
 import pygame
-from core import palette
+from core import mouse, palette
 from core.config import ORION2RE_VERSION
 from core.hud import shell
 from core.screen_base import ScreenBase
+from screens.main_menu.easteregg import EasterEgg
 
 # A credit line is "role <dots> name". The dot run is a separator, not
 # a length: the source file keeps the original's fixed-width columns,
@@ -78,6 +79,7 @@ class MainMenuScreen(ScreenBase):
         self._paused = False
         self._pause_timer = 0.0
         self._last_time = 0.0
+        self._egg = None
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -86,6 +88,9 @@ class MainMenuScreen(ScreenBase):
         self._apply_version()
         self._reset_scroll()
         self._last_time = time.monotonic()
+        # The easter egg (work order 327) — read again on every entry, so
+        # a mod's file counts after a restart of the screen; shut.
+        self._egg = EasterEgg(self)
 
     def _apply_version(self):
         """Fill the version box — wording from JSON, number from code.
@@ -188,6 +193,11 @@ class MainMenuScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
+        # The easter egg's panel takes every click while it is open, so no
+        # menu button behind it reacts; shut, it takes only its star.
+        if self._egg is not None and self._egg.click(
+                screen_x, screen_y, *self._window_size()):
+            return None
         for box in self.boxes:
             if box.name in self.BUTTON_FIELDS and \
                     box.contains(screen_x, screen_y):
@@ -203,7 +213,10 @@ class MainMenuScreen(ScreenBase):
 
     def handle_key(self, key):
         """Q is QUIT here too (`last_input_scan == 0x51`, mainmenu.cpp:521),
-        while the menu's own list is up."""
+        while the menu's own list is up. The easter egg's open panel takes
+        every key first: ESC closes it and nothing reaches the game."""
+        if self._egg is not None and self._egg.key(key):
+            return
         if key in (ord("q"), ord("Q")) and self.app.connected and \
                 not self.help_consumes_key(key) and self.button_field(
                     "quit", getattr(getattr(self.app.client, "state", None),
@@ -212,6 +225,27 @@ class MainMenuScreen(ScreenBase):
             self.app.client.inject_key(key)
             return
         super().handle_key(key)
+
+    def handle_mouse_motion(self, screen_x, screen_y):
+        if self._egg is not None and self._egg.open:
+            for box in self.boxes:      # nothing behind the panel lights
+                box.hover = False
+            return
+        super().handle_mouse_motion(screen_x, screen_y)
+
+    def handle_right_button(self, down, screen_x, screen_y):
+        if self._egg is not None and self._egg.open:
+            return True                 # no help behind the panel
+        return super().handle_right_button(down, screen_x, screen_y)
+
+    def handle_mousewheel(self, direction, mx, my):
+        if self._egg is not None and self._egg.open:
+            return True
+        return super().handle_mousewheel(direction, mx, my)
+
+    def _window_size(self):
+        """The window the background covers — the layout's, as drawn."""
+        return self.layout.window_w, self.layout.window_h
 
     def _quitting(self):
         """QUIT ends the game at once, no question (mainmenu.cpp:521-523,
@@ -261,6 +295,8 @@ class MainMenuScreen(ScreenBase):
 
     def render(self, surface):
         self._render_background(surface)
+        if self._egg is not None:
+            self._egg.render_star(surface, mouse.pos())
         self._render_credits(surface)
 
         # Logo (top-left of the CONTENT area, as the buttons are placed in
@@ -275,6 +311,9 @@ class MainMenuScreen(ScreenBase):
 
         for box in self.boxes:
             box.render(surface, self.layout, self.style)
+
+        if self._egg is not None:
+            self._egg.render_panel(surface)
 
         # Last, so the popup covers the logo and the credit scroll.
         self.render_help(surface)

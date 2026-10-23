@@ -32,6 +32,8 @@ GAME_ART = ("assets/shared/background_cockpit.png",
             "screens/galaxy_map/assets/ships/*/*.png",
             "screens/galaxy_map/assets/stars/*/*.png",
             "screens/main_menu/assets/logo.png",
+            # Data's easter egg panel (work order 327, `easteregg.py`)
+            "screens/main_menu/assets/easter_egg_panel.png",
             "screens/new_game/assets/*/*.png",
             # Data's cut-out leader portraits, redrawings of the game's
             # (work order 255, `core/leaderportraits.py`)
