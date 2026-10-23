@@ -71,24 +71,24 @@ CLOSE_FRAC = (0.819, 0.900, 0.153, 0.062)
 ONE_LINE = ("welcome", "title", "subtitle", "thanks", "signature")
 #: The centred headline, fitted by its own factor (`_layout`).
 HEADLINE = ("welcome", "title", "subtitle")
-#: A line's step as a multiple of its font size, every role alike (work
-#: order 328): Aldrich's own line is 0.95 of its size, almost no leading,
-#: so lines set by their surface's height stood packed. The mockup's body
-#: runs at 1.2 (23 px for a 19 px font); the text is fitted to the column's
-#: height, so every bit of leading is font size given up, and Data's order
-#: 328 keeps the sizes: 1.1, and never less than LEAD_MIN of the size above
-#: the line's own height, so a small window's lines do not touch.
-LINE_STEP = 1.1
-LEAD_MIN = 0.08
+#: A line's step as a multiple of its font size, every role alike, and
+#: never less than the line's own height (Aldrich's line is its size with
+#: the shadow, ink from top to bottom). The text is fitted to the column's
+#: height, so every bit of leading is font size given up: work order 328
+#: first set 1.1, and Data's review of it put the font first — the body
+#: at least the size work order 327 drew at every window, in both
+#: languages. The German text reaches that at 1280x720 and 3840x2160 only
+#: with no leading at all, so lines step their own height, as in 327.
+LINE_STEP = 1.0
 #: How much a gap may grow, relative to itself, from the height the text
 #: leaves free — every gap in proportion, so the hierarchy holds. The base
 #: gaps are the least a gap is, and the font factor is fitted with them
 #: alone, so they trade against the font: measured over 1280x720 ..
-#: 3840x2160 in both languages (work order 328), gaps of these sizes keep
-#: the body within 2 px of 327's (720p 13 for 15, 1080p 21 for 20, 4K 43
-#: for 45) and every paragraph clearly apart (11 px at 1080p); half of
-#: them kept 327's sizes and left 5 px, twice them took a tenth off the
-#: font. The free height then opens them up to twice.
+#: 3840x2160 in both languages (Data's review of 328), these are the
+#: largest that keep the body at 327's size or above everywhere, with
+#: under a tenth to spare: 1.1 times them costs the German a pixel at
+#: 3840x2160, 1.2 times also at 1280x720. The free height then opens
+#: them up to twice.
 MAX_SPREAD = 1.0
 
 #: role -> (font size as a share of the panel height, colour key, centred,
@@ -96,19 +96,19 @@ MAX_SPREAD = 1.0
 #: set (headline, the rest) is scaled by one factor. Gaps are in body
 #: line steps, before MAX_SPREAD opens them (work order 328): the gold key
 #: sentence set apart by almost twice a paragraph's gap either side, the
-#: thanks more, the heading's own text close under it, the signature close
+#: thanks at least as much, the heading's own text close under it, the signature close
 #: to the thanks and the hashtag under the name. A gap AFTER a role, where it has one, is the
 #: gap to whatever follows it.
 ROLES = {
     "welcome": (0.040, "egg_title", True, 0.0, None),
     "title": (0.064, "egg_title", True, 0.0, None),
     "subtitle": (0.036, "egg_accent", True, 0.1, None),
-    "heading": (0.036, "egg_title", False, 0.7, 0.22),
-    "body": (0.024, "egg_body", False, 0.45, None),
+    "heading": (0.036, "egg_title", False, 0.21, 0.07),
+    "body": (0.024, "egg_body", False, 0.14, None),
     "line": (0.024, "egg_body", False, 0.0, None),
-    "spark": (0.025, "egg_title", False, 0.75, 0.75),
-    "thanks": (0.036, "egg_title", False, 0.9, 0.18),
-    "signature": (0.030, "egg_body", False, 0.18, 0.0),
+    "spark": (0.025, "egg_title", False, 0.23, 0.23),
+    "thanks": (0.036, "egg_title", False, 0.27, 0.05),
+    "signature": (0.030, "egg_body", False, 0.05, 0.0),
     "hashtag": (0.024, "egg_accent", False, 0.0, None),
 }
 
@@ -473,8 +473,7 @@ class EasterEgg:
                     lines = self._balanced(text, size, lines,
                                            width - _shadow_offset(size))
             plain = self._plain_height(size)
-            line_step = max(round(size * LINE_STEP),
-                            plain + math.ceil(LEAD_MIN * size))
+            line_step = max(round(size * LINE_STEP), plain)
             for i, line in enumerate(lines):
                 if i:
                     y += line_step
