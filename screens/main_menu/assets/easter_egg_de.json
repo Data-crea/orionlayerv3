@@ -1,11 +1,11 @@
 {
   "_comment": [
-    "The easter egg's text in German (work order 328, Data: \"er soll auch ins deutsch übersetzt werden\"), drawn in a German session; the English file easter_egg.json holds the star and the English text. Same roles, same order; a block missing here is not filled from English. Translated by Claude; Data reviews it."
+    "The easter egg's text in German (work order 328, Data: \"er soll auch ins deutsch übersetzt werden\"), drawn in a German session; the English file easter_egg.json holds the star and the English text. Same roles, same order; a block missing here is not filled from English. GetDaved's greeting stays in English (Data). Translated by Claude; Data reviews it."
   ],
   "blocks": [
     [
       "welcome",
-      "Willkommen zurück bei"
+      "Welcome back to"
     ],
     [
       "title",
@@ -13,7 +13,7 @@
     ],
     [
       "subtitle",
-      "mit mir, GetDaved!"
+      "with me, GetDaved!"
     ],
     [
       "heading",

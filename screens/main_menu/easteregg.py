@@ -72,23 +72,16 @@ ONE_LINE = ("welcome", "title", "subtitle", "thanks", "signature")
 #: The centred headline, fitted by its own factor (`_layout`).
 HEADLINE = ("welcome", "title", "subtitle")
 #: A line's step as a multiple of its font size, every role alike, and
-#: never less than the line's own height (Aldrich's line is its size with
-#: the shadow, ink from top to bottom). The text is fitted to the column's
-#: height, so every bit of leading is font size given up: work order 328
-#: first set 1.1, and Data's review of it put the font first — the body
-#: at least the size work order 327 drew at every window, in both
-#: languages. The German text reaches that at 1280x720 and 3840x2160 only
-#: with no leading at all, so lines step their own height, as in 327.
-LINE_STEP = 1.0
+#: always a pixel more than the line's own height: Aldrich's ink fills
+#: its line from top to bottom, so a step of the height alone lets a
+#: descender meet the next line's ascender. Data's final polish of the
+#: easter egg put air between lines and paragraphs before the largest
+#: font (English body about 22 px at 1920x1080).
+LINE_STEP = 1.1
 #: How much a gap may grow, relative to itself, from the height the text
 #: leaves free — every gap in proportion, so the hierarchy holds. The base
-#: gaps are the least a gap is, and the font factor is fitted with them
-#: alone, so they trade against the font: measured over 1280x720 ..
-#: 3840x2160 in both languages (Data's review of 328), these are the
-#: largest that keep the body at 327's size or above everywhere, with
-#: under a tenth to spare: 1.1 times them costs the German a pixel at
-#: 3840x2160, 1.2 times also at 1280x720. The free height then opens
-#: them up to twice.
+#: gaps are the least a gap is, and the font factor is fitted with them,
+#: so they trade against the font. The free height opens them up to twice.
 MAX_SPREAD = 1.0
 
 #: role -> (font size as a share of the panel height, colour key, centred,
@@ -96,19 +89,19 @@ MAX_SPREAD = 1.0
 #: set (headline, the rest) is scaled by one factor. Gaps are in body
 #: line steps, before MAX_SPREAD opens them (work order 328): the gold key
 #: sentence set apart by almost twice a paragraph's gap either side, the
-#: thanks at least as much, the heading's own text close under it, the signature close
+#: thanks more, the heading's own text close under it, the signature close
 #: to the thanks and the hashtag under the name. A gap AFTER a role, where it has one, is the
 #: gap to whatever follows it.
 ROLES = {
     "welcome": (0.040, "egg_title", True, 0.0, None),
     "title": (0.064, "egg_title", True, 0.0, None),
     "subtitle": (0.036, "egg_accent", True, 0.1, None),
-    "heading": (0.036, "egg_title", False, 0.21, 0.07),
-    "body": (0.024, "egg_body", False, 0.14, None),
+    "heading": (0.036, "egg_title", False, 0.6, 0.2),
+    "body": (0.024, "egg_body", False, 0.4, None),
     "line": (0.024, "egg_body", False, 0.0, None),
-    "spark": (0.025, "egg_title", False, 0.23, 0.23),
-    "thanks": (0.036, "egg_title", False, 0.27, 0.05),
-    "signature": (0.030, "egg_body", False, 0.05, 0.0),
+    "spark": (0.025, "egg_title", False, 0.75, 0.75),
+    "thanks": (0.036, "egg_title", False, 1.0, 0.18),
+    "signature": (0.030, "egg_body", False, 0.18, 0.0),
     "hashtag": (0.024, "egg_accent", False, 0.0, None),
 }
 
@@ -144,6 +137,13 @@ SCRIM_ALPHA = 0.55
 SCRIM_INSET = (16 / 1465, 25 / 1073, 22 / 1465, 31 / 1073)
 SCRIM_CORNER = (0.065, 0.05)
 SCRIM_FEATHER = 0.006
+#: The text half darker still (Data's final polish): (extra shade, panel x
+#: where it starts to fade, panel x where it is gone). Over the body column
+#: it takes about a fifth more of the light the shade lets through — the
+#: galaxy's bright arms behind the text, the lit consoles behind the key
+#: sentence — and fades out smoothly before the galaxy's core, the mug and
+#: the commander, so no edge shows.
+SCRIM_LEFT = (0.18, 0.40, 0.66)
 
 #: The hover area never shrinks below this many device pixels, so the
 #: star stays easy to hit in the smallest window (1280x720).
@@ -354,8 +354,12 @@ class EasterEgg:
             # LOOK EXCEPTION marking: the shade over the easter egg's
             # panel, Data's call for readability over his picture.
             shade.fill(SCRIM_RGB)
+            extra, x_full, x_gone = SCRIM_LEFT
+            t = np.clip(((x0 + u) / p.w - x_full) / (x_gone - x_full), 0, 1)
+            left = extra * (1 - t * t * (3 - 2 * t))[:, None]   # smoothstep
+            alpha = 1 - (1 - SCRIM_ALPHA) * (1 - left)
             pygame.surfarray.pixels_alpha(shade)[:] = (
-                ramp * SCRIM_ALPHA * 255).astype(np.uint8)
+                ramp * alpha * 255).astype(np.uint8)
             self._scrim_cache = (p.size, (shade, x0, y0))
         return self._scrim_cache[1]
 
@@ -473,7 +477,7 @@ class EasterEgg:
                     lines = self._balanced(text, size, lines,
                                            width - _shadow_offset(size))
             plain = self._plain_height(size)
-            line_step = max(round(size * LINE_STEP), plain)
+            line_step = max(round(size * LINE_STEP), plain + 1)
             for i, line in enumerate(lines):
                 if i:
                     y += line_step
