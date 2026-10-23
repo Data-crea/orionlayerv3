@@ -160,14 +160,72 @@ def ship_centre(spec, place):
     return pl["high_ships"].get(product, pl["centre"])
 
 
-def tile(spec, climate, bg, place="popup"):
+def painted(spec, colour, place="popup"):
+    """True when `spec` is a colony, outpost or transport ship (45-47) and
+    the player's mod folder paints it in the galaxy map's slot for owner
+    `colour` (`core.shippicture`, the one route of every place): the tile
+    is then taken without the sprite and `overlay` draws the painted
+    picture. HD EXTENSION `slot_ship_pictures` (work order 326 P7)."""
+    from core import shippicture
+    if colour is None or spec[0] != "ship" or \
+            int(spec[1]) not in shippicture.NON_COMBAT:
+        return False
+    win = PLACES[place]["window"]
+    return shippicture.fitted(None, colour, int(spec[1]), (
+        0, 0, win[2] - win[0], win[3] - win[1])) is not None
+
+
+def overlay(surface, spec, colour, climate, bg, place, origin, k):
+    """Draw the painted picture of ship `spec` for owner `colour` over a
+    tile stood at `origin` (window px) magnified `k` times; True if drawn.
+    It is fitted into the drawn pixels of the sprite the original draws
+    there (`shippicture.footprint`) and never enlarged, so it is sharp and
+    stands where the sprite stood. The original draws the colony screen's
+    grey remap of SHIPS.LBX 45-47 here (`Remap_Draw_Ship_Seg_N_Centered`,
+    colony_main.cpp:878/:881, colbldg.cpp:916/:950/:959; a queued ship
+    `Remap_Draw_Ship_Centered`, colony.cpp:435-450, :750)."""
+    from core import shippicture
+    from screens.refit import refart
+    if not painted(spec, colour, place):
+        return False
+    sprite = refart.picture(int(spec[1]), int(spec[2]) if len(spec) > 2
+                            else 0, climate, bg)
+    if sprite is None:
+        return False
+    at = ship_centre(spec, place)
+    win = PLACES[place]["window"]
+    pos = (origin[0] + (at[0] - win[0] - sprite.get_width() // 2) * k,
+           origin[1] + (at[1] - win[1] - sprite.get_height() // 2) * k)
+    got = shippicture.fitted(None, colour, int(spec[1]),
+                             shippicture.footprint(sprite, pos, k))
+    if got is None:
+        return False
+    surface.blit(got[0], got[1])
+    return True
+
+
+def owner_colour(state, owner):
+    """Player `owner`'s colour index (`_player[owner].color`), or None."""
+    from core.structs import player as player_struct
+    raws = getattr(state, "player_raw", None) or []
+    try:
+        return int(player_struct.parse(raws[int(owner)]).color) \
+            if 0 <= int(owner) < len(raws) and raws[int(owner)] else None
+    except (IndexError, TypeError, ValueError, AttributeError):
+        return None
+
+
+def tile(spec, climate, bg, place="popup", colour=None):
     """The place's window with the room and `spec`'s picture, native size,
     as an RGB surface — or None without the extraction. `spec`:
     ("building", id) — a satellite's own picture where it is one —,
     ("ground", id) — the ground drawing whatever the building —,
     ("trade_goods",), ("android",), ("spy", race), ("ship", picture_num,
     owner[, special product]), ("room",)."""
-    key = (tuple(spec), int(climate), int(bg), place)
+    bare = painted(spec, colour, place)
+    from core import shippicture
+    key = (tuple(spec), int(climate), int(bg), place, bare,
+           shippicture.usermod_generation() if bare else 0)
     if key in _cache:
         return _cache[key]
     out = None
@@ -197,7 +255,7 @@ def tile(spec, climate, bg, place="popup"):
             _centred(canvas, art, f"spy_{int(spec[1])}", pl["centre"], win)
         rgb = lut(climate, bg, place)[canvas]
         out = pygame.surfarray.make_surface(rgb.transpose(1, 0, 2))
-        if kind == "ship":
+        if kind == "ship" and not bare:
             from screens.refit import refart
             pic = refart.picture(int(spec[1]), int(spec[2]) if len(spec) > 2
                                  else 0, climate, bg)
@@ -215,10 +273,10 @@ def step(tile_size, box):
     return max(1, min(box[0] // tile_size[0], box[1] // tile_size[1]))
 
 
-def draw(surface, rect, spec, climate, bg, place="popup"):
+def draw(surface, rect, spec, climate, bg, place="popup", colour=None):
     """The tile stepped up by a whole number and centred in `rect`; True if
     drawn. The box keeps its room even when the product has no picture."""
-    t = tile(spec, climate, bg, place)
+    t = tile(spec, climate, bg, place, colour)
     if t is None:
         return False
     rect = pygame.Rect(rect)
@@ -226,6 +284,8 @@ def draw(surface, rect, spec, climate, bg, place="popup"):
     big = pygame.transform.scale(t, (t.get_width() * k, t.get_height() * k))
     clip = surface.get_clip()
     surface.set_clip(rect)
-    surface.blit(big, big.get_rect(center=rect.center))
+    at = big.get_rect(center=rect.center)
+    surface.blit(big, at)
+    overlay(surface, spec, colour, climate, bg, place, at.topleft, k)
     surface.set_clip(clip)
     return True

@@ -7,7 +7,8 @@
         85,
         341,
         304
-      ]
+      ],
+      "anchor_v": "top"
     },
     {
       "name": "col_production",
@@ -16,7 +17,8 @@
         85,
         528,
         304
-      ]
+      ],
+      "anchor_v": "top"
     },
     {
       "name": "col_population",
@@ -25,7 +27,8 @@
         85,
         594,
         304
-      ]
+      ],
+      "anchor_v": "top"
     },
     {
       "name": "col_build",
@@ -34,7 +37,8 @@
         85,
         357,
         304
-      ]
+      ],
+      "anchor_v": "top"
     },
     {
       "name": "col_surface",
@@ -43,7 +47,8 @@
         409,
         1880,
         651
-      ]
+      ],
+      "anchor_v": "stretch"
     }
   ]
 }

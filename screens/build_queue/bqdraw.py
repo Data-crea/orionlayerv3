@@ -207,7 +207,11 @@ def _picture(surface, screen, view, state, names, product):
     climate, bg, race = _world(view, state)
     pic, ship = _ship_parts(view, state, product)
     spec = bqproduct.picture(product, race, pic, ship)
-    colroom.draw(surface, inner, spec or ("room",), climate, bg)
+    owner = getattr(ship, "previous_owner", None)
+    if owner is None:
+        owner = getattr(state, "player_num", 0) or 0
+    colroom.draw(surface, inner, spec or ("room",), climate, bg,
+                 colour=colroom.owner_colour(state, owner))
     if spec is None:
         word = (screen.e(bqproduct.WORD_IN_BOX[product])
                 if product in bqproduct.WORD_IN_BOX

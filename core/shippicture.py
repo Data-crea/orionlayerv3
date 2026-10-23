@@ -145,10 +145,11 @@ def _slot(colour, picture, box):
     rule: a captured ship takes the HOLDER's colour here (`fitted` is given
     the cell's ramp, not the builder's), the map takes the builder's own
     `<colour>_<n>.png` first."""
+    from core import palette
     from screens.galaxy_map import shippics
     box = pygame.Rect(box)
     key = ("slot", int(colour), picture, box.w, box.h,
-           usermod_generation())
+           usermod_generation(), palette.generation())
     if key not in _FITTED:
         if len(_FITTED) >= KEEP:
             _FITTED.clear()

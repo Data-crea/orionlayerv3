@@ -197,7 +197,8 @@ touching the code: put your files in your mod folder
 `.venv/bin/python tools/mod_template.py`
 writes a starting point with every name it can hold. Mods inside the
 project folder can also change data, layouts and screens. Everything is
-in [MODDING.md](MODDING.md).
+in [MODDING.md](MODDING.md); the galaxy map's pictures have their own
+part, [doc/modding_galaxy_map.md](doc/modding_galaxy_map.md).
 
 ## Licences and credits
 

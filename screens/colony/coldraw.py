@@ -174,7 +174,14 @@ def _room(surface, screen, view, state):
         if 0 <= i < len(ships):
             ship = ship_struct.parse(ships[i])
     spec = bqproduct.picture(pid, race, None, ship) or ("room",)
-    t = colroom.tile(spec, view.colony.climate, _bg_type(view), "colony")
+    # the colour of the ship's builder: the queued ship's previous owner,
+    # else the local player (`Remap_Draw_Ship_Seg_N_Centered` takes
+    # MOX::PLAYER_NUM, colony.cpp:1186)
+    owner = int(ship.previous_owner) if ship is not None else \
+        int(getattr(state, "player_num", 0) or 0)
+    colour = colroom.owner_colour(state, owner)
+    t = colroom.tile(spec, view.colony.climate, _bg_type(view), "colony",
+                     colour)
     if t is None:
         return
     win = colroom.PLACES["colony"]["window"]
@@ -182,7 +189,11 @@ def _room(surface, screen, view, state):
     big = nd.magnified(t, screen.layout)
     clip = surface.get_clip()
     surface.set_clip(r)
-    surface.blit(big, big.get_rect(center=r.center))
+    at = big.get_rect(center=r.center)
+    surface.blit(big, at)
+    colroom.overlay(surface, spec, colour, view.colony.climate,
+                    _bg_type(view), "colony", at.topleft,
+                    big.get_width() // t.get_width())
     surface.set_clip(clip)
 
 

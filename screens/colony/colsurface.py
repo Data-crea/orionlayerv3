@@ -3,10 +3,14 @@ order 232 (Data's decisions 2 and 3, 11 October 2026).
 
 Since 232 the surface panel runs from under the band to the content
 rectangle's bottom edge, and its shape is the screen's surface format: at a
-16:9 window or a wider one 1880 x 651 reference px, about 2.89 : 1 — far
-flatter than the original's 640 x 328 picture, which is therefore cut to
-cover it (`coldraw.cover`). Data's decision 3: a new picture is made for
-the format. This is where it goes and how it is found.
+16:9 window or a wider one 1864 x 635 device px at 1920x1080 (3728 x 1270
+at 3840x2160), about 2.94 : 1 — far flatter than the original's 640 x 328
+picture, which is therefore cut to cover it (`coldraw.cover`). A window
+taller than 16:9 makes the panel taller (1864 x 755 at 1920x1200) and the
+picture's sides are cut: the band keeps the rectangle's top and the surface
+box is anchored "stretch" in boxes.json (WO 326 P9; without an anchor the
+box stayed in the letterboxed 16:9 area, 635 high, while `format_size` said
+755). Data's decision 3: a new picture is made for the format. This is where it goes and how it is found.
 
 THE PLACE: `screens/colony/assets/surfaces/<climate>.png`, one per
 climate, the climate's name as the Colonies screen's discs and surfaces
