@@ -27,9 +27,14 @@ and each in `layout.json` `marks`, the status document and check 090p:
                  the Colonies screen's)
   DEVIATION      `figure_on_line` (326): a figure's ink stands on its
                  cell's line, the original's canvas hangs from the row top
-  DEVIATION      `building_list` — the colony's buildings are a list of
-                 names; UNVERIFIED `building_placement` — open fix 36's
-                 grid is read and not placed (see `_buildings`)
+  TRANSCRIPTION  `building_sprites` (work order 326, `colbuildings`): the
+                 colony's buildings drawn as the original's sprites from open
+                 fix 36's grid, its satellites in the sky; HD EXTENSION: at
+                 a whole step in the surface panel's lower part
+  DEVIATION      `building_list` — the colony's buildings are also a list of
+                 names (the right click and the demolish ask through it),
+                 beside the city; UNVERIFIED `building_placement` — see
+                 `_buildings`
   TRANSCRIPTION  `unit_figures`, `product_room` (work order 226 G, Data's
                  decision 6): the units at the screen's foot as the
                  original's figures, and the build box's grid room with the
@@ -42,6 +47,7 @@ and each in `layout.json` `marks`, the status document and check 090p:
   DEVIATION      `one_top` (226 G): the four boxes of the band share one
                  top and one height, the band's (17..158), where the
                  original's art boxes start at 17, 24 and 29
+  OMISSION       `veggies` (326): COLVEGGI's plants between the buildings
   OMISSION       `officer_portrait`, `hover_strip`, `roads` — original
                  art this project does not extract, and the hover strip
                  of the original's own pointer; each named where it would
@@ -64,6 +70,7 @@ from screens.colony_summary.colonyplanets import set_for as planet_set_for
 from core import nativedraw as nd
 
 from . import colart
+from . import colbuildings
 from . import colprod
 from . import colsurface
 from . import colgeom as geom
@@ -573,26 +580,37 @@ def _build(surface, screen, view, state, words, names):
 
 
 def _buildings(surface, screen, view, state, names):
-    """DEVIATION `building_list`: the colony's buildings as a list.
+    """TRANSCRIPTION `building_sprites` / HD EXTENSION `building_sprites`
+    (work order 326, `colbuildings`): the colony's buildings as the
+    original's sprites on the ground and its satellites in the sky, from
+    open fix 36's grid; and DEVIATION `building_list`: the buildings as a
+    list of names, which is how HD asks for a building's description and its
+    demolish (`colright`, `coldemolish`) — in the panel's left margin beside
+    the city when the sprites are drawn, the original's rows when they are
+    not (no extracted pictures).
 
-    UNVERIFIED `building_placement`: open fix 36's grid is parsed, and its
-    OCCUPIED CELLS are verified — every one lands on a live building field
-    (`colgeom.building_field`, check 090p). What a cell's id MEANS for the
-    scene is not: `Make_Bldg_Array_For_Colony_` also puts housing (-3) in
-    the grid and jitters satellites into it (colony_main.cpp:559-600), and
-    the recorded grids name Star Base and Star Fortress twice where the
-    native scene shows each once. So nothing is placed from it."""
+    UNVERIFIED `building_placement`: the grid's occupied cells are verified
+    against the live fields (`colgeom.building_field`, check 090p); that a
+    live engine's CBLD block draws the native city was not seen live (work
+    order 326: the transcription of the placement was compared with a
+    native frame instead)."""
     ids = view.buildings()
+    placement = colbuildings.shown(state)
+    if placement is not None:
+        colbuildings.draw(surface, scene_rect(screen), colart.load(),
+                          placement, view.colony.climate, _bg_type(view))
     if not ids:
         return
-    nd.draw_box(surface, screen, geom.building_box(len(ids)))
-    for i, bid in enumerate(ids):
-        row = geom.building_row(i)
-        # a row as tall as the surface panel makes it: the words fit it
-        h = nd.rect(screen.layout, row).h
-        text(surface, screen, names.building(bid),
-             row[0] + geom.BUILDING_TEXT_DX, row[1], geom.BUILDING_TEXT_W,
-             "small", "label", size=max(nd.MIN_FONT, int(h * 0.9)))
+    box, rows = colbuildings.list_geometry(screen, len(ids), placement)
+    hud.panel(surface, box, screen.layout.scale)
+    dx = max(2, nd.rect(screen.layout, (0, 0, geom.BUILDING_TEXT_DX, 0)).w)
+    for bid, row in zip(ids, rows):
+        # a row as tall as the panel makes it: the words fit it
+        nd.blit_text(surface, screen.style, names.building(bid),
+                     row.x + dx, row.y, row.w - dx,
+                     min(max(nd.MIN_FONT, int(row.h * 0.9)),
+                         font(screen.layout, "small")),
+                     hudtext.colour("label"))
 
 
 #: `Military_Anim_` (colony.cpp:1308-1328): marines (0) are figure 1, or 2

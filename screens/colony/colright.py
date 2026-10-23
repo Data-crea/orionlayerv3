@@ -19,8 +19,7 @@ colony.cpp:1731-1758) — and the game's `Text_Box_` comes back as HD's
 message box (`core/rightinfo`).
 """
 from core import rightinfo
-from core import nativedraw as nd
-
+from . import colbuildings
 from . import colgeom as geom
 
 #: `Add_Satellite_Fields_`: slot i at x 295 + (-1)^i * i * 50, y 162.
@@ -33,9 +32,12 @@ def sat_x(i):
 
 def row_at(screen, ids, x, y):
     """The building id of the list row under a window point, or None."""
-    for i, bid in enumerate(ids):
-        # the rows `coldraw._buildings` draws (`colgeom.building_row`)
-        if nd.rect(screen.layout, geom.building_row(i)).collidepoint(x, y):
+    # the rows `coldraw._buildings` draws: ONE geometry (`colbuildings.
+    # list_geometry`, the sprites' margin or `colgeom.building_row`)
+    _box, rows = colbuildings.list_geometry(
+        screen, len(ids), colbuildings.shown(screen._state))
+    for bid, row in zip(ids, rows):
+        if row.collidepoint(x, y):
             return bid
     return None
 

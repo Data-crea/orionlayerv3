@@ -63,6 +63,17 @@ WHAT IT TAKES (colony_main.cpp, colsysdi.cpp, colony.cpp):
     race * 13 + v + 6    the units at the screen's foot, v 0..4 (militia,
                          marines, powered armour, armour, battleoids;
                          `Military_Anims_`, colony.cpp:1297-1306; 226 G)
+  BLDG<n>.LBX (work order 326, the scene's buildings)
+    cell frame + (k % 10) * 36   building k + 1's drawing on each of the 36
+                         grid cells, 640 x 480 with the building where the
+                         cell is, one frame (`Cache_Load_Bldg_`, colbcach.cpp:
+                         4-19, frame by `Bldg_Coords_To_Effective_Frame_`,
+                         colony_main.cpp:229-236); stored as
+                         `bldgcell_<id>_<frame>.bin`
+  FONTS.LBX
+    0                    its first 64 bytes: the 16 glass colours (`Load_Font_File_`,
+                         fonts.cpp:894), stored as `glass.json`; pixels 0xF0..0xFF of
+                         a glassed picture blend with what is under them
   COLPUPS.LBX
     5                    the colony screen's band with its build box's grid
                          room (`Draw_Colony_Info_Background_`, colony.cpp:
@@ -96,6 +107,8 @@ SCREEN_PALETTE, PALETTE_BYTES = 2, 256 * 4
 #: 5 * 6 - 5 + 5 (colony_main.cpp:229-236); COLONY.LBX's satellites
 #: 9..16 (colony.cpp:205-228: pictures 0..7); RACEICON's 13 races (13 entries each, then 0xA9, 0xAA).
 BUILDINGS, BLDG_CELL, SATELLITES, RACES = 49, 30, 8, 13
+#: the grid's 6 x 6 cells; `video::glass_colors` is 16 x 4 bytes (orion2.h:979)
+CELLS, GLASS_BYTES = 36, 64
 #: ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH, ECON_BC (orion2_consts.h:119-122)
 PROD_TYPES = 4
 
@@ -123,6 +136,12 @@ def wanted():
         for tens in (0, 1):
             out[f"prod_{t}_{tens}"] = ("COLONY2.LBX", t + tens * 4)
             out[f"import_{t}_{tens}"] = ("COLONY2.LBX", t + tens * 4 + 8)
+    # the scene's buildings, every cell of every building (work order 326)
+    for b in range(1, BUILDINGS):
+        k = b - 1
+        for f in range(CELLS):
+            out[f"bldgcell_{b}_{f}"] = (f"BLDG{k // 10}.LBX",
+                                        f + (k % 10) * 36)
     out["android"] = ("RACEICON.LBX", 0xA9)
     for r in range(RACES):
         out[f"spy_{r}"] = ("RACEICON.LBX", r * 13 + 11)
@@ -181,6 +200,11 @@ def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
         # indent=2: the tree's JSON convention (smoke check 062).
         json.dump([list(palette.get(i, (0, 0, 0)))[:3] for i in range(256)],
                   fh, indent=2)
+        fh.write("\n")
+    # intensity, r, g, b (6-bit VGA) of glass colour 0xF0 + i
+    glass = [list(files["FONTS.LBX"][0][4 * i:4 * i + 4]) for i in range(16)]
+    with open(os.path.join(out, "glass.json"), "w", encoding="utf-8") as fh:
+        json.dump(glass, fh, indent=2)
         fh.write("\n")
     with open(os.path.join(out, "manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
