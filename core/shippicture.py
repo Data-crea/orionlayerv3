@@ -38,7 +38,7 @@ DOOM_STAR = 43
 #: order 222; the livery window shows frame 1).
 AT_REST = 1
 #: The colony, outpost and transport ship pictures: no battle picture
-#: (`screens/galaxy_map/shippics.NON_COMBAT_PICTURES`).
+#: (CMBTSHP holds 45 per colour, 0-44; `initship.cpp`'s templates).
 NON_COMBAT = (45, 46, 47)
 #: Player colours 0..7; anything else is the monster set (`fltrows`).
 COLOURS = 8

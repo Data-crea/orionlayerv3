@@ -14,7 +14,6 @@ REF_H = 1080
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SETTINGS_PATH = os.path.join(BASE_DIR, "settings.json")
 SCREENS_DIR = os.path.join(BASE_DIR, "screens")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 MODS_DIR = os.path.join(BASE_DIR, "mods")
 
 # --- FPS ---

@@ -215,7 +215,6 @@ RING = 350
 METRICS = (("population_history", 2), ("production_history", 3),
            ("fleet_history", 4), ("tech_history", 5))
 LADDER = (25, 50, 100, 250, 500, 1000, 2000)
-GRAPH_X0, GRAPH_Y0 = 0xEE, 0x186          # 238, 390
 
 
 def history_length(stardate, bill):

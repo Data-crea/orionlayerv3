@@ -141,10 +141,8 @@ INFO_EDGE = (palette.col("galaxy_map", "system_info_edge_outer_lit",
                          (56, 76, 108)),
              palette.col("galaxy_map", "system_info_edge_inner_dim",
                          (68, 92, 128)))
-#: BUFFER0.LBX 0x49, native px: the whole picture, and the title panel's
-#: band (its inner dark run, rows 12..37 of the picture, measured).
+#: BUFFER0.LBX 0x49, native px: the whole picture.
 WINDOW_PICTURE = (347, 273)
-TITLE_BAND = (12, 37)
 #: HD's step-0 star canvas, native px, whose LIGHT covers as much as the
 #: original's sun picture's (BUFFER0.LBX 0x53-0x58, 32-35 px pictures):
 #: equal area above luminance 100, the median over the six classes

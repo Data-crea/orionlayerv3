@@ -20,7 +20,6 @@ from core.hud import blocks as hud
 from core.hud import glyphs
 
 from core import palette
-from core.hestrings import printf
 from core.structs import settings as settings_spec
 from screens.game_menu import gmframe, nodes
 

@@ -89,7 +89,6 @@ from core import textfit
 from core import zoomtables
 
 from . import colonybuild
-from . import colonyfigures
 from . import colonyscroll
 from . import colonytrack
 from .colonyrows import POP_LIMIT_CAP

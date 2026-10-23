@@ -35,7 +35,6 @@ from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
-from core.structs import star as star_struct
 from screens.colony_summary import colonyrows
 from screens.planets import planetwords
 

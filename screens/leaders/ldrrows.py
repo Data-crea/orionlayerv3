@@ -34,9 +34,6 @@ H_TO_HIRE, H_MAINT, H_NO = 0x108, 0x109, 0x10A      # :3641, :3657, :3661
 H_POOL, H_UNASSIGNED = 0x10B, 0x10C                  # :3681, :3684
 H_FOR_HIRE = 0x10D                                   # :3703
 H_ETA = 0x12F                                        # :3084
-#: The strips under the view box: "%s (%s, %d turn[s])" while a
-#: leader is travelling there (officer.cpp:716-721, :820-821).
-H_STRIP_ETA1, H_STRIP_ETAN = 0x92, 0x93
 
 #: `Get_Monetary_Unit_String_` (harold.cpp:1188-1203).
 UNIT = {"de": "MC"}

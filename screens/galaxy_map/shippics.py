@@ -88,9 +88,6 @@ STEPS = ("on", "off")
 SLOT = "screens/galaxy_map/assets/ship_pictures"
 #: picture_num of Loknar's Avenger (ship_config.cpp:68; colrefit.cpp:196).
 AVENGER = 44
-#: The pictures with no battle drawing: colony ship, outpost ship, transport
-#: (CMBTSHP holds 45 per colour, 0-44; `initship.cpp`'s templates).
-NON_COMBAT_PICTURES = (45, 46, 47)
 #: The original's order of the non-combat types (shipstak.cpp:300-308).
 _NON_COMBAT_RANK = {ship_struct.SHIP_TYPE_COLONY: -1,
                     ship_struct.SHIP_TYPE_TRANSPORT: -2,

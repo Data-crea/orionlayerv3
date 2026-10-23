@@ -44,39 +44,27 @@ PORTRAIT_FIELD = (0x08, 0, 0x5B, 0x60)    # (8, y, 91, y + 96)
 
 #: `Print_Officer_Data_`'s arguments from `Wrapper_For_Offscrn_Data_`
 #: (officer.cpp:1975-1991), per row `i`: text at (0x5C, 0x26 + 109 i),
-#: the portrait box at (8, 0x22 + 109 i), 0x53 wide, its status line
-#: 0x60 below, and the right column 0xCC right of the text.
+#: and the right column 0xCC right of the text.
 TEXT_X = 0x5C                      # 92
 TEXT_DY = 0x26 - ROW_TOP           # 4: text_y = row top + 4
-PORTRAIT_X = 0x08
-PORTRAIT_W = 0x53                  # 83
-STATUS_DY = 0x60                   # 96
 RIGHT_COLUMN = 0xCC                # 204
 
 #: The name is centred in 0xA0 px starting 0x16 right of text_x
 #: (officer.cpp:3630-3631).
-NAME_DX, NAME_W = 0x16, 0xA0
+NAME_W = 0xA0
 #: The two cost lines end 2 px left of the right column
 #: (officer.cpp:3647-3671), the skill values 3 px (:3794).
-COST_RIGHT_INSET = 2
 VALUE_RIGHT_INSET = 3
 #: The skill lines start 0x10 below the name (:3751) and step 0x11
 #: (:3799); the icon sits 2 px right of text_x and 4 px up (:3758,
 #: :3575), the name 0x16 right of the icon's x (:3778).
 SKILL_DY, SKILL_STEP = 0x10, 0x11
-SKILL_ICON_DX, SKILL_ICON_DY = 2, -4
 #: OFFICER.LBX 0x58..0x72's own size: every one of the 27 skill icons is
 #: 16 x 16 (their headers, read by `dev:tools/skill_icons_export.py` for
 #: work order 255) — the square a painted icon is fitted into where the
 #: original's would stand.
 SKILL_ICON_SIZE = 16
 SKILL_NAME_DX = 2 + 0x16
-#: `Set_Fitted_Font_Style_(status, …, 4, 0x4A, 1)` (:3719-3726): the
-#: status line is fitted to 74 px.
-STATUS_FIT_W = 0x4A
-#: The portrait is centred in a 75 x 90 cell at (12, 37 + 109 i)
-#: (`Draw_Officer_Screen_To_Back_`, officer.cpp:640-641).
-PORTRAIT_CELL = (12, 37, 75, 90)
 #: The skill help fields: `Add_Skill_Description_Help_Fields_(0x5E,
 #: 0x32 + 109 i, …)` (:1903-1924), stepping 0x11. **The two loops do not
 #: make the same rectangle**: a SPECIAL skill's field is `(x, y - 1,
@@ -104,24 +92,8 @@ def portrait_field(i):
     return (x1, y, x2, y + dy2)
 
 
-def portrait_cell(i):
-    x, y, w, h = PORTRAIT_CELL
-    y += i * ROW_PITCH
-    return (x, y, x + w - 1, y + h - 1)
-
-
 def text_y(i):
     return row_top(i) + TEXT_DY
-
-
-def status_y(i):
-    return row_top(i) + STATUS_DY + 1
-
-
-def skill_rows(i, count):
-    """The native y of each of `count` skill lines of row `i`."""
-    y0 = text_y(i) + SKILL_DY
-    return [y0 + k * SKILL_STEP for k in range(count)]
 
 
 def skill_help_rects(left, top, n_special, n_general):

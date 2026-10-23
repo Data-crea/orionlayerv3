@@ -47,7 +47,6 @@ import pygame
 
 from core import backgrounds
 from core import mapcoords as mc
-from core import mouse as mouse_input
 from core import palette
 from core import zoomtables as zt
 from core.hud import lru

@@ -39,7 +39,6 @@ from core.screen_base import ScreenBase
 from core import hestrings
 from core import shipstacks
 from core import kentext
-from core import mouse as mouse_input
 from core.shipparts import ShipPartNames
 from screens.colony_summary import colonyrows
 
