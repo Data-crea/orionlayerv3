@@ -101,7 +101,9 @@ SPECIAL_ROW, SPECIAL_ROWS = 30, 8
 VALUE_PAD = 64
 SKILL_ROW = 26
 #: the portrait's widest part, reference px (HD EXTENSION `scan_portrait_full`)
-PORTRAIT_MAX = 176
+PORTRAIT_MAX = 206
+#: the portrait's gap under the title strip (the left gap is the box's own)
+PORTRAIT_GAP = 16
 #: a table's column head under a box's title: its top from the box's top,
 #: its text size and the gap to the first row — SPECIAL SYSTEMS' and, since
 #: work order 301, HULL AND SYSTEMS' "HP" alike
@@ -373,9 +375,13 @@ class View:
             # figure fills the box from its title strip down to its edge, its
             # proportion kept; a wider picture than PORTRAIT_MAX is cut at
             # both sides (never stretched), a narrower one stands at the left
+            # a gap under the title strip and at the left (Data, work order
+            # 332, from his screenshot: the head touched the strip and the
+            # figure was cut): the whole picture, a little smaller
             pad = max(1, round(2 * k))
-            top = R(0, BOXES["officer"][1] + 38, 0, 0).y
-            port = pygame.Rect(r.x + pad, top, 0, r.bottom - pad - top)
+            top = R(0, BOXES["officer"][1] + 38 + PORTRAIT_GAP, 0, 0).y
+            port = pygame.Rect(r.x + px(6), top, 0,
+                               r.bottom - pad - top)
             pic = pics.portrait(o, (port.h * 40, port.h))
             if pic is not None:
                 keep = min(pic.get_width(), px(PORTRAIT_MAX))
