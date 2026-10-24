@@ -66,6 +66,15 @@ class HudStyle:
             c = raise_to(c, self.get(floor[path]))
         return c
 
+    def raw_colour(self, path):
+        """`path`'s colour as measured — the blue of Data's picture — whatever
+        frame colour the player chose: for the one element a screen sets
+        apart from the frame (`core.hud.blocks.blue`)."""
+        v = self._walk(self.chosen, path + "_from")
+        if isinstance(v, str):
+            return self.raw_colour(v)
+        return tuple(int(x) for x in self.get(path)[:3])
+
     def _colour(self, path, kind):
         """`path`'s colour, tinted as `kind` is — an indirection keeps the
         class of the name that asked (a word stays a word, work order

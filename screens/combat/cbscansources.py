@@ -58,12 +58,13 @@ class Sources:
         s = self._screen
         key = (id(s._names), id(s._ken), s._language)
         if self._words is None or self._words[0] != key:
-            from core import estrings, hestrings
+            from core import estrings, hestrings, skildesc
             from screens.leaders import ldrrows
             unit = ldrrows.UNIT.get(s._language, ldrrows.UNIT_DEFAULT)
             self._words = (key, cbscan.Words(
                 s._ken, s._names, estrings.EStrings(s._language),
-                hestrings.for_app(s.app), unit))
+                hestrings.for_app(s.app), unit,
+                skildesc.for_app(s.app)))
         return self._words[1]
 
     def note_round(self, shown):

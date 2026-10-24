@@ -44,6 +44,8 @@ operational one says none.
 
 Geometry in reference px, scaled by the window's `k` as the scan.
 """
+import contextlib
+
 import pygame
 
 from core import lang, textfit
@@ -64,6 +66,8 @@ TITLE, TOTAL, HEAD = 22, 34, 54
 #: 941): the head's mode, the body's median of its text-free pixels — one
 #: flat colour for the body's gradient (33, 28, 24) .. (20, 18, 16)
 CARD_HEAD, CARD_BODY = (19, 17, 15), (29, 25, 21)
+# LOOK EXCEPTION data: the blue value card's ground, the mockup's navy
+BLUE_BODY = (12, 26, 46)
 #: the glow's reach round a card, reference px, and its strongest alpha
 GLOW, GLOW_ALPHA = 14, 90
 #: what another unit gives, in its own tint (Data: "a distinct tint")
@@ -278,6 +282,16 @@ def hull_rows(style, k, card):
     return rows
 
 
+def skill_rows(style, k, text, room):
+    """A skill's card (HD EXTENSION `scan_skill_help`): its name in the
+    head, the original's sentence below, broken to the card's width."""
+    title, body = text
+    rows = Rows(str(title).upper())
+    for line in wrap(style, body, max(9, int(20 * k)), room):
+        rows.add("wrap", line)
+    return rows
+
+
 def hull_rect(window, hull, height, k, row):
     """The card of a HULL AND SYSTEMS row (Data, work order 302): left of
     the box by the gap, so it never covers the row it explains; its top on
@@ -309,14 +323,24 @@ def glow(rect, edge, k, scale):
     return surf, pad
 
 
-def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
+# LOOK EXCEPTION data: the blue card's and panel's title word, Data's mockup
+# of 24 October 2026 (HD EXTENSION `scan_blue`, `cbscanview`)
+BLUE_TITLE = (96, 190, 255)
+
+
+def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None,
+         blue=False):
     """The card in `rect`, lying on top (work order 298), its rows top
     down; `tip` the notch's points (a value card's); `bounds` the scan
     window, which the glow never passes."""
-    from core.hud import style as hudstyle
+    with (hud.blue() if blue else contextlib.nullcontext()):
+        _draw(surface, style, scale, k, rect, rows, rgb, tip, bounds, blue)
+
+
+def _draw(surface, style, scale, k, rect, rows, rgb, tip, bounds, blue):
     px = lambda n: max(9, int(n * k))
     thin = lambda n: max(1, round(n * k))
-    edge = hudstyle.get().colour("popup.edge")[:3]
+    edge = hud.colour("popup.edge")[:3]
     halo, pad = glow(rect, edge, k, scale)
     keep = surface.get_clip()
     if bounds is not None:
@@ -329,9 +353,10 @@ def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
     # the edge
     shape = [(rect.x + x, rect.y + y) for x, y in
              hud.panel_polygon(rect.w - 1, rect.h - 1, scale)]
-    pygame.draw.polygon(surface, CARD_BODY, shape)
+    body = BLUE_BODY if blue else CARD_BODY
+    pygame.draw.polygon(surface, body, shape)
     if tip is not None:
-        pygame.draw.polygon(surface, CARD_BODY, tip)
+        pygame.draw.polygon(surface, body, tip)
     if rows.title:
         surface.set_clip(pygame.Rect(rect.x, rect.y, rect.w,
                                      px(HEAD)).clip(keep))
@@ -367,7 +392,7 @@ def draw(surface, style, scale, k, rect, rows, rgb, tip=None, bounds=None):
         # the title in the HUD's accent word colour (`text.title`: it follows
         # the frame's hue, `style.WORDS_THAT_FOLLOW`), the edge the frame's
         put(fit(style, rows.title, px(TITLE), room), (x, y + px(4)), TITLE,
-            hudtext.colour("title"))
+            BLUE_TITLE if blue else hudtext.colour("title"))
         y = rect.y + px(HEAD)
         hud.separator(surface, x, right, y, scale)
         y += px(8)
@@ -479,7 +504,7 @@ def show(view, surface, style, scale, k, m, pointer, rgb, column):
                         max(c.drawn_height(k) for c in cards.values()), r)
         tip = notch(at, r, k)
         draw(surface, style, scale, k, at, cards[key], rgb, tip,
-             bounds=view.window)
+             bounds=view.window, blue=True)
         view.card = (key, at, tip)
         return
     for key, r in (view.rects.get("hull") or {}).items():
@@ -495,6 +520,23 @@ def show(view, surface, style, scale, k, m, pointer, rgb, column):
         view.card = ("hull", at, r, tip)
         return
     avoid = [view.boxes[b] for b in ("values", "specials", "hull")]
+    column_room = column.w - 2 * int(PAD * k)
+    for sid, r in (view.rects.get("skills") or {}).items():
+        text = ((m.officer or {}).get("explain") or {}).get(sid)
+        if text is None or not r.collidepoint(pointer):
+            continue
+        rows = skill_rows(style, k, text, min(column_room, round(
+            VALUE_W * k) - 2 * int(PAD * k)))
+        size = (min(column.w, round(VALUE_W * k)),
+                rows.drawn_height(k))
+        # under the whole block of skill lines, so it never covers one
+        block = r.unionall(list(view.rects["skills"].values()))
+        at = place(size, block, view.window, avoid)
+        if at is not None:
+            draw(surface, style, scale, k, at, rows, rgb,
+                 bounds=view.window)
+            view.card = ("skill", at, r)
+        return
     for r, whole in view.cut:
         if not r.collidepoint(pointer):
             continue
