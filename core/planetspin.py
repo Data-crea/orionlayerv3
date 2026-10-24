@@ -149,8 +149,8 @@ def angle(cfg, name, climate, seed, t=None):
 #: has moved about this many pixels at its centre, and never faster than
 #: `FASTEST`: a small planet turns under a pixel a second and costs a
 #: redraw a second, a big one a few (`core.drawgate`).
-MOVE_PX = 0.7
-FASTEST = 1 / 15
+MOVE_PX = 0.3
+FASTEST = 1 / 30
 
 
 def touch(side=0, cfg=None):

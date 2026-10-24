@@ -45,7 +45,7 @@ CLOUDS = MAP_DIR + "{}_clouds.png"
 #: (orion2_consts.h:409-421) and `volcanic`, which the game has no climate
 #: for (WO 331, a question to Data) and which is therefore only reachable by
 #: name.
-MIN_STEP = 1 / 24
+MIN_STEP = 1 / 30
 #: Pixels of a frame made per call: about 4 ms, so no single draw is long.
 SLICE = 40000
 #: Map pixels per screen pixel at the centre, and the width buckets of a mip.
