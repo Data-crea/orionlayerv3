@@ -122,8 +122,10 @@ COLOURS = {
 SHADOW = (0, 0, 0)
 
 #: The shade over the panel's inside (Data, work order 327: the text was
-#: hard to read over the stars and the console; a shade over the whole
-#: popup rather than one behind the text): a deep navy at this opacity, over
+#: hard to read over the stars and the console; reworked after his
+#: reference picture, "a calm dark-blue text zone on the left that runs out
+#: softly into the galaxy on the right"): a deep navy (#07111F) at an
+#: opacity that follows the panel's width — SCRIM_PROFILE below — over
 #: everything inside the frame, measured off the picture (1465 x 1073, the
 #: last pixel of the frame's lit edge per side at five rows and columns):
 #: 16 px left, 22 right, 25 top, 31 bottom, and the corner ornaments'
@@ -131,26 +133,25 @@ SHADOW = (0, 0, 0)
 #: light. Faded in over SCRIM_FEATHER, from that edge inwards.
 #: HD EXTENSION `text_shade`: the mockup has none; it is drawn over Data's
 #: picture, which itself stays unaltered.
-SCRIM_RGB = palette.col("main_menu", "egg_scrim", (4, 8, 22))
-SCRIM_ALPHA = 0.55
+SCRIM_RGB = palette.col("main_menu", "egg_scrim", (7, 17, 31))
+#: (opacity over the text zone, opacity over the galaxy, panel x up to which
+#: the first holds, panel x from which the second holds), smoothstep
+#: between. Left: the stars, nebula and console light behind the text keep
+#: about a tenth of their light, so they show faintly and no longer compete
+#: with the letters (the text column ends at 0.60 of the width); right: the
+#: galaxy, the commander and the mug keep nearly all of theirs.
+SCRIM_PROFILE = (0.90, 0.08, 0.56, 0.72)
 #: (left, top, right, bottom) as fractions of the panel.
 SCRIM_INSET = (16 / 1465, 25 / 1073, 22 / 1465, 31 / 1073)
 SCRIM_CORNER = (0.065, 0.05)
 SCRIM_FEATHER = 0.006
-#: The text half darker still (Data's final polish): (extra shade, panel x
-#: where it starts to fade, panel x where it is gone). Over the body column
-#: it takes about a fifth more of the light the shade lets through — the
-#: galaxy's bright arms behind the text, the lit consoles behind the key
-#: sentence — and fades out smoothly before the galaxy's core, the mug and
-#: the commander, so no edge shows.
-SCRIM_LEFT = (0.18, 0.40, 0.66)
 #: The lit consoles right behind the gold key sentence, dimmed further
 #: (Data: the sentence was hard to read there): a shade of SCRIM_RGB at
-#: this opacity — 40 % of the light the panel shade lets through —
-#: over the sentence's own box, faded out smoothly over these shares of the
-#: panel (sideways, up and down) so no edge shows, and gone by SPARK_SHADE_X1
-#: of the panel's width, before the mug. The consoles still show through;
-#: the gold letters are drawn over it unchanged.
+#: this opacity on top of the panel shade, over the sentence's own box,
+#: faded out smoothly over these shares of the panel (sideways, up and down)
+#: so no edge shows, and gone by SPARK_SHADE_X1 of the panel's width, before
+#: the mug. The consoles still show through; the gold letters are drawn over
+#: it unchanged.
 SPARK_SHADE_ALPHA = 0.40
 SPARK_SHADE_FEATHER = (0.03, 0.025)
 SPARK_SHADE_X1 = 0.615
@@ -370,10 +371,9 @@ class EasterEgg:
             # LOOK EXCEPTION marking: the shade over the easter egg's
             # panel, Data's call for readability over his picture.
             shade.fill(SCRIM_RGB)
-            extra, x_full, x_gone = SCRIM_LEFT
+            a_text, a_sky, x_full, x_gone = SCRIM_PROFILE
             t = np.clip(((x0 + u) / p.w - x_full) / (x_gone - x_full), 0, 1)
-            left = extra * (1 - t * t * (3 - 2 * t))[:, None]   # smoothstep
-            alpha = 1 - (1 - SCRIM_ALPHA) * (1 - left)
+            alpha = (a_text + (a_sky - a_text) * t * t * (3 - 2 * t))[:, None]
             pygame.surfarray.pixels_alpha(shade)[:] = (
                 ramp * alpha * 255).astype(np.uint8)
             self._scrim_cache = (p.size, (shade, x0, y0))
