@@ -366,6 +366,62 @@ ones and 1 for the tens. `import_…` are the imported goods (and, for
 industry, the pollution); a shortage is the import symbol with the
 game's red outline round it.
 
+### Turning planets
+
+Every planet OrionLayer draws is a sphere that turns slowly, built from a
+flat map of its type — the colony list, the Planets list, the star system
+windows, the colony screen's system display, the invasion popup and the
+battle. The light, the darkening to the edge and the glow are drawn over
+the turning map, so they stay where they are.
+
+Replace a type's map, or add clouds over it (any size, 2:1; a map wraps
+left to right):
+
+```
+files/assets/shared/planets/<type>_surface.png     the surface, no alpha needed
+files/assets/shared/planets/<type>_clouds.png      optional, with transparency,
+                                                   turns a little faster
+```
+
+`<type>` is one of toxic, radiated, barren, desert, tundra, ocean, swamp,
+arid, terran, gaia (and volcanic, which the game has no climate for).
+Gas giants and asteroid belts are not spheres and stay as they are.
+
+The numbers are in `planets.json` in your mod folder; write only the keys
+you change:
+
+```json
+{
+  "seconds_per_turn": 480,
+  "speed_spread": 0.15,
+  "ambient": 0.10,
+  "types": { "ocean": { "glow": [60, 140, 230], "speed": 0.5 } }
+}
+```
+
+| key | meaning (default) |
+|---|---|
+| `seconds_per_turn` | one full turn of a planet whose speed is 1; 0 stops the rotation (240) |
+| `speed_spread` | each planet's own speed lies within 1 ± this; its start angle is its own (0.15) |
+| `cloud_speed` | the clouds' speed compared with the surface (1.25) |
+| `ambient` | how bright the night side stays, 0 to 1 (0.10) |
+| `limb` | how much the edge darkens, 0 to 1 (0.55) |
+| `glow_width` | the glow ring, a fraction of the picture's half size; the sphere fills the rest, 0.068 draws it as large as the old pictures (0.068) |
+| `rim` | the atmosphere's brightness over the lit rim (0.45) |
+| `types.<type>.glow` | the glow colour `[r, g, b]` |
+| `types.<type>.glow_strength` | its strength (0.8) |
+| `types.<type>.speed` | this type's turn compared with the others (1.0) |
+| `types.<type>.light` | where the light comes from `[x, y, z]`: x right, y down, z toward you; upper left is `[-0.58, -0.52, 0.63]` |
+| `types.<type>.emissive` | 0 to 1: how much bright warm spots (lava) keep their own light on the night side; volcanic 1, radiated 0.5 |
+
+All planets turn the same way. A planet's start angle and exact speed come
+from the planet itself, so it is the same on every screen and every run.
+
+**An old-style picture still works.** A type for which you supply a full
+planet picture (below) and no map of its own is shown as that static
+picture: no rotation, no error. Supply a map for the type too and the map
+wins.
+
 ### Planet pictures and the Space Dragon
 
 One picture per climate replaces the planet wherever OrionLayer draws one

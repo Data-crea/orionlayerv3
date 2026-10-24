@@ -104,6 +104,50 @@
       2231296,
       "a18b5138c2639a3de5485cd9b9c49cc2a46e294f7a7164f035486d212ae70235"
     ],
+    "assets/shared/planets/arid_surface.png": [
+      2791799,
+      "c821f7e0b92308a7cf0d3051bc69276d69cdd8d9c30c7000243f9328e39b08df"
+    ],
+    "assets/shared/planets/barren_surface.png": [
+      3087339,
+      "0b4fea7c4b97cb9511dff76f7d0286dd2af99cf3b3db366e0c8e0848fb8c072f"
+    ],
+    "assets/shared/planets/desert_surface.png": [
+      2546952,
+      "7275303708930afa93ca495c9083d4780b18cdfbd92186f7a4ee5ebf8f0632e4"
+    ],
+    "assets/shared/planets/gaia_surface.png": [
+      2692518,
+      "afdf5bf3633e60bbf791367a6c77c235eb4a00ca01eec3604499336da1a31887"
+    ],
+    "assets/shared/planets/ocean_surface.png": [
+      2635858,
+      "52f9feb56e92372a7f5c4c95ae743d1a240ef27d4aea000b4e7d8b87ef1bb8fc"
+    ],
+    "assets/shared/planets/radiated_surface.png": [
+      2735098,
+      "4e6a57f831fef71e8a6040b37645e04e5e2816f3b4860ace26d3fec5622a1f37"
+    ],
+    "assets/shared/planets/swamp_surface.png": [
+      2785963,
+      "e4d190e1a2245e1549e46189bc438b8129249d1fd46af1b338a3e0eb3d3f01f9"
+    ],
+    "assets/shared/planets/terran_surface.png": [
+      2831674,
+      "c29cbdadd9bfcd264b700621968a1375202981593ce16ad4c1413e47b7d95480"
+    ],
+    "assets/shared/planets/toxic_surface.png": [
+      2578046,
+      "1aee38cf7e9f10cd9ce92f8b08e853a069a8cf69c08d726908ccd4f9d9b4304f"
+    ],
+    "assets/shared/planets/tundra_surface.png": [
+      2933454,
+      "ae69f8a6381661905dd66750569a3dbc715cfacc72ab3438a1dbb920eff1991a"
+    ],
+    "assets/shared/planets/volcanic_surface.png": [
+      2941681,
+      "519cba6979003f855afdec6db54ca69947b65ec9bc7025675d64bf175bfc978a"
+    ],
     "screens/colony_summary/assets/_src/output/low_moral.png": [
       709567,
       "5bc347f5c49614f99b15e0e7839ddd5899084f97ee90fbcb302e9b7b5c7b616d"
@@ -119,46 +163,6 @@
     "screens/colony_summary/assets/_src/surfaces/planet_surfaces.png": [
       2136173,
       "0092f48571ff247d74af7d718c797f1055489a549ca561a17811f01c7e5612de"
-    ],
-    "screens/colony_summary/assets/planets/arid.png": [
-      7251,
-      "8a1671b49afd7d164bdf1c0425d782900cec2860843d4175f985903aef9e0993"
-    ],
-    "screens/colony_summary/assets/planets/barren.png": [
-      6684,
-      "60e3ee39232f36571026f0ac670ad8d1f75c90428006753585d08a0a3fa6a423"
-    ],
-    "screens/colony_summary/assets/planets/desert.png": [
-      6313,
-      "d32f22165ca1f8fa305f595151d75aa230cd2421e8b5366603c12ed3598a6713"
-    ],
-    "screens/colony_summary/assets/planets/gaia.png": [
-      6849,
-      "75f034b05c050ebc5a5e83ff8dd6eb395ca1c64775a7198932336e292cd39b50"
-    ],
-    "screens/colony_summary/assets/planets/ocean.png": [
-      6869,
-      "3b10bd8633b1066d2faf34478d2e62a8f1dae2af87c4ad66a9e6e8bd8d563d66"
-    ],
-    "screens/colony_summary/assets/planets/radiated.png": [
-      6581,
-      "299d3fb85274bbdf63d4f9adbf4a49823d0e8290527a870f151df7b36a629418"
-    ],
-    "screens/colony_summary/assets/planets/swamp.png": [
-      7064,
-      "db3a1d7cf9294123a4821f5b2c2546e395c5539a1d56ed21235318a93d5ca5e1"
-    ],
-    "screens/colony_summary/assets/planets/terran.png": [
-      7163,
-      "8d53c4f5d76f668848d55786a7186fc685093882ef081b6da938a7389e1a9789"
-    ],
-    "screens/colony_summary/assets/planets/toxic.png": [
-      6328,
-      "2273d7e6d2614144f587af2cb904c193b6a77cf3e1da005df9528b7cc6c97fc0"
-    ],
-    "screens/colony_summary/assets/planets/tundra.png": [
-      6801,
-      "dd1ae3a6cbe7071cd0078ad170f1b4d68c9dfb073654835c77c41c9bea311686"
     ],
     "screens/custom_race/assets/checkbox_off.png": [
       123882,

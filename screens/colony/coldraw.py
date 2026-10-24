@@ -311,6 +311,16 @@ def _bg_type(view):
     return int(getattr(planet, "climate_bg_type", 0) or 0) if planet else 0
 
 
+def _shown_climate(planet, state):
+    """The climate the system display shows for a planet: the colony's where
+    it has one (a terraformed world shows its new climate)."""
+    ci = getattr(planet, "colony_index", -1)
+    raws = getattr(state, "colonies_raw", None) or []
+    if ci is not None and 0 <= ci < len(raws):
+        return colony_struct.parse(raws[ci]).climate
+    return planet.climate
+
+
 def system_picture(art, planet, state, view):
     """The system display's drawing of one orbit's planet: COLSYSDI by the
     COLONY'S climate where the planet has one (a terraformed world shows
@@ -378,7 +388,8 @@ def _system(surface, screen, view, state, words):
     extracted pictures, decision 58's climate disc for a planet."""
     art = colart.load()
     size = max(1, int(20 * nd.native_scale(screen.layout)))
-    planets = None if art.available else planet_set_for(screen, size)
+    # WO 331: a planet is a turning sphere here too, at the sprite's own
+    # size, whether or not the original's pictures are extracted
     for i, planet in enumerate(view.system):
         (cx, cy), (tx, ty) = geom.sys_row(i)
         if art.available:
@@ -388,6 +399,7 @@ def _system(surface, screen, view, state, words):
                          geom.SYS_X + 2, geom.SYS_Y + i * geom.SYS_ROW + 12)
         if planet is None:
             continue
+        pic = None
         if art.available:
             pic = system_picture(art, planet, state, view)
             pic = nd.magnified(pic, screen.layout) if pic is not None \
@@ -398,9 +410,14 @@ def _system(surface, screen, view, state, words):
                 pic = painted_planet(screen.app.res, planet.climate,
                                      getattr(planet, "size", None),
                                      max(pic.get_size())) or pic
-        else:
-            pic = planets.get(planet.climate) if planets is not None and \
-                planet.planet_type == PLANET else None
+        if planet.planet_type == PLANET:
+            disc = planet_set_for(screen, max(pic.get_size()) if pic
+                                  is not None else size)
+            turning = disc.get(_shown_climate(planet, state),
+                               view.system_ids[i]) if disc is not None \
+                else None
+            if turning is not None:
+                pic = turning
         if pic is not None:
             x, y = nd.point(screen.layout, cx, cy)
             surface.blit(pic, (x - pic.get_width() // 2,

@@ -111,6 +111,7 @@ class View:
         self.index = -1
         self.colony = self.planet = self.star = None
         self.system = [None] * star_struct.PLANET_SLOTS
+        self.system_ids = [-1] * star_struct.PLANET_SLOTS
         self._held = held
         self._read(state)
 
@@ -159,6 +160,8 @@ class View:
         if self.star is not None:
             self.system = [by_index.get(i) if i >= 0 else None
                            for i in star_struct.planet_indices(self.star)]
+            # the planet indices, for the turning spheres (WO 331)
+            self.system_ids = list(star_struct.planet_indices(self.star))
         self.drawing_display = block["drawing_display"]
         self.autobuild_enabled = bool(block["autobuild_enabled"])
         players = getattr(state, "player_raw", None) or []

@@ -899,6 +899,9 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             # Nothing DRAWS it. It is an identity, and it is the one
             # key in this dict that would be wrong to show.
             "index": index,
+            # the PLANET it is on, for the turning sphere (WO 331): its
+            # start and speed are the planet's on every screen
+            "planet": int(col.planet),
             "name": planet_name(col, planets, stars),
             "pops": col.n_pops,
             "jobs": jobs,

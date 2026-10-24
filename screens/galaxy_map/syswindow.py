@@ -334,7 +334,8 @@ def draw_view(screen, surface, view, model, state=None):
         disc = None
         if p["type"] != 2:
             discs = colonyplanets.set_for(screen, side, p.get("size"))
-            disc = discs.get(p["climate"]) if discs is not None else None
+            disc = (discs.get(p["climate"], p.get("planet"))
+                    if discs is not None else None)
         else:
             # Data's painted gas giant (work order 236, `gasgiant`)
             from screens.galaxy_map import gasgiant
@@ -363,7 +364,8 @@ def _planet_picture(screen, surface, p, centre, side):
         pic = gasgiant.picture(side)
     else:
         discs = colonyplanets.set_for(screen, side, p.get("size"))
-        pic = discs.get(p["climate"]) if discs is not None else None
+        pic = (discs.get(p["climate"], p.get("planet"))
+               if discs is not None else None)
     if pic is not None:
         surface.blit(pic, pic.get_rect(center=centre))
     else:

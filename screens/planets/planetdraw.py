@@ -179,7 +179,8 @@ def _render_planet_cell(screen, surface, col, by, bh, words, row, colour,
         return
     x, w = col
     pad = max(4, bh // 8)
-    disc = discs.get(row["climate"]) if discs is not None else None
+    disc = (discs.get(row["climate"], row["index"])
+            if discs is not None else None)
     if disc is not None:
         surface.blit(disc, (x + pad, by + (bh - size) // 2))
     tx = x + 2 * pad + size
@@ -357,7 +358,8 @@ def render_planet_panel(screen, surface, row, words):
     if disc_rect:
         size = min(disc_rect.width, disc_rect.height)
         disc = colonyplanets.set_for(screen, size)
-        image = disc.get(row["climate"]) if disc is not None else None
+        image = (disc.get(row["climate"], row["index"])
+                 if disc is not None else None)
         if image is not None:
             surface.blit(image, image.get_rect(center=disc_rect.center))
     colour = row_color(row, False)

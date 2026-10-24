@@ -20,6 +20,8 @@ import os
 #: names only.
 GAME_ART = ("assets/shared/background_cockpit.png",
             "assets/shared/cursor.png",
+            # the turning planets' maps, OrionLayer's own (work order 331)
+            "assets/shared/planets/*_surface.png",
             "assets/shared/figures/*.png",
             "screens/colony_summary/assets/output/*.png",
             "screens/colony_summary/assets/planets/*.png",

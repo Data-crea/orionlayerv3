@@ -154,6 +154,7 @@ def render(screen, surface, popup, state, app=None, words=None):
         cols = getattr(state, "colonies_raw", None) or []
         planets = getattr(state, "planets_raw", None) or []
         size_ = 2
+        pl = -1
         if 0 <= colony < len(cols):
             pl = colony_struct.parse(cols[colony]).planet
             if 0 <= pl < len(planets):
@@ -167,8 +168,11 @@ def render(screen, surface, popup, state, app=None, words=None):
             # at the drawing's size (DEVIATION `painted_planets`).
             from screens.colony_summary import colonyplanets
             from core import resources
-            big = colonyplanets.painted(resources.res, climate, size_,
-                                        max(big.get_size())) or big
+            side = max(big.get_size())
+            big = (colonyplanets.turning(resources.res, climate, side, pl,
+                                         size_)
+                   or colonyplanets.painted(resources.res, climate, size_,
+                                            side) or big)
             cx, cy = bm.point(bm.x0 + BOX_W // 2, bm.y0 + BOX_H // 2)
             surface.blit(big, big.get_rect(center=(cx, cy)))
     defender, attacker = _player(state, a[8]), _player(state, a[7])
