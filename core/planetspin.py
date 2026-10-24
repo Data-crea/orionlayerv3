@@ -29,7 +29,7 @@ from core import usermod
 #: Built in, so a pack with no file still turns: the file only changes values.
 DEFAULT = {
     # One full turn of a planet whose own speed factor is 1; 0 = no turn.
-    "seconds_per_turn": 240.0,
+    "seconds_per_turn": 60.0,
     # A planet's own factor lies within 1 +- this (a fraction).
     "speed_spread": 0.15,
     # The cloud layer's turn relative to the surface (only if a map exists).

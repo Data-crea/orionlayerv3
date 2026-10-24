@@ -401,7 +401,7 @@ you change:
 
 | key | meaning (default) |
 |---|---|
-| `seconds_per_turn` | one full turn of a planet whose speed is 1; 0 stops the rotation (240) |
+| `seconds_per_turn` | one full turn of a planet whose speed is 1; 0 stops the rotation (60) |
 | `speed_spread` | each planet's own speed lies within 1 ± this; its start angle is its own (0.15) |
 | `cloud_speed` | the clouds' speed compared with the surface (1.25) |
 | `ambient` | how bright the night side stays, 0 to 1 (0.10) |
