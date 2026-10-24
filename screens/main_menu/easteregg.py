@@ -144,6 +144,16 @@ SCRIM_FEATHER = 0.006
 #: sentence — and fades out smoothly before the galaxy's core, the mug and
 #: the commander, so no edge shows.
 SCRIM_LEFT = (0.18, 0.40, 0.66)
+#: The lit consoles right behind the gold key sentence, dimmed further
+#: (Data: the sentence was hard to read there): a shade of SCRIM_RGB at
+#: this opacity — 40 % of the light the panel shade lets through —
+#: over the sentence's own box, faded out smoothly over these shares of the
+#: panel (sideways, up and down) so no edge shows, and gone by SPARK_SHADE_X1
+#: of the panel's width, before the mug. The consoles still show through;
+#: the gold letters are drawn over it unchanged.
+SPARK_SHADE_ALPHA = 0.40
+SPARK_SHADE_FEATHER = (0.03, 0.025)
+SPARK_SHADE_X1 = 0.615
 
 #: The hover area never shrinks below this many device pixels, so the
 #: star stays easy to hit in the smallest window (1280x720).
@@ -192,9 +202,11 @@ class EasterEgg:
         self._blocks = {}             # language -> [(role, text)]
         self._panel_src = None
         self._panel_cache = None      # ((w, h), scaled picture)
-        self._text_cache = None       # (((w, h), language), placed, span)
+        self._text_cache = None       # (((w, h), language), placed, span,
+                                      #  spark box)
         self._glow_cache = None       # (radius, sprite)
         self._scrim_cache = None      # ((w, h), (shade, x, y))
+        self._spark_cache = None      # (((w, h), box), (shade, x, y))
         self._load()
 
     # ── data ──
@@ -318,6 +330,10 @@ class EasterEgg:
         placed = self._text(p)
         shade, sx, sy = self._scrim(p)
         surface.blit(shade, (p.x + sx, p.y + sy))
+        spark = self._spark_shade(p, self._text_cache[3])
+        if spark is not None:
+            shade, sx, sy = spark
+            surface.blit(shade, (p.x + sx, p.y + sy))
         for surf, x, y in placed:
             surface.blit(surf, (p.x + x, p.y + y))
         for a, b in self._rules(p, self._text_cache[2]):
@@ -362,6 +378,43 @@ class EasterEgg:
                 ramp * alpha * 255).astype(np.uint8)
             self._scrim_cache = (p.size, (shade, x0, y0))
         return self._scrim_cache[1]
+
+    def _spark_shade(self, p, box):
+        """(surface, x, y) relative to the panel: the extra shade behind the
+        gold key sentence (SPARK_SHADE_ALPHA), or None without one; built
+        once per panel size and sentence box."""
+        if box is None:
+            return None
+        key = (p.size, box)
+        if self._spark_cache is None or self._spark_cache[0] != key:
+            bx0, by0, bx1, by1 = box
+            fx = SPARK_SHADE_FEATHER[0] * p.w
+            fy = SPARK_SHADE_FEATHER[1] * p.h
+            x0 = max(0, math.floor(bx0 - fx))
+            x1 = min(math.ceil(SPARK_SHADE_X1 * p.w), math.ceil(bx1 + fx))
+            y0 = max(0, math.floor(by0 - fy))
+            y1 = min(p.h, math.ceil(by1 + fy))
+            bw, bh = max(1, x1 - x0), max(1, y1 - y0)
+            u = x0 + np.arange(bw, dtype=np.float32) + 0.5
+            v = y0 + np.arange(bh, dtype=np.float32) + 0.5
+            # Full inside the box, smoothstep down to nothing over the
+            # feather; on the right the fade ends at the box's end plus the
+            # feather or SPARK_SHADE_X1, whichever comes first.
+            right = min(bx1 + fx, SPARK_SHADE_X1 * p.w)
+            tx = np.maximum(np.clip((bx0 - u) / fx, 0, 1),
+                            np.clip((u - (right - fx)) / fx, 0, 1))
+            ty = np.clip(np.maximum(by0 - v, v - by1) / fy, 0, 1)
+            sx = 1 - tx * tx * (3 - 2 * tx)
+            sy = 1 - ty * ty * (3 - 2 * ty)
+            shade = pygame.Surface((bw, bh), pygame.SRCALPHA)
+            # LOOK EXCEPTION marking: the shade behind the easter egg's key
+            # sentence, Data's call for readability over his picture.
+            shade.fill(SCRIM_RGB)
+            pygame.surfarray.pixels_alpha(shade)[:] = (
+                SPARK_SHADE_ALPHA * 255 * sx[:, None] * sy[None, :]
+            ).astype(np.uint8)
+            self._spark_cache = (key, (shade, x0, y0))
+        return self._spark_cache[1]
 
     def _rules(self, p, sub):
         if not sub:
@@ -412,7 +465,7 @@ class EasterEgg:
 
         kh = largest(lambda k: self._flow(pw, ph, k, k, HEADLINE)[1] < 1e9)
         kb = largest(lambda k: self._flow(pw, ph, k, kh)[1] <= avail)
-        _placed, used, _span, gaps = self._flow(pw, ph, kb, kh)
+        _placed, used, _span, gaps, _spark = self._flow(pw, ph, kb, kh)
         # What the fonts leave free goes into the gaps, each in proportion
         # to itself and capped, so the signature stands near the panel's
         # foot as in the mockup and a larger gap stays the larger.
@@ -420,15 +473,17 @@ class EasterEgg:
         n = sum(1 for role, _t in self.blocks if role not in HEADLINE)
         spread = min(MAX_SPREAD, max(0.0, avail - used - 0.5 * n) / gaps) \
             if gaps else 0.0
-        placed, _used, span, _gaps = self._flow(pw, ph, kb, kh, spread=spread)
-        return placed, span
+        placed, _used, span, _gaps, spark = self._flow(pw, ph, kb, kh,
+                                                       spread=spread)
+        return placed, span, spark
 
     def _flow(self, pw, ph, k, kh, roles=None, spread=0.0):
         """One top-to-bottom pass, the headline at font factor kh and the
         rest at k, over `roles` (all by default), every gap grown by
         `spread` of itself: (placed, height used — infinite when a one-line
         role overflows its width —, the subtitle's (x0, x1, y) or None, the
-        sum of the body's gaps in pixels)."""
+        sum of the body's gaps in pixels, the gold key sentence's ink box
+        (x0, y0, x1, y1) or None)."""
         style = self.screen.style
         x0, x1 = round(COL_X0 * pw), round(COL_X1 * pw)
         centre = round((COL_X0 + RULE_X1) / 2 * pw)
@@ -436,6 +491,7 @@ class EasterEgg:
         top = bottom = y
         placed = []
         span = None
+        spark = None
         indent = 0
         overflow = False
         gaps = 0.0
@@ -494,6 +550,11 @@ class EasterEgg:
                     span = (x, x + surf.get_width(),
                             y + plain // 2)
                 bottom = max(bottom, y + plain)
+                if role == "spark":
+                    b = (x, y, x + surf.get_width(), y + plain)
+                    spark = b if spark is None else (
+                        min(spark[0], b[0]), min(spark[1], b[1]),
+                        max(spark[2], b[2]), max(spark[3], b[3]))
             # The headline stacks tight, as the mockup sets it; any other
             # block ends one full line step on, so a gap of 0 ("line")
             # continues its paragraph at the same rhythm.
@@ -503,7 +564,7 @@ class EasterEgg:
                 indent = style.render_text(
                     lang.Stored("— "), size, SHADOW).get_width()
         return (placed, (float("inf") if overflow else bottom - top), span,
-                gaps)
+                gaps, spark)
 
     def _plain_height(self, size):
         """A line's height at `size` with no fallback glyph in it, the
