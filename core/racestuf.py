@@ -137,16 +137,18 @@ class RaceTraits:
             bonus = (SPECIAL_BONUS[trait - 1][level - 1]
                      if 1 <= level <= 3 else 0)
             rows.append({"name": self.names[trait], "value": value,
-                         "good": bonus > 0 if bonus else None})
+                         "good": bonus > 0 if bonus else None,
+                         "trait": trait})
         for trait in range(TRAIT_LOW_G, TRAIT_COUNT):
             if record[trait] == 1:
                 rows.append({"name": self.names[trait], "value": "",
-                             "good": None})
+                             "good": None, "trait": trait})
         government = None
         if estrings is not None:
             government = estrings.string(GOVERNMENT_ESTRING + record[0])
         rows.append({"name": "Government", "value": government or "",
-                     "good": None, "government": True})
+                     "good": None, "government": True,
+                     "gov_id": record[0]})
         return rows
 
 

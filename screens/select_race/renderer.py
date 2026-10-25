@@ -22,6 +22,8 @@ COL_GOOD      = _c("good",       (80, 200, 120))
 COL_BAD       = _c("bad",        (212, 160, 74))
 COL_NEUTRAL   = _c("neutral",    (138, 180, 232))
 COL_FLAVOR    = _c("flavor",     (144, 152, 176))
+COL_DESC      = _c("description", (226, 231, 242))
+COL_RACE_TEXT = _c("race_text",   (206, 211, 222))
 COL_HIGHLIGHT = _c("highlight",  (100, 210, 140))
 COL_KEYWORD   = _c("keyword",    (140, 185, 240))
 COL_SUBTITLE  = _c("subtitle",   (120, 104, 176))
@@ -38,12 +40,12 @@ NAME_H = 32         # height reserved for name label below portrait
 HEADER_H = 32       # "CHOOSE YOUR RACE" header height
 
 # Font sizes
-TITLE_FONT = 28
-SUBTITLE_FONT = 15
-BODY_FONT = 15
-HEADING_FONT = 13
-TRAIT_FONT = 15
-NAME_FONT = 13
+TITLE_FONT = 34
+SUBTITLE_FONT = 19
+BODY_FONT = 19
+HEADING_FONT = 16
+TRAIT_FONT = 19
+NAME_FONT = 16
 
 
 def grid_cell_rect(grid_rect, index):
@@ -122,6 +124,8 @@ def render_race_grid(surface, L, style, races, selected_id, rect,
         # lit on the chosen race: the field's own edge, which the portrait
         # covers.
         hud.outline(surface, cell_r, L.scale, lit=selected)
+        if selected:
+            _gold_frame(surface, cell_r, L.scale)
 
         # Race name below portrait
         is_custom = (race.get("key") == "custom" or race["id"] == 13)
@@ -135,6 +139,24 @@ def render_race_grid(surface, L, style, races, selected_id, rect,
         nx = sx + (sw - n_surf.get_width()) // 2
         ny = sy + port_h + (name_sh - n_surf.get_height()) // 2
         surface.blit(n_surf, (nx, ny))
+
+
+def _gold_frame(surface, rect, scale):
+    """The chosen race's cell: a thin gold frame and a soft glow outside
+    it (HD EXTENSION `race_panel_pictures`, Data's mockup). The glow is
+    a few lines of falling alpha, drawn once per frame on one cell."""
+    reach = max(3, int(7 * scale))
+    glow = pygame.Surface((rect.w + 2 * reach, rect.h + 2 * reach),
+                          pygame.SRCALPHA)
+    for i in range(reach, 0, -1):
+        a = int(70 * (1 - i / (reach + 1)) ** 1.6)
+        pygame.draw.rect(glow, (*COL_GOLD[:3], a),
+                         (reach - i, reach - i, rect.w + 2 * i,
+                          rect.h + 2 * i), 1, border_radius=3)
+    surface.blit(glow, (rect.x - reach, rect.y - reach))
+    # LOOK EXCEPTION marking: the chosen race's gold frame (Data's mockup, race_panel_pictures)
+    pygame.draw.rect(surface, COL_GOLD, rect, max(2, round(2 * scale)),
+                     border_radius=2)
 
 
 # ── Portrait helpers ─────────────────────────────────────
