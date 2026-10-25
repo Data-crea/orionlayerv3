@@ -151,7 +151,7 @@ NEBULA_BRIGHTNESS = 230
 BH_ROTATE_PERIOD_S = 90.0
 BH_ROTATE_STEPS = 720
 
-STAR_NAME_GAP = 0.30      # of icon height, below the star centre
+STAR_NAME_GAP = 0.40      # of icon height, below the star centre
 
 #: Wormhole links are drawn one pixel wide and antialiased. The
 #: original is one native pixel; a thicker HD line turns a faint hint

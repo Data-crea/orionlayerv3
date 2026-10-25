@@ -581,7 +581,7 @@ class GalaxyMapScreen(ScreenBase):
         # DEVIATION `names_over_stars`: the names after the stars, so over
         # the black holes and the lines too; the original prints them first
         # (Print_Star_Names_, mainscr_main.cpp:949, before :967-979). HD's
-        # name sits STAR_NAME_GAP (0.30) of the icon height below the
+        # name sits STAR_NAME_GAP (0.40) of the icon height below the
         # centre, inside the larger HD sprite, so a star drawn over it
         # would cut its top.
 
