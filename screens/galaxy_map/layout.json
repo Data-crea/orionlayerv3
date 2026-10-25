@@ -94,6 +94,10 @@
     "parallax_from_view": "DEVIATION parallax_from_view (screens/galaxy_map/starfield.py parallax_offsets): the offset is read off the view's origin (-k x map_x), so the layers move against the scroll and a view always shows the same sky; the original adds each step's absolute size (mainscr.cpp:2020-2027), drifting right and down whichever way it scrolls. A zoom moves the layers by the same rule, HD's wheel zoom moving map_x; the original jumps them on a zoom instead (a zoom-out passes cur_map_x - old_x as the target, mainscr_main.cpp:838; leaving the zoom mode resets them to 0x16, :853-854), and only a scroll moves them by the scroll (mainscr.cpp:2521, :2634). The tile is the window, not 640 x 480 native px. Work order 310.",
     "black_hole_order": "TRANSCRIPTION black_hole_order (screens/galaxy_map/screen.py _render_map, renderer.render_stars black_holes=): the black holes in their own pass before the destination lines, the ETA line and the stars (Draw_Black_Holes_, mainscr_main.cpp:967-979). Work order 310.",
     "names_over_stars": "DEVIATION names_over_stars (screens/galaxy_map/screen.py _render_map): the star names after the stars, so over black holes and lines; the original prints them first (mainscr_main.cpp:949). HD's name sits inside its larger star sprite's lower part, which would cut it. Work order 310.",
+    "star_shape_by_size": "HD EXTENSION star_shape_by_size (screens/galaxy_map/renderer.py render_stars, core/usermod.py SLOTS): with a class's three pictures large/medium/small in the mod folder the shape follows star.size at every zoom of HD's continuous wheel and only the width follows the zoom; without them the original's six steps (zoom + size). Data, 24 October 2026.",
+    "star_name_halo": "HD EXTENSION star_name_halo (screens/galaxy_map/renderer.py render_star_names, _name_halo): a soft dark glow round the star names' outline, a neutral name in near-white and the names one size larger, so they read over nebulae and bright stars. Data, 24 October 2026.",
+    "map_icon_halo": "HD EXTENSION map_icon_halo (screens/galaxy_map/ships.py haloed): every ship and monster icon on the map gets a dark glow round its silhouette so it stands out from bright stars and nebulae (a light rim looked wrong on black, Data, 24 October 2026). Data, 24 October 2026.",
+    "map_icon_scale": "DEVIATION map_icon_scale (screens/galaxy_map/layout.json ship_icons.scale): every ship and monster icon 1.3 x the original's footprint, hit box included, so they stand out on the map; the Guardian stays the largest monster and the amoeba, crystal, dragon and hydra are scaled (kinds) to about 0.88 of its drawn area at zoom 0. Data, 24 October 2026.",
     "black_hole_turn": "HD EXTENSION black_hole_turn (screens/galaxy_map/renderer.py BH_ROTATE_PERIOD_S): one master turned smoothly, 90 s a revolution; the original steps its sprite's frames, one every second draw (Draw_Black_Holes_ mainscr.cpp:729-737). Both stand still where Advance_Black_Hole_Animation_ says. Work order 310.",
     "nebula_zoom3_hold": "TRANSCRIPTION nebula_zoom3_hold (core/zoomtables.py NEBULA_HOLD_SCALE, nebula_native_dimension): past the scale of the original's rung the nebula keeps its size, as the original keeps the variant of its zoom level (mainscr.cpp:941-963): past 30 on an ordinary map (zoom 3, harold.cpp:1086-1110); on an extended one (over 72 stars) by Extended_Zoom_Level_For_Scale_ (map_scale.h:25-32), the zoom-2 size up to max_map_scale - 1 and the zoom-3 size only at the maximum. Work order 310.",
     "system_window_blocks_map": "DEVIATION system_window_blocks_map (screens/galaxy_map/boxdraw.py system_open): the original's star system window is moveable box 0 beside the map's own fields, and the grid field that hits stars and ships stays live around it (mainscr.cpp:1406, :1426; mainscr_main.cpp:421-438). HD blocks the whole map while it is open: Data's decision 5 of work order 226 F.",
@@ -172,10 +176,22 @@
   "_sizing_note": "Star and black hole sizes are NOT configured here. They come from core/zoomtables.py, transcribed from orion2re: MOX::_star_fields_dim {33,29,25,23,21,17} indexed by (zoom_level + star.size), and for the black hole its sprite header {40,34,34,25}, placed by Draw_Black_Holes_ zoom_dist {39,33,33,24} / 2; both ignore star.size. Changing them would desync HD from the original's proportions. The same holds for nebulas: NEBULA_DIM there holds the twelve types x four zoom variants read out of STARBG.LBX.",
   "ship_icons": {
     "fit": "height",
-    "scale": 1.0,
+    "scale": 1.3,
     "kinds": {
+      "amoeba": {
+        "scale": 0.92
+      },
+      "crystal": {
+        "scale": 1.21
+      },
+      "dragon": {
+        "scale": 0.95
+      },
       "eel": {
         "fit": "area"
+      },
+      "hydra": {
+        "scale": 0.91
       }
     },
     "_note": "Ship and monster icons. Sizes are NOT configured here - they come from core/zoomtables.py (SHIP_ICON_DIM 11/10/9/8 px wide by zoom level, MONSTER_ICON_DIM per monster type and zoom level, the pixels the original's own sprite draws). Only zoom level changes an icon's size; galaxy size merely caps how far the player may zoom out, so a Small galaxy is stuck at zoom 0 and always draws the largest icon.",
@@ -188,7 +204,7 @@
     "seed": 20260829,
     "count_scale": 1.0,
     "dot_native": 1.0,
-    "brightness": 1.0,
+    "brightness": 0.7,
     "clumping": 0.0
   },
   "home_ping": {

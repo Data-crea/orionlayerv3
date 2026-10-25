@@ -256,6 +256,48 @@ def sun_centre(place, size):
     return None if disc is None else disc[:2]
 
 
+#: The painted star is orange (class K); the other classes take its light in
+#: their own tint (Data, 25 Oct 2026: the system window shows the star's
+#: colour as the original does). Class -> tint at full brightness.
+SUN_TINTS = {0: (90, 150, 255), 1: (255, 246, 232), 2: (255, 214, 64),
+             4: (255, 58, 36), 5: (176, 98, 48)}
+SUN_TINT_REACH = 2.4        # radii of the painted star that are recoloured
+_tinted = {}
+
+
+def tint_sun(pic, disc, spectral_class):
+    """`pic` (the box's picture) with the painted star's warm light
+    recoloured to the class's tint — hue only: brightness and the white
+    core kept. Classes without a tint (K, the painted one) return `pic`."""
+    tint_rgb = SUN_TINTS.get(spectral_class)
+    if tint_rgb is None or disc is None:
+        return pic
+    key = (id(pic), spectral_class)
+    hit = _tinted.get(key)
+    if hit is not None and hit[0] is pic:
+        return hit[1]
+    cx, cy, r = disc
+    a = pygame.surfarray.array3d(pic).astype(np.float64)     # (w, h, 3)
+    w, h = a.shape[:2]
+    xs = np.arange(w)[:, None]
+    ys = np.arange(h)[None, :]
+    d = np.hypot(xs - cx, ys - cy) / max(r, 1.0)
+    reach = np.clip((SUN_TINT_REACH - d) / 0.4, 0.0, 1.0)
+    # warm pixels only: red leads blue (the nebula round the star is blue)
+    warm = np.clip((a[..., 0] - a[..., 2]) / 90.0, 0.0, 1.0)
+    weight = (reach * warm)[..., None]
+    peak = a.max(-1, keepdims=True) / 255.0
+    white = a.min(-1, keepdims=True) / 255.0
+    new = np.array(tint_rgb, dtype=np.float64) * peak * (1.0 - white) \
+        + 255.0 * white
+    out = np.clip(a * (1.0 - weight) + new * weight, 0, 255)
+    surf = pic.copy()
+    pygame.surfarray.blit_array(surf, out.astype(np.uint8))
+    _tinted.clear()
+    _tinted[key] = (pic, surf)
+    return surf
+
+
 # ── the view's space held back (work order 286) ──────────
 
 #: INVENTION `view_muted` (Data, work order 286): the view picture's space

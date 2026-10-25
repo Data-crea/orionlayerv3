@@ -389,6 +389,13 @@ def _view_picture(screen, surface, view, model, state):
                         muted=True)
     if pic is None:
         return None
+    stars = getattr(screen, "_stars", None) or []
+    star = stars[model["star"]] if 0 <= model["star"] < len(stars) else None
+    if star is not None:
+        # the painted sun is orange: the star's own class tints it
+        pic = ldrpics.tint_sun(pic, ldrpics.sun_disc(ldrsystem.PLACE,
+                                                     view.size),
+                               star.spectral_class)
     surface.blit(pic, view.topleft)
     hud.panel(surface, view, screen.layout.scale, filled=False)
     s, cx, cy = sysorbits.frame(view)

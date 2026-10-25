@@ -591,7 +591,7 @@ class GalaxyMapScreen(ScreenBase):
         # scale once, and `box_font_scale` would apply it a second time —
         # names four times the 1080p size at 2160p instead of twice (work
         # order 179; `ScreenBase.box_font_scale_stored`).
-        name_size = self.layout.font_size(int(16 * ctx.name_font_scale
+        name_size = self.layout.font_size(int(20 * ctx.name_font_scale
                                               * self.box_font_scale_stored("map_area")))
 
         def render_label(text, colour):

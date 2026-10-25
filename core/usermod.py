@@ -131,6 +131,10 @@ SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",) + tuple(
     f"{PLANET_PICTURE_DIR}{n}.png" for n in (
         "toxic", "radiated", "barren", "desert", "tundra",
         "ocean", "swamp", "arid", "terran", "gaia"))
+#: HD EXTENSION `star_shape_by_size`: a class's three star pictures by
+#: star.size (`galaxy_map.renderer.SIZE_DIRS`), drawn at the zoom's width.
+SLOTS += tuple(f"screens/galaxy_map/assets/stars/*/{n}.png"
+               for n in ("large", "medium", "small"))
 #: Work order 331: the rotating planets' maps, a surface per type
 #: (`<type>_surface.png`, in the base pack) and an optional cloud layer
 #: (`<type>_clouds.png`, with transparency; nothing ships). Any size, 2:1,
