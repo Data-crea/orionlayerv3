@@ -21,6 +21,10 @@ log = logging.getLogger("planets")
 NEUTRAL = palette.require("planets", "neutral")
 NEUTRAL_HOVER = palette.require("planets", "neutral_hover")
 OWNER_HOVER = {}
+#: The scanned star's box in the inset: a light gold the colours of the
+#: stars do not take (HD EXTENSION `inset_scanned_glow`, colonyinset); the
+#: skin's `[planets] scan_box` may change it.
+SCAN_BOX = palette.col("planets", "scan_box", (250, 214, 110))
 
 
 @palette.on_preset
@@ -327,7 +331,7 @@ def render_inset(screen, surface, stars, marker):
     cfg = screen._data.get("inset", {})
     colonyinset.render(surface, stars, "", rect, cfg, screen.layout,
                        screen.style, native=tuple(cfg.get("native", (180, 116))),
-                       marker=marker)
+                       marker=marker, strong=SCAN_BOX)
 
 
 def inset_star_at(screen, stars, x, y):

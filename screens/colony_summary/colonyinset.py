@@ -299,7 +299,7 @@ def scanned_marker(stars, star_index):
 
 
 def render(surface, stars, label, area, cfg, layout, style,
-           native=(128, 91), marker=None):
+           native=(128, 91), marker=None, strong=None):
     """Draw the inset into `area`, the `galaxy_inset` cutout.
 
     `stars` is `colonyrows.galaxy_inset_stars` output and `label` is
@@ -339,10 +339,26 @@ def render(surface, stars, label, area, cfg, layout, style,
     # star since work order 196 (HD EXTENSION `inset_scanned_box`).
     if marker is not None and 0 <= marker[0] < len(points):
         mx, my, _c, cw, ch = points[marker[0]]
-        # LOOK EXCEPTION picture: a stack marker in its owner's colour
-        pygame.draw.rect(surface, tuple(marker[1])[:3],
-                         pygame.Rect(mx - 4 * cw, my - 4 * ch, 9 * cw, 9 * ch),
-                         max(1, cw))
+        box = pygame.Rect(mx - 4 * cw, my - 4 * ch, 9 * cw, 9 * ch)
+        if strong is not None:
+            # HD EXTENSION `inset_scanned_glow` (Planets, 25 Oct 2026): in
+            # a galaxy of a hundred coloured dots the owner-coloured line
+            # of two pixels was lost, so the box is a light colour, three
+            # cells thick, with a soft glow outside it
+            reach = 3 * cw
+            glow = pygame.Surface((box.w + 2 * reach, box.h + 2 * reach),
+                                  pygame.SRCALPHA)
+            for i in range(reach, 0, -1):
+                a = int(90 * (1 - i / (reach + 1)) ** 1.5)
+                pygame.draw.rect(glow, (*tuple(strong)[:3], a),
+                                 (reach - i, reach - i, box.w + 2 * i,
+                                  box.h + 2 * i), 1)
+            surface.blit(glow, (box.x - reach, box.y - reach))
+            # LOOK EXCEPTION marking: the scanned star's box in a light colour (HD EXTENSION inset_scanned_glow)
+            pygame.draw.rect(surface, tuple(strong)[:3], box, max(2, cw + 1))
+        else:
+            # LOOK EXCEPTION picture: a stack marker in its owner's colour
+            pygame.draw.rect(surface, tuple(marker[1])[:3], box, max(1, cw))
     if not label:
         return
     size = layout.font_size(cfg.get("label_font", 15))

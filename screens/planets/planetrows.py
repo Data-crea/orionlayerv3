@@ -54,6 +54,11 @@ STACK_SKIP = ship_struct.STATUS_STACK_SKIP
 #: The five toggles, in the original's field order and hotkeys 1-5
 #: (Add_Plntsum_Fields_, plntsum.cpp:697-701).
 FILTERS = ("enemy", "gravity", "hostile", "minerals", "range")
+#: The toggles' state when the game starts: `filter_out_planets_out_of_range
+#: = 1` is the one global that does not start at 0 (plntsum.cpp:19-20), so
+#: the original's list opens limited to planets in range of a colony.
+#: TRANSCRIPTION `range_default_on`.
+DEFAULT_FILTERS = {key: key == "range" for key in FILTERS}
 #: Toggles the game applies and this module does not — none since work
 #: order 322 A3 built the range filter (`planetrange`). Kept, empty, because
 #: a smoke check holds a toggle that changes nothing to an entry here.
