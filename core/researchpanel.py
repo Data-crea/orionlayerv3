@@ -108,6 +108,98 @@ BOX_FILL = _hudstyle.get().colour("panel.fill")
 BOX_OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
 
+#: One set of relative positions for all eight cards (native px, from the
+#: card's drawn left/top edge, `BOX_MARGIN` out from the entry origin):
+#: the name and category stand NAME_PAD in, the rows ROW_INDENT in, the
+#: cost ends NAME_PAD short of the right edge; the rows are pushed
+#: ROW_SHIFT down to clear the name's new top gap, and the card grows
+#: BOX_FOOT at its foot to hold them. Drawing only: the click rectangles
+#: stay the transcribed ones.
+NAME_PAD = 8
+#: The opaque ground under the whole panel (see `render_content`).
+GROUND = (9, 13, 18)
+#: The option rows are one step smaller and lighter in stroke than the
+#: technology names (half `BOLD`: one device px, where the names take two
+#: at 4K), so the names stand out over them.
+ROW_FONT = 14
+ROW_BOLD = 0.2
+ROW_INDENT = 18
+ROW_SHIFT = 2
+ROW_PITCH_PLUS = 1      # native px added per row to the 15 px pitch
+BOX_FOOT = 2
+CAT_DY = 8
+#: The dark shadow under a word: offset in device px, and its opacity.
+SHADOW_ALPHA = 130
+
+
+def name_anchor(entry):
+    x, y, w = entry.field_name_anchor()
+    return (entry.x - BOX_MARGIN + NAME_PAD, y - BOX_MARGIN + NAME_PAD,
+            researchlist.ROW_X_SPAN - 2 * NAME_PAD + BOX_MARGIN)
+
+
+def label_anchor(entry, row):
+    x, y, w = entry.app_label_anchor(row)
+    return (entry.x - BOX_MARGIN + ROW_INDENT,
+            y + ROW_SHIFT + row * ROW_PITCH_PLUS,
+            researchlist.ROW_X_SPAN - NAME_PAD - ROW_INDENT + BOX_MARGIN)
+
+
+def panel_box(entry):
+    """The card as drawn: the entry's box, a little longer at the foot."""
+    x1, y1, x2, y2 = entry.panel_box(BOX_MARGIN)
+    return (x1, y1, x2, y2 + BOX_FOOT)
+
+
+#: How much heavier the letters are drawn, in device px per scale unit:
+#: the display font's strokes are thin against a picture, so each word is
+#: laid down again one step right and down (a synthetic bold that keeps
+#: `render_text`'s per-character fallback).
+BOLD = 0.4
+
+
+def _bolden(surf, b):
+    if not b:
+        return surf
+    out = pygame.Surface((surf.get_width() + b, surf.get_height() + b),
+                         pygame.SRCALPHA)
+    for dx, dy in ((0, 0), (b, 0), (0, b), (b, b)):
+        out.blit(surf, (dx, dy))
+    return out
+
+
+def _ink_drop(scale, bold):
+    """How far `shadowed` draws the letters below where `render_text`
+    would: the outline's one-step offset, and the heavier stroke's
+    extra rows, half of which move the middle of the ink. The hover
+    band is centred on the cap line, so it follows the drawn letters
+    by this much (the smoke check measures the drawing, decision 5)."""
+    b = max(1, int(round(scale * bold))) if bold else 0
+    d = max(1, int(round(scale)))
+    return int(round(max(1, d // 2) + b / 2.0))
+
+
+def shadowed(style, text, size, color, scale, bold=BOLD):
+    """`text` in a heavier stroke, with a thin dark outline and a soft
+    shadow one device px down-right."""
+    b = int(round(scale * bold)) if bold else 0
+    b = max(1, b) if bold else 0
+    surf = _bolden(style.render_text(text, size, color), b)
+    shade = _bolden(style.render_text(text, size, (0, 0, 0)), b)
+    shade.set_alpha(SHADOW_ALPHA)
+    d = max(1, int(round(scale)))
+    o = max(1, d // 2)
+    out = pygame.Surface((surf.get_width() + d + o, surf.get_height() + d + o),
+                         pygame.SRCALPHA)
+    out.blit(shade, (d + o, d + o))
+    for dx in (0, o, 2 * o):
+        for dy in (0, o, 2 * o):
+            if (dx, dy) != (o, o):
+                out.blit(shade, (dx, dy))
+    out.blit(surf, (o, o))
+    return out
+
+
 def draw_box(surface, layout, style, native_rect, popup=False):
     """One box of the panel: a fill and a rounded outline, in code.
 
@@ -138,7 +230,8 @@ def _fit(style, text, max_w, size):
     return MIN_FONT
 
 
-def _blit_text(surface, style, text, pos, max_w, size, color):
+def _blit_text(surface, style, text, pos, max_w, size, color, scale=None,
+               bold=BOLD):
     """One name, shrunk to fit, through Style.render_text (decision 30).
 
     Every string here can carry game data — a field name, an
@@ -149,7 +242,8 @@ def _blit_text(surface, style, text, pos, max_w, size, color):
     if not text:
         return None
     size = _fit(style, text, max_w, size)
-    surf = style.render_text(text, size, color)
+    surf = (style.render_text(text, size, color) if scale is None
+            else shadowed(style, text, size, color, scale, bold))
     surface.blit(surf, pos)
     return surf
 
@@ -219,7 +313,7 @@ def draw_exit(surface, layout, style, native_rect, label, pressed=False):
     size = _fit(style, label, int(box.width * 0.8),
                 layout.font_size(13))
     text = style.render_text(label, size, col("exit_label",
-                                              (198, 212, 238)))
+                                              (228, 234, 242)))
     # The button's glyph beside the word when both fit (work order 179).
     cx = hud.icon_beside(surface, box, glyphs.for_button("research", "exit"),
                          text.get_width())
@@ -238,17 +332,17 @@ def row_label(layout, style, entry, row, text):
     nominal size would get a band a pixel off on exactly the rows the
     shrink touches.
     """
-    label_x, label_y, label_w = entry.app_label_anchor(row)
+    label_x, label_y, label_w = label_anchor(entry, row)
     width = geom_mod.window_width(label_x, label_y, label_w, layout)
-    size = _fit(style, text or "", width, layout.font_size(14))
-    return size, width, researchband.band(layout, style, size,
-                                          (label_x, label_y),
-                                          *entry.band_span())
+    size = _fit(style, text or "", width, layout.font_size(ROW_FONT))
+    band = researchband.band(layout, style, size, (label_x, label_y),
+                             *entry.band_span())
+    return size, width, band.move(0, _ink_drop(layout.scale, ROW_BOLD))
 
 
 def _inks():
     """Every ink the words over a box can take (`_draw_entry`)."""
-    return (col("field", (226, 234, 250)), col("row", (198, 212, 238)),
+    return (col("field", (228, 234, 242)), col("row", (228, 234, 242)),
             col("field_current", (250, 226, 150)),
             col("row_current", (250, 226, 150)))
 
@@ -267,9 +361,9 @@ def word_rects(layout, style, entry, words, names):
     out = []
     name = names.field_name(entry.field) if names else None
     if name:
-        name_x, name_y, name_w = entry.field_name_anchor()
+        name_x, name_y, name_w = name_anchor(entry)
         size = _fit(style, name, geom_mod.window_width(
-            name_x, name_y, name_w, layout), layout.font_size(17))
+            name_x, name_y, name_w, layout), layout.font_size(19))
         surf = style.render_text(name, size, (255, 255, 255))
         out.append(surf.get_rect(topleft=geom_mod.window_point(
             (name_x, name_y), layout)))
@@ -278,7 +372,7 @@ def word_rects(layout, style, entry, words, names):
         if not text:
             continue
         size, _width, _band = row_label(layout, style, entry, row, text)
-        label_x, label_y, _w = entry.app_label_anchor(row)
+        label_x, label_y, _w = label_anchor(entry, row)
         surf = style.render_text(text, size, (255, 255, 255))
         out.append(surf.get_rect(topleft=geom_mod.window_point(
             (label_x, label_y), layout)))
@@ -309,7 +403,7 @@ def draw(surface, layout, style, entries, hover, words, names, wording,
         # category's picture from the mod folder fills the box, the words
         # keeping their floor over it (`core.researchart`); without one,
         # the panel as before.
-        native = entry.panel_box(BOX_MARGIN)
+        native = panel_box(entry)
         # the words are measured only for a box that has a picture
         if researchart.source(entry.group) is None or \
                 not researchart.draw_box(
@@ -335,9 +429,13 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
     label = wording.group_name(entry.group) if wording else None
     if label:
         _blit_text(surface, style, label,
-                   geom_mod.window_point((entry.x, entry.y + 2), layout),
-                   geom_mod.window_width(entry.x, entry.y + 2, 150, layout),
-                   layout.font_size(13), col("category", (128, 148, 186)))
+                   geom_mod.window_point(
+                       (entry.x - BOX_MARGIN + NAME_PAD, entry.y + CAT_DY),
+                       layout),
+                   geom_mod.window_width(entry.x, entry.y + CAT_DY, 150,
+                                         layout),
+                   layout.font_size(14), col("category", (176, 196, 232)),
+                   layout.scale)
 
     # The cost, right-aligned where Print_Right_ puts it (tech.cpp:703).
     # AND IN THE CURRENT FIELD'S COLOUR WHEN IT IS THE CURRENT FIELD.
@@ -347,25 +445,28 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
     cost_of = words.get("cost")
     cost = cost_of(entry) if cost_of else None
     if cost:
-        size = layout.font_size(13)
-        surf = style.render_text(
-            cost, size, col("field_current", (250, 226, 150)) if is_current
-            else col("cost", (188, 204, 236)))
-        cx, cy = geom_mod.window_point(entry.cost_anchor(), layout)
+        size = layout.font_size(14)
+        surf = shadowed(
+            style, cost, size,
+            col("field_current", (250, 226, 150)) if is_current
+            else col("cost", (214, 226, 250)), layout.scale)
+        cx, cy = geom_mod.window_point(
+            (entry.x + researchlist.ROW_X_SPAN + BOX_MARGIN - NAME_PAD,
+             entry.y + CAT_DY), layout)
         surface.blit(surf, (cx - surf.get_width(), cy))
 
     # The field name, on row 0's own first line (tech.cpp:700).
-    name_x, name_y, name_w = entry.field_name_anchor()
+    name_x, name_y, name_w = name_anchor(entry)
     _blit_text(surface, style,
                names.field_name(entry.field) if names else None,
                geom_mod.window_point((name_x, name_y), layout),
                geom_mod.window_width(name_x, name_y, name_w, layout),
-               layout.font_size(17),
+               layout.font_size(19),
                col("field_current", (250, 226, 150)) if is_current
-               else col("field", (226, 234, 250)))
+               else col("field", (228, 234, 242)), layout.scale)
 
     for row, app in enumerate(entry.apps):
-        label_x, label_y, label_w = entry.app_label_anchor(row)
+        label_x, label_y, label_w = label_anchor(entry, row)
         # THE SIZE IS DECIDED BEFORE THE BAND, because the band is
         # centred on the line this size renders — a name the shrink
         # rule had to bring down has a shorter line to be centred on.
@@ -391,4 +492,5 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                    col("row_current", (250, 226, 150))
                    if is_current and (every_row
                                       or marks_row(names, app, current[1]))
-                   else col("row", (198, 212, 238)))
+                   else col("row", (228, 234, 242)), layout.scale,
+                   ROW_BOLD)

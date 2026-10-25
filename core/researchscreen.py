@@ -412,6 +412,12 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         if self._state != READY:
             return
         words = self.panel_words()
+        # An opaque ground over the whole panel, so the map's labels
+        # (FLEETS, RACES, ...) no longer show through the glass.
+        ground = pygame.Rect(*nativeview.window_rect(
+            self.geom.panel_rect, self.layout))
+        pygame.draw.rect(surface, researchpanel.GROUND, ground,
+                         border_radius=int(14 * self.layout.scale))
         # SELECT MODE PASSES ZEROS for the current field and
         # application on purpose — `Tech_Select_` has zeroed the field
         # before this list exists (tech.cpp:104-105), so the original's
