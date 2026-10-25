@@ -60,9 +60,9 @@ NAMES = {1: "biology.png", 2: "power.png", 3: "physics.png",
          7: "computers.png", 8: "sociology.png"}
 #: The darkened left side: brightness kept at the left edge, how far it
 #: holds, where the picture is whole again (fractions of the box width).
-DARK = 0.22
-DARK_HOLD = 0.38
-DARK_END = 0.80
+DARK = 0.04
+DARK_HOLD = 0.60
+DARK_END = 0.95
 #: The words' zone's soft edge, a fraction of the box's height.
 FEATHER = 0.10
 
