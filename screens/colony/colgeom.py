@@ -289,6 +289,13 @@ def sys_row(i):
             (SYS_X + SYS_TEXT_DX, y + SYS_TEXT_DY))
 
 
+def sys_row_rect(i):
+    """Orbit row i as a native (x1, y1, x2, y2): the system display's
+    width over the row's 24 px."""
+    y = SYS_Y + i * SYS_ROW
+    return (SYS_DISP[0], y, SYS_DISP[2], y + SYS_ROW - 1)
+
+
 def sys_planet_orbit(field):
     """The orbit of a live field that is a system-display PLANET's
     (`_sys_disp_planet_fields[i]`), else None. `Add_Col_Sys_Disp_Fields_`
