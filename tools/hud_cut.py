@@ -51,6 +51,12 @@ OUT = os.path.join(ROOT, "assets", "shared", "hud", "cut")
 
 #: See the module docstring: the difference that counts as opaque icon.
 KEY = 72
+#: HD EXTENSION `icon_alpha_floor`: a difference below this is the panel's
+#: own noise and the painted glow, not the icon. Without it that haze kept
+#: 35-65 % of each info icon's box at alpha 1-40 and read as a square
+#: lighter or darker than the sidebar's ground (Data's screenshot, 25 Oct
+#: 2026). The ramp from FLOOR to KEY keeps the icon's soft edge.
+FLOOR = 18
 #: A pixel differing from the ring's median by more than this belongs to
 #: the icon when its box is found.
 FIND = 34
@@ -155,7 +161,8 @@ def lift(a, box, how):
     d = p - bg
     if how == "bright":
         d = np.maximum(d, 0.0)
-    alpha = np.clip(np.abs(d).max(axis=2) / KEY, 0.0, 1.0)
+    alpha = np.clip((np.abs(d).max(axis=2) - FLOOR) / (KEY - FLOOR),
+                    0.0, 1.0)
     h, w = alpha.shape
     ry = np.minimum(np.arange(h), np.arange(h)[::-1])[:, None]
     rx = np.minimum(np.arange(w), np.arange(w)[::-1])[None, :]
