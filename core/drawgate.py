@@ -26,6 +26,12 @@ WHAT "THE SAME PICTURE" MEANS, and why each part:
     snapshots in four seconds, all byte for byte the same;
   * the window, the screen, its overlay, the mode and the editor are the
     ones of the last drawn frame;
+  * the last drawn frame held no turning planet, or the next visible step
+    of one is not due (`planetspin.take_touched`, work order 331: a
+    fraction of a pixel at the sphere's centre, never faster than 15 a
+    second): a planet on screen keeps a STILL screen drawing at that pace
+    and no faster, a screen that shows none (or is covered) is gated as
+    before;
   * and the last drawn frame is younger than `REDRAW_EVERY`: a change
     nothing above sees (a file loaded in the background) is drawn within
     a second.
@@ -35,7 +41,7 @@ WHAT "THE SAME PICTURE" MEANS, and why each part:
 import os
 import time
 
-from core import framerate
+from core import framerate, planetspin
 
 REDRAW_EVERY = 1.0
 ENV = "ORIONLAYER_DRAW_ALWAYS"
@@ -51,6 +57,8 @@ class DrawGate:
     def __init__(self):
         self._key = None
         self._at = 0.0
+        self._pending = False
+        self._turning = None
         self.drawn = 0
         self.skipped = 0
 
@@ -70,6 +78,9 @@ class DrawGate:
         becomes the one the next compares with."""
         now = time.monotonic() if now is None else now
         key = self.key(app)
+        if self._pending:
+            # what the frame drawn last held, said by `planetspin.touch`
+            self._turning, self._pending = planetspin.take_touched(), False
         d = app.dispatcher
         last_input = getattr(app, "_input_at", None)
         draw = (os.environ.get(ENV, "").lower() in ("1", "on", "yes")
@@ -77,9 +88,12 @@ class DrawGate:
                 or last_input is None
                 or now - last_input < framerate.IDLE_AFTER
                 or key != self._key
-                or now - self._at >= REDRAW_EVERY)
+                or now - self._at >= REDRAW_EVERY
+                or (self._turning is not None
+                    and now - self._at >= self._turning))
         if draw:
-            self._key, self._at = key, now
+            self._key, self._at, self._pending = key, now, True
+            planetspin.take_touched()      # only what THIS frame draws counts
             self.drawn += 1
         else:
             self.skipped += 1

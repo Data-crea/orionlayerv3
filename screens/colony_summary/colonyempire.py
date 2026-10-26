@@ -32,7 +32,6 @@ what lets the clamp be measured without standing a screen up.
 """
 import pygame
 
-from core.hud import style as hudstyle
 
 from core import palette
 from core.config import REF_W

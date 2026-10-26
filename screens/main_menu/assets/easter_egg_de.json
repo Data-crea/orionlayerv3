@@ -1,0 +1,67 @@
+{
+  "_comment": [
+    "The easter egg's text in German (work order 328, Data: \"er soll auch ins deutsch übersetzt werden\"), drawn in a German session; the English file easter_egg.json holds the star and the English text. Same roles, same order; a block missing here is not filled from English. GetDaved's greeting stays in English (Data). Translated by Claude; Data reviews it."
+  ],
+  "blocks": [
+    [
+      "welcome",
+      "Welcome back to"
+    ],
+    [
+      "title",
+      "MASTER OF ORION II"
+    ],
+    [
+      "subtitle",
+      "with me, GetDaved!"
+    ],
+    [
+      "heading",
+      "Ein ganz besonderes Dankeschön"
+    ],
+    [
+      "body",
+      "Vor 16 Jahren bin ich durch den YouTuber GetDaved und seine Videos auf Master of Orion II gestoßen."
+    ],
+    [
+      "body",
+      "Die Spielmechanik hat mich fasziniert, aber der unscharfe Text war zu anstrengend für meine Augen. Stattdessen habe ich unzählige Abende damit verbracht, einfach seinen Videos zuzuhören – und ein Spiel zu genießen, das ich selbst kaum spielen konnte."
+    ],
+    [
+      "body",
+      "2026 habe ich endlich beschlossen, das zu ändern."
+    ],
+    [
+      "body",
+      "Was als persönlicher Versuch begann, das Spiel angenehmer spielbar zu machen, ist nach und nach zu etwas viel Größerem geworden, als ich es mir je vorgestellt hätte."
+    ],
+    [
+      "body",
+      "Heute hoffe ich, dass OrionLayer anderen hilft, dieses wunderbare Spiel zu entdecken oder wiederzuentdecken und es noch viele Jahre lebendig zu halten."
+    ],
+    [
+      "spark",
+      "Manchmal braucht es nur jemanden, der den ersten Funken entfacht."
+    ],
+    [
+      "body",
+      "Für mich war dieser Jemand GetDaved."
+    ],
+    [
+      "line",
+      "Und 16 Jahre später wurde aus diesem Funken OrionLayer – ein modifizierbares HD-Overlay für Master of Orion II."
+    ],
+    [
+      "thanks",
+      "Danke, GetDaved."
+    ],
+    [
+      "signature",
+      "— Data"
+    ],
+    [
+      "hashtag",
+      "#GotDaved"
+    ]
+  ]
+}

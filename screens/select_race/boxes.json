@@ -32,11 +32,24 @@
       }
     },
     {
-      "name": "race_name",
+      "name": "race_picture",
       "rect": [
         1233,
         93,
         659,
+        270
+      ],
+      "style": {
+        "label": "Race Picture",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_name",
+      "rect": [
+        1247,
+        100,
+        440,
         60
       ],
       "style": {
@@ -48,9 +61,9 @@
       "name": "race_description",
       "rect": [
         1233,
-        163,
+        373,
         659,
-        400
+        250
       ],
       "style": {
         "label": "Description",
@@ -61,9 +74,9 @@
       "name": "race_traits",
       "rect": [
         1233,
-        583,
+        628,
         659,
-        387
+        342
       ],
       "style": {
         "label": "Race Traits",
@@ -104,11 +117,24 @@
       }
     },
     {
-      "name": "race_name",
+      "name": "race_picture",
       "rect": [
         1233,
         93,
         659,
+        270
+      ],
+      "style": {
+        "label": "Race Picture",
+        "font_scale": 1.0
+      }
+    },
+    {
+      "name": "race_name",
+      "rect": [
+        1247,
+        100,
+        440,
         60
       ],
       "style": {
@@ -120,9 +146,9 @@
       "name": "race_description",
       "rect": [
         1233,
-        163,
+        373,
         659,
-        400
+        250
       ],
       "style": {
         "label": "Description",
@@ -133,9 +159,9 @@
       "name": "race_traits",
       "rect": [
         1233,
-        583,
+        628,
         659,
-        387
+        342
       ],
       "style": {
         "label": "Race Traits",

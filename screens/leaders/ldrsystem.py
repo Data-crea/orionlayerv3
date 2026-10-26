@@ -170,7 +170,8 @@ def draw(surface, screen, game_state, art, star):
             pic = gasgiant.picture(side)
         else:
             discs = colonyplanets.set_for(screen, side, p["size"])
-            pic = discs.get(p["climate"]) if discs is not None else None
+            pic = (discs.get(p["climate"], p.get("planet"))
+                   if discs is not None else None)
         at = pygame.Rect(0, 0, side, side)
         at.center = centre
         if pic is not None:

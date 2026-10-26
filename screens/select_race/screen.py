@@ -12,18 +12,27 @@ Custom Race is the 14th grid entry (id=13) with its own portrait.
 All positions come from boxes.json (editable with F3).
 """
 import json
+import math
 import os
 import logging
 import pygame
+
+from core import mouse as mouse_input
 from core import estrings, lang, racestuf
 from core.screen_base import ScreenBase
 
 log = logging.getLogger("select_race")
 TYPE_RADIO = 1          # FIELD_TYPE_RADIO, orion2_consts.h:206
+from screens.select_race import racepanel, traittip
 from screens.select_race.renderer import render_race_grid, grid_cell_rect
 from screens.select_race.info_panel import (
     render_race_name, render_race_description, render_race_traits,
+    description_extent, RACE_PAD,
 )
+
+
+#: Between the description's end and RACE TRAITS, reference px.
+TRAITS_GAP = 10
 
 
 class SelectRaceScreen(ScreenBase):
@@ -50,7 +59,11 @@ class SelectRaceScreen(ScreenBase):
     #: no visible button, only the key). The field id is read off the list
     #: at the moment of the click (`_escape_field`), never stored.
     FRAME_BTN_LEFT = ("Back", None)
-    FRAME_BTN_RIGHT = None
+    #: NEXT (HD EXTENSION `race_panel_pictures`, Data's order of 25 Oct
+    #: 2026): a click on a race only chooses it; NEXT sends the choice to
+    #: the game (`_activate_race`), as ENTER always did. The original has
+    #: no such button: its click on a race was the choice.
+    FRAME_BTN_RIGHT = ("Next", None)
 
     MODE_SELECT_RACE = "select_race"
     MODE_SELECT_PICTURE = "select_picture"
@@ -60,6 +73,8 @@ class SelectRaceScreen(ScreenBase):
         self._races = []
         self._selected_id = 9   # default: Psilon
         self._portraits = {}
+        self._banner_cache = {}      # racepanel: the wide pictures
+        self._icon_cache = {}        # racepanel: the trait icons
         self._desc_scroll = 0
         self._mode = self.MODE_SELECT_RACE
         self._thumb_cache = {}
@@ -187,6 +202,8 @@ class SelectRaceScreen(ScreenBase):
     def on_resize(self):
         super().on_resize()
         self._thumb_cache.clear()
+        self._banner_cache.clear()
+        self._icon_cache.clear()
 
     # ── Rendering ─────────────────────────────────────────
 
@@ -198,7 +215,7 @@ class SelectRaceScreen(ScreenBase):
 
         # Panel skins. Picture mode hides the info panel and its three
         # content boxes; the grid stays and keeps its own frame.
-        _skip_picture = {"info_panel", "race_name",
+        _skip_picture = {"info_panel", "race_name", "race_picture",
                          "race_description", "race_traits"}
         for box in self.boxes:
             if box.style.get("skin") in ("inner_panel", "thin_border"):
@@ -221,26 +238,69 @@ class SelectRaceScreen(ScreenBase):
 
         # Info panel content (normal mode only)
         if not pic and race:
+            br = self.box_rect("race_picture")
+            if br:
+                art, own = racepanel.banner_picture(
+                    self.asset_path, self._icon_cache, race,
+                    self._portraits.get(race["id"]))
+                racepanel.render_banner(surface, L, race, art, br,
+                                        self._banner_cache, own=own)
             nr = self.box_rect("race_name")
             if nr:
                 render_race_name(surface, L, self.style, race, nr,
                                  self.box_font_scale_stored("race_name"))
 
-            dr = self.box_rect("race_description")
-            if dr:
+            # THE DESCRIPTION TAKES THE HEIGHT ITS TEXT NEEDS (HD EXTENSION
+            # `race_panel_pictures`, Data's order of 25 Oct 2026), and the
+            # traits and the government follow right under it, so a short
+            # text leaves no gap in the middle; a text longer than the room
+            # scrolls. The picture above does not move.
+            dr0 = self.box_rect("race_description")
+            tr0 = self.box_rect("race_traits")
+            if dr0 and tr0:
+                rows = self._race_traits(race)
+                custom = race.get("key") == "custom" or race["id"] == 13
+                cards = sum(1 for t in rows if not t.get("government"))
+                # the Custom Race has no traits: its slogan and picture
+                # stand where they would
+                block = racepanel.CUSTOM_FOOT_MIN if custom \
+                    else racepanel.block_height(cards)
+                content, _view = description_extent(
+                    L, self.style, race, dr0,
+                    self.box_font_scale_stored("race_description"))
+                want = content / L.scale + 2 * RACE_PAD
+                room = tr0[1] + tr0[3] - dr0[1] - block - TRAITS_GAP
+                h = math.ceil(max(2 * RACE_PAD, min(room, want)))
+                dr = (dr0[0], dr0[1], dr0[2], h)
+                top = dr0[1] + h + TRAITS_GAP
+                self._desc_rect = dr
+                self._desc_scroll = self._clamp_scroll(race, dr)
                 render_race_description(surface, L, self.style, race,
                                         dr, self._desc_scroll,
                                         self.box_font_scale_stored("race_description"))
-
-            tr = self.box_rect("race_traits")
-            if tr:
-                render_race_traits(surface, L, self.style,
-                                   dict(race, traits=self._race_traits(race)),
-                                   tr, self.box_font_scale_stored("race_traits"))
+                if custom:
+                    racepanel.render_custom_footer(
+                        surface, L, self.style,
+                        lang.tr(race.get("tagline", "")),
+                        racepanel.custom_picture(self.asset_path,
+                                                 self._icon_cache),
+                        (tr0[0], top, tr0[2], tr0[1] + tr0[3] - top),
+                        self._icon_cache)
+                else:
+                    tr = (tr0[0], top, tr0[2], block)
+                    self._trait_hover = render_race_traits(
+                        surface, L, self.style, dict(race, traits=rows), tr,
+                        self._icon_cache, self.asset_path,
+                        self.box_font_scale_stored("race_traits"),
+                        mouse_input.pos())
 
         # Frame overlay
         if self.USE_FRAME:
             self._render_frame(surface)
+        # the full text of the trait under the mouse, over everything
+        if not pic and getattr(self, "_trait_hover", None):
+            traittip.draw(surface, L, self.style, self._trait_hover)
+        self._trait_hover = None
 
     # ── Input ─────────────────────────────────────────────
 
@@ -262,11 +322,10 @@ class SelectRaceScreen(ScreenBase):
         return None
 
     def handle_mouse_motion(self, screen_x, screen_y):
+        # No choosing by the mouse's way over the grid any more: with NEXT
+        # at the far corner the pointer crosses other races on its way
+        # there (HD EXTENSION `race_panel_pictures`).
         super().handle_mouse_motion(screen_x, screen_y)
-        rid = self._race_at_screen_pos(screen_x, screen_y)
-        if rid is not None and rid != self._selected_id:
-            self._selected_id = rid
-            self._desc_scroll = 0
 
     def _modal_net(self):
         """The safety net (work order 177 C, DEVIATION `modal_fallback`,
@@ -308,10 +367,12 @@ class SelectRaceScreen(ScreenBase):
         return True
 
     def _frame_button_hit(self, screen_x, screen_y):
-        if self._frame_button_side(screen_x, screen_y) == "left" and \
-                not self.is_picture_mode:
+        side = self._frame_button_side(screen_x, screen_y)
+        if side == "left" and not self.is_picture_mode:
             f = self._escape_field()
             return f.index if f is not None else None
+        if side == "right":
+            return None           # NEXT has no field of its own
         return super()._frame_button_hit(screen_x, screen_y)
 
     def handle_click(self, screen_x, screen_y):
@@ -321,10 +382,19 @@ class SelectRaceScreen(ScreenBase):
             else:
                 self.handle_key(pygame.K_ESCAPE)
             return
+        if self._frame_button_side(screen_x, screen_y) == "right":
+            self._activate_race(self._selected_id)        # NEXT
+            return
         rid = self._race_at_screen_pos(screen_x, screen_y)
         if rid is None:
             return
-        self._activate_race(rid)
+        if self.is_picture_mode:
+            self._activate_race(rid)    # a portrait is its own answer
+            return
+        # HD EXTENSION `race_panel_pictures`: choose, nothing more
+        if rid != self._selected_id:
+            self._selected_id = rid
+            self._desc_scroll = 0
 
     def _activate_race(self, rid):
         """Select + confirm a race. Shared by mouse click and ENTER
@@ -415,7 +485,8 @@ class SelectRaceScreen(ScreenBase):
         """Scroll description text."""
         if self.is_picture_mode:
             return
-        dr = self.box_rect("race_description")
+        dr = getattr(self, "_desc_rect", None) or \
+            self.box_rect("race_description")
         if not dr:
             return
         L = self.layout
@@ -423,8 +494,21 @@ class SelectRaceScreen(ScreenBase):
         dw, dh = L.size(dr[2], dr[3])
         if pygame.Rect(dx, dy, dw, dh).collidepoint(mx, my):
             scroll_step = int(24 * L.scale)
+            race = self._race_by_id(self._selected_id)
+            content, view = description_extent(
+                L, self.style, race or {}, dr,
+                self.box_font_scale_stored("race_description"))
             self._desc_scroll -= direction * scroll_step
-            self._desc_scroll = max(0, self._desc_scroll)
+            self._desc_scroll = max(0, min(self._desc_scroll,
+                                           max(0, content - view)))
+
+    def _clamp_scroll(self, race, dr):
+        """The scroll offset held inside the text's own length, after the
+        box has taken the height this race's text needs."""
+        content, view = description_extent(
+            self.layout, self.style, race, dr,
+            self.box_font_scale_stored("race_description"))
+        return max(0, min(self._desc_scroll, max(0, content - view)))
 
     def _invalidate_thumb(self, race_id):
         """Remove cached thumbnails for a race so they regenerate."""

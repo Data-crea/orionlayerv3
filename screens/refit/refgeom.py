@@ -43,7 +43,6 @@ def design_row(k):
 
 
 DESIGN_NAME_X, DESIGN_COLON_X, DESIGN_HULL_RIGHT = 183, 320, 457
-DESIGN_TITLE_Y = 20
 GOTO_ROW = 6
 #: The design list's own box, the art's (REFITPUP.LBX 4): rows and the
 #: paragraph; measured on the native picture of a live list.

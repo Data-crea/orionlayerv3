@@ -46,7 +46,6 @@ leader FOR HIRE, the popup and the boxes.
 """
 import logging
 
-import pygame
 
 from core import estrings, hestrings, lang, shipstacks, skildesc
 from core.hud import blocks as hud

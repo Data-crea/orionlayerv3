@@ -256,8 +256,10 @@ class Words:
     `scan_words` for those, through `core.lang` like every HD word."""
 
     def __init__(self, ken=None, names=None, estrings=None, hstrings=None,
-                 unit="BC"):
+                 unit="BC", skills=None):
         self.ken, self.names = ken, names
+        #: the player's SKILDESC.LBX texts (`core.skildesc`), or None
+        self.skills = skills
         self.e = estrings if getattr(estrings, "state", None) == "ok" \
             else None
         self.h = hstrings if getattr(hstrings, "state", None) == "ok" \
@@ -450,7 +452,20 @@ def officer(unit, leaders_raw, words, warlord_of):
             continue
         name = words.estring(ls.SKILL_NAME_ESTRINGS[sid]) or f"skill {sid}"
         skills.append((sid, name, skill_value(sid, level, words.unit)))
-    return {"index": idx, "rec": rec, "name": str(rec.name),
+    # HD EXTENSION `scan_skill_help` (Data, work order 332): each skill's
+    # explanation is the ORIGINAL's own (`Print_Officer_Skill_Help_`,
+    # officer.cpp:1891-1925), read from the player's SKILDESC.LBX like
+    # the Leaders screen's box; without that file no card, nothing invented
+    from screens.leaders.ldrrows import skill_help_text, the_word
+    explain = {}
+    if getattr(words, "skills", None) is not None:
+        the = the_word(words, idx)
+        for sid, _n, _v in skills:
+            text = skill_help_text(rec, idx, sid, level, words,
+                                   words.skills, the)
+            if text is not None and text[1]:
+                explain[sid] = text
+    return {"index": idx, "explain": explain, "rec": rec, "name": str(rec.name),
             "title": str(rec.title), "level": level,
             "level_word": words.estring(ls.level_name_estring(rec, level)),
             "skills": skills}

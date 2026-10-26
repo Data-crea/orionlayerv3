@@ -1,0 +1,75 @@
+{
+  "_comment": [
+    "The main menu's easter egg (work order 327): a hidden star in the background; a click opens Data's thank-you to GetDaved.",
+    "star: where the star is, as a fraction of the main menu background picture (assets/shared/backgrounds/main_menu.png, 1812 x 868: the four-pointed star's centre at 368, 444.5 px (pixel i spans i..i+1, as backgrounds.point reads a fraction), measured off the picture and confirmed to 1 px against Data's 2549 x 1440 screenshot of the running menu, the screenshot fitted onto the picture by its pixels). A mod that replaces the background moves the star by replacing this file. hit_radius and glow_radius are in that picture's pixels and scale with it.",
+    "blocks: the panel's text, transcribed from Data's mockup, top to bottom. role names the look (screens/main_menu/easteregg.py ROLES); 'line' continues the paragraph above without a gap. English; the German text is easter_egg_de.json (work order 328)."
+  ],
+  "star": {
+    "x": 0.20309,
+    "y": 0.5121,
+    "hit_radius": 16,
+    "glow_radius": 30
+  },
+  "blocks": [
+    [
+      "welcome",
+      "Welcome back to"
+    ],
+    [
+      "title",
+      "MASTER OF ORION II"
+    ],
+    [
+      "subtitle",
+      "with me, GetDaved!"
+    ],
+    [
+      "heading",
+      "A Special Thank You"
+    ],
+    [
+      "body",
+      "16 years ago, a YouTuber named GetDaved introduced me to Master of Orion II."
+    ],
+    [
+      "body",
+      "I was fascinated by the game's mechanics, but the blurry text made playing difficult for my eyes. Instead, I spent countless evenings simply listening to his videos, enjoying a game I could barely play myself."
+    ],
+    [
+      "body",
+      "In 2026, I finally decided to change that."
+    ],
+    [
+      "body",
+      "What began as a personal attempt to make the game easier to enjoy gradually grew into something much bigger than I ever imagined."
+    ],
+    [
+      "body",
+      "Today, I hope OrionLayer will help others discover or rediscover this wonderful game and keep it alive for many more years."
+    ],
+    [
+      "spark",
+      "Sometimes, all it takes is someone to light the first spark."
+    ],
+    [
+      "body",
+      "For me, that someone was GetDaved."
+    ],
+    [
+      "line",
+      "And 16 years later, that spark became OrionLayer \u2014 a moddable HD overlay for Master of Orion II."
+    ],
+    [
+      "thanks",
+      "Thank you, GetDaved."
+    ],
+    [
+      "signature",
+      "\u2014 Data"
+    ],
+    [
+      "hashtag",
+      "#GotDaved"
+    ]
+  ]
+}

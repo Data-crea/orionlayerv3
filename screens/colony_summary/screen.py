@@ -97,7 +97,6 @@ import pygame
 
 from core import mouse as mouse_input
 from core import palette
-from core.hud import blocks as hud
 from core.screen_base import ScreenBase
 from core.structs import player as player_struct
 

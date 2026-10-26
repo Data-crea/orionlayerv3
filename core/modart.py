@@ -20,6 +20,8 @@ import os
 #: names only.
 GAME_ART = ("assets/shared/background_cockpit.png",
             "assets/shared/cursor.png",
+            # the turning planets' maps, OrionLayer's own (work order 331)
+            "assets/shared/planets/*_surface.png",
             "assets/shared/figures/*.png",
             "screens/colony_summary/assets/output/*.png",
             "screens/colony_summary/assets/planets/*.png",
@@ -32,6 +34,8 @@ GAME_ART = ("assets/shared/background_cockpit.png",
             "screens/galaxy_map/assets/ships/*/*.png",
             "screens/galaxy_map/assets/stars/*/*.png",
             "screens/main_menu/assets/logo.png",
+            # Data's easter egg panel (work order 327, `easteregg.py`)
+            "screens/main_menu/assets/easter_egg_panel.png",
             "screens/new_game/assets/*/*.png",
             # Data's cut-out leader portraits, redrawings of the game's
             # (work order 255, `core/leaderportraits.py`)
@@ -58,6 +62,17 @@ NOT_LISTED = {
     "assets/shared/hud/settings_preview.png":
         "Data's own picture, the OrionLayer settings window's preview "
         "ground (work order 251) — OrionLayer's, not the game's",
+    # Data's trait and government icons (25 Oct 2026, `racepanel.py`):
+    # OrionLayer's own art, not the game's, so no MOO2 name to list
+    "screens/select_race/assets/banners/*.png":
+        "Data's city views over each race's text (racepanel.py), "
+        "OrionLayer's, not the game's",
+    "screens/select_race/assets/custom_panel.png":
+        "Data's own picture under the Custom Race's text (racepanel.py), "
+        "OrionLayer's, not the game's",
+    "screens/select_race/assets/icons/*/*.png":
+        "Data's own trait and government icons (racepanel.py), "
+        "OrionLayer's, not the game's",
     "screens/galaxy_map/assets/_black_hole_src.png":
         "the source of black_hole.png (tools/make_black_hole_master.py)",
     # Work order 205 moved the pictures nothing loaded — the galaxy map's

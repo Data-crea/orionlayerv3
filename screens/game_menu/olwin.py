@@ -57,6 +57,11 @@ HEIGHT, WIDTH, WIDTH_BY_HEIGHT = 0.83, 0.64, 1.25
 #: Columns of a row, as shares of its width: the value column starts at
 #: `value_x`, the colour bars end at `hue_end` (gmorion's rule keys), a
 #: drop-down field is `field_w` wide.
+#: The "Open mod folder" button is a share wider than the drop-downs: its
+#: German word ("Mod-Ordner öffnen") filled it to within a pixel at some
+#: window sizes, and the window follows the map's free area, which moves
+#: with the HUD's boxes.
+MOD_BUTTON_EXTRA = 0.04
 ROW_RULE = {"value_x": 0.36, "hue_end": 0.80, "field_w": 0.36,
             "swatch_x": 0.75, "swatch_gap": 0.2}
 #: The title plate's aspect: the cut piece's, 4780 x 240 (`hud_cut.TITLE`),
@@ -196,7 +201,7 @@ def _row_parts(out, names):
         fh = max(8, int(r.h * 0.78))
         out["mod_open_button"] = pygame.Rect(
             r.x + int(r.w * ROW_RULE["value_x"]), r.y + (r.h - fh) // 2,
-            int(r.w * ROW_RULE["field_w"]), fh)
+            int(r.w * (ROW_RULE["field_w"] + MOD_BUTTON_EXTRA)), fh)
     if "colours" in out:
         gmorion.swatch_geometry(out, ROW_RULE)
     if "frame" in out:

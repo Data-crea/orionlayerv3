@@ -131,6 +131,16 @@ SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",) + tuple(
     f"{PLANET_PICTURE_DIR}{n}.png" for n in (
         "toxic", "radiated", "barren", "desert", "tundra",
         "ocean", "swamp", "arid", "terran", "gaia"))
+#: HD EXTENSION `star_shape_by_size`: a class's three star pictures by
+#: star.size (`galaxy_map.renderer.SIZE_DIRS`), drawn at the zoom's width.
+SLOTS += tuple(f"screens/galaxy_map/assets/stars/*/{n}.png"
+               for n in ("large", "medium", "small"))
+#: Work order 331: the rotating planets' maps, a surface per type
+#: (`<type>_surface.png`, in the base pack) and an optional cloud layer
+#: (`<type>_clouds.png`, with transparency; nothing ships). Any size, 2:1,
+#: so `_checked_image` never rescales them to the base map's.
+PLANET_MAPS = "assets/shared/planets/"
+SLOTS += (PLANET_MAPS + "*_clouds.png", PLANET_MAPS + "*_surface.png")
 #: The galaxy map's ship masters (work order 243, Data's decision): a whole
 #: master `files/<SHIP_MASTERS>/<kind>.png` replaces every icon cut from it
 #: (`core.shipcut`: the four steps and the Planets panel's picture), cut
@@ -145,9 +155,11 @@ MOD_JSON = "mod.json"
 #: The two files that are values, not pictures.
 STYLE = "style.json"
 COLOUR = "colour.json"
+#: The rotating planets' values (work order 331), merged like style.json.
+PLANETS = "planets.json"
 #: What the template lists and MODDING.md explains, in this order.
 NAMES = ("background.png", "backgrounds/<screen>.png", "hud/<piece>.png",
-         "frames/<screen>.png", STYLE, COLOUR, "files/<path in the tree>",
+         "frames/<screen>.png", STYLE, COLOUR, PLANETS, "files/<path in the tree>",
          "texts/<screen>/<key>.txt")
 #: The texts' folder: read by `read_text`, asked by `core.modtexts`.
 TEXTS = "texts/"
@@ -242,7 +254,7 @@ def init(enabled=True, root=None):
         for f in sorted(files):
             full = os.path.join(dirpath, f)
             name = os.path.relpath(full, root).replace(os.sep, "/")
-            if (name in (STYLE, COLOUR, MOD_JSON) or name in GUIDE
+            if (name in (STYLE, COLOUR, PLANETS, MOD_JSON) or name in GUIDE
                     or name.startswith((ORIGINALS + "/", TEMPLATES + "/"))
                     or _is_notice(name)):
                 continue
@@ -385,7 +397,7 @@ def in_use():
     for _dir, _sub, files in os.walk(os.path.join(root, TEXTS)):
         texts += sum(f.endswith(".txt") for f in files)
     return len(_state["index"]) + texts + sum(
-        os.path.exists(os.path.join(root, n)) for n in (STYLE, COLOUR))
+        os.path.exists(os.path.join(root, n)) for n in (STYLE, COLOUR, PLANETS))
 
 
 def read_text(name, max_bytes):
@@ -491,7 +503,8 @@ def _checked_image(key, src, default_path):
         log.warning("mod: %s cannot be read (%s) — the default is used",
                     name, err)
         return None
-    if key.startswith("assets/shared/backgrounds/") or not default_path:
+    if key.startswith(("assets/shared/backgrounds/", PLANET_MAPS)) \
+            or not default_path:
         return src
     try:
         want = pygame.image.load(default_path).get_size()
@@ -555,7 +568,7 @@ def _same_kind(a, b):
     return type(a) is type(b)
 
 
-def merge(default, partial, where=""):
+def merge(default, partial, where="", name=STYLE):
     """`default` with every key of `partial` that exists there and has
     the same kind of value; each key that does not is named once and
     skipped. Neither argument is changed."""
@@ -563,18 +576,18 @@ def merge(default, partial, where=""):
     for key, value in partial.items():
         path = f"{where}{key}"
         if key not in default:
-            log.warning("mod: %s has no key %s — skipped", STYLE, path)
+            log.warning("mod: %s has no key %s — skipped", name, path)
         elif isinstance(default[key], dict):
             if isinstance(value, dict):
-                out[key] = merge(default[key], value, path + ".")
+                out[key] = merge(default[key], value, path + ".", name)
             else:
                 log.warning("mod: %s key %s must be a group { ... } — "
-                            "skipped", STYLE, path)
+                            "skipped", name, path)
         elif _same_kind(default[key], value):
             out[key] = value
         else:
             log.warning("mod: %s key %s is %r, the default is %r — skipped",
-                        STYLE, path, value, default[key])
+                        name, path, value, default[key])
     return out
 
 
@@ -582,6 +595,13 @@ def style_overrides(default):
     """The HUD style with the player's partial style.json over it."""
     partial = _read_json(STYLE)
     return merge(default, partial) if partial else default
+
+
+def planet_overrides(default):
+    """The rotating planets' values with the player's partial
+    `planets.json` over them (work order 331, `core.planetspin`)."""
+    partial = _read_json(PLANETS)
+    return merge(default, partial, name=PLANETS) if partial else default
 
 
 def frame_colour():

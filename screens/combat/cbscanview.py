@@ -28,6 +28,7 @@ Geometry in 1920 x 1080 reference pixels, scaled by the window's `k` as
 the battle's other popups (`cbpopups._k`); nothing is held across frames
 but the click rects of the frame drawn last.
 """
+import contextlib
 import math
 
 import pygame
@@ -43,6 +44,11 @@ from . import cbart, cbscan, cbscancard
 #: combat skill) and COMBAT VALUES gain; measured by check 090znb at three
 #: window sizes, every text inside its box.
 WINDOW = (60, 30, 1800, 1020)
+#: HD EXTENSION `scan_blue` (Data, work order 332): SPECIAL SYSTEMS and the
+#: value card that explains a combat value glow blue (`hud.blue`), the
+#: window and every other box keep the frame colour; the title's word
+#: is the mockup's light blue.
+_NONE = contextlib.nullcontext()
 BOXES = {
     "ship": (80, 114, 520, 200), "officer": (80, 328, 520, 250),
     "crew": (80, 592, 520, 126),
@@ -94,6 +100,10 @@ SPECIAL_ROW, SPECIAL_ROWS = 30, 8
 #: edge: the state marker and the breakdown's info sign stand right of it.
 VALUE_PAD = 64
 SKILL_ROW = 26
+#: the portrait's widest part, reference px (HD EXTENSION `scan_portrait_full`)
+PORTRAIT_MAX = 206
+#: the portrait's gap under the title strip (the left gap is the box's own)
+PORTRAIT_GAP = 16
 #: a table's column head under a box's title: its top from the box's top,
 #: its text size and the gap to the first row — SPECIAL SYSTEMS' and, since
 #: work order 301, HULL AND SYSTEMS' "HP" alike
@@ -274,8 +284,9 @@ class View:
         hud.popup(surface, R(*WINDOW), scale, fill=GROUND)
         for key, box in BOXES.items():
             r = R(*box)
-            hud.panel(surface, r, scale, dense=True, fill=BODY)
-            title_strip(surface, r, scale, k, key == "weapons")
+            with (hud.blue() if key == "specials" else _NONE):
+                hud.panel(surface, r, scale, dense=True, fill=BODY)
+                title_strip(surface, r, scale, k, key == "weapons")
         text("SHIP SCAN", R(960, 40, 0, 0).topleft, 40, value, "midtop")
         if turn is not None:
             text(f"Combat turn  {turn}", R(1790, 52, 0, 0).topleft, 28,
@@ -285,7 +296,8 @@ class View:
         self.rects["close_x"] = x
         for key, box in BOXES.items():
             r = R(*box)
-            text(TITLES[key], (r.x + px(14), r.y + px(8)), 24, head)
+            text(TITLES[key], (r.x + px(14), r.y + px(8)), 24,
+                 cbscancard.BLUE_TITLE if key == "specials" else head)
 
         def marker(right, cy, state):
             """The state beside a coloured number, so it never rests on the
@@ -359,13 +371,26 @@ class View:
         if o is None:
             text("No officer", (r.x + px(16), r.y + px(48)), 24, label)
         else:
-            # the whole figure, as every place draws it (`leaderportraits`)
-            port = R(BOXES["officer"][0] + 12, BOXES["officer"][1] + 38,
-                     150, 200)
-            pic = pics.portrait(o, port.size)
+            # HD EXTENSION `scan_portrait_full` (Data, work order 332): the
+            # figure fills the box from its title strip down to its edge, its
+            # proportion kept; a wider picture than PORTRAIT_MAX is cut at
+            # both sides (never stretched), a narrower one stands at the left
+            # a gap under the title strip and at the left (Data, work order
+            # 332, from his screenshot: the head touched the strip and the
+            # figure was cut): the whole picture, a little smaller
+            pad = max(1, round(2 * k))
+            top = R(0, BOXES["officer"][1] + 38 + PORTRAIT_GAP, 0, 0).y
+            port = pygame.Rect(r.x + px(6), top, 0,
+                               r.bottom - pad - top)
+            pic = pics.portrait(o, (port.h * 40, port.h))
             if pic is not None:
-                surface.blit(pic, pic.get_rect(center=port.center))
+                keep = min(pic.get_width(), px(PORTRAIT_MAX))
+                pic = pic.subsurface(((pic.get_width() - keep) // 2, 0,
+                                      keep, pic.get_height()))
+                port.w = keep
+                surface.blit(pic, port.topleft)
             else:
+                port.w = px(150)
                 hud.field(surface, port, scale)
             tx = port.right + px(16)
             room = r.right - px(16) - tx
@@ -381,6 +406,8 @@ class View:
             skills = o["skills"]
             shown = skills if len(skills) <= fit else skills[:fit - 1]
             for sid, name, val in shown:
+                self.rects.setdefault("skills", {})[sid] = pygame.Rect(
+                    tx, y, r.right - px(16) - tx, px(SKILL_ROW))
                 icon = pics.skill_icon(sid, px(22))
                 if icon is not None:
                     surface.blit(icon, (tx, y))
@@ -694,6 +721,6 @@ class View:
         if self.card is None:
             return False
         rows = self.rects.get("values") or {}
-        hit = self.card[2] if self.card[0] in ("cell", "hull") else \
+        hit = self.card[2] if self.card[0] in ("cell", "hull", "skill") else \
             rows.get(self.card[0])
         return hit is not None and hit.collidepoint(x, y)

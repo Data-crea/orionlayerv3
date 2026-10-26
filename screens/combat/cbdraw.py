@@ -330,6 +330,24 @@ def draw_footprint(surface, cam, art, cell, size_class):
     pygame.draw.rect(surface, col, r, max(1, round(cam.scale)))
 
 
+def turning_planet(planet_pic, scale):
+    """HD EXTENSION `rotating_planets` (WO 331): the battle's planet as the
+    turning sphere of its climate, at the old picture's on-screen size plus
+    its glow ring, or None (a mod's old-style picture, no map, a tuple from
+    before). It is read from the global planet clock inside the existing
+    draw: no loop, no timing of its own, nothing of the battle's."""
+    if len(planet_pic) < 4:
+        return None
+    from core import planetspin, resources
+    from screens.colony_summary import colonyplanets
+    w, h = cbart.native_size(planet_pic[0])
+    side = max(1, round(max(w, h) * scale))
+    ring = 1.0 - float(planetspin.config(resources.res)["glow_width"])
+    return colonyplanets.turning(resources.res, planet_pic[2],
+                                 round(side / ring), planet_pic[3],
+                                 planet_pic[1])
+
+
 def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
                planet_pic=None, phased_shown=True, fades=None, now=0.0,
                fast=False):
@@ -348,9 +366,17 @@ def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
             if planet_pic is not None:
                 size = planet_pic[1]
                 ox, oy = PLANET_OFF.get(size, (7, 7))
-                surface.blit(scaled(planet_pic[0], cam.scale, cache),
-                             cam.to_window(u["x"] * CELL + ox,
-                                           u["y"] * CELL + oy))
+                at = cam.to_window(u["x"] * CELL + ox, u["y"] * CELL + oy)
+                spin = turning_planet(planet_pic, cam.scale)
+                if spin is not None:
+                    # the sphere includes its glow ring, so it is drawn
+                    # larger than the old sprite and centred on it
+                    w, h = cbart.native_size(planet_pic[0])
+                    at = (at[0] + (round(w * cam.scale) - spin.get_width()) // 2,
+                          at[1] + (round(h * cam.scale) - spin.get_height()) // 2)
+                    surface.blit(spin, at)
+                else:
+                    surface.blit(scaled(planet_pic[0], cam.scale, cache), at)
             continue
         glow = glow_frame(u, i, glow_clock)
         flag = int(u.get("special_status_flag", 0))

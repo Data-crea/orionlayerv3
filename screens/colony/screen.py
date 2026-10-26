@@ -103,7 +103,7 @@ from screens.colony_summary import (colonylist, colonymove, colonypick,
                                     colonysend)
 from core import nativedraw as nd
 
-from . import (coldemolish, coldraw, colgeom as geom, colright, colsettle,
+from . import (colplanettip, coldemolish, coldraw, colgeom as geom, colright, colsettle,
                coltransfer, colwire, colwords)
 
 log = logging.getLogger("colony")
@@ -342,6 +342,8 @@ class ColonyScreen(ScreenBase):
                              align="center")
         self.render_shell(surface)
         if view is not None and view.draws:
+            # HD EXTENSION `planet_hover` (colplanettip.py)
+            colplanettip.draw(surface, self, view, self._state, self._words)
             coltransfer.render(self, surface, lambda: self.carry.draw(
                 surface, mouse_input.pos(), self._draw_hand))
         self.render_help(surface)

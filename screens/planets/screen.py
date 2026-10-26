@@ -69,7 +69,7 @@ class PlanetsScreen(ScreenBase):
         self._state = None
         self._view = None
         self._list = planetrows.PlanetList()
-        self._filters = {key: False for key in planetrows.FILTERS}
+        self._filters = dict(planetrows.DEFAULT_FILTERS)
         self._words = None
         self._first = 0
         self._hover = None          # list index under the pointer, or None

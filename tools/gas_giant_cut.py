@@ -6,8 +6,8 @@
     python tools/gas_giant_cut.py --check          # measure, write nothing
 
 Work order 236. Writes `screens/galaxy_map/assets/gas_giant.png`, which is
-committed; the picture it is cut from is not (the line `planet_extract.py`
-draws: authored artwork is committed, the thing it was cut from is not,
+committed; the picture it is cut from is not (the line the planet
+discs' extractor drew, retired by work order 331: authored artwork is committed, the thing it was cut from is not,
 and this file is how the cut is repeated). The source is Data's
 "Crimson Eye of the Gas Giant.png", delivered on 11 October 2026, 1254 x
 1254 RGBA, refused by sha256 if it is another file.

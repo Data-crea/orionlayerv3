@@ -146,6 +146,16 @@ FALLBACK_OUTLINE = palette.col("galaxy_map", "fleet_outline", (16, 16, 20))
 NEUTRAL_COLOR = palette.col("galaxy_map", "fleet_neutral", (170, 170, 180))
 
 
+#: HD EXTENSION `monster_fixed_size` (Data, 25 October 2026): a monster is
+#: drawn at the footprint, inset and picture of zoom 0, the largest, at
+#: every zoom; zoomed out it was too small to make out. The original steps
+#: it down with the zoom (MONSTER_ICON_DIM). Orbit slots stay on the zoom.
+MONSTER_ZOOM = 0
+#: HD EXTENSION `monster_fixed_size`: and 20 % smaller than that (Data,
+#: 25 October 2026), hit box included.
+MONSTER_SHRINK = 0.8
+
+
 def kind_for_owner(owner):
     """Asset folder for an owner value, or None if unknown."""
     if owner is None:
@@ -717,10 +727,13 @@ def icon_box(icon, owner, ctx, anchor=None, cfg=None):
     (decision 5)."""
     kind = kind_for_owner(owner)
     _, scale = kind_config(cfg, kind or PLAYER_KIND)
-    nw, nh = native_size(kind, ctx.zoom)
+    if kind not in (None, PLAYER_KIND):
+        scale *= MONSTER_SHRINK
+    nw, nh = native_size(kind, ctx.zoom if kind in (None, PLAYER_KIND)
+                         else MONSTER_ZOOM)
     box_w = max(2, int(round(nw * ctx.px * scale)))
     box_h = max(2, int(round(nh * ctx.px * scale)))
-    inset = (zt.monster_icon_inset(kind, ctx.zoom)
+    inset = (zt.monster_icon_inset(kind, MONSTER_ZOOM)
              if kind not in (None, PLAYER_KIND) else (0, 0))
     left, top = icon_screen_pos(icon, ctx, anchor, box_w, box_h, owner,
                                 inset)
@@ -800,11 +813,12 @@ def render(surface, ctx, icons, players, cache, tints,
             pic = _stack_picture(icon, owner, players, tints, ships, nodes,
                                  me, settings, box_w, box_h)
             if pic is not None:
-                surface.blit(pic, (int(round(cx - pic.get_width() / 2.0)),
-                                   int(round(cy - pic.get_height() / 2.0))))
+                _blit_haloed(surface, pic, cx, cy)
                 continue
 
-        key = _resolve_sprite(cache, kind or PLAYER_KIND, ctx.zoom)
+        key = _resolve_sprite(
+            cache, kind or PLAYER_KIND,
+            ctx.zoom if kind in (None, PLAYER_KIND) else MONSTER_ZOOM)
         if key is None:
             _draw_fallback(surface, cx, cy, box_w, box_h, owner)
             continue
@@ -823,8 +837,61 @@ def render(surface, ctx, icons, players, cache, tints,
             if color_idx is not None:
                 sprite = tints.get(sprite, key, color_idx)
 
-        surface.blit(sprite, (int(round(cx - sprite.get_width() / 2.0)),
-                              int(round(cy - sprite.get_height() / 2.0))))
+        _blit_haloed(surface, sprite, cx, cy)
+
+
+#: Haloed copies made so far, keyed by the sprite they came from (held, so
+#: its id cannot be reused); bounded.
+_HALOED = {}
+HALO_KEEP = 256
+#: A ship's dark glow (a light rim looked wrong on black, Data).
+GLOW_COLOR = (0, 0, 8)
+
+
+def haloed(sprite):
+    """`sprite` with a dark glow round its silhouette,
+    on a canvas grown by the glow (HD EXTENSION `map_icon_halo`, Data: ships
+    and monsters must stand out from the background)."""
+    hit = _HALOED.get(id(sprite))
+    if hit is not None and hit[0] is sprite:
+        return hit[1]
+    w, h = sprite.get_size()
+    g = max(2, min(4, round(min(w, h) / 10)))
+    pad = g + 1
+    mask = pygame.mask.from_surface(sprite, 40)
+    sil = mask.to_surface(setcolor=(255, 255, 255, 255),
+                          unsetcolor=(0, 0, 0, 0))
+
+    def tinted(colour, alpha):
+        t = sil.copy()
+        t.fill(colour + (255,), special_flags=pygame.BLEND_RGBA_MULT)
+        t.set_alpha(alpha)
+        return t
+
+    out = pygame.Surface((w + 2 * pad, h + 2 * pad), pygame.SRCALPHA, 32)
+    glow = tinted(GLOW_COLOR, 80)
+    for d in range(2, g + 1):
+        for dx, dy in ((-d, 0), (d, 0), (0, -d), (0, d),
+                       (-d, -d), (d, -d), (-d, d), (d, d)):
+            out.blit(glow, (pad + dx, pad + dy))
+    # only the ring: the silhouette itself is cut out, the sprite is blitted
+    # on its own, first, and the ring over its edge (see `_blit_haloed`)
+    out.blit(sil, (pad, pad), special_flags=pygame.BLEND_RGBA_SUB)
+    if len(_HALOED) >= HALO_KEEP:
+        _HALOED.clear()
+    _HALOED[id(sprite)] = (sprite, out)
+    return out
+
+
+def _blit_haloed(surface, sprite, cx, cy):
+    x = int(round(cx - sprite.get_width() / 2.0))
+    y = int(round(cy - sprite.get_height() / 2.0))
+    ring = haloed(sprite)
+    pad = (ring.get_width() - sprite.get_width()) // 2
+    # the ring is the outline round the picture, so it goes over the
+    # picture's own edge pixels only where the picture is transparent
+    surface.blit(sprite, (x, y))
+    surface.blit(ring, (x - pad, y - pad))
 
 
 def _stack_picture(icon, owner, players, tints, ships, nodes, me,

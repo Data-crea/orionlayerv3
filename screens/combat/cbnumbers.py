@@ -32,7 +32,6 @@ but never smaller than at the original's framing (32 cells across) — the
 whole field zoomed out keeps them readable, zoomed in they grow with the
 ships as the original's would. The original has no zoom.
 """
-import pygame
 
 #: The colour steps, three entries a frame (beams.cpp:313-321).
 TOTAL_STEPS = (0xb0, 0xb9, 0xba, 0xb0, 0xb8, 0xb9, 0xb0, 0xb7, 0xb8, 0xb0,

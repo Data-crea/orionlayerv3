@@ -86,6 +86,31 @@ def _dim(surf):
 
 # ── panel, popup, separator ──────────────────────────────────────────
 
+#: HD EXTENSION `blue_panel` (Data, ship scan order 332): while set, the
+#: panels and separators drawn take the MEASURED blue for their edge, glow
+#: and inner band, not the player's frame colour — one element a screen
+#: sets apart (the scan's SPECIAL SYSTEMS and its value card); everything
+#: else stays the frame's.
+_BLUE = [False]
+
+
+class blue:
+    def __enter__(self):
+        self.was, _BLUE[0] = _BLUE[0], True
+
+    def __exit__(self, *exc):
+        _BLUE[0] = self.was
+
+
+def _col(st, path):
+    return st.raw_colour(path) if _BLUE[0] else st.colour(path)
+
+
+def colour(path):
+    """The HUD colour `path`, as the blocks drawn now take it (`blue`)."""
+    return _col(hudstyle.get(), path)
+
+
 def panel(surface, rect, scale, lit=False, filled=True, dense=False,
           fill=None):
     """A HUD panel. `lit` gives it the action button's edge: a popup.
@@ -121,10 +146,10 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False,
     if see:
         glass.keep_ground(surface, rect)
     key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense, t,
-           own)
+           own, _BLUE[0])
 
     def build():
-        edge = st.colour("popup.edge") if lit else st.colour("panel.edge")
+        edge = _col(st, "popup.edge" if lit else "panel.edge")
         fill_px, fill_a = None, None
         if see:
             fill_a, col = glass.profile(rect.h, t)
@@ -136,9 +161,9 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False,
             lambda w, h: panel_polygon(w, h, scale), rect.w, rect.h,
             fill=own or st.colour("panel.fill"), edge=edge,
             edge_w=_px(st.get("panel.edge_width"), scale),
-            glow=st.colour("panel.glow"),
+            glow=_col(st, "panel.glow"),
             glow_w=_px(st.get("panel.glow_width"), scale),
-            inner=st.colour("panel.fill_edge"),
+            inner=_col(st, "panel.fill_edge"),
             inner_w=_px(st.get("panel.inner_glow"), scale),
             fill_alpha=1.0 if filled else 0.0,
             ss=int(st.get("supersample")), glass=fill_px,
@@ -272,7 +297,7 @@ def separator(surface, x0, x1, y, scale, vertical=False):
     """One separator line from x0 to x1 at y (or y0..y1 at x)."""
     st = hudstyle.get()
     w = max(1, round(_px(st.get("separator.width"), scale)))
-    col = st.colour("separator.color")
+    col = _col(st, "separator.color")
     if vertical:
         pygame.draw.rect(surface, col, (int(y) - w // 2, int(x0), w,
                                         int(x1 - x0)))

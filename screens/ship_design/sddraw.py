@@ -27,7 +27,6 @@ anchor, fitted to a native width). What is drawn and where it comes from:
                  which is not on the wire; `flashing_hover` — the cycling
                  palette index of a hovered row
 """
-import pygame
 
 from core.hestrings import printf
 from core.hud import blocks as hud

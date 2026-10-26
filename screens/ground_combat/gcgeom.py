@@ -32,8 +32,6 @@ from core.nativeview import NATIVE_W, NATIVE_H
 #: `Draw_Summary_Box_ATK_` / `_DEF_` (colgcbt.cpp:279-296, :363-384): the
 #: frame COLGCBT.LBX 21 at (1, 40) / (0x17A, 0x28), darkened inside
 #: (2, 0x29)..(0x103, 0xB8) / (0x17B, 0x29)..(0x27E, 0xB8).
-BOX_ATK = (1, 40, 261, 188)
-BOX_DEF = (378, 40, 638, 188)
 BOX_W, BOX_H = 261, 149
 #: The header line, centred at (0x82, 50) / (0x1FC, 50) — relative to the
 #: box: 129 and 10; the lines `Print_Data_` prints at x + 9, 0xF3 wide,
@@ -44,8 +42,6 @@ HEADER_DX, HEADER_Y = 129, 50
 LINE_DX, LINE_W, LINE_Y0, LINE_PITCH = 9, 0xF3, 50, 11
 TOTALS_FIGURE_FOOT, TOTALS_LINES = 157, (158, 167, 176)
 TOTALS_SPAN = 261
-#: The title line, centred at (319, 10) (:906, :650) — HD's plate.
-TITLE_CENTRE = (319, 10)
 #: The colony's scene starts under the colony screen's band (`colgeom.
 #: SCENE`, 152): above it the picture is the sky the boxes stand over.
 SCENE_TOP = 152

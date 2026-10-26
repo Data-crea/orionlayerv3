@@ -469,7 +469,7 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     # because this panel is about one colony. The disc is square, so
     # it takes the box's SHORTER side and is centred in the other one:
     # the renderer fits, the box does not have to be square.
-    disc = (planets.get(row.get("climate"))
+    disc = (planets.get(row.get("climate"), row.get("planet"))
             if planets is not None and disc_rect is not None else None)
     if disc is not None:
         surface.blit(disc, (

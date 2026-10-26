@@ -8,13 +8,18 @@ import re
 import pygame
 
 from core import lang
+from core.hud import tables
+from screens.select_race import racepanel
 
 from screens.select_race.renderer import (
-    COL_HEADING, COL_LABEL, COL_VALUE, COL_GOOD, COL_BAD,
-    COL_NEUTRAL, COL_FLAVOR, COL_HIGHLIGHT, COL_KEYWORD,
-    COL_SUBTITLE, COL_SEPARATOR,
-    TITLE_FONT, SUBTITLE_FONT, BODY_FONT, HEADING_FONT, TRAIT_FONT,
+    COL_HEADING, COL_DESC, COL_RACE_TEXT, COL_HIGHLIGHT, COL_KEYWORD,
+    TITLE_FONT, SUBTITLE_FONT,
 )
+
+
+#: The subtitle over a picture: lighter than `COL_SUBTITLE`, which was
+#: chosen for the plain box.
+SUBTITLE_ON_PICTURE = (214, 202, 250)
 
 
 def render_race_name(surface, L, style, race, rect, fs_scale=1.0):
@@ -26,6 +31,11 @@ def render_race_name(surface, L, style, race, rect, fs_scale=1.0):
     tfont = style.get_font(tfs)
     tx, ty = L.pos(rx, ry)
     t_surf = tfont.render(race["name"].upper(), True, COL_HEADING)
+    # the name stands over the race's picture: a dark shadow keeps it
+    # readable (HD EXTENSION `race_panel_pictures`, racepanel)
+    shade = tfont.render(race["name"].upper(), True, (0, 0, 0))
+    for dx, dy in ((2, 2), (-1, 2), (2, -1)):
+        surface.blit(shade, (tx + dx, ty + dy))
     surface.blit(t_surf, (tx, ty))
 
     # Subtitle below name
@@ -33,8 +43,11 @@ def render_race_name(surface, L, style, race, rect, fs_scale=1.0):
     if sub:
         sfs = L.font_size(int(SUBTITLE_FONT * fs_scale))
         sfont = style.get_font(sfs)
-        sx, sy = L.pos(rx, ry + 34)
-        s_surf = sfont.render(sub.upper(), True, COL_SUBTITLE)
+        sx, sy = L.pos(rx, ry + 42)
+        s_surf = sfont.render(sub.upper(), True, SUBTITLE_ON_PICTURE)
+        s_shade = sfont.render(sub.upper(), True, (0, 0, 0))
+        for dx, dy in ((2, 2), (-1, 2), (2, -1)):
+            surface.blit(s_shade, (sx + dx, sy + dy))
         surface.blit(s_surf, (sx, sy))
 
 
@@ -52,232 +65,175 @@ def render_race_description(surface, L, style, race, rect,
                         rx, ry, rw, rh, scroll_offset, fs_scale)
 
 
-def render_race_traits(surface, L, style, race, rect, fs_scale=1.0):
-    """Render RACE TRAITS section in its own box."""
-    rx, ry, rw, rh = rect
-    _render_traits_section(surface, L, style, race,
-                           rx, ry, rw, fs_scale)
+def render_race_traits(surface, L, style, race, rect, cache, find=None,
+                       fs_scale=1.0, mouse=None):
+    """Render RACE TRAITS section in its own box (racepanel: icons).
+    Returns the card under `mouse`, if any (for the tooltip)."""
+    return racepanel.render_traits(surface, L, style, race, rect, cache,
+                                   find, fs_scale, mouse)
+
+
+#: The description text, HD EXTENSION `race_panel_pictures`: a size up,
+#: the light body colour and a tighter line (Data's mockup of 25 Oct 2026).
+DESC_FONT = 20
+DESC_LINE = 1.45
+SCROLLBAR_W = 5           # reference px
+
+
+def markup_lines(font, text, max_w, colour):
+    """`text` with *highlight* and ~keyword~ markup cut into lines. A line
+    is a list of words, a word a list of (fragment, colour): the full
+    stop after a marked word stays on it ("*grow*." is one word, green
+    "grow" and a plain "."). `colour(kind)` gives "plain", "highlight"
+    and "keyword" their colour. One wrap for the description and the
+    tooltip."""
+    words, cur = [], []
+    for p in re.split(r'(\*[^*]+\*|~[^~]+~)', text):
+        if not p:
+            continue
+        if p.startswith('*') and p.endswith('*'):
+            kind, body = "highlight", p[1:-1]
+        elif p.startswith('~') and p.endswith('~'):
+            kind, body = "keyword", p[1:-1]
+        else:
+            kind, body = "plain", p
+        for i, chunk in enumerate(body.split(" ")):
+            if i and cur:                 # a space ended the word
+                words.append(cur)
+                cur = []
+            if chunk:
+                cur.append((chunk, colour(kind)))
+    if cur:
+        words.append(cur)
+
+    def width(word):
+        return font.size("".join(f for f, _ in word))[0]
+
+    lines, line, line_w = [], [], 0
+    space = font.size(" ")[0]
+    for word in words:
+        w = width(word)
+        if line and line_w + space + w > max_w:
+            lines.append(line)
+            line, line_w = [], 0
+        line_w += (space if line else 0) + w
+        line.append(word)
+    if line:
+        lines.append(line)
+    return lines
+
+
+def draw_line(surface, font, line, x, y):
+    """One wrapped line, fragment by fragment."""
+    space = font.size(" ")[0]
+    for word in line:
+        for frag, col in word:
+            f = font.render(frag, True, col)
+            surface.blit(f, (x, y))
+            x += f.get_width()
+        x += space
+
+
+def _desc_colour(kind):
+    return {"highlight": COL_HIGHLIGHT, "keyword": COL_KEYWORD}.get(
+        kind, COL_DESC)
+
+
+#: The race description's own look (Data's order of 25 Oct 2026; the
+#: tooltip keeps DESC_LINE and `_desc_colour`): a line a fifth taller,
+#: soft grey for plain text, 12 reference px of room inside the box, and
+#: a half line between paragraphs.
+RACE_LINE = 1.74
+RACE_PAD = 12
+PARA_GAP = 0.5
+PARA_CHARS = 240
+_SENTENCE_END = re.compile(r'(?<=[.!?])\s+(?=[A-Z0-9*~])')
+
+
+def paragraphs(text):
+    """`text` cut into paragraphs at its own sentence ends — the words
+    are not touched, only where a paragraph begins. About one paragraph
+    to `PARA_CHARS` characters, the sentences shared out evenly, so no
+    paragraph is left with a single short sentence; a cut never falls
+    inside a *marked* or ~marked~ run."""
+    if "\n" in text:                      # paragraphs the text sets itself
+        return [q for part in text.split("\n") if part.strip()
+                for q in paragraphs(part)]
+    n = max(1, round(len(text) / PARA_CHARS))
+    sents = _SENTENCE_END.split(text)
+    if n == 1 or len(sents) < 2:
+        return [text]
+    target = len(text) / n
+    out, cur = [], ""
+    for sent in sents:
+        if cur and len(out) < n - 1 \
+                and abs(len(cur) + 1 + len(sent) - target) > \
+                abs(len(cur) - target) \
+                and cur.count('*') % 2 == 0 and cur.count('~') % 2 == 0:
+            out.append(cur)
+            cur = sent
+        else:
+            cur = f"{cur} {sent}" if cur else sent
+    out.append(cur)
+    return out
+
+
+def _race_colour(kind):
+    return {"highlight": COL_HIGHLIGHT, "keyword": COL_KEYWORD}.get(
+        kind, COL_RACE_TEXT)
+
+
+def _description_layout(L, style, text, rect, fs_scale):
+    """[(line, y offset)] from the text area's top, the content height,
+    the view height, the font — all device px, all one computation for
+    the drawing and for the wheel's limit."""
+    fs = L.font_size(int(DESC_FONT * fs_scale))
+    font = style.get_prop_font(fs)
+    pad = int(RACE_PAD * L.scale)
+    width = int(rect[2] * L.scale) - 2 * pad
+    line_h = int(fs * RACE_LINE)
+    out, y = [], 0
+    for i, para in enumerate(paragraphs(text)):
+        if i:
+            y += int(line_h * PARA_GAP)
+        for line in markup_lines(font, para, width, _race_colour):
+            out.append((line, y))
+            y += line_h
+    return out, y, int(rect[3] * L.scale) - 2 * pad, font
+
+
+def description_extent(L, style, race, rect, fs_scale=1.0):
+    """(content height, view height) of a race's description in device
+    px — what the wheel may scroll by."""
+    text = lang.tr(race.get("description", ""))
+    _lines, content, view, _font = _description_layout(L, style, text,
+                                                       rect, fs_scale)
+    return content, view
 
 
 def _render_description(surface, L, style, text, rx, ry, rw, rh,
                         scroll_offset, fs_scale):
     """Scrollable description with *highlight* and ~keyword~ markup."""
-    fs = L.font_size(int((BODY_FONT + 1) * fs_scale))
-    font = style.get_prop_font(fs)
-    max_w = int(rw * L.scale)
+    lines, content, view, font = _description_layout(
+        L, style, text, (rx, ry, rw, rh), fs_scale)
+    pad = int(RACE_PAD * L.scale)
     sx, sy = L.pos(rx, ry)
-    sh = int(rh * L.scale)
-    line_h = int(fs * 1.5)
-    space_w = font.size(" ")[0]
+    tx, ty = sx + pad, sy + pad
+    width = int(rw * L.scale) - 2 * pad
+    line_h = font.get_height()
 
-    # Parse markup
-    parts = re.split(r'(\*[^*]+\*|~[^~]+~)', text)
-    words = []
-    for p in parts:
-        if p.startswith('*') and p.endswith('*'):
-            for w in p[1:-1].split():
-                words.append((w, COL_HIGHLIGHT))
-        elif p.startswith('~') and p.endswith('~'):
-            for w in p[1:-1].split():
-                words.append((w, COL_KEYWORD))
-        elif p:
-            for w in p.split():
-                words.append((w, COL_FLAVOR))
-
-    # Word-wrap
-    lines = []
-    cur_line = []
-    cur_text = ""
-    for word, col in words:
-        test = f"{cur_text} {word}".strip()
-        if font.size(test)[0] > max_w and cur_line:
-            lines.append(cur_line)
-            cur_line = [(word, col)]
-            cur_text = word
-        else:
-            cur_line.append((word, col))
-            cur_text = test
-    if cur_line:
-        lines.append(cur_line)
-
-    # Render with clipping
-    clip = pygame.Rect(sx, sy, max_w, sh)
     old_clip = surface.get_clip()
-    surface.set_clip(clip)
-
-    y = sy - scroll_offset
-    for line_words in lines:
-        if y + line_h > sy - line_h and y < sy + sh + line_h:
-            x = sx
-            for word, col in line_words:
-                w_surf = font.render(word, True, col)
-                surface.blit(w_surf, (x, y))
-                x += w_surf.get_width() + space_w
-        y += line_h
-
+    surface.set_clip(pygame.Rect(tx, ty, width, view))
+    for line_words, y in lines:
+        y = ty + y - scroll_offset
+        if y + line_h > ty - line_h and y < ty + view + line_h:
+            draw_line(surface, font, line_words, tx, y)
     surface.set_clip(old_clip)
 
-
-TWO_COL_THRESHOLD = 3  # switch to two columns when more traits than this
-
-
-def _trait_width(trait, name_font, note_font, val_font, scale):
-    """Measure the pixel width a trait needs (name+value or note)."""
-    gap = int(10 * scale)
-    name_w = name_font.size(trait["name"])[0]
-    value = trait.get("value", "")
-    if value:
-        name_w += gap + val_font.size(value)[0]
-    note = trait.get("note", "")
-    note_w = note_font.size(note)[0] if note else 0
-    return max(name_w, note_w)
-
-
-def _render_traits_section(surface, L, style, race, rx, ry, rw,
-                           fs_scale):
-    """Render RACE TRAITS heading + trait list + government.
-
-    Auto-switches to two-column layout when trait count exceeds
-    TWO_COL_THRESHOLD. Traits that are too wide for a half-column
-    get their own full-width row; only narrow traits are paired.
-    Government always renders full-width at bottom.
-    """
-    hfs = L.font_size(int(HEADING_FONT * fs_scale))
-    hfont = style.get_font(hfs)
-    hx, hy = L.pos(rx, ry)
-    h_surf = hfont.render("RACE TRAITS", True, COL_LABEL)
-    surface.blit(h_surf, (hx, hy))
-
-    tfs = L.font_size(int(TRAIT_FONT * fs_scale))
-    nfs = L.font_size(int(13 * fs_scale))
-    name_font = style.get_font(tfs)
-    note_font = style.get_prop_font(nfs)
-    val_font = style.get_prop_font(tfs)
-    note_offset = int(20 * fs_scale)
-    row_note = int(42 * fs_scale)
-    row_plain = int(26 * fs_scale)
-
-    # Separate government from other traits
-    gov_value = None
-    traits = []
-    for trait in race.get("traits", []):
-        if trait["name"] == "Government":
-            gov_value = trait.get("value", "")
-        else:
-            traits.append(trait)
-
-    two_col = len(traits) > TWO_COL_THRESHOLD
-    col_gap = int(12 * fs_scale)
-    col_w = (rw - col_gap) / 2 if two_col else rw
-
-    if two_col:
-        # Measure each trait and classify as wide or narrow
-        half_px = int(col_w * L.scale)
-        narrow = []
-        wide = []
-        for trait in traits:
-            w = _trait_width(trait, name_font, note_font,
-                             val_font, L.scale)
-            if w > half_px:
-                wide.append(trait)
-            else:
-                narrow.append(trait)
-
-        row_y = ry + 24
-        ti = 0  # index into original traits (for ordering)
-
-        while ti < len(traits):
-            trait = traits[ti]
-            if trait in wide:
-                # Full-width row
-                row_y = _draw_trait(surface, L, name_font, note_font,
-                                    val_font, trait, rx, row_y, rw,
-                                    note_offset, row_note, row_plain,
-                                    fs_scale)
-                ti += 1
-            else:
-                # Pair narrow traits: find next narrow after ti
-                left = trait
-                right = None
-                ti += 1
-                while ti < len(traits):
-                    if traits[ti] in wide:
-                        ti += 1
-                    else:
-                        right = traits[ti]
-                        ti += 1
-                        break
-
-                # Draw left
-                left_y = _draw_trait(surface, L, name_font, note_font,
-                                     val_font, left, rx, row_y,
-                                     col_w, note_offset, row_note,
-                                     row_plain, fs_scale)
-                if right:
-                    right_y = _draw_trait(
-                        surface, L, name_font, note_font, val_font,
-                        right, rx + col_w + col_gap, row_y,
-                        col_w, note_offset, row_note, row_plain,
-                        fs_scale)
-                    row_y = max(left_y, right_y)
-                else:
-                    row_y = left_y
-    else:
-        row_y = ry + 24
-        for trait in traits:
-            row_y = _draw_trait(surface, L, name_font, note_font,
-                                val_font, trait, rx, row_y, rw,
-                                note_offset, row_note, row_plain,
-                                fs_scale)
-
-    # Government separator + value
-    col_x_right = rx + (rw - col_gap) / 2 + col_gap
-    row_y += int(6 * fs_scale)
-    sx1, sy1 = L.pos(rx, row_y)
-    sx2, _ = L.pos(rx + rw, row_y)
-    pygame.draw.line(surface, COL_SEPARATOR, (sx1, sy1), (sx2, sy1), 1)
-    row_y += int(10 * fs_scale)
-    gx, gy = L.pos(rx, row_y)
-    g_label = name_font.render("Government", True, COL_VALUE)
-    surface.blit(g_label, (gx, gy))
-    if gov_value:
-        gv_surf = val_font.render(gov_value, True, COL_NEUTRAL)
-        y_off = g_label.get_height() - gv_surf.get_height()
-        gvx, _ = L.pos(col_x_right, row_y)
-        surface.blit(gv_surf, (gvx, gy + y_off))
-
-
-def _draw_trait(surface, L, name_font, note_font, val_font,
-                trait, rx, row_y, col_w, note_offset,
-                row_note, row_plain, fs_scale):
-    """Draw a single trait entry. Returns the next row_y."""
-    good = trait.get("good")
-    vcol = (COL_GOOD if good is True
-            else COL_BAD if good is False
-            else COL_NEUTRAL)
-    max_w = int(col_w * L.scale)
-
-    tx, ty = L.pos(rx, row_y)
-    t_surf = name_font.render(trait["name"], True, COL_VALUE)
-    surface.blit(t_surf, (tx, ty))
-
-    value = trait.get("value", "")
-    if value:
-        gap = int(10 * L.scale)
-        v_surf = val_font.render(value, True, vcol)
-        y_off = t_surf.get_height() - v_surf.get_height()
-        surface.blit(v_surf, (tx + t_surf.get_width() + gap,
-                              ty + y_off))
-
-    note = trait.get("note", "")
-    if note:
-        nx, ny = L.pos(rx, row_y + note_offset)
-        n_surf = note_font.render(note, True, vcol)
-        if n_surf.get_width() > max_w:
-            n_surf = n_surf.subsurface(
-                (0, 0, max_w, n_surf.get_height()))
-        surface.blit(n_surf, (nx, ny))
-        return row_y + row_note
-    return row_y + row_plain
-
-
+    # A text that does not fit says so: the HUD's scroll bar at the box's
+    # right edge
+    if content > view:
+        bw = max(6, int(SCROLLBAR_W * L.scale))
+        tables.scrollbar(surface, (sx + int(rw * L.scale) - bw, ty, bw, view),
+                         L.scale, first=scroll_offset, visible=view,
+                         total=content)

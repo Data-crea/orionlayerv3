@@ -199,7 +199,7 @@
           "label": "Advanced"
         }
       },
-      "_values_v2_source": "orion2re v2 (work order 243) offers a fourth level and orders the buttons Pre-Warp, Average, Post-Warp, Advanced (newgame.cpp NEW_GAME_CIVILIZATION_POST_WARP = 2, NEW_GAME_CIVILIZATION_ADVANCED = 3); the base pack has no Post-Warp picture yet, so its panel shows the word alone.",
+      "_values_v2_source": "orion2re v2 (work order 243) offers a fourth level and orders the buttons Pre-Warp, Average, Post-Warp, Advanced (newgame.cpp NEW_GAME_CIVILIZATION_POST_WARP = 2, NEW_GAME_CIVILIZATION_ADVANCED = 3); its picture is `post_warp`.",
       "values_v2": {
         "0": {
           "image": "pre_warp",
@@ -210,7 +210,7 @@
           "label": "Average"
         },
         "2": {
-          "image": null,
+          "image": "post_warp",
           "label": "Post Warp"
         },
         "3": {

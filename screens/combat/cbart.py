@@ -597,7 +597,10 @@ def planet_picture(art, state, c):
         except lbx.LbxError:
             extra = None
     pic = art.surface("cmbtplnt", climate * 6 + size, 0, extra)
-    return (pic, size) if pic is not None else None
+    # climate and planet index ride along for the turning sphere (WO 331);
+    # every reader takes [0] and [1] only
+    return (pic, size, climate, int(colony.planet)) if pic is not None \
+        else None
 
 
 def display_format(surf):

@@ -49,7 +49,6 @@ def _button(dx, size):
 
 REJECT_RECT = _button(0x2C, REJECT_SIZE)        # (211, 333, 302, 359)
 HIRE_RECT = _button(0xAF, HIRE_SIZE)            # (342, 333, 426, 359)
-REJECT_KEY, HIRE_KEY = ord("R"), ord("H")
 
 #: `Print_Officer_Data_(-1, id, g_x + 0x5F, g_y + 0x35 + 5, g_x + 10,
 #: g_y + 0x35 + 2, 0x50, 0x5A, 0xC3, 0xE)` (officer.cpp:3542-3546): in

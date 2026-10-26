@@ -35,7 +35,6 @@ relative luminance keeps every word's contrast at every hue. The
 REFERENCE hue is the measured panel edge's, 196: a setting of 196 changes
 nothing, and so does the default, `None`.
 """
-import colorsys
 
 import numpy as np
 

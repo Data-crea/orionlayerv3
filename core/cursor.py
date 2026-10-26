@@ -155,10 +155,6 @@ def clear_override(res=None, win_h=None, settings=None):
         log.debug("Cursor not settable on this driver: %s", exc)
 
 
-def overridden():
-    return _override is not None
-
-
 def reset():
     """Drop the cached artwork — for tests and skin changes."""
     global _source, _last

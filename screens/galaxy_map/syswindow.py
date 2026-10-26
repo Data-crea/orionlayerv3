@@ -141,10 +141,8 @@ INFO_EDGE = (palette.col("galaxy_map", "system_info_edge_outer_lit",
                          (56, 76, 108)),
              palette.col("galaxy_map", "system_info_edge_inner_dim",
                          (68, 92, 128)))
-#: BUFFER0.LBX 0x49, native px: the whole picture, and the title panel's
-#: band (its inner dark run, rows 12..37 of the picture, measured).
+#: BUFFER0.LBX 0x49, native px: the whole picture.
 WINDOW_PICTURE = (347, 273)
-TITLE_BAND = (12, 37)
 #: HD's step-0 star canvas, native px, whose LIGHT covers as much as the
 #: original's sun picture's (BUFFER0.LBX 0x53-0x58, 32-35 px pictures):
 #: equal area above luminance 100, the median over the six classes
@@ -336,7 +334,8 @@ def draw_view(screen, surface, view, model, state=None):
         disc = None
         if p["type"] != 2:
             discs = colonyplanets.set_for(screen, side, p.get("size"))
-            disc = discs.get(p["climate"]) if discs is not None else None
+            disc = (discs.get(p["climate"], p.get("planet"))
+                    if discs is not None else None)
         else:
             # Data's painted gas giant (work order 236, `gasgiant`)
             from screens.galaxy_map import gasgiant
@@ -365,7 +364,8 @@ def _planet_picture(screen, surface, p, centre, side):
         pic = gasgiant.picture(side)
     else:
         discs = colonyplanets.set_for(screen, side, p.get("size"))
-        pic = discs.get(p["climate"]) if discs is not None else None
+        pic = (discs.get(p["climate"], p.get("planet"))
+               if discs is not None else None)
     if pic is not None:
         surface.blit(pic, pic.get_rect(center=centre))
     else:
@@ -389,6 +389,13 @@ def _view_picture(screen, surface, view, model, state):
                         muted=True)
     if pic is None:
         return None
+    stars = getattr(screen, "_stars", None) or []
+    star = stars[model["star"]] if 0 <= model["star"] < len(stars) else None
+    if star is not None:
+        # the painted sun is orange: the star's own class tints it
+        pic = ldrpics.tint_sun(pic, ldrpics.sun_disc(ldrsystem.PLACE,
+                                                     view.size),
+                               star.spectral_class)
     surface.blit(pic, view.topleft)
     hud.panel(surface, view, screen.layout.scale, filled=False)
     s, cx, cy = sysorbits.frame(view)

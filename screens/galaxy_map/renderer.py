@@ -65,7 +65,7 @@ def _bind_owner_colours():
 
 
 _bind_owner_colours()
-NEUTRAL_COLOR = palette.col("galaxy_map", "star_name", (150, 152, 166))
+NEUTRAL_COLOR = palette.col("galaxy_map", "star_name", (242, 242, 248))
 OUTLINE_COLOR = palette.col("galaxy_map", "star_name_outline", (0, 0, 0))
 #: Wormhole link colour, RGBA. The original draws these in palette
 #: index 4 (MAINSCR::Draw_Wormhole_Links_ -> line::Line_(..., 4)), a
@@ -103,7 +103,9 @@ WORMHOLE_COLOR = palette.col("galaxy_map", "wormhole",
 #: because even the near-black interior keeps ~55% coverage.
 #: 255 = original brightness; slightly below keeps star names on
 #: top comfortably readable.
-NEBULA_BRIGHTNESS = 230
+#: HD EXTENSION `calm_backdrop` (Data's comparison with the original): 188,
+#: about 18 % under the former 230, so the gas sits back as a backdrop.
+NEBULA_BRIGHTNESS = 188
 
 #: Black hole animation. The original advances its frames only
 #: while icons are drawn at full size (Advance_Black_Hole_Animation_),
@@ -151,7 +153,7 @@ NEBULA_BRIGHTNESS = 230
 BH_ROTATE_PERIOD_S = 90.0
 BH_ROTATE_STEPS = 720
 
-STAR_NAME_GAP = 0.30      # of icon height, below the star centre
+STAR_NAME_GAP = 0.40      # of icon height, below the star centre
 
 #: Wormhole links are drawn one pixel wide and antialiased. The
 #: original is one native pixel; a thicker HD line turns a faint hint
@@ -694,7 +696,14 @@ def render_stars(surface, ctx, stars, cache, black_holes=None):
         if star_struct.is_black_hole(s):
             img = _black_hole_frame(cache, width, ctx.animate_black_holes)
         else:
-            img = cache.scaled(name, width)
+            # HD EXTENSION `star_shape_by_size`: with the three picture
+            # files of a class (`large`/`medium`/`small`, a mod's), the
+            # shape follows star.size at every zoom of HD's continuous
+            # wheel and only the width follows the zoom; without them the
+            # original's six steps (zoom + size) as before
+            by_size = f"{name.rsplit('/', 1)[0]}/{SIZE_DIRS.get(s.size, 'medium')}"
+            img = cache.scaled(by_size if cache.has(by_size) else name,
+                               width)
         if img is None:
             continue
         sx, sy = view.to_screen(s.x, s.y)
@@ -780,11 +789,49 @@ def render_star_names(surface, ctx, stars, heights, render_label,
         shadow = render_label(label, OUTLINE_COLOR[:3])
         sx, sy = view.to_screen(s.x, s.y)
         ih = heights.get(s.index, 0)
+        # HD EXTENSION `star_name_halo`: a soft dark glow round the
+        # outline, so a name reads over a nebula or a bright star
+        halo = _name_halo(text, shadow)
+        pad = (halo.get_width() - text.get_width()) // 2
         x = int(sx - text.get_width() / 2)
         y = int(sy + ih * STAR_NAME_GAP)
-        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        surface.blit(halo, (x - pad, y - pad))
+        # HD EXTENSION `star_name_halo`: a two pixel outline and the name
+        # drawn twice, one pixel apart, so the thin face reads heavier
+        for dx, dy in _NAME_OUTLINE:
             surface.blit(shadow, (x + dx, y + dy))
         surface.blit(text, (x, y))
+        surface.blit(text, (x + 1, y))
+
+
+_NAME_OUTLINE = ((-1, 0), (2, 0), (0, -1), (0, 1), (-1, -1), (2, -1),
+                 (-1, 1), (2, 1), (-2, 0), (3, 0), (0, -2), (0, 2))
+
+#: Halos made so far, keyed by the label picture they came from (the
+#: picture itself is held so its id cannot be reused); bounded.
+_HALOS = {}
+HALO_KEEP = 512
+
+
+def _name_halo(text, shadow):
+    """The soft dark glow behind a label: its outline picture grown by
+    `r` pixels in eight directions, at a fraction of full strength."""
+    hit = _HALOS.get(id(text))
+    if hit is not None and hit[0] is text:
+        return hit[1]
+    r = max(2, text.get_height() // 7)
+    w, h = text.get_size()
+    out = pygame.Surface((w + 2 * r, h + 2 * r), pygame.SRCALPHA, 32)
+    glow = shadow.copy()
+    glow.set_alpha(70)
+    for d in range(1, r + 1):
+        for dx, dy in ((-d, 0), (d, 0), (0, -d), (0, d),
+                       (-d, -d), (d, -d), (-d, d), (d, d)):
+            out.blit(glow, (r + dx, r + dy))
+    if len(_HALOS) >= HALO_KEEP:
+        _HALOS.clear()
+    _HALOS[id(text)] = (text, out)
+    return out
 
 
 # TRANSCRIPTION end_of_turn_stardate: nothing to draw. With the setting

@@ -89,7 +89,6 @@ from core import textfit
 from core import zoomtables
 
 from . import colonybuild
-from . import colonyfigures
 from . import colonyscroll
 from . import colonytrack
 from .colonyrows import POP_LIMIT_CAP
@@ -534,7 +533,8 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     # cannot touch the cell plate's line above or below. Centred
     # vertically, because it is a disc and a disc sitting on a floor
     # reads as falling.
-    icon = planets.get(row.get("climate")) if planets is not None else None
+    icon = (planets.get(row.get("climate"), row.get("planet"))
+            if planets is not None else None)
     if icon is not None:
         surface.blit(icon, (left, y + (row_h - icon.get_height()) // 2))
         step = icon.get_width() + icon_gap

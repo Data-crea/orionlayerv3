@@ -223,7 +223,8 @@ def _draw_system(surface, screen, view, game_state, art, star):
         disc = None
         if int(p.planet_type) != 2:        # not a gas giant
             discs = colonyplanets.set_for(screen, side, int(p.size))
-            disc = discs.get(int(p.climate)) if discs is not None else None
+            disc = (discs.get(int(p.climate), index)
+                    if discs is not None else None)
         if disc is not None:
             surface.blit(disc, disc.get_rect(center=centre))
         else:

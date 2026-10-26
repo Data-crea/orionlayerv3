@@ -15,7 +15,7 @@ import time
 import pygame
 
 from core.pressfeedback import Pressed
-from core.box import load_boxes, read_boxes
+from core.box import read_boxes
 from core.screenhelp import HelpMixin
 from core import backgrounds
 from core.hud import screenframe

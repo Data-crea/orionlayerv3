@@ -38,7 +38,6 @@ at x3. An earlier draft used a 9 px gap and it was invented.
 a heading is always exactly as wide as the column under it and the
 two cannot drift.
 """
-import os
 
 import pygame
 

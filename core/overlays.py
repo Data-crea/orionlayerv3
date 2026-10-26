@@ -288,14 +288,19 @@ class Overlays:
         self.app.client.inject_key(code)
 
     def answer_box(self, field):
-        """The box's answer: its own field, activated — once per box."""
+        """The box's answer: its own field, activated — once per box, again
+        after `turnpopup.RESEND_AFTER` unchanged snapshots (an answer the
+        engine did not take, e.g. while it was busy)."""
         box, app = self.box, self.app
         if box is None or field is None or not app.connected:
             return
         key = (box["kind"], box["title"], box["text"], box["field_a"])
-        if key == self.box_sent:
+        snap = getattr(app.client, "stats", {}).get("state", 0)
+        sent = self.box_sent
+        if sent is not None and sent[0] == key and \
+                snap - sent[1] < turnpopup.RESEND_AFTER:
             return
-        self.box_sent = key
+        self.box_sent = (key, snap)
         log.info("message box: %s answered with field %d", box["kind"],
                  field.index)
         if self.quit_confirmed(box, field):

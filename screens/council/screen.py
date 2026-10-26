@@ -25,7 +25,7 @@ import logging
 
 from core.screen_base import ScreenBase
 
-from . import cldraw, clgeom as geom
+from . import cldraw
 
 log = logging.getLogger("council")
 

@@ -47,7 +47,6 @@ import pygame
 
 from core import backgrounds
 from core import mapcoords as mc
-from core import mouse as mouse_input
 from core import palette
 from core import zoomtables as zt
 from core.hud import lru
@@ -582,7 +581,7 @@ class GalaxyMapScreen(ScreenBase):
         # DEVIATION `names_over_stars`: the names after the stars, so over
         # the black holes and the lines too; the original prints them first
         # (Print_Star_Names_, mainscr_main.cpp:949, before :967-979). HD's
-        # name sits STAR_NAME_GAP (0.30) of the icon height below the
+        # name sits STAR_NAME_GAP (0.40) of the icon height below the
         # centre, inside the larger HD sprite, so a star drawn over it
         # would cut its top.
 
@@ -592,7 +591,7 @@ class GalaxyMapScreen(ScreenBase):
         # scale once, and `box_font_scale` would apply it a second time —
         # names four times the 1080p size at 2160p instead of twice (work
         # order 179; `ScreenBase.box_font_scale_stored`).
-        name_size = self.layout.font_size(int(16 * ctx.name_font_scale
+        name_size = self.layout.font_size(int(20 * ctx.name_font_scale
                                               * self.box_font_scale_stored("map_area")))
 
         def render_label(text, colour):

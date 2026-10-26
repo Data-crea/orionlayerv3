@@ -19,8 +19,6 @@ EXIT = (535, 434, 535 + 91 - 1, 434 + 30 - 1)
 #: 27/25/26/26/27 high), multi-buttons bound to `current_tab` (:563-574).
 TAB_AT = ((21, 50), (21, 77), (21, 102), (21, 128), (21, 154))
 TAB_SIZE = ((164, 27), (164, 25), (164, 26), (164, 26), (164, 27))
-#: The page title, centred at (416, 31) (:1150 and each page's twin).
-TITLE_BOX = (212, 21, 620, 44)
 #: The left panel: the stardate centred at (151, 27) (:578, :596).
 STARDATE_AT = (151, 27)
 LEFT_PANEL = (8, 8, 205, 471)
