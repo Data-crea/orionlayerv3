@@ -19,7 +19,8 @@ with its source), `INVENTION` (something the original cannot do),
 
 ## Pull requests
 
-Issues and pull requests are welcome. Start OrionLayer and look at what
-you changed (`python main.py` runs without the game); a change to a screen
-is best shown with a screenshot beside the original's (F12 shows it, F8
-saves a picture).
+Issues and pull requests are welcome; open them against `main` (players
+clone the `beta` branch, which the maintainer moves forward). Start
+OrionLayer and look at what you changed (`python main.py` runs without the
+game); a change to a screen is best shown with a screenshot beside the
+original's (F12 shows it, F8 saves a picture).
