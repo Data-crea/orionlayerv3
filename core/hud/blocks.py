@@ -531,6 +531,11 @@ def checkbox(surface, rect, scale, checked, hover=False):
 
 # ── the title plate ──────────────────────────────────────────────────
 
+#: The smallest share of its size a title steps down to before it is
+#: squeezed to the plate's box (`title_plate`).
+TITLE_MIN_K = 0.3
+
+
 def title_plate_rect(center_x, top_y, scale):
     """(plate rect, text rect) in device px: the cut piece at the HUD's
     own proportion — its width in the HUD times 1920/6704 reference px
@@ -565,12 +570,19 @@ def title_plate(surface, center_x, top_y, scale, text="",
         # A TITLE FITS ITS PLATE (work order 225): a long one — the colony's
         # "INDUSTRIAL COLONY OF SOL II" — steps down until it stands inside
         # the lit box instead of running into the lamps; one that fits is
-        # drawn exactly as before.
+        # drawn exactly as before. Since work order 332 (Data, 26 October
+        # 2026) the steps go on below half the size — "AGRICULTURAL COLONY
+        # OF NEW ALPHA CENTAURI PRIME II", or the German "LANDWIRTSCHAFTLICHE
+        # KOLONIE VON …", ran out of the box at the old floor of 0.5 — and a
+        # title still wider at the smallest size is squeezed to the box.
         k = 1.0
-        while s.get_width() > box.w and k > 0.5:
+        while s.get_width() > box.w and k > TITLE_MIN_K:
             k -= 0.05
             s = hudtext.render(style_renderer, text.upper(), "title", box.h,
                                col, scale=k)
+        if s.get_width() > box.w > 0:
+            s = pygame.transform.smoothscale(
+                s, (box.w, max(1, s.get_height() * box.w // s.get_width())))
         hudtext.blit(surface, s, box)
     return box
 
