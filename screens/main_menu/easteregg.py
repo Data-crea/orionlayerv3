@@ -41,12 +41,12 @@ DATA_FILE = "easter_egg.json"
 #: the one shown, English where it is missing or unusable.
 LANG_FILE = "easter_egg_{}.json"
 
-#: The panel's height as a share of the window, per language, unless the
-#: width runs out first (a 5:4 window). Data's mockup shows it at 75 % of
-#: the screen; 80 % keeps the English body at the size Data chose (about
-#: 22 px at 1080p, work order 328). His longer German text (26 October 2026)
-#: gets 90 %: the body it had at 80 % with the earlier German text.
-PANEL_H_FRAC = {"en": 0.80, "de": 0.90}
+#: The panel's height as a share of the window, unless the width runs out
+#: first (a 5:4 window). Data's mockup shows it at 75 % of the screen; 80 %
+#: keeps the body text readable at 1280x720 and gives the English body the
+#: size Data chose (about 22 px at 1080p, work order 328); his German text
+#: of 26 October 2026 lands on the same size.
+PANEL_H_FRAC = 0.80
 PANEL_W_FRAC = 0.94
 
 #: The text column, as fractions of the panel, measured off the mockup
@@ -172,11 +172,6 @@ PULSE_MAX = 0.55
 #: The wave is cut into this many brightness steps, each its own cached
 #: sprite, so a frame never builds one.
 PULSE_STEPS = 24
-
-
-def panel_h_frac():
-    """The panel's height share in the language shown now."""
-    return PANEL_H_FRAC.get(lang.current(), PANEL_H_FRAC[lang.DEFAULT])
 
 
 def now_ms():
@@ -352,7 +347,7 @@ class EasterEgg:
         shape."""
         iw, ih = self._panel_src.get_size() if self._panel_src else \
             (1465, 1073)
-        s = min(panel_h_frac() * h / ih, PANEL_W_FRAC * w / iw)
+        s = min(PANEL_H_FRAC * h / ih, PANEL_W_FRAC * w / iw)
         pw, ph = round(iw * s), round(ih * s)
         return pygame.Rect((w - pw) // 2, (h - ph) // 2, pw, ph)
 
