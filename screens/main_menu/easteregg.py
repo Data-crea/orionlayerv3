@@ -160,6 +160,30 @@ SPARK_SHADE_X1 = 0.615
 #: star stays easy to hit in the smallest window (1280x720).
 MIN_HIT_PX = 14
 
+#: HD EXTENSION `star_pulse`: the original's menu has no easter
+#: egg. At rest the star breathes between these shares of the hover glow,
+#: one cosine wave per period, so a player can find it without the hover
+#: ever being as bright as the pointer on it. Slow on purpose.
+PULSE_PERIOD_MS = 3600
+PULSE_MIN = 0.12
+PULSE_MAX = 0.55
+#: The wave is cut into this many brightness steps, each its own cached
+#: sprite, so a frame never builds one.
+PULSE_STEPS = 24
+
+
+def now_ms():
+    """The pulse's clock; a check replaces it to freeze the wave."""
+    return pygame.time.get_ticks()
+
+
+def pulse_level(ms):
+    """The share of the hover glow at time ms: PULSE_MIN .. PULSE_MAX."""
+    wave = 0.5 - 0.5 * math.cos(2 * math.pi * (ms % PULSE_PERIOD_MS)
+                                / PULSE_PERIOD_MS)
+    step = round(wave * (PULSE_STEPS - 1)) / (PULSE_STEPS - 1)
+    return PULSE_MIN + (PULSE_MAX - PULSE_MIN) * step
+
 
 def _glow_sprite(radius, rgb):
     """The star's hover light: a soft halo and four long rays, to be ADDED
@@ -176,6 +200,13 @@ def _glow_sprite(radius, rgb):
     light = np.clip(halo + 0.8 * rays, 0, 1) * np.clip(1.2 - d, 0, 1)
     arr = np.stack([light * c for c in rgb], axis=-1).astype(np.uint8)
     return pygame.surfarray.make_surface(arr)
+
+
+def _scaled(sprite, level):
+    """The glow sprite at a share of its brightness (it is ADDED, so black
+    adds nothing and a dimmer sprite is simply a fainter star)."""
+    arr = pygame.surfarray.array3d(sprite).astype(np.float32) * level
+    return pygame.surfarray.make_surface(arr.astype(np.uint8))
 
 
 def _shadow_offset(size):
@@ -205,7 +236,7 @@ class EasterEgg:
         self._panel_cache = None      # ((w, h), scaled picture)
         self._text_cache = None       # (((w, h), language), placed, span,
                                       #  spark box)
-        self._glow_cache = None       # (radius, sprite)
+        self._glow_cache = None       # (radius, sprite, {level: sprite})
         self._scrim_cache = None      # ((w, h), (shade, x, y))
         self._spark_cache = None      # (((w, h), box), (shade, x, y))
         self._load()
@@ -283,19 +314,27 @@ class EasterEgg:
             s[2] ** 2
 
     def render_star(self, surface, mouse_pos):
-        """The glow, only while the pointer is on the star and the panel is
-        shut; drawn right after the background, so it is part of the sky."""
+        """The glow: full under the pointer, a slow pulse otherwise; only
+        while the panel is shut; drawn right after the background, so it is
+        part of the sky."""
         if self.open:
             return
         w, h = surface.get_size()
         s = self.star_at(w, h)
-        if s is None or not self.star_hit(*mouse_pos, w, h):
+        if s is None:
             return
         radius = max(4, int(round(s[3])))
         if self._glow_cache is None or self._glow_cache[0] != radius:
             self._glow_cache = (radius, _glow_sprite(
-                radius, COLOURS["egg_glow"]))
-        surface.blit(self._glow_cache[1],
+                radius, COLOURS["egg_glow"]), {})
+        level = 1.0 if self.star_hit(*mouse_pos, w, h) \
+            else pulse_level(now_ms())
+        sprites = self._glow_cache[2]
+        key = round(level, 4)
+        if key not in sprites:
+            sprites[key] = self._glow_cache[1] if level >= 1.0 else \
+                _scaled(self._glow_cache[1], level)
+        surface.blit(sprites[key],
                      (round(s[0]) - radius, round(s[1]) - radius),
                      special_flags=pygame.BLEND_RGB_ADD)
 
