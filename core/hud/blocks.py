@@ -51,6 +51,14 @@ _CACHE = lru.Cache(_CACHE_MAX, _CACHE_BYTES)
 #: (x0, y0, x1, y1): measured on the cut piece, the inside of the rim the
 #: word sits in. The piece is 4780x240; the box is its middle.
 TITLE_TEXT_BOX = (1737, 27, 3024, 190)
+#: The box is widest at its top; the plate's inner slanted line runs inward
+#: as it goes down and, in the rows the title's ink stands in (the middle
+#: 0.404 of the box's height, `text.title.cap`), stands 35 and 36 raw px
+#: inside the box's left and right edge (measured off the cut piece, 1287 raw
+#: px wide). A title that fills the box touches those lines (Data, 26
+#: October 2026: "die Schrift hängt im Rahmen"), so it is fitted to the box
+#: less this share on each side: the measured 2.8 % and the same again as air.
+TITLE_INK_INSET = 0.055
 
 
 def _cached(key, build):
@@ -575,14 +583,15 @@ def title_plate(surface, center_x, top_y, scale, text="",
         # OF NEW ALPHA CENTAURI PRIME II", or the German "LANDWIRTSCHAFTLICHE
         # KOLONIE VON …", ran out of the box at the old floor of 0.5 — and a
         # title still wider at the smallest size is squeezed to the box.
+        fit_w = int(box.w * (1 - 2 * TITLE_INK_INSET))
         k = 1.0
-        while s.get_width() > box.w and k > TITLE_MIN_K:
+        while s.get_width() > fit_w and k > TITLE_MIN_K:
             k -= 0.05
             s = hudtext.render(style_renderer, text.upper(), "title", box.h,
                                col, scale=k)
-        if s.get_width() > box.w > 0:
+        if s.get_width() > fit_w > 0:
             s = pygame.transform.smoothscale(
-                s, (box.w, max(1, s.get_height() * box.w // s.get_width())))
+                s, (fit_w, max(1, s.get_height() * fit_w // s.get_width())))
         hudtext.blit(surface, s, box)
     return box
 
