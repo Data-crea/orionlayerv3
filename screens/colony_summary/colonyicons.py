@@ -80,15 +80,14 @@ The chain is one link longer and the extra link matters:
   `right_x - left_x + 8`, so the arithmetic reduces to the identity
   and the value IS the pointer x, clamped to `[left_x, right_x]`.
 
-Two consequences a click frame has to live with, and neither is
-something this module can compute away. The value SURVIVES between
-clicks, because nothing resets it — so a column that has never been
-pushed carries whatever it last held. And `_pointer_offset` is the
-current mouse picture's frame number (mouse.cpp:115), which is not
-zero for every cursor. Both are why the caller VERIFIES the cluster
-the game actually took against the one it predicted, instead of
-trusting this arithmetic: the interlock is the measurement, and this
-is only the aim.
+Two consequences belong to the original's click and nothing here can
+compute them away. The value SURVIVES between clicks, because nothing
+resets it. And `_pointer_offset` is the current mouse picture's frame
+number (mouse.cpp:115), which is not zero for every cursor. HD sends
+no click for a move any more (decision 52: a pop is named by its
+index, `colonysend`), so nothing aims with this walk; it stays as the
+transcription of how the original tells an icon from its neighbour,
+which `slot_at` and check 030 hold.
 """
 from core.structs import colony as colony_struct
 
@@ -240,35 +239,3 @@ def slot_at(job, value, count):
         if value <= slot_right_edge(job, slot, count) or last == slot:
             return slot
     return None
-
-
-def slot_click_x(job, slot, count):
-    """The x to inject so the walk lands on `slot`.
-
-    The icon's own right edge, which is the largest value that still
-    selects it — the walk takes the FIRST slot whose right edge is at
-    or past the value, so anything from one past the previous edge to
-    this one works and the edge itself is the one number the source
-    writes down.
-
-    It cannot fall outside the column: the pitch is
-    `(right_x - left_x - 10) / count` truncated, so the last icon's
-    right edge is at least ten px inside `right_x` and the clamp in
-    `Find_Bar_Position_` never bites. The clamp is applied anyway,
-    because a `count` that did not come from `icon_pops` would
-    otherwise aim outside the field and the failure would be a click
-    that lands on the wrong icon rather than one that is refused.
-    """
-    _left, right_x = COLUMNS[job]
-    return min(slot_right_edge(job, slot, count), right_x)
-
-
-def row_click_y(row_slot):
-    """The y to inject for a row of the GAME's window.
-
-    `colony_idx * 31 + 34` is the top of the row's fields
-    (colsum.cpp:311-345) and the scroll field is 30 high, so the
-    middle is `+ 15`. The argument is a SLOT in the game's ten-row
-    window and never an HD row (decision 46).
-    """
-    return ROW_TOP + ROW_PITCH * int(row_slot) + ROW_HEIGHT // 2

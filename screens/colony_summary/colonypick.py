@@ -2,7 +2,7 @@
 
 **NOTHING IN THIS MODULE CAN SEND ANYTHING.** It imports the rules
 (`colonymove`), the icon list (`colonyicons`) and the struct
-accessors, and no client, no injection and no screen. That is the
+accessors, and no client, no sending and no screen. That is the
 decision this file exists to make structural rather than remembered,
 and a smoke check asserts the import list stays that way.
 
@@ -18,10 +18,10 @@ would therefore strand a player who changed their mind, on a screen
 whose own Cancel does not exist.
 
 So the first click is LOCAL. It picks a pop, computes what the game
-WOULD take, and draws it. Nothing is injected until the second click
+WOULD take, and draws it. Nothing is sent until the second click
 names a target and every rule has passed — and then the move goes out
-as ONE command (open fix 12, `colonysend`; the two injected clicks it
-replaced went on 10 September 2026, commit c2de21d).
+as ONE command (open fix 12, `colonysend`, decision 52; the two clicks
+it replaced went on 10 September 2026, commit c2de21d).
 
 **THE CANCEL IS AN HD EXTENSION, AND THIS IS THE SENTENCE IT RESTS
 ON.** A left click on neither an icon nor a column discards the
@@ -30,7 +30,7 @@ context help only). MOO2 has no such thing: there is no cancel
 that stays on this screen at all. It is not offered because it is
 kinder — it is offered because *our* selection is not the game's
 cluster, so discarding it costs nothing and changes nothing on the
-other side of the wire. The moment a preview does inject, this
+other side of the wire. The moment a preview does send, this
 paragraph stops being true and the extension has to go. Marked here,
 in `layout.json` under `move`, in `dev:v3_projektstatus.md`, and in a
 smoke check that fails if any of the three markings disappears.
@@ -103,10 +103,10 @@ class Pick:
     """A pop selected in HD, and what the game would take with it.
 
     `slot` is the icon's position in the original's own column
-    (`colonyicons.icon_pops`), which is what a click has to aim at;
-    `pop` is its index in `pop[]`, which is what the rules read. They
-    are different numbers and both are needed, because the column is
-    not the array in order.
+    (`colonyicons.icon_pops`), which is how the cell is identified
+    (decision 48); `pop` is its index in `pop[]`, which is what the
+    rules read and what the command names. They are different numbers
+    and both are needed, because the column is not the array in order.
 
     `pops` is the array the pick was computed against, kept so a
     later drop can notice the colony changed underneath it. A
@@ -249,7 +249,7 @@ def message(words, outcome, total=0):
     "1 moved" where it had been.
 
     A REFUSAL still speaks, and that is decision 33 rather than an
-    exception to this. HD refuses before injecting precisely so the
+    exception to this. HD refuses before sending precisely so the
     player reads a reason instead of meeting the silence the
     framebuffer would answer with — and the original's own answer to
     a refusal is `GENDRAW::Help_`, a BLOCKING text box over the whole

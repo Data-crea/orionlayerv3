@@ -15,12 +15,14 @@ the smoke test drives this class with a fake client and asserts that
 the cancel path and every refusal send NOTHING, which is the claim
 section 3 of this phase rests on.
 
-**THE FIRST CLICK IS LOCAL AND THE SECOND SENDS BOTH.** The reason is
-in `colonypick`: a preview that created the game's own cluster would
-strand a player who changed their mind, because both `Clear_Cluster_`
-call sites on this screen are leave-the-screen paths
+**THE FIRST CLICK IS LOCAL AND THE SECOND SENDS ONE COMMAND.** The
+reason is in `colonypick`: a preview that created the game's own
+cluster would strand a player who changed their mind, because both
+`Clear_Cluster_` call sites on this screen are leave-the-screen paths
 (colsum.cpp:804, :938). So `pick` only computes, and `Send` is
-constructed at the drop, with both clicks in it.
+constructed at the drop: one `MSG_SET_JOBS` naming the colony and the
+list of (pop, job), which the engine applies whole or not at all
+(decision 52). No click is injected.
 
 **THE SELECTION MAY BE DISCARDED — HD EXTENSION.** A left click on
 neither an icon nor a drop band. (Not a right click since brief 98: the
@@ -163,7 +165,7 @@ class MoveController:
 
     def _second_click(self, row, row_index, pops, n_pops, max_farms, x,
                       area, cfg, scale, words, client, connected):
-        """Drop — and this is the only path that can inject."""
+        """Drop — and this is the only path that can send."""
         job = colonylist.drop_band(area, cfg, scale, row, x)
         if job is None:
             if colonytrack.on_name(area, cfg, scale, row, x):
@@ -180,10 +182,10 @@ class MoveController:
                 # transcription rather than a shortcut: our selection
                 # was never the game's cluster (decision 47), so
                 # releasing it reproduces the original's OUTCOME with
-                # no injection at all. Injecting the pair would
-                # create the cluster in the game only to release it,
-                # which is strictly more that can go wrong for a
-                # gesture whose whole content is "nothing happened".
+                # nothing sent at all. A command for it would only
+                # ask the engine to leave things as they are, which
+                # is strictly more that can go wrong for a gesture
+                # whose whole content is "nothing happened".
                 self.cancel("dropped on the colony name")
                 return True
             self.cancel("dropped outside every target")
@@ -272,7 +274,7 @@ class MoveController:
 
     def cancel(self, why):
         """Discard the selection — **HD EXTENSION**, see the module
-        docstring. Nothing was injected, so there is nothing to undo
+        docstring. Nothing was sent, so there is nothing to undo
         on the other side of the wire."""
         if self.pick is None:
             return
@@ -460,8 +462,8 @@ class MoveController:
 
         What `build_rows` needs to clear `0x200` on, which is the
         whole of how a held cluster leaves the row. It survives into
-        the send: the game takes the pops at the first injected
-        click, so a row that put them back while the wire was working
+        the send: the engine takes the pops when it applies the
+        command, so a row that put them back while the wire was working
         would be showing a state neither side is in.
         """
         if self.pick is None:

@@ -429,13 +429,11 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
 
     **IDENTITY IS BY INDEX, NOT BY POSITION, and that is what makes
     the drawing free** (decision 48). Cell k of job j is slot k of the
-    game's own column j: `colonysend` injects
-    `colonyicons.slot_click_x(j, k, count)`, a NATIVE x computed from
-    the same `column_pitch`. Nothing here is transferred into that
-    call — the two share the index and the count, and the pixel each
-    works in is its own. A cell drawn anywhere in its column would
-    still click correctly; drawn at the original's pitch it also
-    LOOKS like the thing it clicks.
+    game's own column j: `colonysend` names the pop by that index in its
+    `MSG_SET_JOBS` (decision 52), and no x is computed from the pitch
+    at all. A cell drawn anywhere in its column would still move the
+    right pop; drawn at the original's pitch it also LOOKS like the
+    thing it moves.
 
     **THE CELLS START AT THE COLUMN'S OWN LEFT EDGE.** They used to
     start one marker's width in; the markers are gone (see
@@ -644,7 +642,7 @@ def pick_zones(area, cfg, scale, row, figures=None):
     neighbour's strip — a click on a figure picked up the one to its
     right, or nothing in the gap HD left between cells (Data, 16 September
     2026). Identity is untouched: the pick is still (job, index), and
-    `colonysend` still injects the original's own slot point for it.
+    `colonysend` still names the pop by the same index.
     """
     zones = []
     cells = row.get("cells") if isinstance(row, dict) else None
