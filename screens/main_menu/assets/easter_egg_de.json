@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "The easter egg's text in German (work order 328, Data: \"er soll auch ins deutsch übersetzt werden\"), drawn in a German session; the English file easter_egg.json holds the star and the English text. Same roles, same order; a block missing here is not filled from English. GetDaved's greeting stays in English (Data). Translated by Claude; Data reviews it."
+    "The easter egg's text in German (work order 328, Data: \"er soll auch ins deutsch übersetzt werden\"), drawn in a German session; the English file easter_egg.json holds the star and the English text. Same roles, same order; a block missing here is not filled from English. GetDaved's greeting stays in English (Data). The wording is Data's own of 26 October 2026 (a freer rendering than the English, with two sentences it does not have)."
   ],
   "blocks": [
     [
@@ -21,35 +21,35 @@
     ],
     [
       "body",
-      "Vor 16 Jahren bin ich durch den YouTuber GetDaved und seine Videos auf Master of Orion II gestoßen."
+      "Vor 16 Jahren entdeckte ich Master of Orion II durch die Videos des YouTubers GetDaved."
     ],
     [
       "body",
-      "Die Spielmechanik hat mich fasziniert, aber der unscharfe Text war zu anstrengend für meine Augen. Stattdessen habe ich unzählige Abende damit verbracht, einfach seinen Videos zuzuhören – und ein Spiel zu genießen, das ich selbst kaum spielen konnte."
+      "Das Spiel hat mich sofort fasziniert. Doch die unscharfe Schrift machte es für meine Augen unglaublich anstrengend, selbst zu spielen. Also verbrachte ich unzählige Abende damit, GetDaved zuzuhören und seine Abenteuer im Spiel zu verfolgen. So konnte ich eine Welt genießen, die mir selbst weitgehend verschlossen blieb."
     ],
     [
       "body",
-      "2026 habe ich endlich beschlossen, das zu ändern."
+      "2026 beschloss ich schließlich, das zu ändern."
     ],
     [
       "body",
-      "Was als persönlicher Versuch begann, das Spiel angenehmer spielbar zu machen, ist nach und nach zu etwas viel Größerem geworden, als ich es mir je vorgestellt hätte."
+      "Eigentlich wollte ich nur eines: Master of Orion II endlich selbst spielen können, ohne meine Augen dabei zu überanstrengen. Doch aus diesem kleinen Vorhaben wurde mit der Zeit ein Projekt, dessen Ausmaß ich mir anfangs niemals hätte vorstellen können."
     ],
     [
       "body",
-      "Heute hoffe ich, dass OrionLayer anderen hilft, dieses wunderbare Spiel zu entdecken oder wiederzuentdecken und es noch viele Jahre lebendig zu halten."
+      "Heute wünsche ich mir, dass OrionLayer auch anderen Menschen die Möglichkeit gibt, dieses wunderbare Spiel neu zu entdecken oder alte Erinnerungen wieder aufleben zu lassen. Und vielleicht trägt es dazu bei, dass Master of Orion II noch viele weitere Jahre gespielt wird."
     ],
     [
       "spark",
-      "Manchmal braucht es nur jemanden, der den ersten Funken entfacht."
+      "Manchmal genügt ein einziger Funke, um etwas Großes entstehen zu lassen."
     ],
     [
       "body",
-      "Für mich war dieser Jemand GetDaved."
+      "Diesen Funken hat damals GetDaved in mir entfacht."
     ],
     [
       "line",
-      "Und 16 Jahre später wurde aus diesem Funken OrionLayer – ein modifizierbares HD-Overlay für Master of Orion II."
+      "16 Jahre später ist daraus OrionLayer entstanden – ein anpassbares HD-Overlay für Master of Orion II."
     ],
     [
       "thanks",
