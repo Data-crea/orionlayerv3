@@ -107,9 +107,43 @@ def panel(screen, surface, name):
     return b
 
 
-def button(screen, surface, name, word):
+def fit_size(screen, b, word):
+    """The font size `word` is drawn at in button box `b`: the box's own,
+    and outside English the largest one that keeps the word inside 90 % of
+    the button (the text-fit rule, work order 200 C: ÜBERNEHMEN was wider
+    than its button); English is drawn exactly as before."""
+    size = _size(screen, b, default=30)
+    if lang.current() == lang.DEFAULT:
+        return size
+    r = b.screen_rect
+    while size > 8 and screen.style.render_text(
+            word, size, (255, 255, 255)).get_width() > r.w * 0.9:
+        size -= 1
+    return size
+
+
+def group_size(screen, items):
+    """HD EXTENSION `button_group_size` (Data, 26 October 2026: in German
+    SPIEL SPEICHERN and EINSTELLUNGEN stood smaller than SPIEL LADEN beside
+    them): outside English the buttons of one dialog share ONE font size,
+    the smallest `fit_size` any of them needs, so no word is drawn past its
+    button and none looks larger than its neighbours. `items` is
+    [(box name, word)]; None in English, where each button keeps its own
+    size as before."""
+    if lang.current() == lang.DEFAULT:
+        return None
+    sizes = []
+    for name, text in items:
+        b = box(screen, name)
+        if b is not None and b.screen_rect is not None:
+            sizes.append(fit_size(screen, b, text))
+    return min(sizes) if sizes else None
+
+
+def button(screen, surface, name, word, size=None):
     """A button of the menu: the HUD's small button (decision 71), lit
-    while pressed and on hover; its word in code as before."""
+    while pressed and on hover; its word in code as before. `size` is the
+    dialog's shared size (`group_size`), None for the button's own."""
     b = box(screen, name)
     if b is None or b.screen_rect is None:
         return
@@ -120,17 +154,10 @@ def button(screen, surface, name, word):
     else:
         state = "normal"
     hud.small_button(surface, b.screen_rect, screen.layout.scale, state)
-    size = _size(screen, b, default=30)
+    size = size or fit_size(screen, b, word)
     img = screen.style.render_text(
         word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))
     r = b.screen_rect
-    # the text-fit rule outside English (work order 200 C: ÜBERNEHMEN was
-    # wider than its button); English is drawn exactly as before
-    while img.get_width() > r.w * 0.9 and size > 8 and \
-            lang.current() != lang.DEFAULT:
-        size -= 1
-        img = screen.style.render_text(
-            word, size, tuple(screen.pressed.colour(name, COL_BUTTON)[:3]))
     # The button's glyph beside the word when both fit (work order 179).
     cx = hud.icon_beside(surface, r, glyphs.for_button("game_menu", name),
                          img.get_width())
@@ -195,11 +222,13 @@ def _menu(screen, surface):
     from the menu's own last list (multiplayer has no LOAD or NEW)."""
     panel(screen, surface, "body")
     under = screen.node != nodes.MENU
-    for name, key in screen.BUTTONS[nodes.MENU]:
-        if (key in screen.menu_keys) if under else screen.present(nodes.MENU,
-                                                                   key):
-            button(screen, surface, name,
-                   word(screen, "menu", name.split("_", 1)[1]))
+    shown = [(name, word(screen, "menu", name.split("_", 1)[1]))
+             for name, key in screen.BUTTONS[nodes.MENU]
+             if ((key in screen.menu_keys) if under else
+                 screen.present(nodes.MENU, key))]
+    size = group_size(screen, shown)
+    for name, text in shown:
+        button(screen, surface, name, text, size)
     from screens.game_menu import gmsliders
     gmsliders.render(screen, surface)
 
@@ -312,8 +341,11 @@ def _slots(screen, surface, node):
                           COL_DETAIL, x, dy)
                 _blit(screen, surface, slots[i]["date"], small, COL_DETAIL,
                       row.x + int(row.w * rule.get("date_x", 0.48)), dy)
-    for name, key in screen.BUTTONS[node]:
-        button(screen, surface, name, word(screen, node, name.split("_", 1)[1]))
+    shown = [(name, word(screen, node, name.split("_", 1)[1]))
+             for name, key in screen.BUTTONS[node]]
+    size = group_size(screen, shown)
+    for name, text in shown:
+        button(screen, surface, name, text, size)
 
 
 DIALOGS = {
