@@ -339,20 +339,30 @@ def _draw_fleet(screen, surface, r, model, hits):
                    syswindow.font(screen, "fleet_status", 16), colour)
 
 
+#: A colony, outpost or transport ship's picture is wide (the slot pictures
+#: are about 1.6 : 1, a battle ship's stands on its end): it is fitted into
+#: this share of the cell's width instead of 8/10, so it fills its cell as
+#: the battle ships' pictures do (Data, 26 October 2026: "zu klein").
+WIDE_SHIP_SHARE = 92
+
+
 def cell_picture(screen, ship, owner, cell):
     """A fleet box cell's picture: its own ship's (HD EXTENSION
-    `box_ship_picture`) fitted into 8/10 of the cell, else the owner's
+    `box_ship_picture`) fitted into 8/10 of the cell (a colony, outpost or
+    transport ship into `WIDE_SHIP_SHARE` % of its width), else the owner's
     tinted map master at 7/10, as before (`sysfleets.icon`)."""
     side = min(cell.w, cell.h)
     if ship is not None and \
             ship_icons.kind_for_owner(owner) == ship_icons.PLAYER_KIND:
         state = getattr(screen, "_state", None)
+        wide = int(getattr(ship, "ship_type", 0)) != 0     # not a combat ship
         pic = ship_icons.ship_picture(
             getattr(screen, "_tints", None), ship, owner,
             getattr(screen, "_players", None),
             getattr(state, "player_num", None),
             getattr(getattr(screen, "app", None), "user_settings", None),
-            side * 8 // 10, side * 8 // 10)
+            side * WIDE_SHIP_SHARE // 100 if wide else side * 8 // 10,
+            side * 8 // 10)
         if pic is not None:
             return pic
     return sysfleets.icon(screen, owner, side * 7 // 10)
