@@ -752,6 +752,14 @@
       2994429,
       "8f1b906923b96b56d9c4252c85b672d353d445a3151636366431ed33ed106f1f"
     ],
+    "screens/select_race/assets/portraits/klackon.webp": [
+      292638,
+      "3ef4977694323ae6c4cac26ac16962c9728bcf5d4e0131585ed8a99c5cfcd30a"
+    ],
+    "screens/select_race/assets/portraits/meklar.jpg": [
+      393491,
+      "88cd2775c8b4d8649743675f28e0225c1184e4c5bb655f73eb812df8de8a8080"
+    ],
     "screens/select_race/assets/portraits/meklar.png": [
       3214959,
       "2c39cf66c472c89ad11435ad1039124f0e7c3447eca594d2304f14e030f6ddf6"
@@ -767,6 +775,10 @@
     "screens/select_race/assets/portraits/sakkra.png": [
       3311414,
       "3e72e9e915a0839738f2b8f7928881190340a622cf7346c2d61c99eb5f070978"
+    ],
+    "screens/select_race/assets/portraits/silicoid.jpg": [
+      511401,
+      "5ba679baa7b7f7329997e1737cff50e55e90637e62421733f99e31ce76d3f0a4"
     ],
     "screens/select_race/assets/portraits/silicoid.png": [
       3293014,

@@ -16,10 +16,15 @@
 #   scipy 1.18.0 (work order 229: tools/setup.py's generators import it,
 #   and it was missing here; the suite holds this file to the imports)
 #
+#   Pillow 13.0.0 (26 Oct 2026) is NOT green: the Lanczos downsample in
+#   tools/make_output_icons.py gives research.png 184 other pixels, so the
+#   byte-for-byte rebuild of the output icons (decision 40) fails; with
+#   Pillow 12.3.0 all six icons are identical. Hence the ceiling below.
+#
 # If a future combination drifts, dev:tools/smoke_test.py is what says so
 # — tighten the floor to a pin then, with the failure recorded.
 
 pygame>=2.6.1
 numpy>=2.4
-Pillow>=12.1
+Pillow>=12.1,<13
 scipy>=1.18
