@@ -1,9 +1,7 @@
 """Fleets — orion2re SCREEN_FLEET (4), `FLT1::Fleet_Screen_` (flt1.cpp:486-837).
 
-HD STATE: **BUILT, NOT ACCEPTED.** No live acceptance has run against
-this screen — work order 134's live part is parked in
-`dev:doc/briefs/134-parked-for-data.md`, with the exact steps. Decision 61,
-and a smoke check fails if this sentence leaves this docstring.
+HD STATE: **ACCEPTED** by Data on 26 October 2026 (decision 77). Decision 61:
+a smoke check fails if this sentence leaves this docstring.
 
 Entered from the galaxy map's Fleets button, which is the only place in
 the engine that assigns the id (`mainscr_main.cpp:632-643`); the loop
