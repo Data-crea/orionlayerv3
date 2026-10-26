@@ -41,6 +41,17 @@ satellites (open fix 36); `placement.py` of the work order's scratch is
 only for offline renders. Without the extracted pictures nothing is drawn
 and `coldraw` keeps the building list (DEVIATION `building_list`).
 
+HD EXTENSION `satellite_lift` (Data, 26 October 2026: the Star Base stood
+on the mountains and did not read as being in the air): the satellites
+— Star Base, Battlestation, Star Fortress, Artemis System Net, Dimensional
+Portal, all in the one row — are drawn higher than the original's row 162
+wherever the panel is taller than the block it holds, so that their top
+edge stands `SAT_TOP_SHARE` of the panel's height under its top at the
+latest; never lower than the original puts them, and not at all where the
+panel holds the block exactly (1920x1080, 3840x2160: they already stand at
+the panel's top). Only the drawing moves: the wire's fields (`colright`)
+keep the engine's own coordinates.
+
 UNVERIFIED `building_grid_live`: the grid was compared with a native frame
 of a live colony only through the offline transcription of the engine's
 placement (work order 326's check); a live engine's CBLD block was not
@@ -69,6 +80,11 @@ SAT_Y, SAT_SLOTS, SAT_CENTRE, SAT_STEP = 162, 10, 295, 50
 NATIVE_W, NATIVE_H = nat.NATIVE_W, nat.NATIVE_H
 #: The block laid in the panel runs from the satellites' row to the foot.
 BLOCK_TOP = SAT_Y + 1
+#: `satellite_lift`: the share of the panel's height under its top at which
+#: the satellites' top edge stands at the latest. At 2560x1440 the original's
+#: row put the Star Base at 25 % of the panel, on the ridge of the HD sky's
+#: mountains (about 30 %); 10 % leaves it clear of them.
+SAT_TOP_SHARE = 0.10
 
 
 def sat_xy(slot):
@@ -76,11 +92,13 @@ def sat_xy(slot):
     return (1 if slot % 2 == 0 else -1) * slot * SAT_STEP + SAT_CENTRE, SAT_Y
 
 
-def sprites(art, placement, climate, bg):
+def sprites(art, placement, climate, bg, lift=0):
     """[(surface, (x, y))] in the original's 640 x 480 coordinates, in
-    drawing order: the city back to front, then the satellites. Only what
-    the pictures hold: a cell or a satellite the extraction lacks is
-    skipped. `placement` is open fix 36's {"grid", "satellites"}."""
+    drawing order: the city back to front, then the satellites, `lift`
+    native rows higher than the original's (`sat_lift`; 0 is the original's
+    own place). Only what the pictures hold: a cell or a satellite the
+    extraction lacks is skipped. `placement` is open fix 36's {"grid",
+    "satellites"}."""
     out = []
     grid = placement["grid"]
     for col, row in BACK_TO_FRONT:
@@ -94,7 +112,7 @@ def sprites(art, placement, climate, bg):
             if pic is not None else None
         if got is not None:
             x, y = sat_xy(slot)
-            out.append((got[0], (x + got[1][0], y + got[1][1])))
+            out.append((got[0], (x + got[1][0], y - lift + got[1][1])))
     return out
 
 
@@ -102,12 +120,12 @@ def art_stem(bid, col, row):
     return colart.bldg_stem(bid, col, row)
 
 
-def native_layer(art, placement, climate, bg):
+def native_layer(art, placement, climate, bg, lift=0):
     """The whole scene's buildings and satellites at the original's size,
     over nothing (alpha): 640 x 480 — what the check lays over the original's
-    own frame, and what `layer` scales."""
+    own frame (`lift` 0), and what `layer` scales."""
     surf = pygame.Surface((NATIVE_W, NATIVE_H), pygame.SRCALPHA)
-    for pic, at in sprites(art, placement, climate, bg):
+    for pic, at in sprites(art, placement, climate, bg, lift):
         surf.blit(pic, at)
     return surf
 
@@ -132,21 +150,31 @@ def block_rect(rect):
     return k, pygame.Rect(rect.x + (rect.w - w) // 2, rect.bottom - h, w, h)
 
 
+def sat_lift(rect, step):
+    """HD EXTENSION `satellite_lift`: how many native rows higher than the
+    original's row the satellites are drawn in a panel `rect` at `step`: the
+    rows that bring their top edge to `SAT_TOP_SHARE` of the panel's height
+    under its top, 0 when the original's row is already that high."""
+    natural_top = rect.bottom - (NATIVE_H - SAT_Y) * step
+    want_top = rect.y + round(SAT_TOP_SHARE * rect.h)
+    return max(0, (natural_top - want_top) // step)
+
+
 _cache = {}
 
 
-def layer(art, placement, climate, bg, step):
+def layer(art, placement, climate, bg, step, lift=0):
     """The native layer scaled by a whole `step`, kept per what it shows
-    (grid, satellites, world, step) — one scale per snapshot and size, not
-    one a frame (check 090zzzzzp)."""
+    (grid, satellites, world, step, lift) — one scale per snapshot and
+    size, not one a frame (check 090zzzzzp)."""
     key = (tuple(map(tuple, placement["grid"])),
-           tuple(placement["satellites"]), climate, bg, step)
+           tuple(placement["satellites"]), climate, bg, step, lift)
     got = _cache.get(key)
     if got is None:
         if len(_cache) >= 4:
             _cache.clear()
         got = pygame.transform.scale(
-            native_layer(art, placement, climate, bg),
+            native_layer(art, placement, climate, bg, lift),
             (NATIVE_W * step, NATIVE_H * step))
         _cache[key] = got
     return got
@@ -159,7 +187,7 @@ def draw(surface, rect, art, placement, climate, bg):
             art.glass() is None or not art.has("bldgcell_1_0"):
         return False
     k, dest = block_rect(rect)
-    pic = layer(art, placement, climate, bg, k)
+    pic = layer(art, placement, climate, bg, k, sat_lift(rect, k))
     prev = surface.get_clip()
     surface.set_clip(rect.clip(prev))
     surface.blit(pic, dest.topleft)
