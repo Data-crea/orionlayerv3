@@ -86,19 +86,22 @@ def title(state, star, estrings):
     return printf(template, race, name)
 
 
-def model(state, popup, text, estrings, omniscient=False):
+def model(state, popup, text, estrings, omniscient=False, close_arg=2,
+          title_text=None):
     """(model, None) or (None, reason): the map window's model (`boxmodel.
     system_model`'s keys) from the popup's block — each planet where its
-    field says, the fleets of the bar, the close field."""
+    field says, the fleets of the bar, the close field (`args[close_arg]`:
+    2 for the combat target, 4 for the planet choice) and the title (the
+    engine's own for the planet choice, `title_text`)."""
     sysd = popup.get("system") or {}
     a = popup["args"]
     star = sysd.get("star", -1)
     stars = getattr(state, "stars", None) or []
     if not 0 <= star < len(stars):
         return None, f"star {star} is not in the snapshot"
-    close = _field(state, a[2])
+    close = _field(state, a[close_arg])
     if close is None:
-        return None, f"the close field {a[2]} is not in the live list"
+        return None, f"the close field {a[close_arg]} is not in the live list"
     # The planets' places off the orbit centre, as `boxmodel.match_planets`
     # reads the map's: the window's corner is CLOSE's place less its offset.
     ox = close.x - CLOSE_AT[0] + boxmodel.ORBIT_CENTRE[0]
@@ -116,7 +119,7 @@ def model(state, popup, text, estrings, omniscient=False):
         planets.append(dict(p, field=f.index, at=(cx - ox, cy - oy)))
     out = boxmodel.window_texts(state, star, text, omniscient)
     out.update({"star": star, "name": stars[star].name, "close": close.index,
-                "title": title(state, star, estrings),
+                "title": title_text or title(state, star, estrings),
                 "planets": sorted(planets, key=lambda q: q["orbit"]),
                 "belts": boxmodel.star_belts(state, stars[star]),
                 "fleets": sysfleets.entries(sysd.get("ships"),
@@ -169,8 +172,14 @@ def render(screen, surface, popup, state, app=None):
     _l, estrings = screen._combat_words
     text = hestrings.for_app(screen.app)
     text = text if text.state == "ok" else None
+    choice = popup["kind"] == "planet_choice"
+    close_arg = 4 if choice else 2
+    if choice:
+        from core.turnpopupcontent import RIGHT_HELP
+        out.right_help = RIGHT_HELP["planet_choice"]
     m, why = model(state, popup, text, estrings,
-                   getattr(screen, "_omniscient", False))
+                   getattr(screen, "_omniscient", False), close_arg,
+                   popup.get("title") if choice else None)
     # UNDER A BOX (the engine's answer to a click, E 0x24E, 0x253 …) the
     # live list is the box's, not the window's: the window is drawn as it
     # last stood for this popup, as the original's stays under its help
@@ -183,15 +192,22 @@ def render(screen, surface, popup, state, app=None):
     stale = not live and last is not None and last[0] == key
     if stale:
         m = last[1]
+    if m is None and choice:
+        # The engine's field list comes a tick after the popup's block: until
+        # it does there is nothing to click and nothing to say — not the
+        # reason in the view's middle, which flashed on the first frame
+        # (Data, 26 October 2026)
+        log.info("planet choice window not drawn yet: %s", why)
+        return out
     # Data's decision 3 (work order 230 C), as the map's window
     panel, corners = syswindow.system_frame(screen, surface, r["system_box"],
                                             r["system_title"])
     if m is None:
         log.info("combat target window: %s", why)
-        m = {"title": title(state, (popup.get("system") or {}).get(
-            "star", -1), estrings), "viewable": False, "body": why,
-            "close": popup["args"][2], "planets": [], "fleets": [],
-            "wormhole": ""}
+        m = {"title": (popup.get("title") if choice else None) or title(
+            state, (popup.get("system") or {}).get("star", -1), estrings),
+            "viewable": False, "body": why, "close": popup["args"][close_arg],
+            "planets": [], "fleets": [], "wormhole": ""}
     syswindow.title(screen, surface, panel, m["title"],
                     syswindow.font(screen, "system_title", 20),
                     syswindow.native_scale(r["system_box"]))
@@ -215,7 +231,11 @@ def render(screen, surface, popup, state, app=None):
     for p, rect in drawn:
         f = _field(state, p["field"])
         out.rects.append((rect, ("click", f) if f is not None else None))
-        out.right.append((rect, ("field", f) if f is not None else None))
+        # the planet choice answers a right click with its whole-popup help
+        # (`turnpopupcontent.RIGHT_HELP`), the combat target with the
+        # planet's colony information
+        out.right.append((rect, ("field", f) if f is not None and
+                          not choice else None))
     for rect, _owner, f in fleets:
         out.rects.append((rect, ("click", f)))
         out.right.append((rect, None))

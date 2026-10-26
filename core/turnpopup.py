@@ -101,6 +101,14 @@ class View:
         self._choosing = False
         if popup["kind"] == "combat_target":
             return self._render_window(surface, popup, state, backdrop, app)
+        if popup["kind"] == "planet_choice" and not popup.get("text") and \
+                app is not None and "galaxy_map" in app.dispatcher.screens:
+            # TRANSCRIPTION `planet_choice_window` (Data, 26 October 2026):
+            # the planet choice is the system window, as the original draws
+            # it (`Draw_Selection_Popup`, mainpups.cpp:1863-1921 calls
+            # `SYS::Draw_System_Display_Popup`); a system special's text
+            # (the popup's `text`) keeps the panel
+            return self._render_window(surface, popup, state, backdrop, app)
         if popup["kind"] == "colony_combat":
             return self._render_invasion(surface, popup, state, backdrop,
                                          app, labels)

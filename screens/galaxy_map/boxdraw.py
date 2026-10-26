@@ -365,7 +365,30 @@ def cell_picture(screen, ship, owner, cell):
             side * 8 // 10)
         if pic is not None:
             return pic
+        if wide:
+            _say_no_slot(screen, ship, owner)
     return sysfleets.icon(screen, owner, side * 7 // 10)
+
+
+_SAID = set()
+
+
+def _say_no_slot(screen, ship, owner):
+    """Once per ship picture, type and owner: a colony, outpost or transport
+    ship drew the owner's tinted master, not a slot picture — with what the
+    lookup had (Data, 26 October 2026: the colony ship stayed small on a
+    black ground in his game, not in the checks)."""
+    key = (int(ship.picture_num), int(ship.ship_type), int(owner))
+    if key in _SAID:
+        return
+    _SAID.add(key)
+    settings = getattr(getattr(screen, "app", None), "user_settings", None)
+    log.info("fleet box: no slot picture for ship picture %d (type %d, owner "
+             "%d, builder %d, map_ship_pictures %r, pictures %s)",
+             key[0], key[1], key[2], int(ship.previous_owner),
+             None if settings is None else settings.get("map_ship_pictures"),
+             "present" if getattr(getattr(screen, "_tints", None),
+                                  "pictures", None) is not None else "absent")
 
 
 def hover_status(screen):
