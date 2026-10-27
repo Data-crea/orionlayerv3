@@ -31,7 +31,7 @@ Still needed, still unverified:
   (s_player.tech_applications @379 was promoted 22 September 2026 —
                   work order 165 part A; see the note further down)
 """
-from core.structs import Spec
+from core.structs import Spec  # noqa: F401
 
 #: s_leader_data — **PROMOTED 24 September 2026, work order 167**, to
 #: `core/structs/leader.py`, where both sources are written out: the

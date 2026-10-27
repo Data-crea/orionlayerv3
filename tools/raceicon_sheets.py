@@ -17,7 +17,6 @@ names rather than importing them, so this module cannot become a
 second home for the 13-entry layout that `raceicon_extract` and
 `colonyfigures` already share.
 """
-import os
 
 try:
     from PIL import Image, ImageDraw

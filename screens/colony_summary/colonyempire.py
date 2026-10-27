@@ -46,7 +46,7 @@ PANEL_BG = palette.col("colony_summary", "panel_background", (8, 11, 20))
 #: because `_inject`'s bounds check and this module's scaling are
 #: statements about the same 640x480 slice, and two copies of a
 #: screen size is how one of them ends up describing a window.
-from core.nativeview import NATIVE_W, NATIVE_H
+from core.nativeview import NATIVE_W, NATIVE_H  # noqa: F401
 
 
 def format_value(value, signed=False):

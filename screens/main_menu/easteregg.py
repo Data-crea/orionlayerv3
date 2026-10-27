@@ -526,7 +526,7 @@ class EasterEgg:
         sum of the body's gaps in pixels, the gold key sentence's ink box
         (x0, y0, x1, y1) or None)."""
         style = self.screen.style
-        x0, x1 = round(COL_X0 * pw), round(COL_X1 * pw)
+        x0 = round(COL_X0 * pw)
         centre = round((COL_X0 + RULE_X1) / 2 * pw)
         y = round(TEXT_Y0 * ph)
         top = bottom = y

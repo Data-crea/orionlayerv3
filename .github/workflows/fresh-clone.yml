@@ -1,0 +1,36 @@
+# The player half of tools/fresh_clone_check.py, on GitHub's runner: what a
+# stranger gets from the commits alone (work order 335, question 7).
+# The developer half needs the private store and stays in the pre-push hook.
+name: fresh clone
+on:
+  push:
+    branches: [main, beta]
+  pull_request:
+    branches: [main, beta]
+  workflow_dispatch:
+jobs:
+  player:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: setup fetches the base pack from its release
+        run: python tools/setup.py
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+      - name: main.py must still be running after 25 s, without a traceback
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set +e
+          timeout 25 python main.py > main.log 2>&1
+          code=$?
+          cat main.log
+          [ "$code" -eq 124 ] || { echo "main.py ended with $code"; exit 1; }
+          if grep -q Traceback main.log; then exit 1; fi

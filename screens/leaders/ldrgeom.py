@@ -22,7 +22,7 @@ module keeps the NUMBERS only, so the drawing and the hit test read one
 table (decision 5).
 """
 
-from core.nativeview import NATIVE_W, NATIVE_H
+from core.nativeview import NATIVE_W, NATIVE_H  # noqa: F401
 
 #: `SCREEN_OFFICERS` (orion2_consts.h:484).
 GAME_SCREEN_ID = 29

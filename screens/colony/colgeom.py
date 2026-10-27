@@ -16,7 +16,7 @@ the list it is sending into, so a different art size moves the button's
 field, never HD's idea of it.
 """
 
-from core.nativeview import NATIVE_W, NATIVE_H
+from core.nativeview import NATIVE_W, NATIVE_H  # noqa: F401
 
 #: `SCREEN_COLONY` (orion2_consts.h:463).
 GAME_SCREEN_ID = 1

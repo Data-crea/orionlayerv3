@@ -59,9 +59,7 @@ so a live run shows nothing in Data's session (and plays no sound there);
 the screen checks and the idle inhibitor apply only to the real desktop.
 """
 import argparse
-import glob
 import os
-import signal
 import socket
 import subprocess
 import sys

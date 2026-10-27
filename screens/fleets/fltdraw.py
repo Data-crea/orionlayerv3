@@ -142,7 +142,6 @@ def icon_slots(screen):
 def draw_slots(surface, screen):
     """The twenty sunken slots the original paints into its background."""
     edge = col("slot_edge")
-    fill = col("slot_fill")
     width = max(1, int(round(screen.layout.scale)))
     for slot in icon_slots(screen):
         # **NO EDGE UNDER v4**: the slot IS a hole and the frame paints

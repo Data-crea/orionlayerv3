@@ -226,7 +226,6 @@ def parse_save_slots(data):
         if marked:
             desc = desc[1:].split("\x01", 1)[0]
         # the player's own words: never translated (work order 208 A6)
-        from core import lang
         desc = lang.stored(desc)
         slots.append(dict(
             status=status, game_type=game_type, description=desc,

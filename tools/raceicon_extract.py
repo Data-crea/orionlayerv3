@@ -59,7 +59,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core import lbx  # noqa: E402
 from core import paths  # noqa: E402 — work order 229 D: the game folder
 from tools.raceicon_sheets import (  # noqa: E402
-    SHEET_SCALE, contact_sheet, labelled_sheet, opaque_box, sprite_grid)
+    SHEET_SCALE, contact_sheet, labelled_sheet, opaque_box)
 from core.config import BASE_DIR  # noqa: E402
 from screens.colony_summary import colonyfigures as figures  # noqa: E402
 
@@ -68,7 +68,7 @@ FIGURE_DIR = figures.FIGURE_DIR
 MASTER_SIZE = figures.MASTER_SIZE
 
 try:
-    from PIL import Image, ImageDraw
+    from PIL import Image
 except ImportError:
     sys.exit("Pillow is missing. Run: pip install pillow --break-system-packages")
 

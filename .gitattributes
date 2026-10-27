@@ -1,0 +1,11 @@
+# Line endings are part of the content: basepack.json holds the SHA-256 of
+# files and of itself, so a CRLF checkout on Windows would change a hash
+# nobody edited (work order 335, question 6).
+* text=auto eol=lf
+*.json text eol=lf
+*.png binary
+*.zip binary
+*.ogg binary
+*.wav binary
+*.ttf binary
+*.otf binary

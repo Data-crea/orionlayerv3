@@ -170,7 +170,6 @@ def word_zones(screen, slot, row, art):
     line and the ETA in the red (the strictest ink there); an empty row:
     the caption's two lines."""
     from core.hud import fill
-    layout = screen.layout
     box = fill.member("panel")
     if row is None:
         return [(z, ldrpics.ceiling(ink, box))

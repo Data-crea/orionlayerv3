@@ -14,7 +14,7 @@ on this disk's RACES.LBX for work order 175 and held to the live list by
 `raceswire`, which refuses a list that disagrees.
 """
 
-from core.nativeview import NATIVE_W, NATIVE_H
+from core.nativeview import NATIVE_W, NATIVE_H  # noqa: F401
 
 #: `SCREEN_RACE` (orion2_consts.h:466).
 GAME_SCREEN_ID = 6

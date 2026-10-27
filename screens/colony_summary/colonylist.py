@@ -91,7 +91,7 @@ from core import zoomtables
 from . import colonybuild
 from . import colonyscroll
 from . import colonytrack
-from .colonyrows import POP_LIMIT_CAP
+from .colonyrows import POP_LIMIT_CAP  # noqa: F401
 #: THE GEOMETRY LIVES IN `colonytrack`, and is re-exported here.
 #: Split out on 6 September 2026 (decision 6); the names stay
 #: importable from this module because every caller in the tree and

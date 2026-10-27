@@ -4,7 +4,7 @@ import sys
 import logging
 import time
 import pygame
-from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
+from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,  # noqa: F401
                          build_line, display_line, environment_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import framerate

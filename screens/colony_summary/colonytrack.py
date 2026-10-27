@@ -491,7 +491,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
     parent, the two empty fields at work order 157's commit for 156's
     part C.
     """
-    from core import box
+    from core import box  # noqa: F401
     from . import colonyicons
     regions = row_regions(row)
     cells, targets = [], []

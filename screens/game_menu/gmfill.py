@@ -25,7 +25,7 @@ import colorsys
 
 import pygame
 
-from core.hud import blocks as hud
+from core.hud import blocks as hud  # noqa: F401
 from core.hud import fill
 from core.hud import glass
 

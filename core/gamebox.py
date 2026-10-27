@@ -34,7 +34,7 @@ box is the last one: the detector runs on every snapshot.
 import pygame
 
 #: 640x480, the frame every rectangle here is in (decision 35).
-from core.nativeview import NATIVE_W, NATIVE_H
+from core.nativeview import NATIVE_W, NATIVE_H  # noqa: F401
 
 
 class BoxKind:
