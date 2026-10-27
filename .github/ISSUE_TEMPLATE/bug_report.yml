@@ -1,0 +1,71 @@
+name: Problem report
+description: Something stopped working, looks wrong, or behaves differently from the original game
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing OrionLayer. The beta runs on **Linux only**, and you need your own copy of Master of Orion 2.
+        One problem per report, please. **Do not attach save games or any file taken from your Master of Orion 2 installation.**
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem is it?
+      options:
+        - The program stopped, or showed "Something went wrong in OrionLayer"
+        - Something looks wrong
+        - Something behaves differently from the original game
+        - It will not install or start
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: screen
+    attributes:
+      label: Which screen?
+      description: For example the main menu, Select Race, the galaxy map, Colony, Planets, Fleets, a battle.
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you do, and what happened?
+      description: The few steps before it went wrong, and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, or what does the original do?
+      description: F12 shows the original screen; press it again to come back. If it is about looks, a screenshot (F8) next to the original's (F12) says most.
+  - type: input
+    id: build
+    attributes:
+      label: Build line
+      description: |
+        The line that starts with "build:" at the beginning of the console output, or in the first lines of `~/.config/orionlayer/logs/client.log`. It is also in every entry of `faults.log`.
+      placeholder: "build: OrionLayer abc1234 (clean), orion2re 2.0.0"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Distribution, desktop (X11 or Wayland), screen resolution and OrionLayer's window size. The "environment:" line in the log has the rest (Python, pygame).
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        `faults.log` (only if a screen showed "Something went wrong") and the end of `client.log`, both in `~/.config/orionlayer/logs/`. OrionLayer already replaces your home folder and user name in them; please read through before you post. For an install problem, paste the output of the command that failed.
+      render: text
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before you send
+      options:
+        - label: I run Linux.
+          required: true
+        - label: I read my logs through and no user name or private path is left in them.
+          required: true
+        - label: I attach no save game and no file from my Master of Orion 2 installation.
+          required: true

@@ -42,6 +42,15 @@ say how a piece relates to the original game:
 Please keep these labels, and the source references, when you change a line
 they sit on.
 
+## Reporting a problem
+
+Open an issue; the form asks for what a report needs: the build line, your
+system, what you did and what the original does, and your logs. OrionLayer
+keeps two logs in `~/.config/orionlayer/logs/` (`faults.log`, written when a
+screen fails, and `client.log`, the console's output); both are written
+without your home folder and user name, but please read them before you
+post. Never attach a save game or a file from your Master of Orion 2.
+
 ## Pull requests
 
 Issues and pull requests are welcome; open them against `main` (players
