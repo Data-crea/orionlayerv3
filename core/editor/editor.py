@@ -47,6 +47,17 @@ class Editor:
         self.refusal = None
         self._glow_idx = -1
 
+    def place_refusal(self, box):
+        """Why `box` cannot be moved, or None. A box whose rect the screen
+        derives is rebuilt from its reference at every load, so a move of
+        it was never saved anywhere (decision 3), unless the screen writes
+        it back (`ScreenBase.editor_moves`)."""
+        scr = self.app.dispatcher.top
+        if scr is not None and not scr.editor_moves(box):
+            return ("The place of this box is derived by the screen and "
+                    "cannot be moved (decision 3).")
+        return None
+
     def revert(self):
         """Drop every unsaved change: the boxes are read again."""
         scr = self.app.dispatcher.top
@@ -72,6 +83,7 @@ class Editor:
             self._glow_idx = -1
             self.show_help = False
         self.panel.blur()
+        self.panel.dragging = None
 
     def handle_event(self, event):
         if not self.active:
@@ -84,6 +96,12 @@ class Editor:
                 return self.panel.click(*event.pos)
             self.panel.blur()
             return self._on_click(*event.pos)
+        if event.type == pygame.MOUSEMOTION and self.panel.dragging:
+            self.panel.drag_to(*event.pos)
+            return True
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1 \
+                and self.panel.release():
+            return True
         if event.type == pygame.MOUSEMOTION and self._drag:
             self._on_drag(*event.pos)
             return True
@@ -191,8 +209,10 @@ class Editor:
                 box = None
             if box:
                 self.selected = box
-                self.refusal = None
+                self.refusal = self.place_refusal(box)
                 self._glow_idx = -1
+                if self.refusal:
+                    return True
                 self._drag = "move"
                 self._dstart = (rx, ry)
                 self._dorig = tuple(box.ref_rect)
@@ -314,6 +334,10 @@ class Editor:
 
     def _arrow_move(self, dx, dy):
         box = self.selected
+        if self.place_refusal(box) and not (
+                self._glow_idx >= 0 and box.style.get("skin") == "button"):
+            self.refusal = self.place_refusal(box)
+            return
         if self._glow_idx >= 0 and box.style.get("skin") == "button":
             key = self.glow_key
             if "glows" not in box.style:
@@ -412,25 +436,24 @@ class Editor:
         log.info("Saved %d boxes for %s -> %s", len(scr.boxes), res_key,
                  tgt.folder)
         self._save_flash = time.monotonic()
-        if not self.developer:
-            if hasattr(scr, "save_geometry") or hasattr(scr, "save_races"):
-                # Say it: these edits live in the base project's own
-                # files, which a player's save never writes.
-                self._save_note += (" Moves of derived boxes and portrait "
-                                    "crops on this screen are saved only "
-                                    "in developer mode.")
-            return
-        # THE SCREENS' OWN EXTRA FILES are the base project's, so only
-        # developer mode writes them (a player's edit stays in the mod).
+        # THE SCREENS' OWN EXTRA FILES go where boxes.json went: into the
+        # mod for a player (`folder`), into the base project for a developer.
+        folder = None if self.developer else tgt.folder
+        root = os.path.dirname(os.path.dirname(os.path.normpath(tgt.folder)))
+        if not self.developer and os.path.normpath(root) not in [
+                os.path.normpath(m) for m in self.app.res.mod_dirs]:
+            # the mod loads from the next start; this session reads it too,
+            # so Revert brings back what was saved and not the base
+            self.app.res.mod_dirs.insert(0, root)
         if hasattr(scr, "save_races"):
-            scr.save_races()
+            scr.save_races(folder)
             log.info("Saved races.json (portrait crops)")
         # A SCREEN MAY OWN GEOMETRY boxes.json CANNOT HOLD. The colony
         # summary derives every rect from `layout_reference.json` at
         # load, so a box the editor is allowed to move has to be
         # written back THERE or the next start rebuilds it.
         if hasattr(scr, "save_geometry"):
-            for _name, _rect in scr.save_geometry() or ():
+            for _name, _rect in scr.save_geometry(folder) or ():
                 log.info("Saved %s %s -> layout_reference.json",
                          _name, _rect)
 

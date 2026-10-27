@@ -105,7 +105,7 @@
   },
   "btn_all": {
     "title": "All Button",
-    "about": "Button labelled All (key A) that selects every ship of the stack; sits in the button band at the lower right."
+    "about": "Selects every ship of the shown stack, or clears the selection when all are selected (key A)."
   },
   "btn_relocate": {
     "title": "Relocate Button",
@@ -117,7 +117,7 @@
   },
   "btn_leaders": {
     "title": "Leaders Button",
-    "about": "Slanted button labelled Leaders (key L) in the lower row of the button band; opens the fleet's officers."
+    "about": "Opens the officers screen (key L); with no officer to assign the game shows a message instead."
   },
   "btn_support": {
     "title": "Support Filter Button",

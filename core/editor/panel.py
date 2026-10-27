@@ -16,6 +16,7 @@ its content gone or, on the colony list, crashed the screen (measured,
 work order 334).
 """
 import textwrap
+import time
 from types import SimpleNamespace
 
 import pygame
@@ -46,6 +47,12 @@ class Panel:
         self.side = "right"        # the edge the panel stands on
         self._dock_for = None
         self._scr = None
+        #: Where the person put the panel (window px, top left), or None
+        #: while it docks itself at an edge.
+        self.pos = None
+        self.dragging = None       # grab offset while the header is held
+        self._hdr_t = 0.0
+        self._moved = False        # the held header actually moved
 
     # ── what the panel knows ─────────────────────────────────────
     def _screen(self):
@@ -73,7 +80,8 @@ class Panel:
         the class offers a handle on it."""
         handles = boxclass.HANDLES[boxclass.classify(
             self.ed._screen_name(), box.name)]
-        return {"x": True, "y": True,
+        place = self.ed.place_refusal(box) is None
+        return {"x": place, "y": place,
                 "w": bool(handles & {"l", "r"}),
                 "h": bool(handles & {"t", "b"})}
 
@@ -90,12 +98,23 @@ class Panel:
         bar = max(24, int(28 * s))             # the editor's info bar
         pad = int(10 * s)
         r = SimpleNamespace(s=s, pad=pad)
-        left = self._dock(width, bar) == "left"
         #: Clear of the editor's badge and its save note (top left).
         top = int(64 * s)
+        if self.pos is not None:
+            # PLACED BY THE PERSON: it stays where it was put (inside the
+            # window), and the docking rule leaves it alone.
+            height = min(app.win_h - bar - top, int(720 * s))
+            px = max(0, min(self.pos[0], app.win_w - width))
+            py = max(0, min(self.pos[1], app.win_h - bar - height))
+            r.panel = pygame.Rect(px, py, width, height)
+            top = py
+            left = px + width // 2 < app.win_w // 2
+        else:
+            left = self._dock(width, bar) == "left"
+            r.panel = pygame.Rect(0 if left else app.win_w - width, top,
+                                  width, app.win_h - bar - top)
         r.top = top
-        r.panel = pygame.Rect(0 if left else app.win_w - width, top, width,
-                              app.win_h - bar - top)
+        r.header = pygame.Rect(r.panel.x, r.panel.y, width, int(40 * s))
         r.tab = pygame.Rect(4 if left else app.win_w - int(150 * s),
                             top, int(146 * s), int(26 * s))
         x, w = r.panel.x + pad, width - 2 * pad
@@ -176,6 +195,17 @@ class Panel:
                 self.visible = True
             return True
         pos = (sx, sy)
+        if r.header.collidepoint(pos):
+            self.blur()
+            self._moved = False
+            now = time.monotonic()
+            if now - self._hdr_t < 0.4:
+                self.pos, self.dragging = None, None   # double click: dock
+                self._hdr_t = 0.0          # a third click starts a new pair
+            else:
+                self.dragging = (sx - r.panel.x, sy - r.panel.y)
+                self._hdr_t = now
+            return True
         for name, rect in r.buttons.items():
             if rect.collidepoint(pos):
                 self._button(name)
@@ -224,6 +254,19 @@ class Panel:
             self.visible = False
         elif name == "close":
             ed.toggle()
+
+    def drag_to(self, sx, sy):
+        """The header is held and the pointer moved."""
+        if self.dragging is not None:
+            self.pos = (sx - self.dragging[0], sy - self.dragging[1])
+            self._moved = True
+
+    def release(self):
+        was = self.dragging is not None
+        self.dragging = None
+        if self._moved:
+            self._hdr_t = 0.0      # a drag is not the first half of a double click
+        return was
 
     def wheel(self, dy):
         n = len(self.entries())
@@ -332,7 +375,7 @@ class Panel:
         self._text(surface, "LAYOUT EDITOR", (r.x, r.top + int(8 * r.s)), 18,
                    C_SEL)
         self._text(surface, f"{name.replace('_', ' ')}  "
-                   f"{ed.app.win_w}x{ed.app.win_h}",
+                   f"{ed.app.win_w}x{ed.app.win_h}  -  drag here to move",
                    (r.x, r.top + int(26 * r.s)), 12, C_FTX)
         for key, text in (("save", "Save"), ("revert", "Revert"),
                           ("hide", "Hide"), ("close", "Close")):

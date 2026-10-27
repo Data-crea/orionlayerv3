@@ -308,7 +308,7 @@ def editor_free(data):
     return free
 
 
-def write_back(screen):
+def write_back(screen, folder=None):
     """Write the editor-free boxes' rects back into the reference.
 
     **THE ONLY WAY A DRAG SURVIVES A RESTART ON THIS SCREEN.**
@@ -329,10 +329,30 @@ def write_back(screen):
     The BLEED comes off again on the way in: `boxes.json`'s rect is
     the typed rect grown by what overlaps it, and what is typed here
     is the rect itself.
+
+    `folder`: a mod's screen folder (a player's save, work order 334). The
+    reference is READ from where the stack finds it and WRITTEN there, so
+    the base project's file is never touched.
     """
     path = os.path.join(screen._screen_dir, REFERENCE)
-    with open(path, encoding="utf-8") as fh:
-        data = json.load(fh, object_pairs_hook=_ordered())
+    data = None
+    if folder:
+        # a player's save: read what the stack loads (a damaged mod file
+        # falls back to the next, as `reference` does), write into the mod
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, REFERENCE)
+        for src in screen.app.res.candidates(
+                f"screens/{screen.SCREEN_NAME}/{REFERENCE}"):
+            try:
+                with open(src, encoding="utf-8") as fh:
+                    data = json.load(fh, object_pairs_hook=_ordered())
+                break
+            except (OSError, ValueError):
+                continue
+    if data is None:
+        with open(os.path.join(screen._screen_dir, REFERENCE),
+                  encoding="utf-8") as fh:
+            data = json.load(fh, object_pairs_hook=_ordered())
     free = editor_free(data)
     if not free:
         return []

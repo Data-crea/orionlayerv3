@@ -431,7 +431,10 @@ class ColonySummaryScreen(ScreenBase):
         """The wording, from layout.json (decision 15)."""
         return self._data.get("move", {})
 
-    def save_geometry(self):
+    def editor_moves(self, box):
+        return box.name in getattr(self, "_free_names", ())
+
+    def save_geometry(self, folder=None):
         """The F3 editor's write-back, and the ONE path it takes.
 
         Called by `Editor._save` the way `save_races` already is. What
@@ -443,7 +446,7 @@ class ColonySummaryScreen(ScreenBase):
         every other box on this screen is a cutout the editor refuses
         to move.
         """
-        return colonyplates.write_back(self)
+        return colonyplates.write_back(self, folder)
 
     def _reload_boxes(self):
         """The base's load, then the cutouts re-derived from the
@@ -452,6 +455,10 @@ class ColonySummaryScreen(ScreenBase):
         super()._reload_boxes()
         if self.boxes:
             colonyplates.reseat(self)
+            # what `save_geometry` writes back, read once per load: the
+            # editor asks every frame and the reference is a file
+            self._free_names = set(colonyplates.editor_free(
+                colonyplates.reference(self)))
 
     def _render_move(self, surface):
         """Everything the move draws — `colonymoveui.render_for`.

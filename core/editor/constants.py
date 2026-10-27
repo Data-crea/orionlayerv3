@@ -29,6 +29,7 @@ HELP_SECTIONS = [
         ("Selected box", "Only the chosen box stays outlined"),
     ]),
     ("The panel", [
+        ("Header", "Drag to move the panel; double-click docks it"),
         ("List", "Click a box to select it"),
         ("X Y Width Height", "Click a number, type, Enter"),
         ("Save / Revert", "Write your mod / drop unsaved changes"),

@@ -308,6 +308,12 @@ class LeadersScreen(ScreenBase):
                             frame=0 if colony else 1,
                             window=tabs["tab_ship"])
 
+    def editor_dormant(self, box):
+        """The hire panel shows only in hire mode."""
+        if box.name == "hire_panel":
+            return not (self._shown and self._shown[1])
+        return super().editor_dormant(box)
+
     def _draw_hire_panel(self, surface):
         """OFFICER.LBX 17 at (300, 441) and the cost of the leader under
         the pointer — "%d bcs and %d bc/turn" or "%d bcs, no

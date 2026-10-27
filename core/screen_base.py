@@ -320,6 +320,17 @@ class ScreenBase(HelpMixin):
         """
         return None
 
+    def editor_moves(self, box):
+        """True when a move of `box` in the F3 editor survives a restart.
+
+        A box whose rect the screen derives is rebuilt from its reference
+        at every load, so a move of it was saved nowhere; the editor
+        refuses it rather than let the person think it was kept. A
+        screen that writes some derived boxes back (the colony summary's
+        parts, `save_geometry`) overrides this for those.
+        """
+        return not getattr(box, "derived", False)
+
     def editor_dormant(self, box):
         """True when `box` is a popup that is not on screen right now.
 

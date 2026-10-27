@@ -516,8 +516,10 @@ class SelectRaceScreen(ScreenBase):
         for k in keys:
             del self._thumb_cache[k]
 
-    def save_races(self):
-        path = os.path.join(self._screen_dir, "races.json")
+    def save_races(self, folder=None):
+        # `folder`: a mod's screen folder (a player's save, work order 334)
+        path = os.path.join(folder or self._screen_dir, "races.json")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             json.dump(self._races, f, indent=2)
             f.write("\n")      # the tree's JSON convention, as save_boxes
