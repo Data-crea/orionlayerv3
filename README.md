@@ -18,8 +18,8 @@ so the game stays playable.
 ## Status
 
 > **Not ready to use yet.** OrionLayer is under heavy development. It is
-> not ready to play or to rely on yet, and none of its screens has been
-> accepted.
+> not ready to play or to rely on yet, and only some of its screens have
+> been accepted so far.
 >
 > **The beta runs on Linux only.** Windows (and macOS) are not part of it:
 > OrionLayer does not start on Windows yet.
