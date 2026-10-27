@@ -639,6 +639,9 @@ class GalaxyMapScreen(ScreenBase):
         mergemark.render(self, surface, ctx)
         surface.set_clip(clip)
 
+    def editor_dormant(self, box):
+        return boxdraw.dormant(self, box)
+
     def _render_sidebar(self, surface):
         hudview.render_sidebar(self, surface)
 

@@ -1,0 +1,170 @@
+{
+  "map_panel": {
+    "title": "Map Panel",
+    "about": "The glass panel behind the inset star map at the left of the screen."
+  },
+  "cell_00": {
+    "title": "Ship Icon Cell 1",
+    "about": "Icon cell 1 (row 1, column 1 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_01": {
+    "title": "Ship Icon Cell 2",
+    "about": "Icon cell 2 (row 1, column 2 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_02": {
+    "title": "Ship Icon Cell 3",
+    "about": "Icon cell 3 (row 1, column 3 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_03": {
+    "title": "Ship Icon Cell 4",
+    "about": "Icon cell 4 (row 1, column 4 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_04": {
+    "title": "Ship Icon Cell 5",
+    "about": "Icon cell 5 (row 2, column 1 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_05": {
+    "title": "Ship Icon Cell 6",
+    "about": "Icon cell 6 (row 2, column 2 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_06": {
+    "title": "Ship Icon Cell 7",
+    "about": "Icon cell 7 (row 2, column 3 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_07": {
+    "title": "Ship Icon Cell 8",
+    "about": "Icon cell 8 (row 2, column 4 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_08": {
+    "title": "Ship Icon Cell 9",
+    "about": "Icon cell 9 (row 3, column 1 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_09": {
+    "title": "Ship Icon Cell 10",
+    "about": "Icon cell 10 (row 3, column 2 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_10": {
+    "title": "Ship Icon Cell 11",
+    "about": "Icon cell 11 (row 3, column 3 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_11": {
+    "title": "Ship Icon Cell 12",
+    "about": "Icon cell 12 (row 3, column 4 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_12": {
+    "title": "Ship Icon Cell 13",
+    "about": "Icon cell 13 (row 4, column 1 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_13": {
+    "title": "Ship Icon Cell 14",
+    "about": "Icon cell 14 (row 4, column 2 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_14": {
+    "title": "Ship Icon Cell 15",
+    "about": "Icon cell 15 (row 4, column 3 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_15": {
+    "title": "Ship Icon Cell 16",
+    "about": "Icon cell 16 (row 4, column 4 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_16": {
+    "title": "Ship Icon Cell 17",
+    "about": "Icon cell 17 (row 5, column 1 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_17": {
+    "title": "Ship Icon Cell 18",
+    "about": "Icon cell 18 (row 5, column 2 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_18": {
+    "title": "Ship Icon Cell 19",
+    "about": "Icon cell 19 (row 5, column 3 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "cell_19": {
+    "title": "Ship Icon Cell 20",
+    "about": "Icon cell 20 (row 5, column 4 of the 4 x 5 grid) for one ship stack; click selects it, hover shows its ship."
+  },
+  "inset_map": {
+    "title": "Inset Star Map",
+    "about": "The small galaxy map with the fleets' stars, scaled in at its own proportion; hovering a star scans it."
+  },
+  "ship_panel": {
+    "title": "Ship Panel",
+    "about": "The glass panel at the lower left that holds the scanned ship's data text and picture."
+  },
+  "prev_fleet": {
+    "title": "Previous Fleet Arrow",
+    "about": "The PREV arrow at the left end of the status band; a click selects the previous fleet."
+  },
+  "status_band": {
+    "title": "Status Band",
+    "about": "Strip under the inset map with the Prev arrow, the hovered star's name or stack line, and the Next arrow."
+  },
+  "next_fleet": {
+    "title": "Next Fleet Arrow",
+    "about": "The NEXT arrow at the right end of the status band; a click selects the next fleet."
+  },
+  "btn_all": {
+    "title": "All Button",
+    "about": "Button labelled All (key A) that selects every ship of the stack; sits in the button band at the lower right."
+  },
+  "btn_relocate": {
+    "title": "Relocate Button",
+    "about": "Hidden field (key R) that starts relocation of the selected ships; HD draws the word and lights it while relocate mode is on."
+  },
+  "btn_scrap": {
+    "title": "Scrap Button",
+    "about": "Button labelled Scrap (key S) that scraps the selected ships; live only with ships selected and relocate mode off."
+  },
+  "btn_leaders": {
+    "title": "Leaders Button",
+    "about": "Slanted button labelled Leaders (key L) in the lower row of the button band; opens the fleet's officers."
+  },
+  "btn_support": {
+    "title": "Support Filter Button",
+    "about": "Radio button labelled Support (key U) in the button band; toggles the support-ship filter of the icon grid."
+  },
+  "btn_combat": {
+    "title": "Combat Filter Button",
+    "about": "Radio button labelled Combat (key C) in the button band; toggles the combat-ship filter of the icon grid."
+  },
+  "btn_return": {
+    "title": "Return Button",
+    "about": "Slanted button labelled Return (key Esc) at the lower right of the button band; leaves the Fleets screen."
+  },
+  "ship_panel_text": {
+    "title": "Ship Data Text",
+    "about": "The scanned ship's lines, drawn top down; text stops short of the ship picture when one is drawn."
+  },
+  "ship_picture": {
+    "title": "Scanned Ship Picture",
+    "about": "A large picture of the scanned ship (HD addition), drawn at the right of the ship panel; empty when nothing is scanned."
+  },
+  "icon_area": {
+    "title": "Ship Icon Area",
+    "about": "The panel at the upper right that holds the grid of ship icons and the scroll column."
+  },
+  "button_band": {
+    "title": "Button Band",
+    "about": "The panel at the lower right behind the seven action buttons."
+  },
+  "status_text": {
+    "title": "Status Text",
+    "about": "Right-click help area (help 363) of the middle of the status band; the hovered star or stack name itself is drawn by the band."
+  },
+  "scroll_column": {
+    "title": "Scroll Column",
+    "about": "The scroll bar at the right edge of the icon area; it scrolls the grid of ship icons."
+  },
+  "inset_hint": {
+    "title": "Inset Hint",
+    "about": "A hint line on the inset map telling that the map view belongs to the game window."
+  },
+  "status_hint": {
+    "title": "Status Hint",
+    "about": "Hint line drawn in the status band while nothing is scanned, telling to hover a stack in the game window."
+  },
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "Shown only while right-click help is open; holds the help text for the clicked control."
+  }
+}

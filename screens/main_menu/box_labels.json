@@ -1,0 +1,34 @@
+{
+  "continue": {
+    "title": "Continue Button",
+    "about": "Menu button that continues the most recent game."
+  },
+  "load_game": {
+    "title": "Load Game Button",
+    "about": "Menu button that opens the load game dialog."
+  },
+  "new_game": {
+    "title": "New Game Button",
+    "about": "Menu button that opens the new game setup."
+  },
+  "multiplayer": {
+    "title": "Multiplayer Button",
+    "about": "Menu button that opens the multiplayer setup."
+  },
+  "hall_of_fame": {
+    "title": "Hall of Fame Button",
+    "about": "Menu button that opens the hall of fame."
+  },
+  "quit": {
+    "title": "Quit Button",
+    "about": "Menu button that quits the program."
+  },
+  "version_text": {
+    "title": "Version Text",
+    "about": "The version line, filled with the orion2re version number from the code."
+  },
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "The panel showing right-click help text; shown only while help is visible."
+  }
+}

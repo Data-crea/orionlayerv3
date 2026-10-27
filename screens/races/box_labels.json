@@ -1,0 +1,10 @@
+{
+  "left_panel": {
+    "title": "Left Race Column",
+    "about": "The left panel of the Races screen: the first four of the seven race slots."
+  },
+  "right_panel": {
+    "title": "Right Race Column",
+    "about": "The right panel: three race slots with the agents' strip, bonuses and the action buttons under them."
+  }
+}

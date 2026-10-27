@@ -70,6 +70,12 @@ class CouncilScreen(ScreenBase):
         if got is not None:
             self._council = got
 
+    def editor_dormant(self, box):
+        """The message box is empty until the game sends a message."""
+        if box.name == "cl_message":
+            return not (self._council or {}).get("message")
+        return super().editor_dormant(box)
+
     def render_content(self, surface):
         if self._council is not None and self._state is not None:
             cldraw.draw(surface, self, self._council, self._state)

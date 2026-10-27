@@ -1,0 +1,10 @@
+{
+  "title": {
+    "title": "Example Heading",
+    "about": "Example panel in the template, labelled Screen Title; a placeholder heading to rename or replace."
+  },
+  "back": {
+    "title": "Back Button",
+    "about": "Example button labelled Back, bound to the game's field id 1; a placeholder to rebind or remove."
+  }
+}

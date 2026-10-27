@@ -1,0 +1,14 @@
+{
+  "gc_attack": {
+    "title": "Attackers Panel",
+    "about": "The left panel with the attacking side's troop summary box; right-click help 541."
+  },
+  "gc_defense": {
+    "title": "Defenders Panel",
+    "about": "The right panel with the defending side's troop summary box; right-click help 542."
+  },
+  "gc_field": {
+    "title": "Battlefield Panel",
+    "about": "The panel under the two summaries that holds the scaled ground combat scene."
+  }
+}

@@ -173,6 +173,25 @@ class GameMenuScreen(ScreenBase):
         self.save.update(game_state)
         gmsliders.advance(self, game_state)
 
+    #: Which dialog draws each box that only one dialog uses; the boxes
+    #: of the others stand in the editor with nothing drawn in them.
+    DIALOG_BOXES = (
+        (nodes.MENU, ("menu_",), ()),
+        (nodes.SETTINGS, ("music_", "sound_", "settings_", "orionlayer_"),
+         ("volume_panel",)),
+        (nodes.LOAD, ("load_",), ("slot_list",)),
+        (nodes.SAVE, ("save_",), ("slot_list",)))
+
+    def editor_dormant(self, box):
+        base = self.under if self.node in (nodes.CONFIRM,
+                                           nodes.WARNING) else self.node
+        for node, prefixes, names in self.DIALOG_BOXES:
+            if box.name in names or box.name.startswith(prefixes):
+                shown = [n for n, p, nm in self.DIALOG_BOXES
+                         if box.name in nm or box.name.startswith(p)]
+                return base not in shown
+        return super().editor_dormant(box)
+
     def render(self, surface):
         # A window over the Settings dialog covers it, and since work order
         # 253 the glass shows what is drawn under a box: the dialog under

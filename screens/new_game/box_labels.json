@@ -1,0 +1,6 @@
+{
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "The panel showing right-click help text; shown only while help is visible."
+  }
+}

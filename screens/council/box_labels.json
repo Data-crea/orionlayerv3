@@ -1,0 +1,22 @@
+{
+  "cl_top": {
+    "title": "Council Top Lines",
+    "about": "Top band printing the council's header lines, left, centred and right."
+  },
+  "cl_nominee_a": {
+    "title": "First Nominee",
+    "about": "Panel showing the first nominee's name, race and colour."
+  },
+  "cl_members": {
+    "title": "Council Members",
+    "about": "Centre panel listing the council members in their players' colours."
+  },
+  "cl_nominee_b": {
+    "title": "Second Nominee",
+    "about": "Panel showing the second nominee's name, race and colour."
+  },
+  "cl_message": {
+    "title": "Council Message",
+    "about": "Bottom panel with the game's message and its vote list; empty until the game sends a message."
+  }
+}

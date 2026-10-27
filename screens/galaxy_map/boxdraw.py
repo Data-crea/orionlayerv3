@@ -158,6 +158,16 @@ def drawable(screen):
     return out
 
 
+def dormant(screen, box):
+    """True for a popup box (system window, fleet box) whose popup is
+    not open: they exist as boxes all the time and are drawn only while
+    the game has the popup open."""
+    for names in (SYSTEM_BOXES, FLEET_BOXES):
+        if box.name in names:
+            return not any(n is names for n, _b, _m in drawable(screen))
+    return False
+
+
 def _placed(screen, names, box):
     """HD rects for a box group, moved to the original's side of the map."""
     rects = {}

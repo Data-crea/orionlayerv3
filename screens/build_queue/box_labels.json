@@ -1,0 +1,14 @@
+{
+  "left_panel": {
+    "title": "Buildings Panel",
+    "about": "Left panel listing the buildings that can be built; the buildings list is drawn in it."
+  },
+  "middle_panel": {
+    "title": "Queue Panel",
+    "about": "Middle panel with the product picture, summary, description and the build queue rows."
+  },
+  "right_panel": {
+    "title": "Others Panel",
+    "about": "Right panel listing the other products and holding the screen's buttons."
+  }
+}

@@ -78,6 +78,7 @@ class PlanetsScreen(ScreenBase):
         self._parts = None          # ship part names, core.shipparts
         self._monster_sprites = {}  # owner -> panel sprite or None
         self._monster_scaled = {}   # the one scaled copy on screen
+        self._monster_shown = False  # the last frame drew the panel
         # THE SHELL (work order 225): the title plate; RETURN is a box of
         # the side panel, so the shell carries no buttons here.
         self.shell = shell.Shell(title=self._title)
@@ -223,9 +224,15 @@ class PlanetsScreen(ScreenBase):
             planetdraw.render_planet_panel(
                 self, surface, row,
                 planetwords.cells(self._view, row, self._words)["planet"])
-        monsterpanel.render(self, surface, row)
+        self._monster_shown = monsterpanel.render(self, surface, row)
         self.render_shell(surface)
         self.render_help(surface)
+
+    def editor_dormant(self, box):
+        """The monster panel's boxes show only for a guarded star."""
+        if box.name in monsterpanel.BOXES:
+            return not self._monster_shown
+        return super().editor_dormant(box)
 
     def _marker(self):
         if self._scanned is None or self._view is None:

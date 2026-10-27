@@ -6,6 +6,7 @@ C_SEL = (255, 220, 50)
 C_GLO = (50, 200, 255)
 C_GLO_ACT = (255, 100, 50)
 C_OUT = (100, 120, 160)
+C_DORMANT = (150, 110, 70)    # a popup's box while its popup is closed
 C_IBG = (0, 0, 0, 180)
 C_ITX = (200, 210, 230)
 C_ASN = (50, 255, 50)
@@ -22,23 +23,22 @@ HELP_SECTIONS = [
     ("General", [
         ("F3", "Toggle editor on/off"),   # core/hdkeys.EDITOR
         ("H", "Toggle this help"),
-        ("Ctrl+S / F2", "Save boxes.json"),
+        ("P", "Show / hide the layout panel"),
+        ("Ctrl+S / F2", "Save (into your mod)"),
         ("Esc", "Deselect / close panel"),
     ]),
-    ("Create & Delete", [
-        ("Ctrl+N", "New button at cursor"),
-        ("Ctrl+I", "New inner panel at cursor"),
-        ("Del", "Delete selected box"),
+    ("The panel", [
+        ("List", "Click a box to select it"),
+        ("X Y Width Height", "Click a number, type, Enter"),
+        ("Save / Revert", "Write your mod / drop unsaved changes"),
     ]),
     ("Move & Resize", [
         ("Click+Drag", "Move selected box"),
         ("Shift+Click", "Cycle overlapping boxes"),
+        ("Dimmed box", "A popup that is not open now"),
         ("Corner/Edge Drag", "Resize box"),
         ("Arrow Keys", "Nudge 1px (Shift: 5px)"),
         ("Alt+Arrow", "Move content inside box"),
-    ]),
-    ("View", [
-        ("Tab", "Field list"),
     ]),
     # The ping is listed here because the help sheet is where anyone
     # looks for "which key does what", but it is NOT an editor

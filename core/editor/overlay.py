@@ -8,10 +8,10 @@ import time
 import pygame
 
 from core.box import get_stored_resolutions
-from core.editor import boxclass
+from core.editor import boxclass, labels
 from core.editor.constants import (
     H_REF, G_REF, C_SEL, C_GLO, C_GLO_ACT, C_OUT, C_IBG, C_ITX,
-    C_ASN, C_FTX, C_HELP_BG, C_HELP_KEY, C_HELP_TXT, C_HELP_HDR,
+    C_ASN, C_FTX, C_DORMANT, C_HELP_BG, C_HELP_KEY, C_HELP_TXT, C_HELP_HDR,
     FIELD_TYPES, HELP_SECTIONS,
 )
 
@@ -24,11 +24,27 @@ def render(ed, surface):
     scr = ed.app.dispatcher.top
     if not scr:
         return
+    nf = ed.app.style.get_font(L.font_size(12))
+    names = labels.load(getattr(scr, "_screen_dir", ""))
     for box in scr.boxes:
-        if box.screen_rect:
-            pygame.draw.rect(surface, C_OUT, box.screen_rect, 1)
+        if not box.screen_rect:
+            continue
+        dormant = scr.editor_dormant(box)
+        # A popup's box with no popup open is dim and says so, so it is
+        # not taken for a box of the picture that lost its content.
+        colour = C_DORMANT if dormant else C_OUT
+        pygame.draw.rect(surface, colour, box.screen_rect, 1)
+        # EVERY BOX WEARS ITS TITLE, clipped to itself, so the picture
+        # says what each rectangle is without a technical name.
+        text = labels.title(names, box.name) + (" (popup)" if dormant else "")
+        clip = surface.get_clip()
+        surface.set_clip(box.screen_rect.clip(clip))
+        surface.blit(nf.render(text, True, colour),
+                     (box.screen_rect.x + 3, box.screen_rect.y + 2))
+        surface.set_clip(clip)
     if ed.selected and ed.selected.screen_rect:
         draw_sel(ed, surface, L)
+    ed.panel.draw(surface)
     draw_info(ed, surface, L)
     if ed.show_fields:
         draw_fields(ed, surface, L)
@@ -156,8 +172,8 @@ def draw_info(ed, surface, L):
             res_info = f"  [{src} | saved: {', '.join(stored)}]"
         else:
             res_info = "  [no saved data]"
-        t = ("Click to select | Ctrl+N button | "
-             "Ctrl+I panel | H help" + res_info)
+        t = ("Click a box to select it | P panel | "
+             "Ctrl+S save | H help" + res_info)
     f = ed.app.style.get_font(L.font_size(13))
     surface.blit(f.render(t, True, C_ITX), (10, iy + 4))
 

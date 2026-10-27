@@ -1,0 +1,54 @@
+{
+  "race_picks_panel": {
+    "title": "Race Picks Panel",
+    "about": "Left column panel holding the list of picks (traits) you can buy."
+  },
+  "specials_panel": {
+    "title": "Special Abilities Panel",
+    "about": "Middle column panel holding the special abilities and their toggles."
+  },
+  "description_panel": {
+    "title": "Description Panel",
+    "about": "Right column panel showing the description of the active entry."
+  },
+  "picks_score_bar": {
+    "title": "Picks and Score Bar",
+    "about": "Bottom bar drawn as two HUD panels: race picks left, score right."
+  },
+  "picks_text": {
+    "title": "Race Picks Figure",
+    "about": "Label and number of race picks remaining, in the left half of the bottom bar."
+  },
+  "score_text": {
+    "title": "Score Figure",
+    "about": "Label and percentage score, in the right half of the bottom bar."
+  },
+  "picks_header": {
+    "title": "Race Picks Header",
+    "about": "Centered heading RACE PICKS at the top of the left panel."
+  },
+  "specials_header": {
+    "title": "Special Abilities Header",
+    "about": "Centered heading SPECIAL ABILITIES at the top of the middle panel."
+  },
+  "description_header": {
+    "title": "Description Header",
+    "about": "Centered heading DESCRIPTION at the top of the right panel."
+  },
+  "picks_popup": {
+    "title": "Message Popup",
+    "about": "Message box shown only when a refusal is given, e.g. picks negative; previewed while the editor runs."
+  },
+  "picks_popup_text": {
+    "title": "Message Popup Text",
+    "about": "Text area inside the message popup; shown only while the popup is visible."
+  },
+  "race_name_label": {
+    "title": "Race Name Label",
+    "about": "Label text beside the race name field; the description ends above it. Not on the mutation screen."
+  },
+  "race_name_field": {
+    "title": "Race Name Field",
+    "about": "Text entry field where the custom race's name is typed. Not on the mutation screen."
+  }
+}

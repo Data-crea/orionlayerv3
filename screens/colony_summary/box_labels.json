@@ -1,0 +1,110 @@
+{
+  "table": {
+    "title": "Colony Table Panel",
+    "about": "Glass panel behind the header band and the ten colony rows."
+  },
+  "list_area": {
+    "title": "Colony List Area",
+    "about": "Area holding the column headings and the colony rows; also where the stranded-pop notice strip is drawn."
+  },
+  "planet_info": {
+    "title": "Planet Info Window",
+    "about": "Lower-left window of the scanned colony; holds the disc, name and paragraph, and shows a refused move's sentence."
+  },
+  "colony_panel": {
+    "title": "Colony Panel",
+    "about": "Lower-middle window that contains the output rows, the surface picture and the empire readouts."
+  },
+  "galaxy_inset": {
+    "title": "Galaxy Inset",
+    "about": "Lower-right window with the small galaxy map and the scanned star's name below it."
+  },
+  "sort_name": {
+    "title": "Sort by Name",
+    "about": "Toggle button that sorts the colony list by name (hotkey n)."
+  },
+  "sort_population": {
+    "title": "Sort by Population",
+    "about": "Toggle button that sorts the colony list by population (hotkey p)."
+  },
+  "sort_food": {
+    "title": "Sort by Food",
+    "about": "Toggle button that sorts the colony list by food (hotkey f)."
+  },
+  "sort_industry": {
+    "title": "Sort by Industry",
+    "about": "Toggle button that sorts the colony list by industry (hotkey i)."
+  },
+  "sort_science": {
+    "title": "Sort by Science",
+    "about": "Toggle button that sorts the colony list by science (hotkey s)."
+  },
+  "sort_producing": {
+    "title": "Sort by Producing",
+    "about": "Toggle button that sorts the colony list by what each colony is producing (hotkey r)."
+  },
+  "sort_bc": {
+    "title": "Sort by BC",
+    "about": "Toggle button that sorts the colony list by bc income (hotkey b)."
+  },
+  "return": {
+    "title": "Return Button",
+    "about": "Button that leaves the Colonies screen; its label comes from the screen's layout data."
+  },
+  "header": {
+    "title": "Column Header Band",
+    "about": "Band across the top of the list that carries the column heading plates."
+  },
+  "planet_disc": {
+    "title": "Planet Disc",
+    "about": "Picture of the scanned colony's planet, chosen by its climate."
+  },
+  "planet_name": {
+    "title": "Planet Name",
+    "about": "The scanned colony's name as a heading above the paragraph."
+  },
+  "planet_paragraph": {
+    "title": "Planet Paragraph",
+    "about": "Descriptive text paragraph for the scanned colony."
+  },
+  "planet_output": {
+    "title": "Colony Output Rows",
+    "about": "Rows of the scanned colony's outputs (food, industry, research and so on) with label left and value right."
+  },
+  "planet_surface": {
+    "title": "Planet Surface Picture",
+    "about": "Landscape picture for the scanned colony's climate, with soft faded left and right edges."
+  },
+  "empire_stats": {
+    "title": "Empire Statistics",
+    "about": "Six empire readouts: Reserve, Income, Population, Freighters, Food and Research."
+  },
+  "col_name": {
+    "title": "Name Column",
+    "about": "Column for colony names: its heading plate, cells and click target."
+  },
+  "col_farmers": {
+    "title": "Farmers Column",
+    "about": "Column showing each colony's farmers: its heading plate, cells and drop target for moving pops."
+  },
+  "col_workers": {
+    "title": "Workers Column",
+    "about": "Column showing each colony's workers: its heading plate, cells and drop target for moving pops."
+  },
+  "col_scientists": {
+    "title": "Scientists Column",
+    "about": "Column showing each colony's scientists: its heading plate, cells and drop target for moving pops."
+  },
+  "col_building": {
+    "title": "Building Column",
+    "about": "Column showing what each colony is building, with the buy control."
+  },
+  "col_scroll": {
+    "title": "Scroll Column",
+    "about": "Column at the list's right edge for the scroll bar."
+  },
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "Hidden box; the right-click help text panel appears here, and only while help is shown."
+  }
+}

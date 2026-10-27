@@ -1,0 +1,10 @@
+{
+  "left_panel": {
+    "title": "Report Column",
+    "about": "The left panel of the race report: portrait, name, personality, spies and treaties; drawn alone until data comes."
+  },
+  "content_panel": {
+    "title": "Report Content Panel",
+    "about": "The large panel at the right that holds the Tech Review page of the race report."
+  }
+}

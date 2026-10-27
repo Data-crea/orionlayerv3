@@ -1,0 +1,26 @@
+{
+  "race_grid": {
+    "title": "Race Portrait Grid",
+    "about": "Grid of the race portraits plus the Custom Race tile; a click selects a race."
+  },
+  "info_panel": {
+    "title": "Race Info Panel",
+    "about": "Framed panel behind the selected race's picture, name, description and traits; hidden in picture mode."
+  },
+  "race_picture": {
+    "title": "Race Picture",
+    "about": "The selected race's banner picture at the top of the info panel."
+  },
+  "race_name": {
+    "title": "Race Name",
+    "about": "The selected race's name, drawn above the description."
+  },
+  "race_description": {
+    "title": "Race Description",
+    "about": "Scrollable description text of the selected race; it shrinks to fit its text."
+  },
+  "race_traits": {
+    "title": "Race Traits",
+    "about": "Trait cards and government of the selected race, below the description; hover shows a trait's full text."
+  }
+}

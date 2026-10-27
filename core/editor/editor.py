@@ -9,8 +9,9 @@ import os
 import time
 import pygame
 from core import mouse as mouse_input
-from core.box import Box, save_boxes
-from core.editor import boxclass, overlay
+from core.box import save_boxes
+from core.editor import boxclass, geometry, overlay, target
+from core.editor.panel import Panel
 from core.editor.constants import GLOW_KEYS, H_REF
 
 log = logging.getLogger("editor")
@@ -33,6 +34,28 @@ class Editor:
         #: on the next click that is not a refusal, so it reads as an
         #: answer to what was just tried and not as a standing state.
         self.refusal = None
+        self.panel = Panel(self)
+        #: Developer mode keeps the engine-field list (Tab) and the base
+        #: route for saving; a player has neither (`core.editor.target`).
+        self.developer = target.developer()
+
+    def target(self):
+        return target.resolve(self.app, self.app.dispatcher.top)
+
+    def select(self, box):
+        self.selected = box
+        self.refusal = None
+        self._glow_idx = -1
+
+    def revert(self):
+        """Drop every unsaved change: the boxes are read again."""
+        scr = self.app.dispatcher.top
+        if scr is None:
+            return
+        scr._reload_boxes()
+        scr._update_box_layout()
+        self.selected = None
+        self._drag = None
 
     @property
     def glow_key(self):
@@ -48,6 +71,7 @@ class Editor:
             self._drag = None
             self._glow_idx = -1
             self.show_help = False
+        self.panel.blur()
 
     def handle_event(self, event):
         if not self.active:
@@ -56,6 +80,9 @@ class Editor:
             if self.show_help:
                 self.show_help = False
                 return True
+            if self.panel.hit(*event.pos):
+                return self.panel.click(*event.pos)
+            self.panel.blur()
             return self._on_click(*event.pos)
         if event.type == pygame.MOUSEMOTION and self._drag:
             self._on_drag(*event.pos)
@@ -64,6 +91,10 @@ class Editor:
             if self._drag:
                 self._drag = None
                 return True
+        if event.type == pygame.MOUSEWHEEL and self.panel.visible \
+                and self.panel.hit(*mouse_input.pos()):
+            self.panel.wheel(event.y)
+            return True
         if event.type == pygame.MOUSEWHEEL and self.selected:
             mods = pygame.key.get_mods()
             if self.selected.name == "race_grid":
@@ -125,7 +156,8 @@ class Editor:
 
     def _on_click(self, sx, sy):
         rx, ry = self._ref(sx, sy)
-        if self.show_fields and self._field_click(sx, sy):
+        if self.developer and self.show_fields \
+                and self._field_click(sx, sy):
             return True
         if self.selected:
             rh = self._hit_resize(rx, ry)
@@ -181,7 +213,7 @@ class Editor:
             return
         if self._drag == "move":
             ox, oy, ow, oh = self._dorig
-            box.ref_rect = (ox + dx, oy + dy, ow, oh)
+            box.ref_rect = geometry.clamp_move((ox + dx, oy + dy, ow, oh))
             box.update_layout(self.app.layout)
         elif self._drag.startswith("resize_"):
             handle = self._drag[7:]
@@ -190,8 +222,8 @@ class Editor:
             # The galaxy inset is the case and it is locked today; the
             # rule is here so the first person to unlock it cannot
             # break a ratio held to a thousandth by a smoke check.
-            box.ref_rect = boxclass.hold_aspect(
-                self._screen_name(), box.name, rect, handle)
+            box.ref_rect = geometry.clamp_resize(boxclass.hold_aspect(
+                self._screen_name(), box.name, rect, handle), handle)
             box.update_layout(self.app.layout)
 
     def _calc_resize(self, o, dx, dy, h):
@@ -221,6 +253,12 @@ class Editor:
 
     def _on_key(self, event):
         k, m = event.key, event.mod
+        if self.panel.focus and (k == pygame.K_F2 or (
+                k == pygame.K_s and m & pygame.KMOD_CTRL)):
+            self.panel.apply()     # a typed number is part of the save
+            self._save(); return True
+        if self.panel.focus:
+            return self.panel.key(event)
         if k == pygame.K_h:
             self.show_help = not self.show_help
             return True
@@ -231,13 +269,9 @@ class Editor:
             self._save(); return True
         if k == pygame.K_F2:
             self._save(); return True
-        if k == pygame.K_n and m & pygame.KMOD_CTRL:
-            self._new_box("button"); return True
-        if k == pygame.K_i and m & pygame.KMOD_CTRL:
-            self._new_box("inner_panel"); return True
-        if k == pygame.K_DELETE and self.selected:
-            self._delete(); return True
-        if k == pygame.K_TAB:
+        if k == pygame.K_p:
+            self.panel.visible = not self.panel.visible; return True
+        if k == pygame.K_TAB and self.developer:
             self.show_fields = not self.show_fields; return True
         if k == pygame.K_ESCAPE:
             if self._glow_idx >= 0:
@@ -288,7 +322,7 @@ class Editor:
             box.style["glows"][key] = [off[0] + dx, off[1] + dy]
         else:
             x, y, w, h = box.ref_rect
-            box.ref_rect = (x + dx, y + dy, w, h)
+            box.ref_rect = geometry.clamp_move((x + dx, y + dy, w, h))
             box.update_layout(self.app.layout)
 
     def _content_offset_move(self, dx, dy):
@@ -360,65 +394,45 @@ class Editor:
 
     def _save(self):
         scr = self.app.dispatcher.top
-        if not scr: return
-        # Where the boxes were LOADED from (work order 324 d): a mod's
-        # file when a mod supplied it, else the base folder.
-        target = getattr(scr, "_boxes_dir", None) or scr._screen_dir
-        base = os.path.abspath(scr._screen_dir)
-        where = "base" if os.path.abspath(target) == base else \
-            f"mod {target}"
-        if not os.path.isdir(target):
-            self._save_note = "NOT SAVED: no folder " + target
-            self._save_flash = time.monotonic()
-            log.warning("editor: %s", self._save_note)
+        if not scr:
             return
-        save_boxes(target, scr.boxes,
-                   self.app.win_w, self.app.win_h)
+        tgt = self.target()
+        target.prepare(tgt)
+        # The seed is the file the boxes were LOADED from, so a mod file
+        # made now keeps that file's other resolutions.
+        base = None if self.developer else (
+            getattr(scr, "_boxes_dir", None) or scr._screen_dir)
+        save_boxes(tgt.folder, scr.boxes, self.app.win_w, self.app.win_h,
+                   seed_dir=base)
         res_key = f"{self.app.win_w}x{self.app.win_h}"
-        self._save_note = f"SAVED [{res_key}] -> {where}"
-        log.info("Saved %d boxes for %s -> %s (%s)",
-                 len(scr.boxes), res_key, target, where)
+        note = f"SAVED [{res_key}] -> {tgt.label}"
+        if not tgt.active:
+            note += ". " + tgt.hint
+        self._save_note = note
+        log.info("Saved %d boxes for %s -> %s", len(scr.boxes), res_key,
+                 tgt.folder)
+        self._save_flash = time.monotonic()
+        if not self.developer:
+            if hasattr(scr, "save_geometry") or hasattr(scr, "save_races"):
+                # Say it: these edits live in the base project's own
+                # files, which a player's save never writes.
+                self._save_note += (" Moves of derived boxes and portrait "
+                                    "crops on this screen are saved only "
+                                    "in developer mode.")
+            return
+        # THE SCREENS' OWN EXTRA FILES are the base project's, so only
+        # developer mode writes them (a player's edit stays in the mod).
         if hasattr(scr, "save_races"):
             scr.save_races()
             log.info("Saved races.json (portrait crops)")
         # A SCREEN MAY OWN GEOMETRY boxes.json CANNOT HOLD. The colony
         # summary derives every rect from `layout_reference.json` at
         # load, so a box the editor is allowed to move has to be
-        # written back THERE or the next start rebuilds it. Same hook
-        # shape as the race crops above: the editor saves what it
-        # knows about and asks the screen for the rest.
+        # written back THERE or the next start rebuilds it.
         if hasattr(scr, "save_geometry"):
             for _name, _rect in scr.save_geometry() or ():
                 log.info("Saved %s %s -> layout_reference.json",
                          _name, _rect)
-        self._save_flash = time.monotonic()
-
-    def _new_box(self, skin="button"):
-        scr = self.app.dispatcher.top
-        if not scr: return
-        rx, ry = self._ref(*mouse_input.pos())
-        n = len(scr.boxes)
-        if skin == "inner_panel":
-            data = {"name": f"panel_{n}",
-                    "rect": [rx - 100, ry - 75, 200, 150],
-                    "style": {"skin": "inner_panel"}}
-        else:
-            data = {"name": f"btn_{n}",
-                    "rect": [rx - 75, ry - 25, 150, 50],
-                    "style": {"skin": "button", "label": "NEW",
-                              "font_size": 16}}
-        b = Box(data)
-        b.update_layout(self.app.layout)
-        scr.boxes.append(b)
-        self.selected = b
-        log.info("Created '%s' (%s)", b.name, skin)
-
-    def _delete(self):
-        scr = self.app.dispatcher.top
-        if scr and self.selected in scr.boxes:
-            scr.boxes.remove(self.selected)
-            log.info("Deleted '%s'", self.selected.name)
-            self.selected = None
 
     def _field_click(self, sx, sy):
         L = self.app.layout

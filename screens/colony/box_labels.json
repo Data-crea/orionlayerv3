@@ -1,0 +1,22 @@
+{
+  "col_system": {
+    "title": "System Panel",
+    "about": "Upper-left window showing the star system display with its planets and markers."
+  },
+  "col_production": {
+    "title": "Production Panel",
+    "about": "Upper window with the colony's production rows."
+  },
+  "col_population": {
+    "title": "Population Panel",
+    "about": "Upper window with the morale and the population job cells."
+  },
+  "col_build": {
+    "title": "Build Panel",
+    "about": "Upper-right window with the current build item and the CHANGE and BUY buttons."
+  },
+  "col_surface": {
+    "title": "Surface Panel",
+    "about": "Large lower window with the planet surface, the building list, units, officer and the LEADERS and RETURN buttons."
+  }
+}

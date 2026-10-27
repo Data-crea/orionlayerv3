@@ -1,0 +1,10 @@
+{
+  "left_panel": {
+    "title": "Left Panel",
+    "about": "The panel on the left with the stardate, the page tabs and the income and maintenance chart."
+  },
+  "content_panel": {
+    "title": "Content Panel",
+    "about": "The panel on the right in which the selected info page's text and pictures are drawn."
+  }
+}

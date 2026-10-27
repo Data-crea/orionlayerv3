@@ -1,0 +1,54 @@
+{
+  "panel": {
+    "title": "Main Panel",
+    "about": "Thin-bordered panel that frames the list of technology entries."
+  },
+  "title": {
+    "title": "Screen Title",
+    "about": "Centered headline text drawn in the top band of the panel."
+  },
+  "left_band": {
+    "title": "Left Help Band",
+    "about": "Hidden hit area at the left edge, over the map strip; a right click there opens this screen's help."
+  },
+  "right_band": {
+    "title": "Right Help Band",
+    "about": "Hidden hit area at the right edge, over the map strip; a right click there opens this screen's help."
+  },
+  "top_band": {
+    "title": "Top Help Band",
+    "about": "Hidden hit area along the top; a right click there opens this screen's help."
+  },
+  "entry_0": {
+    "title": "Research Entry 1",
+    "about": "Entry 1 (row 1, column 1 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_1": {
+    "title": "Research Entry 2",
+    "about": "Entry 2 (row 1, column 2 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_2": {
+    "title": "Research Entry 3",
+    "about": "Entry 3 (row 2, column 1 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_3": {
+    "title": "Research Entry 4",
+    "about": "Entry 4 (row 2, column 2 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_4": {
+    "title": "Research Entry 5",
+    "about": "Entry 5 (row 3, column 1 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_5": {
+    "title": "Research Entry 6",
+    "about": "Entry 6 (row 3, column 2 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_6": {
+    "title": "Research Entry 7",
+    "about": "Entry 7 (row 4, column 1 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  },
+  "entry_7": {
+    "title": "Research Entry 8",
+    "about": "Entry 8 (row 4, column 2 of the 2 x 4 grid): one technology category's offered field, its cost and applications."
+  }
+}

@@ -342,14 +342,25 @@ def read_boxes(path, win_w=1920, win_h=1080):
     return []
 
 
-def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080):
+def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080, seed_dir=None):
     """Save boxes for the current resolution into boxes.json.
 
     Preserves other resolutions already stored in the file.
     Migrates legacy list format to dict on first save.
+
+    `seed_dir`: a mod's file that does not exist yet starts as a copy of
+    this folder's, so the other resolutions stay in it (a mod file
+    replaces the whole file, there is no merging).
     """
     path = os.path.join(screen_dir, "boxes.json")
     key = _resolution_key(win_w, win_h)
+    if seed_dir and not os.path.exists(path):
+        seed = os.path.join(seed_dir, "boxes.json")
+        if os.path.exists(seed):
+            os.makedirs(screen_dir, exist_ok=True)
+            with open(seed, encoding="utf-8") as src:
+                with open(path, "w", encoding="utf-8") as dst:
+                    dst.write(src.read())
 
     # Load existing data to preserve other resolutions
     res_dict = {}

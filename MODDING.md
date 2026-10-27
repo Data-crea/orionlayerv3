@@ -586,9 +586,16 @@ mods/my_mod/assets/shared/help/help_<lang>.json  the help texts
 JSON overrides replace the **whole file** — there is no deep merge.
 Copy the base file into your mod and edit it.
 
-Note on `boxes.json`: the in-game F3 editor always saves to the base
-project folder, never into a mod. When designing a layout for a mod,
-edit with mods disabled, then copy the result into your mod folder.
+Note on `boxes.json`: the in-game F3 editor never touches the base
+project. Press F3 on any screen: a panel lists the screen's boxes by
+name, says what each one is for and lets you move it (drag it, or type
+X, Y, Width and Height) and resize it. Save (Ctrl+S) writes
+`mods/<mod>/screens/<screen>/boxes.json` for the first mod in
+`active_mods`; with none active it makes a mod named `my_layout` and tells you
+to add `"my_layout"` to `active_mods` in `settings.json` and restart.
+Boxes cannot be created or deleted (a box is a name the screen's code
+looks up) and stay inside the 1920x1080 reference area. Revert drops
+what you have not saved.
 
 ### Context help
 
@@ -720,7 +727,7 @@ Rules that keep a screen consistent with the rest:
 
 - Changing skin or mods requires a restart (palettes resolve at
   import time).
-- The F3 editor saves to the base project, never into a mod.
+- The F3 editor saves into a mod, never into the base project.
 - JSON overrides are whole-file; there is no merging.
 - Always use `style.render_text(text, size, colour)` rather than
   `style.get_font(size).render(...)`. It detects which glyphs a font

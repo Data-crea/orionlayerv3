@@ -1,0 +1,14 @@
+{
+  "left_panel": {
+    "title": "Leaders Left Panel",
+    "about": "Left glass panel holding the leader slots (frames and empty slots)."
+  },
+  "right_panel": {
+    "title": "Leaders Right Panel",
+    "about": "Right glass panel holding the selected leader's view box and the galaxy box."
+  },
+  "hire_panel": {
+    "title": "Hire Cost Panel",
+    "about": "Small glass panel with the hire cost of the leader under the pointer; drawn only in the hire view."
+  }
+}

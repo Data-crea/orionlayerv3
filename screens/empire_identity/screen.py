@@ -263,6 +263,12 @@ class EmpireIdentityScreen(ScreenBase):
         if self.USE_FRAME:
             self._render_frame(surface)
 
+    def editor_dormant(self, box):
+        """The progress box shows only while the chain runs (INVENTION)."""
+        if box.name in ("busy_panel", "busy_text"):
+            return not self._chain
+        return super().editor_dormant(box)
+
     def _render_busy(self, surface, L, labels):
         """Progress box while the injection chain runs (INVENTION —
         see the note in renderer.py). Wording per step comes from

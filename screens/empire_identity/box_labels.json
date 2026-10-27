@@ -1,0 +1,58 @@
+{
+  "identity_panel": {
+    "title": "Identity Panel",
+    "about": "Thin-bordered top panel that frames the ruler, banner and home system inputs."
+  },
+  "ruler_header": {
+    "title": "Ruler Header",
+    "about": "Title and hint text above the ruler name input."
+  },
+  "ruler_input": {
+    "title": "Ruler Name Input",
+    "about": "Text input widget where the ruler's name is typed."
+  },
+  "banner_header": {
+    "title": "Banner Header",
+    "about": "Title and hint text above the banner colour grid."
+  },
+  "banner_grid": {
+    "title": "Banner Colour Grid",
+    "about": "Thin-bordered grid of banner colour tiles; hover highlights and a click picks the colour."
+  },
+  "home_header": {
+    "title": "Home System Header",
+    "about": "Title and hint text above the home system name input."
+  },
+  "home_input": {
+    "title": "Home System Input",
+    "about": "Text input widget where the home system's name is typed."
+  },
+  "preview_panel": {
+    "title": "Preview Panel",
+    "about": "Thin-bordered bottom panel framing the empire preview; its border is drawn over the picture."
+  },
+  "preview_image": {
+    "title": "Homeworld Picture",
+    "about": "Homeworld artwork behind the preview, drawn with the zoom, crop and fade set in its style."
+  },
+  "preview_header": {
+    "title": "Preview Header",
+    "about": "Centered heading of the empire preview, in capitals."
+  },
+  "preview_banner": {
+    "title": "Preview Banner",
+    "about": "The chosen banner colour's standard for the race, scaled to the box height."
+  },
+  "preview_text": {
+    "title": "Preview Text",
+    "about": "Empire name with the ruler and home system lines, drawn with icons."
+  },
+  "busy_panel": {
+    "title": "Progress Panel",
+    "about": "Progress popup shown only while the setup chain runs; previewed in the editor."
+  },
+  "busy_text": {
+    "title": "Progress Text",
+    "about": "Text inside the progress popup showing the current step and elapsed time; shown only while the chain runs."
+  }
+}

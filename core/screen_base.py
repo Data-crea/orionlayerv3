@@ -320,6 +320,24 @@ class ScreenBase(HelpMixin):
         """
         return None
 
+    def editor_dormant(self, box):
+        """True when `box` is a popup that is not on screen right now.
+
+        The F3 editor outlines every box. A popup's boxes (the galaxy
+        map's system window and fleet box, the help panel) exist all the
+        time and are only drawn while the popup is open, so their plain
+        outlines sat in the middle of the picture where nothing is drawn
+        and looked like boxes that should not be there. The overlay draws
+        a dormant box dim and with its name; it stays selectable, since
+        this is the only place it can be moved.
+
+        NOT `help_popup`: while the editor is open every screen draws the
+        help panel as a preview (`screenhelp.py`), so it is never empty.
+        A screen adds its own popups by overriding this and calling
+        `super()`.
+        """
+        return False
+
     def editor_note(self, box):
         """One line about `box` for the F3 editor's info bar, or None.
 

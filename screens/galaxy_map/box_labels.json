@@ -1,0 +1,126 @@
+{
+  "map_area": {
+    "title": "Star Map",
+    "about": "The area where the galaxy's stars, lanes and fleets are drawn and clicked."
+  },
+  "sidebar": {
+    "title": "Sidebar",
+    "about": "The right-hand strip holding the stardate and the empire's figures (treasury, command, food, freighters, research)."
+  },
+  "nav_turn": {
+    "title": "Next Turn Button",
+    "about": "The button at the bottom right that ends the turn."
+  },
+  "nav_colonies": {
+    "title": "Colonies Button",
+    "about": "Button that opens the Colonies screen."
+  },
+  "nav_planets": {
+    "title": "Planets Button",
+    "about": "Button that opens the Planets screen."
+  },
+  "nav_fleets": {
+    "title": "Fleets Button",
+    "about": "Button that opens the Fleets screen."
+  },
+  "nav_leaders": {
+    "title": "Leaders Button",
+    "about": "Button that opens the Leaders screen."
+  },
+  "nav_races": {
+    "title": "Races Button",
+    "about": "Button that opens the Races screen."
+  },
+  "nav_info": {
+    "title": "Info Button",
+    "about": "Button that opens the Info screen."
+  },
+  "sb_stardate_text": {
+    "title": "Stardate",
+    "about": "The stardate line at the top of the sidebar."
+  },
+  "sb_treasury_text": {
+    "title": "Treasury Figure",
+    "about": "The sidebar's treasury text; a click here opens the tax rate popup."
+  },
+  "sb_treasury_icon": {
+    "title": "Treasury Icon",
+    "about": "The icon beside the treasury figure; a click here opens the tax rate popup."
+  },
+  "sb_command_text": {
+    "title": "Command Points Figure",
+    "about": "The sidebar's command points text; a click here opens the game's command points notice."
+  },
+  "sb_command_icon": {
+    "title": "Command Points Icon",
+    "about": "The icon beside the command points figure; a click here opens the game's command points notice."
+  },
+  "sb_food_text": {
+    "title": "Food Figure",
+    "about": "The sidebar's food text; a click here does nothing, as in the original."
+  },
+  "sb_food_icon": {
+    "title": "Food Icon",
+    "about": "The icon beside the food figure; a click here does nothing, as in the original."
+  },
+  "sb_freighters_text": {
+    "title": "Freighters Figure",
+    "about": "The sidebar's freighters text; a click here starts the game's scrap freighters dialog, or says none can be scrapped."
+  },
+  "sb_freighters_icon": {
+    "title": "Freighters Icon",
+    "about": "The icon beside the freighters figure; a click here starts the scrap freighters dialog, or says none can be scrapped."
+  },
+  "sb_research_text": {
+    "title": "Research Figure",
+    "about": "The sidebar's research text; a click here opens the research change window."
+  },
+  "sb_research_icon": {
+    "title": "Research Icon",
+    "about": "The icon beside the research figure; a click here opens the research change window."
+  },
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "The panel showing right-click help text; shown only while help is visible."
+  },
+  "system_box": {
+    "title": "System Window",
+    "about": "The frame of the star system window; shown only while the game has a system window open."
+  },
+  "system_title": {
+    "title": "System Window Title",
+    "about": "The title plate with the system's name; shown only while the system window is open."
+  },
+  "system_view": {
+    "title": "System View",
+    "about": "The picture of the star and its orbits inside the system window; shown only while it is open."
+  },
+  "system_text": {
+    "title": "System Info Text",
+    "about": "The information text in the system window; shown only while it is open."
+  },
+  "system_close": {
+    "title": "System Close Button",
+    "about": "The close button of the system window; shown only while it is open."
+  },
+  "fleet_box": {
+    "title": "Fleet Window",
+    "about": "The frame of the fleet selection box; shown only while the game has a fleet box open."
+  },
+  "fleet_title": {
+    "title": "Fleet Window Title",
+    "about": "The title strip of the fleet box: the race's Fleet line, or the ship's name; shown only while the fleet box is open."
+  },
+  "fleet_grid": {
+    "title": "Fleet Ship Grid",
+    "about": "The 3 x 3 grid of ship cells in the fleet box, one ship per cell; click selects, with a scroll bar beyond nine ships."
+  },
+  "fleet_status": {
+    "title": "Fleet Status Line",
+    "about": "The status line of the fleet box (move line, refusal or scanned ship); shown only while it is open."
+  },
+  "fleet_close": {
+    "title": "Fleet Close Button",
+    "about": "The close button of the fleet box; shown only while the fleet box is open."
+  }
+}

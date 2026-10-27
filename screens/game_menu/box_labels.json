@@ -1,0 +1,90 @@
+{
+  "body": {
+    "title": "Menu Panel",
+    "about": "The framed background panel behind the game menu and its settings, load and save dialogs."
+  },
+  "menu_save": {
+    "title": "Save Game Button",
+    "about": "Button on the game menu dialog (key S) that opens the save dialog."
+  },
+  "menu_load": {
+    "title": "Load Game Button",
+    "about": "Button on the game menu dialog (key L) that opens the load dialog."
+  },
+  "menu_new": {
+    "title": "New Game Button",
+    "about": "Button on the game menu dialog (key N) that starts a new game."
+  },
+  "menu_quit": {
+    "title": "Quit Game Button",
+    "about": "Button on the game menu dialog (key Q) that quits the game."
+  },
+  "menu_settings": {
+    "title": "Settings Button",
+    "about": "Button on the game menu dialog (key O) that opens the settings dialog."
+  },
+  "menu_return": {
+    "title": "Return Button",
+    "about": "Button on the game menu dialog (key Esc) that closes it and returns to the game."
+  },
+  "volume_panel": {
+    "title": "Volume Panel",
+    "about": "The bordered panel around the music and sound sliders; shown only in the settings dialog."
+  },
+  "music_label": {
+    "title": "Music Label",
+    "about": "The word labelling the music volume slider; shown only in the settings dialog."
+  },
+  "music_bar": {
+    "title": "Music Slider",
+    "about": "The music volume slider in the settings dialog; click or drag to set the level."
+  },
+  "sound_bar": {
+    "title": "Sound Slider",
+    "about": "The sound effects volume slider in the settings dialog; click or drag to set the level."
+  },
+  "sound_label": {
+    "title": "Sound Label",
+    "about": "The word labelling the sound volume slider; shown only in the settings dialog."
+  },
+  "settings_title": {
+    "title": "Settings Title",
+    "about": "The heading of the settings dialog; shown only while settings are open."
+  },
+  "settings_rows": {
+    "title": "Settings Rows",
+    "about": "The list of the engine's setting rows with their checkboxes; shown only in the settings dialog."
+  },
+  "orionlayer_open": {
+    "title": "OrionLayer Settings Button",
+    "about": "The button opening OrionLayer's own settings window; shown only in the settings dialog."
+  },
+  "settings_accept": {
+    "title": "Settings Accept Button",
+    "about": "The button that accepts and closes the settings dialog; shown only in that dialog."
+  },
+  "slot_list": {
+    "title": "Save Slot List",
+    "about": "The list of save slots with their details; shown only in the load and save dialogs."
+  },
+  "load_load": {
+    "title": "Load Button",
+    "about": "The button that loads the chosen slot; shown only in the load dialog."
+  },
+  "load_cancel": {
+    "title": "Load Cancel Button",
+    "about": "The button that cancels the load dialog; shown only in that dialog."
+  },
+  "save_save": {
+    "title": "Save Button",
+    "about": "The button that saves into the chosen slot; shown only in the save dialog."
+  },
+  "save_cancel": {
+    "title": "Save Cancel Button",
+    "about": "The button that cancels the save dialog; shown only in that dialog."
+  },
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "The panel showing right-click help text; shown only while help is visible."
+  }
+}

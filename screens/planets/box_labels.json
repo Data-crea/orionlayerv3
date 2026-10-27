@@ -1,0 +1,146 @@
+{
+  "list_area": {
+    "title": "Planet List Panel",
+    "about": "The dense glass panel behind the header and the table of planets."
+  },
+  "side_panel": {
+    "title": "Side Panel",
+    "about": "The glass panel at the right holding the sort and filter buttons, the send buttons and RETURN."
+  },
+  "planet_panel": {
+    "title": "Planet Panel",
+    "about": "The glass panel behind the picked planet's disc, name and special."
+  },
+  "picture_panel": {
+    "title": "Picture Panel",
+    "about": "The glass panel at the lower edge behind the guarding monster's picture and data."
+  },
+  "header": {
+    "title": "List Header",
+    "about": "The column headings of the planet table; the column widths of the rows follow it."
+  },
+  "rows": {
+    "title": "Planet Rows",
+    "about": "The visible rows of the planet table; each row is a hover and click area."
+  },
+  "scroll": {
+    "title": "Scroll Bar",
+    "about": "The scroll bar beside the planet table."
+  },
+  "galaxy_inset": {
+    "title": "Galaxy Inset",
+    "about": "The small black galaxy map; scanned star is marked and a click on a star picks it."
+  },
+  "status_line": {
+    "title": "Status Line",
+    "about": "A one-line plate showing the status text for the scanned planet."
+  },
+  "sort_heading": {
+    "title": "Sort Heading",
+    "about": "The heading text above the four sort buttons."
+  },
+  "sort_climate": {
+    "title": "Sort by Climate",
+    "about": "Button labelled Climate that sorts the planet list by climate, best first."
+  },
+  "sort_minerals": {
+    "title": "Sort by Minerals",
+    "about": "Button labelled Minerals that sorts the planet list by minerals, richest first."
+  },
+  "sort_size": {
+    "title": "Sort by Size",
+    "about": "Button labelled Size that sorts the planet list by maximum population, highest first."
+  },
+  "restrict_heading": {
+    "title": "Restrict Heading",
+    "about": "The heading text above the filter buttons."
+  },
+  "restrict_enemy": {
+    "title": "No Enemy Presence Filter",
+    "about": "Toggle labelled No Enemy Presence that filters planets with enemy presence out of the list."
+  },
+  "restrict_gravity": {
+    "title": "Normal Gravity Filter",
+    "about": "Toggle labelled Normal Gravity that drops planets whose gravity gives your race a productivity penalty."
+  },
+  "restrict_hostile": {
+    "title": "Non-Hostile Filter",
+    "about": "Toggle labelled Non-Hostile Environment that drops planets where a farmer would grow no food."
+  },
+  "restrict_minerals": {
+    "title": "Mineral Abundance Filter",
+    "about": "Toggle labelled Mineral Abundance that drops planets with poor or ultra poor minerals from the list."
+  },
+  "restrict_range": {
+    "title": "Planets In Range Filter",
+    "about": "Toggle labelled Planets In Range that keeps only planets within ship range of a colony."
+  },
+  "send_colony": {
+    "title": "Send Colony Ship",
+    "about": "Button that sends a colony ship to the picked planet."
+  },
+  "send_outpost": {
+    "title": "Send Outpost Ship",
+    "about": "Button that sends an outpost ship to the picked planet."
+  },
+  "return": {
+    "title": "Return Button",
+    "about": "Slanted button at the foot of the side panel that closes the screen."
+  },
+  "planet_disc": {
+    "title": "Planet Disc",
+    "about": "The picture of the picked planet in the planet panel."
+  },
+  "planet_name": {
+    "title": "Planet Name",
+    "about": "The name of the picked planet, drawn in the planet panel."
+  },
+  "planet_special": {
+    "title": "Planet Special",
+    "about": "The picked planet's special resource, drawn in the planet panel."
+  },
+  "monster_sprite": {
+    "title": "Monster Picture",
+    "about": "Shown only for a star guarded by a monster; its picture."
+  },
+  "monster_type": {
+    "title": "Monster Type",
+    "about": "Shown only for a guarded star; the monster's name."
+  },
+  "monster_stage": {
+    "title": "Monster Stage",
+    "about": "Shown only for a guarded star; the monster's stage of growth."
+  },
+  "monster_size": {
+    "title": "Monster Size",
+    "about": "Shown only for a guarded star; the monster's hull size."
+  },
+  "monster_structure": {
+    "title": "Monster Structure",
+    "about": "Shown only for a guarded star; the monster's structure value."
+  },
+  "monster_armour": {
+    "title": "Monster Armour",
+    "about": "Shown only for a guarded star; the monster's armour value."
+  },
+  "monster_shield": {
+    "title": "Monster Shield",
+    "about": "Shown only for a guarded star; the monster's shield type."
+  },
+  "monster_weapons": {
+    "title": "Monster Weapons",
+    "about": "Shown only for a guarded star; the Weapons heading and the monster's weapon names."
+  },
+  "monster_weapon_counts": {
+    "title": "Monster Weapon Counts",
+    "about": "Shown only for a guarded star; the weapon counts, right-aligned beside the weapon names."
+  },
+  "monster_specials": {
+    "title": "Monster Specials",
+    "about": "Shown only for a guarded star; the Specials heading and the monster's special abilities."
+  },
+  "help_popup": {
+    "title": "Help Panel",
+    "about": "Shown only while right-click help is open; holds the help text for the clicked control."
+  }
+}
