@@ -20,6 +20,9 @@ so the game stays playable.
 > **Not ready to use yet.** OrionLayer is under heavy development. It is
 > not ready to play or to rely on yet, and none of its screens has been
 > accepted.
+>
+> **The beta runs on Linux only.** Windows (and macOS) are not part of it:
+> OrionLayer does not start on Windows yet.
 
 You can start it, load or begin a game and play through the HD screens,
 but expect missing pieces, screens that still fall back to the original,
@@ -56,9 +59,7 @@ sudo apt install build-essential cmake ninja-build pkg-config git \
     libwayland-dev libdecor-0-dev liburing-dev
 ```
 
-On Windows you need Python 3.10 or newer and git, and Visual Studio 2022
-with "Desktop development with C++" (it brings CMake and Ninja); see
-[On Windows](#on-windows).
+Windows is not part of the beta (see [On Windows](#on-windows)).
 
 ## Getting started
 
@@ -135,8 +136,12 @@ NEW GAME as in the original. Closing OrionLayer stops the game.
 
 ### On Windows
 
-OrionLayer has not been tried on Windows yet; these are the same steps
-with Windows' commands. In an "x64 Native Tools Command Prompt for VS
+**Windows is not part of the beta, and OrionLayer does not start there
+today** (the client calls a Linux-only function while starting, and `play.py`
+uses Linux-only process calls to run the engine). The steps below are the
+Linux steps with Windows' commands, kept for later and not supported. You
+would need Python 3.10 or newer, git and Visual Studio 2022 with "Desktop
+development with C++". In an "x64 Native Tools Command Prompt for VS
 2022", in one folder, with the game in `C:\GOG Games\Master of Orion 2`:
 
 ```bat
