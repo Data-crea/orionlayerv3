@@ -219,7 +219,10 @@ part, [doc/modding_galaxy_map.md](doc/modding_galaxy_map.md).
   OrionLayer includes no part of it; the two talk over a local connection.
 - **The base pack**, OrionLayer's own pictures, is by Data (Daniel
   Sattler) under Creative Commons Attribution 4.0 (CC BY 4.0); its
-  `LICENSE.txt` comes with it.
+  `LICENSE.txt` comes with it. Where a picture redraws artwork of the
+  game, the copyright in the original stays with its rightsholder; the
+  main-menu logo, for one, recreates the lettering of the game's title,
+  which remains the rightsholder's.
 - **The leader portraits** (the optional download) are redrawings of the
   game's portraits; the copyright in the original artwork stays with its
   rightsholder, and they are not under the base pack's licence.

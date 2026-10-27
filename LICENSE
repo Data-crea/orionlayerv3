@@ -39,9 +39,12 @@ It does NOT apply to:
       pack's own LICENSE.txt carries the licence and its one rule: keep
       the credits. Where a picture redraws artwork of Master of Orion 2:
       Battle at Antares (Simtex / MicroProse, 1996), the copyright in the
-      underlying work remains with its rightsholder. OrionLayer needs an
-      installed, legally obtained copy of the game and replaces none of
-      it.
+      underlying work remains with its rightsholder. This holds in
+      particular for the main-menu logo
+      (screens/main_menu/assets/logo.png): it recreates the lettering of
+      the original game's title, and the title and its original lettering
+      remain the rightsholder's. OrionLayer needs an installed, legally
+      obtained copy of the game and replaces none of it.
       Where they came from: the planet surface sheet
       screens/colony_summary/assets/_src/surfaces/planet_surfaces.png and
       the output-panel icon sheets under
@@ -56,10 +59,13 @@ It does NOT apply to:
       drawings. Every picture of the pack is under CC BY 4.0.
 
   The leader portraits
-      The high-resolution leader portraits are in the base pack
-      (screens/leaders/assets/portraits/), not in this repository. They
-      are the maintainer's redrawings of the game's leader portraits; the
-      copyright in the underlying work remains with its rightsholder.
+      The high-resolution leader portraits are NOT in this repository and
+      NOT in the base pack: they are a separate, optional download (the
+      release "Leader portraits") that the player unpacks into
+      OrionLayer's mod folder. They are the maintainer's redrawings of the
+      game's leader portraits; the copyright in the underlying work
+      remains with its rightsholder, and they are not under the base
+      pack's licence.
 
   The display font
       assets/shared/fonts/Aldrich-Regular.ttf is Copyright (c) 2011
