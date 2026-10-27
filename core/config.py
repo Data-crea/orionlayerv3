@@ -132,6 +132,26 @@ def build_line():
             f"orion2re {ORION2RE_VERSION}")
 
 
+def environment_line():
+    """The log's line after the build line (work order 333): the operating
+    system, Python, pygame with its SDL, and the base pack the manifest of
+    this tree names — what a bug report needs and nothing that names the
+    player. Raises nothing."""
+    import platform
+    try:
+        import pygame
+        from core import basepack
+        sdl = ".".join(str(n) for n in pygame.get_sdl_version())
+        # system and release only: the tuple's second field is the host name
+        kind = platform.uname()
+        return (f"environment: {kind[0]} {kind[2]}, "
+                f"Python {platform.python_version()}, pygame "
+                f"{pygame.version.ver} (SDL {sdl}), manifest "
+                f"{basepack.release_tag()}")
+    except Exception as err:           # noqa: BLE001 — a diagnostic only
+        return f"environment: unknown ({type(err).__name__})"
+
+
 def display_line(driver, width, height):
     """The log's second line (work order 202, part 6): SDL's video driver
     and the window OrionLayer got, once at start. 201 could not say which

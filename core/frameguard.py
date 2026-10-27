@@ -223,10 +223,14 @@ class FrameGuard:
         self._repeat = None
 
     def _record(self, stack, where, exc):
-        from core.config import build_line
+        from core.config import build_line, environment_line
+        from core.logredact import redact
         head = (f"\n=== {time.strftime('%Y-%m-%d %H:%M:%S')} fault "
-                f"{self.faults} {where}\n=== build: {build_line()}\n")
-        written = write_log(head + "".join(stack), self.path)
+                f"{self.faults} {where}\n=== build: {build_line()}\n"
+                f"=== {environment_line()}\n")
+        # the stack names every file by its absolute path, and a message
+        # can name the game folder: the file keeps neither (work order 333)
+        written = write_log(redact(head + "".join(stack)), self.path)
         log.error("frame guard: %s: %s %s — full stack in %s",
                   type(exc).__name__, exc, where, written or "(no log)")
 

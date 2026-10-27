@@ -5,7 +5,7 @@ import logging
 import time
 import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,
-                         build_line, display_line)
+                         build_line, display_line, environment_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import framerate
 from core import lastword
@@ -28,7 +28,9 @@ from core import helppopup
 from core import f12notice
 from core import overlays
 from core import pointergate
+from core.pointergate import coalesce_motion
 from core import frameguard
+from core import logredact
 from core import enginelink
 from core.resizeexpect import ResizeExpect
 from core import drawgate
@@ -37,26 +39,6 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s.%(msecs)03d %(name)s: %(message)s",
                     datefmt="%H:%M:%S")
 log = logging.getLogger("orionlayer")
-
-
-def coalesce_motion(events):
-    """The events of one frame, with every pointer motion dropped that
-    another motion follows before any other event — work order 226 C.
-
-    A motion carries an absolute position, so only the last of a run says
-    where the pointer is; every handler reads that (hover, drag, pan). A
-    fast mouse queues many per frame, and each was routed in full before
-    the frame was drawn: on Planets 1.5 ms an event, the highlight a frame
-    or more late (measured, 226's report). A button, wheel or key between
-    two motions keeps the motion before it, so a press still sees the
-    pointer where it was pressed."""
-    out = []
-    for i, ev in enumerate(events):
-        if ev.type == pygame.MOUSEMOTION and i + 1 < len(events) and \
-                events[i + 1].type == pygame.MOUSEMOTION:
-            continue
-        out.append(ev)
-    return out
 
 
 class App:
@@ -75,6 +57,7 @@ class App:
         # raises nothing, because a diagnostic that takes the program
         # down is worse than no diagnostic.
         log.info("build: %s", build_line())
+        log.info(environment_line())
         self.settings = load_settings()
         self.screens_dir = SCREENS_DIR
 
@@ -820,15 +803,14 @@ if __name__ == "__main__":
     # every way the client ends leaves a line saying why (work order 213:
     # Data's client died silently as a battle opened) — the program's, not
     # the tools' that build an App of their own
+    # the console's log is kept in the player's folder too, redacted
+    # (work order 333): a tester's report carries the build line from it
+    logredact.attach_file()
     lastword.install()
     # the pictures are outside the repository (work order 241): without the
     # base pack every screen would draw holes, so say where it was looked for
     from core import basepack
-    _pack = basepack.problems()
-    if _pack:
-        print("OrionLayer cannot start:")
-        for _line in _pack:
-            print("  - " + _line)
+    if basepack.explain_missing():
         lastword.ended("no base pack")
         sys.exit(2)
     app = App()

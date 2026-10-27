@@ -124,6 +124,19 @@ def problems(folder=None):
                 + f") — {how}."]
     return []
 
+def explain_missing(out=print):
+    """What `main.py` prints when the pack is not complete: the sentences
+    of `problems` under "OrionLayer cannot start:". True when it printed
+    (the caller then ends with "no base pack"), False when the pack is
+    there. Moved out of `main.py` by work order 333, which held 40 KB."""
+    pack = problems()
+    if not pack:
+        return False
+    out("OrionLayer cannot start:")
+    for line in pack:
+        out("  - " + line)
+    return True
+
 
 def source(relpath, tree=TREE):
     """A picture's path for a tool that reads one by name (the cutters that

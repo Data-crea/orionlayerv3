@@ -23,6 +23,8 @@ The right button has its own gate since work order 299 (Data's P2 of
 with `handle_right_cancel`, so the battle's camera never pans with no
 button held.
 """
+import pygame
+
 
 DELIVER, CANCEL, DROP = "deliver", "cancel", "drop"
 
@@ -57,3 +59,25 @@ class PointerGate:
     def passes(open_):
         """Motion and wheel: only while the screen is the game's picture."""
         return bool(open_)
+
+
+def coalesce_motion(events):
+    """The events of one frame, with every pointer motion dropped that
+    another motion follows before any other event — work order 226 C.
+
+    A motion carries an absolute position, so only the last of a run says
+    where the pointer is; every handler reads that (hover, drag, pan). A
+    fast mouse queues many per frame, and each was routed in full before
+    the frame was drawn: on Planets 1.5 ms an event, the highlight a frame
+    or more late (measured, 226's report). A button, wheel or key between
+    two motions keeps the motion before it, so a press still sees the
+    pointer where it was pressed.
+
+    Lived in `main.py` until work order 333 (its 40 KB limit)."""
+    out = []
+    for i, ev in enumerate(events):
+        if ev.type == pygame.MOUSEMOTION and i + 1 < len(events) and \
+                events[i + 1].type == pygame.MOUSEMOTION:
+            continue
+        out.append(ev)
+    return out
