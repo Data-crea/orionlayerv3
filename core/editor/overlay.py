@@ -26,8 +26,13 @@ def render(ed, surface):
         return
     nf = ed.app.style.get_font(L.font_size(12))
     names = labels.load(getattr(scr, "_screen_dir", ""))
+    # ONE BOX CHOSEN, THE OTHERS GO: with a selection only that box is
+    # outlined and named, so what is being moved is not lost among its
+    # neighbours; deselecting (Esc, or a click on nothing) shows all again.
     for box in scr.boxes:
         if not box.screen_rect:
+            continue
+        if ed.selected is not None and box is not ed.selected:
             continue
         dormant = scr.editor_dormant(box)
         # A popup's box with no popup open is dim and says so, so it is

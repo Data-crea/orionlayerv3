@@ -25,7 +25,8 @@ HELP_SECTIONS = [
         ("H", "Toggle this help"),
         ("P", "Show / hide the layout panel"),
         ("Ctrl+S / F2", "Save (into your mod)"),
-        ("Esc", "Deselect / close panel"),
+        ("Esc", "Deselect (shows every box again)"),
+        ("Selected box", "Only the chosen box stays outlined"),
     ]),
     ("The panel", [
         ("List", "Click a box to select it"),
