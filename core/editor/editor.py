@@ -1,4 +1,4 @@
-"""Box editor — F3 toggle (`core/hdkeys.py`). H=help. Ctrl+N=button, Ctrl+I=panel.
+"""Box editor — F3 toggle (`core/hdkeys.py`); the side panel lists the boxes.
 
 Input/state half of the editor; overlay rendering lives in
 overlay.py. Public API unchanged: Editor(app), .toggle(),
@@ -12,7 +12,7 @@ from core import mouse as mouse_input
 from core.box import save_boxes
 from core.editor import boxclass, geometry, overlay, target
 from core.editor.panel import Panel
-from core.editor.constants import GLOW_KEYS, H_REF
+from core.editor.constants import H_REF
 
 log = logging.getLogger("editor")
 
@@ -25,9 +25,6 @@ class Editor:
         self._drag = None
         self._dstart = None
         self._dorig = None
-        self.show_fields = False
-        self.show_help = False
-        self._glow_idx = -1
         self._save_flash = 0.0
         self._save_note = ""
         #: Why the last handle was refused, for the info bar. Cleared
@@ -35,8 +32,8 @@ class Editor:
         #: answer to what was just tried and not as a standing state.
         self.refusal = None
         self.panel = Panel(self)
-        #: Developer mode keeps the engine-field list (Tab) and the base
-        #: route for saving; a player has neither (`core.editor.target`).
+        #: Developer mode keeps the base route for saving; a player's save
+        #: goes into a mod (`core.editor.target`).
         self.developer = target.developer()
 
     def target(self):
@@ -45,7 +42,6 @@ class Editor:
     def select(self, box):
         self.selected = box
         self.refusal = None
-        self._glow_idx = -1
 
     def place_refusal(self, box):
         """Why `box` cannot be moved, or None. A box whose rect the screen
@@ -68,20 +64,12 @@ class Editor:
         self.selected = None
         self._drag = None
 
-    @property
-    def glow_key(self):
-        return GLOW_KEYS[self._glow_idx] if 0 <= self._glow_idx < 4 else None
-
     def toggle(self):
         self.active = not self.active
         log.info("Editor %s", "ON" if self.active else "OFF")
-        if self.active:
-            self.show_help = True
-        else:
+        if not self.active:
             self.selected = None
             self._drag = None
-            self._glow_idx = -1
-            self.show_help = False
         self.panel.blur()
         self.panel.dragging = None
 
@@ -89,9 +77,6 @@ class Editor:
         if not self.active:
             return False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.show_help:
-                self.show_help = False
-                return True
             if self.panel.hit(*event.pos):
                 return self.panel.click(*event.pos)
             self.panel.blur()
@@ -113,52 +98,6 @@ class Editor:
                 and self.panel.hit(*mouse_input.pos()):
             self.panel.wheel(event.y)
             return True
-        if event.type == pygame.MOUSEWHEEL and self.selected:
-            mods = pygame.key.get_mods()
-            if self.selected.name == "race_grid":
-                # Portrait zoom/pan when hovering over grid
-                screen = self.app.dispatcher.top
-                if screen and hasattr(screen, "_race_at_screen_pos"):
-                    mx, my = mouse_input.pos()
-                    rid = screen._race_at_screen_pos(mx, my)
-                    if rid is not None:
-                        race = screen._race_by_id(rid)
-                        if race:
-                            if mods & pygame.KMOD_SHIFT:
-                                # Pan vertical
-                                crop = list(race.get("portrait_crop", [0.5, 0.5]))
-                                crop[1] = round(max(0, min(1, crop[1] - event.y * 0.03)), 3)
-                                race["portrait_crop"] = crop
-                            elif mods & pygame.KMOD_ALT:
-                                # Pan horizontal
-                                crop = list(race.get("portrait_crop", [0.5, 0.5]))
-                                crop[0] = round(max(0, min(1, crop[0] - event.y * 0.03)), 3)
-                                race["portrait_crop"] = crop
-                            else:
-                                # Zoom
-                                zoom = race.get("portrait_zoom", 1.0)
-                                zoom = round(max(0.3, min(3.0, zoom + event.y * 0.1)), 2)
-                                race["portrait_zoom"] = zoom
-                            screen._invalidate_thumb(rid)
-                            return True
-            if (self.selected.style.get("pannable")
-                    and not mods & pygame.KMOD_CTRL):
-                self._image_wheel(self.selected, event.y, mods)
-                return True
-            if mods & pygame.KMOD_CTRL:
-                self._change_font_scale(event.y)
-                return True
-        # Right-drag pans the image inside a pannable box
-        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
-                and self.selected and self.selected.style.get("pannable")):
-            self._drag = "pan"
-            self._dstart = self._ref(*event.pos)
-            self._dorig = tuple(self.selected.style.get("crop", [0.5, 0.5]))
-            return True
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 3:
-            if self._drag == "pan":
-                self._drag = None
-                return True
         if event.type == pygame.KEYDOWN:
             return self._on_key(event)
         return False
@@ -174,9 +113,6 @@ class Editor:
 
     def _on_click(self, sx, sy):
         rx, ry = self._ref(sx, sy)
-        if self.developer and self.show_fields \
-                and self._field_click(sx, sy):
-            return True
         if self.selected:
             rh = self._hit_resize(rx, ry)
             if rh:
@@ -210,7 +146,6 @@ class Editor:
             if box:
                 self.selected = box
                 self.refusal = self.place_refusal(box)
-                self._glow_idx = -1
                 if self.refusal:
                     return True
                 self._drag = "move"
@@ -219,14 +154,10 @@ class Editor:
                 return True
         self.selected = None
         self.refusal = None
-        self._glow_idx = -1
         return True
 
     def _on_drag(self, sx, sy):
         rx, ry = self._ref(sx, sy)
-        if self._drag == "pan":
-            self._image_pan_drag(rx, ry)
-            return
         dx, dy = rx - self._dstart[0], ry - self._dstart[1]
         box = self.selected
         if not box:
@@ -279,27 +210,14 @@ class Editor:
             self._save(); return True
         if self.panel.focus:
             return self.panel.key(event)
-        if k == pygame.K_h:
-            self.show_help = not self.show_help
-            return True
-        if self.show_help:
-            self.show_help = False
-            return True
         if k == pygame.K_s and m & pygame.KMOD_CTRL:
             self._save(); return True
         if k == pygame.K_F2:
             self._save(); return True
         if k == pygame.K_p:
             self.panel.visible = not self.panel.visible; return True
-        if k == pygame.K_TAB and self.developer:
-            self.show_fields = not self.show_fields; return True
         if k == pygame.K_ESCAPE:
-            if self._glow_idx >= 0:
-                self._glow_idx = -1
-            elif self.show_fields:
-                self.show_fields = False
-            else:
-                self.selected = None
+            self.selected = None
             return True
         if k == pygame.K_s and not (m & pygame.KMOD_CTRL):
             # Hide decorative background layers while placing boxes.
@@ -311,11 +229,6 @@ class Editor:
                 log.info("Star field: %s",
                          "on" if layer.toggle() else "off")
             return True
-        if k == pygame.K_g and self.selected:
-            if self.selected.style.get("skin") == "button":
-                self._glow_idx = (self._glow_idx + 1) % 4
-                log.info("Glow corner: %s", self.glow_key)
-            return True
         if k in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT,
                  pygame.K_RIGHT) and self.selected:
             s = 5 if m & pygame.KMOD_SHIFT else 1
@@ -323,47 +236,18 @@ class Editor:
                 -s if k == pygame.K_LEFT else 0)
             dy = s if k == pygame.K_DOWN else (
                 -s if k == pygame.K_UP else 0)
-            if m & pygame.KMOD_ALT:
-                self._content_offset_move(dx, dy)
-            else:
-                self._arrow_move(dx, dy)
+            self._arrow_move(dx, dy)
             return True
-        if k == pygame.K_r and self._glow_idx >= 0 and self.selected:
-            self._rotate_glow(); return True
         return False
 
     def _arrow_move(self, dx, dy):
         box = self.selected
-        if self.place_refusal(box) and not (
-                self._glow_idx >= 0 and box.style.get("skin") == "button"):
+        if self.place_refusal(box):
             self.refusal = self.place_refusal(box)
             return
-        if self._glow_idx >= 0 and box.style.get("skin") == "button":
-            key = self.glow_key
-            if "glows" not in box.style:
-                box.style["glows"] = {}
-            off = box.style["glows"].get(key, [0, 0])
-            box.style["glows"][key] = [off[0] + dx, off[1] + dy]
-        else:
-            x, y, w, h = box.ref_rect
-            box.ref_rect = geometry.clamp_move((x + dx, y + dy, w, h))
-            box.update_layout(self.app.layout)
-
-    def _content_offset_move(self, dx, dy):
-        """Alt+Arrow: move content inside the box."""
-        box = self.selected
-        off = list(box.style.get("content_offset", [0, 0]))
-        off[0] += dx
-        off[1] += dy
-        box.style["content_offset"] = off
-
-    def _rotate_glow(self):
-        box = self.selected
-        key = self.glow_key
-        if "glow_rot" not in box.style:
-            box.style["glow_rot"] = {}
-        cur = box.style["glow_rot"].get(key, 0)
-        box.style["glow_rot"][key] = (cur + 90) % 360
+        x, y, w, h = box.ref_rect
+        box.ref_rect = geometry.clamp_move((x + dx, y + dy, w, h))
+        box.update_layout(self.app.layout)
 
     def _change_font_scale(self, direction):
         box = self.selected
@@ -372,49 +256,6 @@ class Editor:
         new = max(0.5, min(3.0, new))
         box.style["font_scale"] = new
         log.info("'%s' font_scale: %.1f", box.name, new)
-
-    # ── Pannable image boxes (style: pannable/zoom/crop) ──
-
-    @staticmethod
-    def _image_wheel(box, dy, mods):
-        """Scroll = zoom, Shift+Scroll = pan vertical, Alt+Scroll =
-        pan horizontal. Stored in box.style, saved with Ctrl+S."""
-        st = box.style
-        if mods & pygame.KMOD_SHIFT:
-            crop = list(st.get("crop", [0.5, 0.5]))
-            crop[1] = round(max(0, min(1, crop[1] - dy * 0.03)), 3)
-            st["crop"] = crop
-        elif mods & pygame.KMOD_ALT:
-            crop = list(st.get("crop", [0.5, 0.5]))
-            crop[0] = round(max(0, min(1, crop[0] - dy * 0.03)), 3)
-            st["crop"] = crop
-        else:
-            st["zoom"] = round(max(0.3, min(4.0,
-                                            st.get("zoom", 1.0) + dy * 0.05)), 2)
-
-    def _image_pan_drag(self, rx, ry):
-        """Right-drag: the image follows the mouse 1:1. The screen may
-        expose image_size(box_name) -> (w, h) so the cover-fill
-        overflow is exact; otherwise a coarse range is assumed."""
-        box = self.selected
-        st = box.style
-        bw, bh = box.ref_rect[2], box.ref_rect[3]
-        zoom = max(0.3, st.get("zoom", 1.0))
-        scr = self.app.dispatcher.top
-        size = (scr.image_size(box.name)
-                if scr and hasattr(scr, "image_size") else None)
-        if size and size[0] > 0 and size[1] > 0:
-            scale = max(bw / size[0], bh / size[1]) * zoom
-            range_x = max(1.0, size[0] * scale - bw)
-            range_y = max(1.0, size[1] * scale - bh)
-        else:
-            range_x = max(1.0, bw * zoom * 0.5)
-            range_y = max(1.0, bh * zoom * 0.5)
-        dx = rx - self._dstart[0]
-        dy = ry - self._dstart[1]
-        cx = round(max(0, min(1, self._dorig[0] - dx / range_x)), 3)
-        cy = round(max(0, min(1, self._dorig[1] - dy / range_y)), 3)
-        st["crop"] = [cx, cy]
 
     def _save(self):
         scr = self.app.dispatcher.top
@@ -456,23 +297,6 @@ class Editor:
             for _name, _rect in scr.save_geometry(folder) or ():
                 log.info("Saved %s %s -> layout_reference.json",
                          _name, _rect)
-
-    def _field_click(self, sx, sy):
-        L = self.app.layout
-        px, py, pw, ph = L.rect((1500, 80, 380, 700))
-        if not (px <= sx <= px+pw and py <= sy <= py+ph):
-            return False
-        if not self.selected: return True
-        fields = (self.app.client.state.fields
-                  if self.app.connected else [])
-        row_h = L.font_size(12) + 6
-        idx = (sy - py - 32) // row_h
-        vis = [f for f in fields if f.index >= 1]
-        if 0 <= idx < len(vis):
-            self.selected.field_id = vis[idx].index
-            log.info("Field %d -> '%s'", vis[idx].index,
-                     self.selected.name)
-        return True
 
     # -- Rendering --
 

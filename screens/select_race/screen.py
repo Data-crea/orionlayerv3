@@ -510,12 +510,6 @@ class SelectRaceScreen(ScreenBase):
             self.box_font_scale_stored("race_description"))
         return max(0, min(self._desc_scroll, max(0, content - view)))
 
-    def _invalidate_thumb(self, race_id):
-        """Remove cached thumbnails for a race so they regenerate."""
-        keys = [k for k in self._thumb_cache if k[0] == race_id]
-        for k in keys:
-            del self._thumb_cache[k]
-
     def save_races(self, folder=None):
         # `folder`: a mod's screen folder (a player's save, work order 334)
         path = os.path.join(folder or self._screen_dir, "races.json")

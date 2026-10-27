@@ -303,12 +303,6 @@ class EmpireIdentityScreen(ScreenBase):
                             self.box_font_scale_stored("preview_text"),
                             tr, empire, rows)
 
-    def image_size(self, box_name):
-        """Editor hook: source size of the artwork in a pannable box."""
-        if box_name == "preview_image" and self._homeworld:
-            return self._homeworld.get_size()
-        return None
-
     # ── Input ─────────────────────────────────────────────
 
     def handle_click(self, screen_x, screen_y):

@@ -13,8 +13,8 @@ Layout is two F3 boxes, the same split the picks/score bar uses:
                        the three Custom Race columns already use
     picks_popup_text   text area, with its own font_scale
 
-Both are movable, resizable and scalable in the editor (Ctrl+Wheel on
-the text box changes the font scale), and the popup renders while the
+Both are movable and resizable in the editor (the panel's Text size
+buttons change the font scale), and the popup renders while the
 editor is open so the scale can be judged against the real string.
 
 The fill is not a colour constant: the popup blits the screen's own
