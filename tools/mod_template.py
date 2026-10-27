@@ -43,7 +43,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vdisplay  # noqa: E402
 vdisplay.headless_clients()
 
-from core import basepack, modart, modtexts, usermod  # noqa: E402
+from core import (basepack, buildingart, modart, modlayout, modtexts,  # noqa: E402
+                  researchart, usermod)
 from screens.colony_summary import colonyplanets  # noqa: E402
 
 STYLE = os.path.join(ROOT, "assets", "shared", "hud", "style.json")
@@ -60,7 +61,8 @@ OrionLayer, and it is used instead of the built-in one.
 ## How it works
 
 1. Find the name you want in `NAMES.txt`.
-2. Put your file here under exactly that name.
+2. Put your file here under exactly that name, in the folder the name
+   gives (`buildings/`, `ships/`, and so on - make it if it is not there).
    Everything in `originals/` is OrionLayer's own version, ready to edit:
    copy it up here (out of `originals/`) and change it.
 3. Restart OrionLayer.
@@ -95,20 +97,42 @@ the original comes back.
   your paint program drops the template's hidden stamp, name it in a
   `mod.json`: `{{"frames": {{"<screen>": "<stamp>"}}}}` -
   `python tools/frame_template.py` prints every stamp.
-- **`files/<path>`** - any other picture on the list in `NAMES.txt`, at
-  the path shown there; the battle's pictures too, one PNG per drawing;
-  and the colony screen's landscape, one PNG per climate at the size
-  `NAMES.txt` gives (`files/screens/colony/assets/surfaces/terran.png`);
-  and the Leaders screen's pictures - its background, one picture per
-  row while a leader stands in it, the empty row and the galaxy map box
-  (`files/screens/leaders/assets/pictures/slot_1_background.png`). Paint
-  them without a frame: OrionLayer draws the frame round them.
-  The galaxy map's ships and monsters go two ways: one icon
-  (`files/screens/galaxy_map/assets/ships/<kind>/2.png`) replaces exactly
-  that icon; a whole master
-  (`files/screens/galaxy_map/assets/ships/_src/<kind>.png`) replaces every
-  icon cut from it - OrionLayer cuts it at the next start. A single icon
-  beside a master still wins.
+- **Pictures of the game's screens** - every other picture on the list in
+  `NAMES.txt`, under the name shown there. One rule gives all the names:
+  a picture that SEVERAL screens draw lives under its SUBJECT
+  (`buildings/`, `ships/`, `planets/`, `landscapes/`, `stars/`, `leaders/`,
+  `races/`, `research/`, `popups/`, `fleets/`); a picture of ONE screen lives
+  under that screen's name (`new_game/difficulty/...`,
+  `galaxy_map/nebula/...`); `shared/<path>` is a picture every screen
+  shares. Some examples:
+  - `buildings/<nn>_<anything>.png` - a building, painted whole (below);
+  - `landscapes/colony/terran.png` - the colony screen's landscape, one PNG
+    per climate at the size `NAMES.txt` gives;
+  - `leaders/screen/slot_1_background.png` - the Leaders screen's pictures:
+    its background, one picture per row while a leader stands in it, the
+    empty row and the galaxy map box. Paint them without a frame:
+    OrionLayer draws the frame round them;
+  - `ships/icons/<kind>/2.png` replaces exactly one icon of the galaxy
+    map's ships and monsters; `ships/masters/<kind>.png` replaces every icon
+    cut from it - OrionLayer cuts it at the next start. A single icon beside
+    a master still wins;
+  - `ships/battle/<entry>_<frame>.png` - the battle's ships, one PNG per
+    drawing.
+- **`buildings/<nn>_<anything>.png`** - an HD picture for one building:
+  `<nn>` is the building's number (01 to 48; `NAMES.txt` lists them with the
+  game's names), the number decides and the rest of the name is yours. A
+  PNG with transparency, the whole building cut tight to its drawing, never
+  stretched. Paint it at about 4 times the widest drawing of the original
+  (roughly 290 to 700 px wide for a window of 3840 x 2160; the satellites
+  308 px): it is fitted into the place the original's drawing had, in the
+  colony's ground and sky, its build box and the build popup. A building
+  without a picture is drawn as the original's.
+- **`files/<path>`** - the advanced way, and the way every mod made before
+  work order 336 used: any picture at its path in OrionLayer's own tree
+  (`files/screens/colony/assets/surfaces/terran.png`). It still works for
+  every picture; where both names fill one picture, the new name wins and
+  one line in the log says so. A few pictures have only this name; they
+  are at the end of `NAMES.txt`.
 - **`texts/<screen>/<key>.txt`** - a TEXT, by its key: `info.tab.reference`
   is `texts/info/tab.reference.txt`. Plain text, saved as UTF-8; a blank
   line starts a paragraph. Long texts wrap and scroll. OrionLayer's own
@@ -189,11 +213,37 @@ def game_art():
     return out
 
 
+def mod_screens():
+    """The tree's screens, as `core.modlayout` asks for them."""
+    return modlayout.screen_names(ROOT)
+
+
+def shown(tree):
+    """The name a tree path has in the mod folder — `modlayout.from_tree`,
+    the one table, so the list cannot drift from what the loader reads —
+    or `files/<tree path>` for a picture that has only that name."""
+    return modlayout.from_tree(tree, mod_screens()) or f"files/{tree}"
+
+
 def names_txt(hud_sizes):
     from PIL import Image
+    # a picture with no name in core/modlayout.py would be missing from the
+    # list the modder reads: stop rather than write a list that is short
+    loose = modlayout.unnamed(modlayout.tree_pictures(ROOT),
+                              modlayout.screen_names(ROOT))
+    if loose:
+        raise SystemExit("pictures without a name in core/modlayout.py "
+                         f"(name them or list them in FILES_ONLY): {loose}")
     w, h = Image.open(UNIVERSAL).size
     lines = ["Every name this folder can hold. Sizes are the built-in "
              "file's; another size is scaled.", "",
+             "THE RULE: a picture several screens draw lives under its "
+             "SUBJECT (buildings/, ships/, planets/,",
+             "landscapes/, stars/, leaders/, races/, research/, popups/, "
+             "fleets/); a picture of one screen lives under",
+             "that screen's name (new_game/..., galaxy_map/...); shared/ is "
+             "what every screen shares. files/ is the",
+             "advanced way (see the end of this list).", "",
              f"background.png            the universal background "
              f"(built-in {w} x {h}; 3840 x 2160 recommended), PNG or JPG",
              "", "backgrounds/<screen>.png  one screen's background, "
@@ -212,32 +262,47 @@ def names_txt(hud_sizes):
     lines += ["", "style.json                HUD style values "
               "(see originals/style.json)",
               "colour.json               the default frame colour "
-              "(see originals/colour.json)", "",
-              "files/<path>              pictures from the game "
-              "(names only - not ours to hand out):"]
-    lines += [f"  files/{rel}  {s[0]} x {s[1]}"
-              for rel, s in sorted(game_art().items())]
+              "(see originals/colour.json)", ""]
+    lines += building_names()
+    lines += ["", "Pictures from the game (names and sizes only - not ours "
+              "to hand out):"]
+    art = game_art()
+    lines += [f"  {shown(rel)}  {s[0]} x {s[1]}"
+              for rel, s in sorted(art.items(), key=lambda a: shown(a[0]))
+              if modlayout.from_tree(rel, mod_screens())]
     lines += ship_masters()
     lines += ["", "  the battle's pictures (work order 197), one PNG per "
               "stored drawing, used as painted:",
-              "  files/screens/combat/assets/gamedata/<file>/<entry>_<frame>"
-              ".png  (<file>: cmbtshp, monster, cmbtplnt, cmbtmisl, "
+              f"  {shown('screens/combat/assets/gamedata/<file>/<entry>_<frame>.png')}"
+              "  (<file>: cmbtshp, monster, cmbtplnt, cmbtmisl, "
               "cmbtfgtr, cmbtsfx, beams, sphersfx, combat;",
-              "  ships: entry = colour x 45 + design picture, frame = 4 x "
-              "facing (0-4, the rest are flips) + glow (0-3))",
+              f"  the ships' <file> is written "
+              f"{shown('screens/combat/assets/gamedata/cmbtshp/<entry>_<frame>.png')}"
+              ": entry = colour x 45 + design picture,",
+              "  frame = 4 x facing (0-4, the rest are flips) + glow (0-3))",
               "", "  Fleets, Leaders, Races, the Ship Designer, the "
               "audience (work order 199) and the Tech Review (272), the "
-              "same way:",
-              "  files/screens/<screen>/assets/gamedata/<group>/<entry>_"
-              "<frame>.png  for the extracted <group>/<entry>.bin",
-              "", "  the colony screen's surface (work order 232), one PNG "
+              "same way, for the extracted <group>/<entry>.bin:"]
+    for screen in ("fleets", "leaders", "races", "ship_design", "audience",
+                   "info"):
+        lines.append("  " + shown(f"screens/{screen}/assets/gamedata/"
+                                  "<group>/<entry>_<frame>.png"))
+    lines += ["", "  the colony screen's landscape (work order 232), one PNG "
               "per climate in the screen's format",
               "  (" + ", ".join(f"{w} x {h} at {ww} x {wh}" for (ww, wh), (
                   w, h) in surface_sizes()) +
               "; drawn instead of the game's picture):"]
-    lines += [f"  files/screens/colony/assets/surfaces/{n}.png"
+    lines += [f"  {shown(f'screens/colony/assets/surfaces/{n}.png')}"
               f"  (or {n}_0.png, {n}_1.png, {n}_2.png per ground)"
               for n in colonyplanets.NAMES]
+    lines += ["", "  the planets (work order 326 F, 331): one picture per "
+              "climate wherever a planet is drawn but the battle (a disc on",
+              "  transparency, 200 px or more), and the turning maps (2:1, "
+              "any size; clouds optional, with transparency):"]
+    lines += [f"  {shown(usermod.PLANET_PICTURE_DIR + n + '.png')}"
+              for n in colonyplanets.NAMES]
+    lines += [f"  {shown(usermod.PLANET_MAPS + '<type>_surface.png')}",
+              f"  {shown(usermod.PLANET_MAPS + '<type>_clouds.png')}"]
     lines += ["", "  the Leaders screen's pictures (work order 237), each "
               "used only while the folder is on; a missing one",
               "  leaves its box as it is. Any size of roughly the shape "
@@ -245,14 +310,36 @@ def names_txt(hud_sizes):
               "  stretched, the overflow cut off evenly (the empty slot's "
               "on the right). Sizes are the box at 3840 x 2160:"]
     lines += leaders_pictures()
-    lines += ["", "  the galaxy map's ship pictures (work order 311), by the "
+    lines += ["", "  the leaders' and the races' painted pictures (work "
+              "orders 234, 255, 315), found by NUMBER - the number",
+              "  decides, the rest of the name is yours:",
+              f"  {shown('screens/leaders/assets/portraits/colony_leaders/<nn>_<anything>.png')}"
+              "  a colony leader",
+              f"  {shown('screens/leaders/assets/portraits/ship_officers/<nn>_<anything>.png')}"
+              "  a ship officer (largest place 438 x 528)",
+              f"  {shown('screens/leaders/assets/gamedata/officer/skill_<k>_0.png')}"
+              "  a skill icon (<k> = the skill's number / 2; 64 x 64)",
+              f"  {shown('screens/races/assets/leaders/<nn>_<anything>.png')}"
+              "  a race leader, <nn> = the race 00-12 (476 x 409)",
+              f"  {shown(modlayout.SINGLES[0][1])}"
+              "  the mark over a wiped-out race (451 px wide)"]
+    lines += ["", "  the research panel's eight pictures (work order 326 E), "
+              "about 1320 x 500 serves both places:"]
+    lines += [f"  {shown(researchart.FOLDER + '/' + n)}"
+              for n in researchart.NAMES.values()]
+    lines += ["", "  other pictures only a mod fills (nothing ships):",
+              f"  {shown('assets/shared/turnpopup/dragon_bribe.png')}"
+              "  the Space Dragon's bribe popup, any size",
+              f"  {shown('screens/fleets/assets/pictures/minimap_background.png')}"
+              "  the Fleets map's panel, 1992 x 1158",
+              "", "  the galaxy map's ship pictures (work order 311), by the "
               "ship's picture number (45 colony ship,",
               "  46 outpost ship, 47 transport; 0-44 a warship's), facing "
               "right, any size; grey takes the owner's colour:",
-              "  files/screens/galaxy_map/assets/ship_pictures/"
-              "all_<picture>.png  every player",
-              "  files/screens/galaxy_map/assets/ship_pictures/"
-              "<colour>_<picture>.png  one colour (0-7), as painted"]
+              f"  {shown(usermod.SHIP_PICTURE_DIR + 'all_<picture>.png')}"
+              "  every player",
+              f"  {shown(usermod.SHIP_PICTURE_DIR + '<colour>_<picture>.png')}"
+              "  one colour (0-7), as painted"]
     lines += ["", "texts/<screen>/<key>.txt  a text by its key, UTF-8. "
               "OrionLayer's own (a copy is in originals/texts/):"]
     keys = text_keys()
@@ -262,7 +349,28 @@ def names_txt(hud_sizes):
               "OrionLayer reads them from your own game files):"]
     lines += [f"  {modtexts.file_name(k)}" for k, src in keys.items()
               if src == "moo2"]
+    lines += ["", "The advanced way: files/<path in OrionLayer's tree>. "
+              "Every picture above also works under it, and these",
+              "have only this name (names and sizes only - not ours to "
+              "hand out):"]
+    lines += [f"  files/{rel}  {s[0]} x {s[1]}"
+              for rel, s in sorted(art.items())
+              if not modlayout.from_tree(rel, mod_screens())]
     return "\n".join(lines) + "\n"
+
+
+def building_names():
+    """NAMES.txt's lines for the buildings (`core.buildingart`): the
+    number decides, the name after it is the building's own."""
+    out = ["buildings/<nn>_<anything>.png  an HD picture of one building, "
+           "PNG with transparency, cut tight to its",
+           "                          drawing: about 4 times the widest "
+           "drawing of the original, roughly 290 to 700 px",
+           "                          wide at 3840 x 2160 (the satellites "
+           "308 px); fitted, never stretched. nn = the number:"]
+    out += [f"  {shown(buildingart.tree_path(b))}"
+            for b in range(1, buildingart.COUNT + 1)]
+    return out
 
 
 def ship_masters():
@@ -272,10 +380,10 @@ def ship_masters():
     from core import shipcut
     out = ["", "  the galaxy map's ships and monsters (work order 243), two "
            "ways:",
-           f"  files/{usermod.SHIP_ICONS}/<kind>/<file>  ONE icon: replaces "
-           "exactly that icon (the files listed above)",
-           f"  files/{usermod.SHIP_MASTERS}/<kind>.png  a WHOLE master: "
-           "every icon of that kind is cut from it -",
+           f"  {shown(usermod.SHIP_ICONS + '/<kind>/<file>')}  ONE icon: "
+           "replaces exactly that icon (the files listed above)",
+           f"  {shown(usermod.SHIP_MASTERS + '/<kind>.png')}  a WHOLE "
+           "master: every icon of that kind is cut from it -",
            "    the four steps 0.png .. 3.png and, for a monster, panel.png "
            "(the Planets panel); a single icon beside it still wins.",
            "    The player's master must be greyscale (it is tinted per "
@@ -287,7 +395,8 @@ def ship_masters():
                                ROOT)
         size = (f"{Image.open(path).width} x {Image.open(path).height}"
                 if os.path.isfile(path) else "none shipped - yours adds it")
-        out.append(f"  files/{usermod.SHIP_MASTERS}/{kind}.png  {size}")
+        out.append(f"  {shown(usermod.SHIP_MASTERS + '/' + kind + '.png')}"
+                   f"  {size}")
     return out
 
 
@@ -305,8 +414,8 @@ def leaders_pictures():
                                    else place]
         label = what.get(place) or (f"row {place[-1]} while a leader "
                                     f"stands in it")
-        out.append(f"  files/{ldrpics.FOLDER}/{name}  {size[0]} x {size[1]}"
-                   f"  ({label})")
+        out.append(f"  {shown(ldrpics.FOLDER + '/' + name)}  {size[0]} x "
+                   f"{size[1]}  ({label})")
     return out
 
 

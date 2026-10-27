@@ -5,18 +5,29 @@ galaxy map's star sprites, the black hole, the ship and monster icons,
 wormhole links, nebulas and the sidebar. Everything else (the mod folder,
 what you can override, writing a screen, gotchas) is in the first half.
 
+**Names.** In your mod folder (the easy way) the galaxy map's pictures have
+the names below: the stars, the ship and monster icons live under their
+subject (`stars/`, `ships/`), the screen's own pictures under `galaxy_map/`.
+`files/screens/galaxy_map/assets/...` (the picture's path in OrionLayer's
+tree) still works for every one of them. A mod inside the tree (the
+developer's route, a folder under `mods/`) uses the tree paths, shown after
+"Tree mod:".
+
 ## Galaxy map star sprites
 
 This is the one asset set with a rule worth knowing before you draw
 anything.
 
 ```
-screens/galaxy_map/assets/stars/<class>/0.png .. 5.png
+stars/<class>/0.png .. 5.png
 ```
+
+Tree mod: `screens/galaxy_map/assets/stars/<class>/0.png .. 5.png`.
 
 Classes are `blue`, `white`, `yellow`, `orange`, `red`, `brown`
 (spectral classes B, F, G, K, M and Dwarf). Black holes use
-`screens/galaxy_map/assets/black_hole.png` and their own size table — with extra rules,
+`galaxy_map/black_hole.png` (tree mod: `screens/galaxy_map/assets/black_hole.png`)
+and their own size table — with extra rules,
 see below.
 
 **The six steps are not "large to small" in the obvious sense.**
@@ -66,7 +77,7 @@ python tools/make_star_icons.py --out mods/my_mod/screens/galaxy_map/assets/star
 
 ## Galaxy map: the black hole
 
-`screens/galaxy_map/assets/black_hole.png` is not a normal sprite. There is exactly one
+`galaxy_map/black_hole.png` is not a normal sprite. There is exactly one
 drawing and the renderer **rotates it at runtime**, which puts four
 hard requirements on the file. Break any of them and the black hole
 still draws, but wrongly — and three of the four are invisible in a
@@ -125,8 +136,10 @@ sizes — judging step 5 at canvas resolution is misleading.
 ### Ship and monster icons
 
 ```
-screens/galaxy_map/assets/ships/<kind>/0.png .. 3.png
+ships/icons/<kind>/0.png .. 3.png
 ```
+
+Tree mod: `screens/galaxy_map/assets/ships/<kind>/0.png .. 3.png`.
 
 Kinds are `player`, `antaran`, `guardian`, `amoeba`, `crystal`,
 `dragon`, `eel` and `hydra`. Four steps, one per zoom level, and the
@@ -159,13 +172,14 @@ The spread from step 0 to step 3 is only 23 %, so unlike the stars
 these four steps do not need four separate drawings — the shipped set
 is one master rendered four times. The masters are hand-drawn HD
 pictures and come with the base pack
-(`screens/galaxy_map/assets/ships/_src/<kind>.png`, 1536 x 1024).
+(`ships/masters/<kind>.png` in a mod folder,
+`screens/galaxy_map/assets/ships/_src/<kind>.png` in the tree, 1536 x 1024).
 
 **Your mod folder replaces them two ways:**
 
 ```
-files/screens/galaxy_map/assets/ships/<kind>/2.png      ONE icon
-files/screens/galaxy_map/assets/ships/_src/<kind>.png   a WHOLE master
+ships/icons/<kind>/2.png      ONE icon
+ships/masters/<kind>.png      a WHOLE master
 ```
 
 - **One icon** replaces exactly that icon — one step, or a monster's
@@ -189,8 +203,8 @@ ship, 46 outpost ship, 47 transport, which have no battle picture; 0-44
 a warship's):
 
 ```
-files/screens/galaxy_map/assets/ship_pictures/all_<picture>.png
-files/screens/galaxy_map/assets/ship_pictures/<colour>_<picture>.png
+ships/map/all_<picture>.png
+ships/map/<colour>_<picture>.png
 ```
 
 `all_47.png` is the transport for every player: paint the hull neutral
@@ -290,8 +304,10 @@ alpha. Widening the line would need the same trick with a polygon.
 ### Nebulas
 
 ```
-screens/galaxy_map/assets/nebula/<form>.png
+galaxy_map/nebula/<form>.png
 ```
+
+Tree mod: `screens/galaxy_map/assets/nebula/<form>.png`.
 
 Shapes are listed in `layout.json` under `nebula_forms`. orion2re
 knows twelve shapes; four HD ones exist so far and the list wraps.

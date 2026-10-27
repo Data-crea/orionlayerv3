@@ -82,6 +82,7 @@ PLACES = {
 }
 
 _cache = {}
+_targets = {}
 
 
 def available(place="popup"):
@@ -160,6 +161,47 @@ def ship_centre(spec, place):
     return pl["high_ships"].get(product, pl["centre"])
 
 
+def hd_target(spec, place="popup"):
+    """HD EXTENSION `building_pictures`: (building id, (x, y, w, h)) when
+    `spec` is a building the player painted (`core.buildingart`) — the ink
+    of the original's drawing in the window's native coordinates, which the
+    painted one is fitted into — else None. Housing's ground drawing
+    ("ground") is the original's own, whatever building 14's picture is."""
+    from core import buildingart
+    if spec[0] != "building" or buildingart.picture(spec[1]) is None:
+        return None
+    key = (int(spec[1]), place, buildingart.present())
+    if key not in _targets:
+        _targets[key] = _hd_target(int(spec[1]), place)
+    return _targets[key]
+
+
+def _hd_target(bid, place):
+    art = colart.load()
+    pl = PLACES[place]
+    if bid in SATELLITES:
+        # HD EXTENSION: the original's satellite drawing is a few pixels
+        # across (77 x 44 at most); a painted one fills 80 % of the window's
+        # width instead, centred where the original's stands
+        win = pl["window"]
+        w = (win[2] - win[0] + 1) * 8 // 10
+        h = (win[3] - win[1] + 1) // 2
+        cx, cy = pl["satellite"]
+        return bid, (cx - w // 2, cy - h // 2, w, h)
+    got = art._indices(f"bldg_{bid}")
+    if got is None:
+        return None
+    x, y = CELL_XY
+    cut = got[2][max(0, y - 120):y, max(0, x - 60):x + 60].copy()
+    cut[cut >= 240] = 0
+    ys, xs = np.nonzero(cut)
+    if not len(xs):
+        return None
+    w = int(xs.max() - xs.min() + 1)
+    h = int(ys.max() - ys.min() + 1)
+    return bid, (pl["foot"][0] - w // 2, pl["foot"][1] - h, w, h)
+
+
 def painted(spec, colour, place="popup"):
     """True when `spec` is a colony, outpost or transport ship (45-47) and
     the player's mod folder paints it in the galaxy map's slot for owner
@@ -184,6 +226,18 @@ def overlay(surface, spec, colour, climate, bg, place, origin, k):
     grey remap of SHIPS.LBX 45-47 here (`Remap_Draw_Ship_Seg_N_Centered`,
     colony_main.cpp:878/:881, colbldg.cpp:916/:950/:959; a queued ship
     `Remap_Draw_Ship_Centered`, colony.cpp:435-450, :750)."""
+    from core import buildingart
+    target = hd_target(spec, place)
+    if target is not None:
+        win = PLACES[place]["window"]
+        bid, (x, y, w, h) = target
+        pic = buildingart.fit(bid, w * k, h * k)
+        if pic is not None:
+            surface.blit(pic, (origin[0] + (x - win[0]) * k
+                               + (w * k - pic.get_width()) // 2,
+                               origin[1] + (y + h - win[1]) * k
+                               - pic.get_height()))
+            return True
     from core import shippicture
     from screens.refit import refart
     if not painted(spec, colour, place):
@@ -224,7 +278,8 @@ def tile(spec, climate, bg, place="popup", colour=None):
     owner[, special product]), ("room",)."""
     bare = painted(spec, colour, place)
     from core import shippicture
-    key = (tuple(spec), int(climate), int(bg), place, bare,
+    hd = hd_target(spec, place) is not None
+    key = (tuple(spec), int(climate), int(bg), place, bare, hd,
            shippicture.usermod_generation() if bare else 0)
     if key in _cache:
         return _cache[key]
@@ -239,6 +294,8 @@ def tile(spec, climate, bg, place="popup", colour=None):
         kind = spec[0]
         if kind == "ground":
             _building(canvas, art, spec[1], pl["foot"], win)
+        elif kind == "building" and hd:
+            pass                    # `overlay` stands the painted one here
         elif kind == "building":
             if int(spec[1]) in SATELLITES:
                 _centred(canvas, art, f"satellite_{SATELLITES[int(spec[1])]}",

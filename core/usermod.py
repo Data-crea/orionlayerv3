@@ -52,6 +52,8 @@ import logging
 import os
 import sys
 
+from core import modlayout  # noqa: E402
+
 log = logging.getLogger("usermod")
 
 ENV = "ORIONLAYER_USER_DIR"
@@ -61,17 +63,11 @@ CACHE = "cache"
 #: The picture formats pygame loads everywhere OrionLayer runs.
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".bmp")
 
-#: Mod name (or prefix) -> the tree path it replaces.
-UNIVERSAL = "assets/shared/backgrounds/universal.png"
-PREFIXES = (("backgrounds/", "assets/shared/backgrounds/"),
-            ("hud/", "assets/shared/hud/cut/"),
-            ("files/", ""))
-SINGLES = {"background.png": UNIVERSAL}
-#: A screen's frame (work order 197 E, 195's Q3): `frames/<screen>.png`,
-#: drawn by `core.frameslot` over the screen at 16:9 when it was painted
-#: for the screen's layout. HD EXTENSION — the original has no such slot.
-FRAMES = "frames/"
-FRAME_TREE = "screens/{screen}/assets/frame.png"
+#: The names and the tree paths they stand for are `core.modlayout`'s; the
+#: pieces `tree_path` and `init` need of them are named here.
+UNIVERSAL = modlayout.UNIVERSAL
+FILES = "files/"
+FRAMES = modlayout.FRAMES
 #: Slots with no file of OrionLayer's own at their tree path: a mod file
 #: there ADDS the picture instead of replacing one — the frames; the
 #: extracted artwork's pictures as PNG (195 §7, work order 199 D:
@@ -131,6 +127,10 @@ SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",) + tuple(
     f"{PLANET_PICTURE_DIR}{n}.png" for n in (
         "toxic", "radiated", "barren", "desert", "tundra",
         "ocean", "swamp", "arid", "terran", "gaia"))
+#: HD EXTENSION `building_pictures`: one painted picture per building
+#: (`core.buildingart`), by exact name.
+from core import buildingart  # noqa: E402
+SLOTS += buildingart.slots()
 #: HD EXTENSION `star_shape_by_size`: a class's three star pictures by
 #: star.size (`galaxy_map.renderer.SIZE_DIRS`), drawn at the zoom's width.
 SLOTS += tuple(f"screens/galaxy_map/assets/stars/*/{n}.png"
@@ -183,7 +183,7 @@ COLOUR_KEYS = {"hue": (0.0, 360.0), "saturation": (0.0, 1.0),
                "brightness": (0.1, 1.6)}
 
 _state = {"root": None, "index": {}, "checked": {}, "texts": {},
-          "enabled": None}
+          "enabled": None, "mirror": None}
 
 
 def user_dir():
@@ -218,28 +218,36 @@ def screenshot_dir():
 def tree_path(name):
     """The tree path a mod file name replaces, or None if nothing does."""
     name = name.replace("\\", "/")
-    if name in SINGLES:
-        return SINGLES[name]
-    if name.startswith(FRAMES) and name.count("/") == 1:
-        stem = os.path.splitext(name[len(FRAMES):])[0]
-        return FRAME_TREE.format(screen=stem) if stem else None
-    for prefix, target in PREFIXES:
-        if name.startswith(prefix) and len(name) > len(prefix):
-            rest = name[len(prefix):]
-            if prefix == "files/" and ".." in rest.split("/"):
-                return None
-            return target + rest
+    laid = modlayout.to_tree(name, _screens())
+    if laid is not None:
+        return laid
+    if name.startswith(FILES) and len(name) > len(FILES):
+        rest = name[len(FILES):]
+        return None if ".." in rest.split("/") else rest
     return None
+
+
+_screen_set = []
+
+
+def _screens():
+    """The tree's screens (`core.modlayout`'s screen shortcut), once."""
+    if not _screen_set:
+        from core.config import BASE_DIR
+        _screen_set.append(modlayout.screen_names(BASE_DIR))
+    return _screen_set[0]
 
 
 def init(enabled=True, root=None):
     """Index the folder once. Returns the number of files that will be
     used; every file that will not says why, once."""
-    _state.update(root=None, index={}, checked={}, texts={},
+    _state.update(root=None, index={}, checked={}, texts={}, mirror=None,
                   enabled=bool(enabled),
                   # a number, not an address: a freed index's id can be
                   # reused by the next one (work order 326 review)
                   generation=_state.get("generation", 0) + 1)
+    from core import buildingart
+    buildingart.forget()
     root = root or mod_dir()
     if not enabled:
         log.info("mod folder switched off (user_mod: off) — defaults only; "
@@ -250,7 +258,9 @@ def init(enabled=True, root=None):
         return 0
     _state["root"] = root
     from core.config import BASE_DIR
+    by_layout = set()
     for dirpath, _dirs, files in os.walk(root):
+        _dirs.sort()
         for f in sorted(files):
             full = os.path.join(dirpath, f)
             name = os.path.relpath(full, root).replace(os.sep, "/")
@@ -270,31 +280,100 @@ def init(enabled=True, root=None):
                 continue
             if not _known(name, target, BASE_DIR):
                 continue
-            if name.startswith("files/") and not os.path.exists(
-                    os.path.join(BASE_DIR, target)) and not is_slot(target) \
-                    and not _in_base_pack(target) \
-                    and not target.startswith(SHIP_MASTERS + "/"):
+            laid = modlayout.to_tree(name, _screens()) is not None
+            if ((laid and not modlayout.direct(name))
+                    or name.startswith(FILES)) and \
+                    not fills_a_picture(target):
                 log.warning("mod: %s replaces nothing (no %s in OrionLayer) "
                             "— ignored%s", name, target,
                             f"; the map's ship pictures are named "
                             f"{SHIP_PICTURE_NAMES}"
                             if target.startswith(SHIP_PICTURE_DIR) else "")
                 continue
+            if name.startswith("files/") and modlayout.themed(target):
+                log.info("mod: %s still works; the name is now %s",
+                         name, modlayout.from_tree(target, _screens()))
+            if target in _state["index"]:
+                # one picture, two names: the new name wins; two NEW names
+                # keep the first in name order, so the choice never depends
+                # on the disk's order
+                other = os.path.relpath(_state["index"][target], root)
+                log.warning("mod: %s and %s fill the same picture — %s is "
+                            "used", name, other,
+                            name if laid and target not in by_layout
+                            else other)
+                if not laid or target in by_layout:
+                    continue
+            if laid:
+                by_layout.add(target)
             _state["index"][target] = full
+    _build_mirror(root)
     log.info("mod folder %s: %d file(s) in use", root, len(_state["index"]))
     return len(_state["index"])
 
 
+def _build_mirror(root):
+    """The folder's pictures at their TREE paths, in `cache/` beside it —
+    the resource root of the loaders that join a root and a tree path
+    (`files_root`). The folder's own names are the modder's and no longer
+    mirror the tree (`core.modlayout`), so the tree-shaped copy is made
+    here, by link where the platform allows and by copy where not, anew
+    at every start."""
+    import shutil
+    base = os.path.join(os.path.dirname(root), CACHE, FOLDER, "tree")
+    shutil.rmtree(base, ignore_errors=True)
+    # what the loaders always saw: every file under `files/`, indexed or
+    # not (a loader may name a file the index has no slot for) ...
+    links = {}
+    legacy = os.path.join(root, "files")
+    for dirpath, _dirs, names in os.walk(legacy):
+        for f in names:
+            full = os.path.join(dirpath, f)
+            links[os.path.relpath(full, legacy).replace(os.sep, "/")] = full
+    # ... and over it the folder's own names, at their tree paths
+    links.update(_state["index"])
+    for target, src in sorted(links.items()):
+        out = os.path.join(base, *target.split("/"))
+        if os.path.lexists(out):
+            # two paths that differ only in case on a case-insensitive disk:
+            # the first stays, and the player's file is never written to
+            log.warning("mod: %s is the same file as another name here — "
+                        "left out", target)
+            continue
+        try:
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            try:
+                # absolute: a relative target would be read from the link's
+                # own folder
+                os.symlink(os.path.abspath(src), out)
+            except (OSError, NotImplementedError):
+                shutil.copyfile(src, out)
+        except OSError as err:
+            log.warning("mod: %s cannot be offered to the loaders (%s)",
+                        target, err)
+    _state["mirror"] = base if os.path.isdir(base) else None
+
+
+def fills_a_picture(target):
+    """True when a mod file at the tree path `target` replaces or adds a
+    picture OrionLayer asks for: the tree has it, it is a slot, the base
+    pack has it, or it is a ship master. What `init` indexes, and what
+    `tools/mod_migrate.py` holds a file to before it moves it."""
+    from core.config import BASE_DIR
+    return (os.path.exists(os.path.join(BASE_DIR, target))
+            or is_slot(target) or _in_base_pack(target)
+            or target.startswith(SHIP_MASTERS + "/"))
+
+
 def files_root():
-    """The folder's `files/` as a RESOURCE ROOT, or None (work order 199 D,
-    195 §11.1): it mirrors the tree, so a loader that chooses between file
-    forms per source root (`Resources.roots`, decision 50's master-or-step
+    """The folder's pictures as a RESOURCE ROOT shaped like the tree, or
+    None (work order 199 D, 195 §11.1; since 336 built from the index by
+    `_build_mirror`, whatever names the files have): a loader that
+    chooses between file forms per source root (`Resources.roots`, decision 50's master-or-step
     — the colony screens' figures, planet discs, surfaces and output icons)
     tries it first. Such a loader checks a file's size itself and refuses a
     wrong one (decision 50) — it is not scaled here."""
-    root = _state["root"]
-    path = os.path.join(root, "files") if root else None
-    return path if path and os.path.isdir(path) else None
+    return _state.get("mirror") if _state["root"] else None
 
 
 def is_slot(target):
@@ -433,7 +512,8 @@ def read_text(name, max_bytes):
 
 def shutdown():
     """Back to never-initialised: the smoke suite, after a check."""
-    _state.update(root=None, index={}, checked={}, texts={}, enabled=None)
+    _state.update(root=None, index={}, checked={}, texts={}, enabled=None,
+                  mirror=None)
 
 
 def override(relpath, default_path):

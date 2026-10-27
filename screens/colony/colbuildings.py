@@ -92,6 +92,26 @@ def sat_xy(slot):
     return (1 if slot % 2 == 0 else -1) * slot * SAT_STEP + SAT_CENTRE, SAT_Y
 
 
+def entries(art, placement, climate, bg, lift=0):
+    """[(surface, (x, y), building id)] — `sprites`, with whose picture each
+    is, so a painted building (`core.buildingart`) can stand where it."""
+    out = []
+    grid = placement["grid"]
+    for col, row in BACK_TO_FRONT:
+        stem = art_stem(grid[col][row], col, row)
+        got = art.picture(stem, climate, bg) if stem else None
+        if got is not None:
+            out.append((got[0], got[1], grid[col][row]))
+    for slot, bid in enumerate(placement["satellites"][:SAT_SLOTS]):
+        pic = SATELLITE_PIC.get(bid)
+        got = art.picture(f"satellite_{pic}", climate, bg, glassed=False) \
+            if pic is not None else None
+        if got is not None:
+            x, y = sat_xy(slot)
+            out.append((got[0], (x + got[1][0], y - lift + got[1][1]), bid))
+    return out
+
+
 def sprites(art, placement, climate, bg, lift=0):
     """[(surface, (x, y))] in the original's 640 x 480 coordinates, in
     drawing order: the city back to front, then the satellites, `lift`
@@ -99,21 +119,8 @@ def sprites(art, placement, climate, bg, lift=0):
     own place). Only what the pictures hold: a cell or a satellite the
     extraction lacks is skipped. `placement` is open fix 36's {"grid",
     "satellites"}."""
-    out = []
-    grid = placement["grid"]
-    for col, row in BACK_TO_FRONT:
-        stem = art_stem(grid[col][row], col, row)
-        got = art.picture(stem, climate, bg) if stem else None
-        if got is not None:
-            out.append((got[0], got[1]))
-    for slot, bid in enumerate(placement["satellites"][:SAT_SLOTS]):
-        pic = SATELLITE_PIC.get(bid)
-        got = art.picture(f"satellite_{pic}", climate, bg, glassed=False) \
-            if pic is not None else None
-        if got is not None:
-            x, y = sat_xy(slot)
-            out.append((got[0], (x + got[1][0], y - lift + got[1][1])))
-    return out
+    return [(pic, at) for pic, at, _bid in
+            entries(art, placement, climate, bg, lift)]
 
 
 def art_stem(bid, col, row):
@@ -163,19 +170,59 @@ def sat_lift(rect, step):
 _cache = {}
 
 
+def _ink_box(pic):
+    """The solid part of a native picture (alpha 255 — not the glass of its
+    shadow): (x, y, w, h) in the picture, or None."""
+    import numpy as np
+    ys, xs = np.nonzero(pygame.surfarray.pixels_alpha(pic).T == 255)
+    if not len(xs):
+        return None
+    return int(xs.min()), int(ys.min()), int(xs.max() - xs.min() + 1), \
+        int(ys.max() - ys.min() + 1)
+
+
+def painted_layer(art, placement, climate, bg, step, lift=0):
+    """HD EXTENSION `building_pictures`: the layer at `step` times the
+    original's size with the buildings the player painted (`core.
+    buildingart`) in place of the original's drawings. A painted building
+    stands on the foot of the ink of the drawing it replaces, centred on it,
+    and is fitted into that ink's size at this step; every other drawing is
+    scaled by the whole step as before."""
+    from core import buildingart
+    surf = pygame.Surface((NATIVE_W * step, NATIVE_H * step),
+                          pygame.SRCALPHA)
+    for pic, (x, y), bid in entries(art, placement, climate, bg, lift):
+        ink = _ink_box(pic) if buildingart.picture(bid) is not None else None
+        hd = buildingart.fit(bid, ink[2] * step, ink[3] * step) \
+            if ink else None
+        if hd is None:
+            surf.blit(pygame.transform.scale(
+                pic, (pic.get_width() * step, pic.get_height() * step)),
+                (x * step, y * step))
+            continue
+        foot_x = (x + ink[0]) * step + ink[2] * step // 2
+        foot_y = (y + ink[1] + ink[3]) * step
+        surf.blit(hd, (foot_x - hd.get_width() // 2,
+                       foot_y - hd.get_height()))
+    return surf
+
+
 def layer(art, placement, climate, bg, step, lift=0):
     """The native layer scaled by a whole `step`, kept per what it shows
-    (grid, satellites, world, step, lift) — one scale per snapshot and
-    size, not one a frame (check 090zzzzzp)."""
+    (grid, satellites, world, step, lift, the painted buildings) — one scale
+    per snapshot and size, not one a frame (check 090zzzzzp)."""
+    from core import buildingart
+    painted = buildingart.present()
     key = (tuple(map(tuple, placement["grid"])),
-           tuple(placement["satellites"]), climate, bg, step, lift)
+           tuple(placement["satellites"]), climate, bg, step, lift, painted)
     got = _cache.get(key)
     if got is None:
         if len(_cache) >= 4:
             _cache.clear()
-        got = pygame.transform.scale(
-            native_layer(art, placement, climate, bg, lift),
-            (NATIVE_W * step, NATIVE_H * step))
+        got = painted_layer(art, placement, climate, bg, step, lift) \
+            if painted else pygame.transform.scale(
+                native_layer(art, placement, climate, bg, lift),
+                (NATIVE_W * step, NATIVE_H * step))
         _cache[key] = got
     return got
 

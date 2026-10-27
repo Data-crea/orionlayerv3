@@ -29,17 +29,30 @@ hud/<piece>.png            a HUD icon or the title plate
 frames/<screen>.png        a frame painted over one screen (see Frames)
 style.json                 HUD colours and sizes — only the keys you write
 colour.json                the frame colour OrionLayer starts with
-files/<path in the tree>   any other picture listed in NAMES.txt
+<subject>/...  <screen>/...  shared/...   every other picture, see the rule below
+files/<path in the tree>   the advanced name of any picture (still works)
 texts/<screen>/<key>.txt   a text, by its key
 ```
+
+**The rule for every other picture (stated once, used on every page
+below).** A picture that several screens draw lives under its SUBJECT:
+`buildings/`, `ships/`, `planets/`, `landscapes/`, `stars/`, `leaders/`,
+`races/`, `research/`, `popups/`, `fleets/`. A picture of one screen lives
+under that screen's name: `new_game/difficulty/...`,
+`galaxy_map/nebula/...`. `shared/<path>` is a picture every screen shares.
+`files/<path in the tree>` still works for every picture, so a mod made
+with the older `files/` names keeps working; where both names fill one picture the
+new name wins (one line in the log says so). You never need to know
+OrionLayer's own folder tree: `NAMES.txt` gives every name.
 
 OrionLayer's own pictures are not in this repository either: they come
 as the **base pack** (`basepack.json` names every file), which
 `tools/setup.py` downloads and installs into its own folder
 (`~/.local/share/orionlayer/base` on Linux; `python tools/basepack.py
 install <zip>` installs a zip you have).
-`files/<path in the tree>` replaces a base-pack picture by that same
-path. Never edit the base pack itself; your mod folder is the place.
+A picture under its new name replaces the base-pack picture it stands for
+(`files/<path in the tree>` does the same by the tree's path). Never edit
+the base pack itself; your mod folder is the place.
 
 A file OrionLayer cannot read, or a name it does not know, is skipped
 with one line in the log; a picture of another size is scaled to fit.
@@ -74,25 +87,51 @@ can be answered with a `mod.json` in the folder:
 `{"frames": {"galaxy_map": "<stamp>"}}` — the tool prints every stamp.
 Screens whose geometry is code (the battle) have no frame slot.
 
+### Buildings in HD
+
+Each of the 48 buildings can have one painted picture, in your mod folder
+only (OrionLayer ships none):
+
+```
+buildings/<nn>_<anything>.png
+```
+
+`<nn>` is the building's number (01 to 48, the game's order; `NAMES.txt`
+lists every name, for example `buildings/01_alien_control_center.png`); the
+number decides, the rest of the name is yours. A PNG with transparency, the
+whole building cut tight to its drawing. It is fitted by its aspect into
+the place the original's drawing had and never stretched, in the colony's
+ground and sky, its build box and the build popup's picture box. Paint it at
+about 4 times the widest drawing of the original: roughly 290 to 700 px wide
+for a window of 3840 x 2160, the satellites 308 px. A building without a
+picture is drawn as the original's; a file that cannot be read costs one
+line in the log. The picture stands where the original's drawing stood, so
+the buildings need the game's extracted pictures (`tools/colony_art_extract.py`).
+A painted satellite is small in the sky, as the original's, and larger in the
+build box and popup. No shadow is drawn for a painted building.
+
+Your folder is read once, at the start: a picture you change or add while the
+game runs shows after the next start.
+
 ### Leader portraits in HD
 
 Painted, cut-out portraits (PNG with transparency) for the leaders are an
 optional download of their own, [`orionlayer-leader-portraits.zip`](https://github.com/Data-crea/orionlayerv3/releases/tag/leader-portraits-8218a046e53e) — not
 part of the base pack: they are redrawings of the game's portraits, and
 the base pack's licence cannot cover them. Unpack it into your mod folder;
-the pictures land in `files/screens/leaders/assets/portraits/`
-(`colony_leaders/`, `ship_officers/`, named `<nn>_<name>.png` by the
+the pictures land in `leaders/`
+(`colony/`, `officers/`, named `<nn>_<name>.png` by the
 leader's number in the game). A leader without one, and every leader
 while the mod folder is off, shows the game's own portrait. To replace a
 portrait, or to give a leader one, put a PNG with transparency in your mod
 folder under
-`files/screens/leaders/assets/portraits/<colony_leaders|ship_officers>/`
+`leaders/<colony|officers>/`
 named `<nn>_<anything>.png` — the number decides, the name after it is
 yours. The largest place a portrait is drawn at 3840 x 2160 is 438 x 528
 (the turn's leader offer); every place scales down from it.
 
 The leaders' skill icons are the game's own 16 x 16 pictures. A redrawn
-icon goes under `files/screens/leaders/assets/gamedata/officer/` as
+icon goes under `leaders/skill_icons/` as
 `skill_<k>_0.png` (`<k>` = the skill's number / 2; one icon serves a
 skill and its starred variant); it is drawn as painted, fitted into the
 icon's square — at 3840 x 2160 64 x 64 in the hire offer, 61 x 61 on a
@@ -101,12 +140,12 @@ slot (49 x 49 with five skills); a square picture of 64 x 64 serves all.
 ### Race leaders in HD
 
 Painted race leaders: an optional download like the leader portraits, unpacked into
-`files/screens/races/assets/leaders/<nn>_<name>.png` (`<nn>` = the race, 00-12).
+`races/leaders/<nn>_<name>.png` (`<nn>` = the race, 00-12).
 Each fills the Races screen's portrait cell (476 x 409 at 3840 x 2160), cut
 centred, from the top.
 
 The mark over a race that has been wiped out is the game's own picture;
-a painted one goes to `files/screens/races/assets/gamedata/eliminated_0.png`
+a painted one goes to `races/eliminated.png`
 (a PNG with transparency, only the banner). It is drawn over the portrait
 where the game draws its mark, as wide as the game's banner — 451 px at
 3840 x 2160, 225 px at 1920 x 1080 — at its own proportion, centred on the
@@ -116,7 +155,7 @@ cell; it shows even without the game's extracted pictures.
 
 Each of the eight research categories can have a picture in its box, on
 the research screen and on the research choice over the map alike:
-`files/assets/shared/research/<category>.png`, `<category>` one of
+`research/<category>.png`, `<category>` one of
 `biology power physics construction force_fields chemistry computers
 sociology`. The picture fills the box at its own proportion, centred, the
 overflow cut (never stretched); the box is about 2.7 : 1 on the choice
@@ -130,7 +169,7 @@ box.
 
 The Leaders screen has eight picture places, filled only from your mod
 folder (OrionLayer ships none of them), each under
-`files/screens/leaders/assets/pictures/`:
+`leaders/screen/`:
 
 | file | where | size at 3840 x 2160 |
 |---|---|---|
@@ -155,7 +194,7 @@ it is without one; with the Mod folder Off the screen is as before.
 
 The Fleets screen's small galaxy map takes a painted background from your
 mod folder only (OrionLayer ships none):
-`files/screens/fleets/assets/pictures/minimap_background.png`. It fills
+`fleets/minimap_background.png`. It fills
 the map's whole panel — 1992 x 1158 at 3840 x 2160, 996 x 579 at
 1920 x 1080 — under the stars, the fleets and the relocation lines. Paint
 it without a frame: OrionLayer draws the panel's edge over it and clips
@@ -175,7 +214,8 @@ ship picture. It needs no file of its own.
 The battle draws the game's own pictures from the files
 `tools/combat_art_extract.py` extracts. One PNG replaces one stored
 drawing, used as painted (no palette), at
-`files/screens/combat/assets/gamedata/<file>/<entry>_<frame>.png`; the
+`combat/gamedata/<file>/<entry>_<frame>.png` (the ships, `<file>` =
+`cmbtshp`, are `ships/battle/<entry>_<frame>.png`); the
 facings the game draws as flips stay flips, so a ship needs its five
 stored facings, not sixteen. `NAMES.txt` gives the numbering.
 
@@ -183,7 +223,7 @@ Paint at the stored drawing's size or at a whole multiple of it: a Doom Star is 
 OrionLayer draws the picture at the drawing's size and place and keeps
 its detail as the camera zooms in; any other size is refused (the log
 says so) and the game's drawing is used. A ship's frames are
-`<entry>_0.png` to `<entry>_19.png`: the five stored facings (0 points
+`<entry>_0.png` to `<entry>_19.png` (in `ships/battle/`): the five stored facings (0 points
 right, each next one 22.5 degrees counter-clockwise, 4 points up), four
 engine-glow frames each. Its entry is `colour * 45 + picture`, so a
 picture replaces one player colour's ship, drawn as painted. The game
@@ -201,7 +241,7 @@ the folder, the largest you have (8 times for a sharp High: a Doom Star at
 and 8x.
 
 **One picture for every player.** Save a ship as
-`files/screens/combat/assets/gamedata/cmbtshp/all_<picture>_<frame>.png`
+`ships/battle/all_<picture>_<frame>.png`
 — `all_43_0.png` is the Doom Star — and it is drawn for every owner who
 has no file of their own, in that owner's colour:
 
@@ -240,9 +280,9 @@ GAME -> Settings -> Livery (the button shows once your folder holds a ship
 with masks). Put the masks beside the ship's file, one pair per pattern:
 
 ```
-cmbtshp/all_<picture>_<frame>.png                    the ship
-cmbtshp/all_<picture>_<frame>_<pattern>_mask.png     first zone
-cmbtshp/all_<picture>_<frame>_<pattern>_mask2.png    second zone
+ships/battle/all_<picture>_<frame>.png                    the ship
+ships/battle/all_<picture>_<frame>_<pattern>_mask.png     first zone
+ships/battle/all_<picture>_<frame>_<pattern>_mask2.png    second zone
 <pattern>: light, stripes, outer, mixed
 ```
 
@@ -275,8 +315,8 @@ up. A painted ship gets all of it from one more file, so you never paint
 the glow frames yourself:
 
 ```
-cmbtshp/all_<picture>_<frame>_engine.png    the engine mask
-cmbtshp/<colour * 45 + picture>_<frame>_engine.png   for a colour's own file
+ships/battle/all_<picture>_<frame>_engine.png    the engine mask
+ships/battle/<colour * 45 + picture>_<frame>_engine.png   for a colour's own file
 ```
 
 - **A greyscale PNG of exactly the ship's size**, like a livery mask:
@@ -311,11 +351,15 @@ cmbtshp/<colour * 45 + picture>_<frame>_engine.png   for a colour's own file
 Fleets, Leaders, Races, the Ship Designer, the diplomacy audience and the
 Info screen's Tech Review draw the game's pictures the same way, from the
 files their extractors write into `screens/<screen>/assets/gamedata/`. A
-PNG at `files/screens/<screen>/assets/gamedata/<group>/<entry>_<frame>.png`
-replaces the drawing stored as `<group>/<entry>.bin` (frame 0 for a still
+PNG at `<screen>/gamedata/<group>/<entry>_<frame>.png` (`ship_design/...`,
+`audience/...`, `info/...`; for the three screens that are also subjects,
+Fleets, Leaders and Races, the advanced name
+`files/screens/<screen>/assets/gamedata/<group>/<entry>_<frame>.png` is the
+only one) replaces the drawing stored as `<group>/<entry>.bin` (frame 0 for a still
 picture; the Races screen and the Tech Review keep their drawings without
-a group folder, `…/gamedata/portrait_3_0.png`,
-`files/screens/info/assets/gamedata/app_<application>_0.png`), used as painted — no palette and no ship colours, so a ship you
+a group folder,
+`files/screens/races/assets/gamedata/portrait_3_0.png`,
+`info/gamedata/app_<application>_0.png`), used as painted — no palette and no ship colours, so a ship you
 paint shows in your colours for every owner. The Ship Designer draws the
 Fleets screen's ships, so one PNG serves both.
 
@@ -330,8 +374,8 @@ own 640 x 328 picture, which is therefore cut to cover it. A picture made
 in the panel's format replaces it, one PNG per climate:
 
 ```
-files/screens/colony/assets/surfaces/<climate>.png
-files/screens/colony/assets/surfaces/<climate>_<ground>.png   (optional)
+landscapes/colony/<climate>.png
+landscapes/colony/<climate>_<ground>.png   (optional)
 ```
 
 `<climate>` is one of `toxic radiated barren desert tundra ocean swamp
@@ -357,8 +401,8 @@ icon and the number. A PNG replaces a symbol, drawn at the game's size
 (16 x 23) and enlarged like the screen's other sprites:
 
 ```
-files/screens/colony/assets/gamedata/prod_<type>_<tens>_0.png
-files/screens/colony/assets/gamedata/import_<type>_<tens>_0.png
+colony/gamedata/prod_<type>_<tens>_0.png
+colony/gamedata/import_<type>_<tens>_0.png
 ```
 
 `<type>` is 0 food, 1 industry, 2 research, 3 BC; `<tens>` is 0 for the
@@ -378,9 +422,9 @@ Replace a type's map, or add clouds over it (any size, 2:1; a map wraps
 left to right):
 
 ```
-files/assets/shared/planets/<type>_surface.png     the surface, no alpha needed
-files/assets/shared/planets/<type>_clouds.png      optional, with transparency,
-                                                   turns a little faster
+planets/maps/<type>_surface.png     the surface, no alpha needed
+planets/maps/<type>_clouds.png      optional, with transparency,
+                                    turns a little faster
 ```
 
 `<type>` is one of toxic, radiated, barren, desert, tundra, ocean, swamp,
@@ -430,13 +474,13 @@ and Leaders), the colony screen's system display and the invasion popup —
 at every planet size; the battle keeps its own pictures:
 
 ```
-files/screens/colony_summary/assets/planet_pictures/<climate>.png
+planets/pictures/<climate>.png
 ```
 
 `<climate>` as above. A disc on transparency, 200 px or more (a smaller
 one is ignored): it is cut to its ink and smoothly scaled to each place's
 size. It wins over painted battle planets in the battle's slot
-(`files/screens/combat/assets/gamedata/cmbtplnt/`), which then show in the
+(`combat/gamedata/cmbtplnt/`), which then show in the
 battle only.
 
 The Space Dragon's bribe shows your picture above its message, in the
@@ -444,7 +488,7 @@ offer and when you cannot pay (not while you choose its new star on the
 map):
 
 ```
-files/assets/shared/turnpopup/dragon_bribe.png
+popups/dragon_bribe.png
 ```
 
 Any size; it is fitted whole, never stretched, into the panel's width and
