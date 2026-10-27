@@ -165,16 +165,16 @@
       "0092f48571ff247d74af7d718c797f1055489a549ca561a17811f01c7e5612de"
     ],
     "screens/custom_race/assets/checkbox_off.png": [
-      123882,
-      "d0a3b51df54d0ca32d6647b350b27cc7752db21c7db175e8620db615a4bb2083"
+      1462,
+      "0cd5a1bc63f23acdc55f8536f553192c95f2bb73b8204198009f1b7c35b540ac"
     ],
     "screens/custom_race/assets/radio_off.png": [
-      499911,
-      "8c36331c418be78d31790c35bd4d97b8dd8c2088532829ff5bf972be1aa9b6aa"
+      4354,
+      "d68ec36e8f166eae193e13d905572c2bfeb36ccce7bcdb302e71532804497a6a"
     ],
     "screens/custom_race/assets/radio_on.png": [
-      1018121,
-      "1702710e0dad38c5935acfc04e4328fb5df8541e4cd2a18aafb375bad3142ff1"
+      6097,
+      "4ee4394f9f64aef72d594b55d858727f492338faa64bb29cf76890ecb2f92d27"
     ],
     "screens/empire_identity/assets/homeworld.png": [
       2987190,
@@ -189,8 +189,8 @@
       "dc5c951033f5bb00e65f22d794d4b813109f2f4b647d56018e708abcaa05596a"
     ],
     "screens/galaxy_map/assets/nebula/type_00.png": [
-      3406233,
-      "44d2c46b02128ab8f44871114a2c22b4fdf391db369fdb6a70557fc635e3bd12"
+      2476322,
+      "edf2bea3e91b23098cafeda6ac1c2f6e8ab0083569d3a2125559a23ba93d7b0e"
     ],
     "screens/galaxy_map/assets/nebula/type_01.png": [
       3178380,
@@ -201,8 +201,8 @@
       "12bee2e22c9f763d0a781baf2a47519727c5c2790d1fd86ced0f04095518260c"
     ],
     "screens/galaxy_map/assets/nebula/type_03.png": [
-      2895537,
-      "01de108049b480a3b1fbcd65422c5d75b57f9b297b1f093e65671ecadf4ac773"
+      1960295,
+      "3ef3b3715b0f078e93b595b8a8f492043ed28cb9a209f7b9dcedb13b17ac2cd1"
     ],
     "screens/galaxy_map/assets/nebula/type_04.png": [
       2941210,
@@ -221,12 +221,12 @@
       "971f52218cf9bf7227c56edeb63371338084b1d5678c0f8b7bb57d0d610bd312"
     ],
     "screens/galaxy_map/assets/nebula/type_08.png": [
-      3713180,
-      "cd9ba60054c361a21f682a39a16b3ef47c2b222d7b97410381e9472bd54c8070"
+      2511353,
+      "0b5524ae2f015c521321749b3dd946696abeb3dbe5353c2cea82a99809caa781"
     ],
     "screens/galaxy_map/assets/nebula/type_09.png": [
-      3232144,
-      "b8f8ff63f67941c0717480688408b7b3db11865264532304fd7ad2cea26b0542"
+      2524526,
+      "a5c37d21aabb679fd3ec72fda86d17ac261cbb4209974889848680954226f84a"
     ],
     "screens/galaxy_map/assets/nebula/type_10.png": [
       3157182,
@@ -237,28 +237,28 @@
       "f823d79ec29e75d9b694069b9b1d61327a9b8544df241fe99b388b9814fcb7cc"
     ],
     "screens/galaxy_map/assets/ships/_src/crystal.png": [
-      1189832,
-      "7b7df890b9ae0be6c74eb3dfd4bb8b1e98393d6c9fac86dc6eb94e2141c30bc6"
+      502790,
+      "d113d27f96772f6d488585b05a545c05eed09cee650b2f9c00678abb6902790e"
     ],
     "screens/galaxy_map/assets/ships/_src/dragon.png": [
-      906490,
-      "caaf69f489df32a260ce1b7b69b63f0c46f899feb90271389fe9cf57bb597e25"
+      484867,
+      "15178e9b215d3d330ebad8c6e959d9e72a9c0d0ebf7de26295c5848b5f732383"
     ],
     "screens/galaxy_map/assets/ships/_src/eel.png": [
-      1268130,
-      "8c1f90d412a5602851125e0ca46990ad4f3b849322b733765f1998e41b7926c7"
+      579184,
+      "97c7b049f5d82d88958fb4876de531ddf5bae2a841444eae9880d52382d2003b"
     ],
     "screens/galaxy_map/assets/ships/_src/guardian.png": [
-      1035661,
-      "29ee15ab598ec13d6f04c7b788a6534b816e5d21fea98b29511120700b71774c"
+      373419,
+      "552b8266ebb021a4307eb022ce57bcbd4a3df10f6fe8bc75cf0a8d4ed9490c37"
     ],
     "screens/galaxy_map/assets/ships/_src/hydra.png": [
-      1176174,
-      "6dcfe6ae2781e651600e32120bfa6f2603b623c6c72b3707cec790027fe9dfa6"
+      517498,
+      "160312f216c0ac9ac7ae602bbe8b8ef9e28e082c5fa62f81922182f7d7c4ffe9"
     ],
     "screens/galaxy_map/assets/ships/_src/player.png": [
-      807981,
-      "9b91fdb9cb114b24cfe96fb4af8010a1381846f53c6fa10726a65c4aff615861"
+      221078,
+      "a534a2d00336cd063c5e720a45ec828b49bcf66fcb3db2fa7cbb9c7a065a02f4"
     ],
     "screens/galaxy_map/assets/stars/blue/0.png": [
       45417,
@@ -453,8 +453,8 @@
       "8b4bf2ebaa79fa00dcc38ad294a2ef2afc2761202f0086568d785696601afff9"
     ],
     "screens/new_game/assets/galaxy_size/maximum.png": [
-      3020694,
-      "c8c6d89f5b80b17ab4ed228e131949c04c1051bff0e6bf9b62015e2b33c52d5b"
+      2062142,
+      "d6850318dcdd2f29d0b1f0936e183d46c676debc53b7351fc7f08e2b0b1c17ba"
     ],
     "screens/new_game/assets/galaxy_size/medium.png": [
       317069,
@@ -501,256 +501,256 @@
       "41aeac66dec3c41d5ceabaca5d9b78144d4805c60ca779a0e43cbbdcb7a88491"
     ],
     "screens/new_game/assets/tech_level/post_warp.png": [
-      2642291,
-      "d3077700e5f146412c517ab95449b3337d2e35e1b32972dc1b787aa665a6645f"
+      1355898,
+      "fce2e201ad51c19d084d898589feff3cb5ef37eaf05f1a31932a4213131d33b8"
     ],
     "screens/new_game/assets/tech_level/pre_warp.png": [
       508666,
       "6ff4a30ab42fcd1470fbc376137aac38388a4d0070829133b0a516f39e49f61e"
     ],
     "screens/select_race/assets/banners/alkari.png": [
-      3044267,
-      "e7fe5365b02d83eab97d99f1bca7d9c4130382b0cf80b5917f44132a1ae0b2d7"
+      1994358,
+      "765dee5cfaaad96b8e2d517f907b7232e5b8675920213837492fe3bfef4506be"
     ],
     "screens/select_race/assets/banners/bulrathi.png": [
-      3096164,
-      "1c5bbb7bb8f1db7a36021c1161eed9fac5cea848accda11fa6226577c43fdd0a"
+      2029049,
+      "e147be60f3a232339dfef52cca45f9fcab9c8be8efb333e5c69886e04b6c9e24"
     ],
     "screens/select_race/assets/banners/darlok.png": [
-      3143131,
-      "b952197671ad19f47bc9ccdb3f0c89665a89d188aaf18a0792b1dc94772f77a3"
+      2061704,
+      "e8cf829b13f8d3dec5eff9f872754e70caf2c3d2cc435f4b18d631fac850604c"
     ],
     "screens/select_race/assets/banners/elerian.png": [
-      3058733,
-      "421d4acffe5043c99376345f1367f93a4b4d6b2e57d12fc19576a0e73b72105e"
+      2011219,
+      "c228a23c0411847ff2c71d53188a2a99e486dacfb878d32f6afce127a4bec77c"
     ],
     "screens/select_race/assets/banners/gnolam.png": [
-      3177552,
-      "4e099c00be6a77b121fc251befb8a1c6b8a6534fdb580c4ee5494a43ce10dfd6"
+      2076494,
+      "1b87f0f703b4fcd4ba491de3c4e712d31e7c44d9418c73424e1dcbff68809d77"
     ],
     "screens/select_race/assets/banners/human.png": [
-      3300547,
-      "8a440da6d49d9c803c62d8094983daecb6cbe968b5816b9b4fddb3d72f6e0190"
+      2150214,
+      "fa19e1a49c7427bf114847ae3f9afbcc0fe9768f5bd35139edc8dd398463a0b8"
     ],
     "screens/select_race/assets/banners/klackon.png": [
-      3145813,
-      "fe8042305aa9a1ac078c0c9e37e1e950fa3a7696587fbf7370751cf51773af4b"
+      2064114,
+      "9dd4b9f73739418ac46325bbb207f45798aca9315d77feec510f314f2e3e0144"
     ],
     "screens/select_race/assets/banners/meklar.png": [
-      3325631,
-      "18d47d5f758c4433eda4dafe172a0402b01ae88bda3940d3d3ee22cc9779e9ea"
+      2176194,
+      "f208570a6e6bc3995a06cb8b50cc1619a076b1cf6d21a5b6f74dc88be6f4b039"
     ],
     "screens/select_race/assets/banners/mrrshan.png": [
-      3166037,
-      "5f24a131584d8cef65643bdea39b0af888cf95d998037fcf7689a918eca61197"
+      2071386,
+      "49700b74ee7a6a10018d3a4bae6a67c6667a7a149a25d89e23fe5ac7266251d0"
     ],
     "screens/select_race/assets/banners/psilon.png": [
-      3050345,
-      "2498f0e45486f178a40d01114494fcf0cbde4717d63dc433e16848a081a9b89d"
+      2001981,
+      "319f015849c68e36c0cc0e83a53e5d9bea23abb0364dbaf242659eef9792e710"
     ],
     "screens/select_race/assets/banners/sakkra.png": [
-      3528214,
-      "8f20e517f2c3b77fea09ee2bead510922499913096526c4fde79ce774c8f9597"
+      2297890,
+      "d1939d7a6f3ce39714a2fc10c6ce1747932d59501c0192c22998f46e609dc96f"
     ],
     "screens/select_race/assets/banners/silicoid.png": [
-      3135103,
-      "d4d79d59b9159d8edc5eb566e218eb2872ed5571fda97d587039d37f5759c2b1"
+      2056154,
+      "d0c02a5374193d0659e7918c478a2b4dba467020a68be975dd88432292f97758"
     ],
     "screens/select_race/assets/banners/trilarian.png": [
-      3328839,
-      "323d213d5aa8b2060095827606b9ea9126d4eeb6ee10d3964408b48e71055eb4"
+      2191106,
+      "188e68a8da6a2ee6467c5211d81e9afc7fa8716d3807778ac3cfccee5f5327a3"
     ],
     "screens/select_race/assets/custom_panel.png": [
       2667466,
       "0ae7353137e276925b214851fb294f87210d72005bba6916339fd8ee5e497a6f"
     ],
     "screens/select_race/assets/icons/govs/confederation.png": [
-      50909,
-      "e494ca37fead46727fada36a7d72e9490d55bba284ea615847123f5a8d2480c3"
+      18275,
+      "7fbaa56fe2928efa6e8e05ecb2a6807de31e3b93d26b1408bedf6c8db5c1ff51"
     ],
     "screens/select_race/assets/icons/govs/democracy.png": [
-      48102,
-      "330a551790452f5a070da4472c431321d15da0d7aa16fe197b1076d0bcc56253"
+      17676,
+      "24b3539fcd0e7552427e697c09aaa8f882b8ff859714dcc4fb2674a9036d4188"
     ],
     "screens/select_race/assets/icons/govs/dictatorship.png": [
-      46559,
-      "729c938f55e514b9ba02e052d57835c8b03eb0dad4e5b2145e2bacedd59283b8"
+      16795,
+      "be3d0413ac168bf132d6f04354a7b06b44d30dc0ed96533f4bcb83ac184edeb1"
     ],
     "screens/select_race/assets/icons/govs/federation.png": [
-      45667,
-      "394dd47f09ea9fc56c064be403ab1fe014d7e10a70540a354304e1adb9836c38"
+      16656,
+      "2e10464f3c9770dcb5c965af9e3ab6ea38244877de0225ea29a3faaf2e7e7f8d"
     ],
     "screens/select_race/assets/icons/govs/feudal.png": [
-      37362,
-      "1afd22255d8f8621405b3242648216152f93a2c7e91b79d4f0b072aebb0d8ed7"
+      15195,
+      "ef5b58590c7db9c3c4ba618ecdf052fd2ce75c30d8690e7163843e87c92e5d27"
     ],
     "screens/select_race/assets/icons/govs/galactic_unification.png": [
-      36595,
-      "212753499045c31fadb4f804d11ec090d32febd2f31f612dea3c7378c326ae64"
+      14135,
+      "129deae41bc31ca5a00a31b65af15608607b874f0413477a4ca422076c292b47"
     ],
     "screens/select_race/assets/icons/govs/imperium.png": [
-      48577,
-      "542abe434918be115a66162501e56f03365ec3305457990e4c44b9b78be241fd"
+      17208,
+      "7903e5de314ff566fb6b4ea1307c9843854044ef3aa45eb7f3d4891157ff4880"
     ],
     "screens/select_race/assets/icons/govs/unification.png": [
-      50137,
-      "db7837504017d7b9797b4d5e0efe5292913765419deae7ff905001f256d53146"
+      17944,
+      "dae3d0ff83c86991699a9e0290877cc4e6101907d176bafe268d6bfa6897bf8b"
     ],
     "screens/select_race/assets/icons/traits/aquatic.png": [
-      63427,
-      "0f0ee08fd702f3ccbb48fe326db72d7f42ceeb0ebbf0ab3f46446c8a2e0284ce"
+      22759,
+      "18ccd92c95585171c6197546d562c3563c19fa3b9181f60727eaf1065f0e6aa2"
     ],
     "screens/select_race/assets/icons/traits/artifacts_home_world.png": [
-      67479,
-      "4ae58ddd421f64f80c6c0cdde899686c48ee6d089415f442489a3f09d9a249f2"
+      24187,
+      "782790b8c423c14202f3da5e86e7815d57a29be5041e5faeabf3a9f8da5f6ff3"
     ],
     "screens/select_race/assets/icons/traits/charismatic.png": [
-      63185,
-      "4cfd78a68bdae269aa699854101d45f60bc0d061ecc9520323f848cd3143cd9a"
+      22772,
+      "aab00f9695d78cb99fca7d0cbd93cad47ecfe7c73a0f9e65036f4b10d600fbc2"
     ],
     "screens/select_race/assets/icons/traits/creative.png": [
-      59123,
-      "2dcf3420d0f9c81a9277fed2a36f78bf1b6c91286d743af87765b3191195fb7c"
+      20765,
+      "4f5f7416ca186fb8605f84fb40d6c90c3e9dd6aa625be2699f422cb69a73606a"
     ],
     "screens/select_race/assets/icons/traits/cybernetic.png": [
-      67610,
-      "ca4f4c31f8af2ae981d9e02ba6b5e603686d175aa9e4dbe0c95e2d45fe21ba33"
+      24429,
+      "163fd28b3f53d816d8f308f7f1275d27209f1809c7ae4be3d26701e934d03e70"
     ],
     "screens/select_race/assets/icons/traits/espionage.png": [
-      59574,
-      "b47c7f33a9347c7d4d1471504aa6ee9752a6ec47ee1f9cf99a0f271fb4606378"
+      21663,
+      "33556598ccaaff70487ade572273598faacc08ba103808ac8fc1f5fab8b2ce00"
     ],
     "screens/select_race/assets/icons/traits/expert_traders.png": [
-      63778,
-      "cbfdaad7258e03e9e289c5db5d25644c2444fdce7b60c253bbb05febec665982"
+      22828,
+      "977b6f7855b594595660213cf53134368eb4c8e98bd477dda0d4707bb2d400d1"
     ],
     "screens/select_race/assets/icons/traits/food_production.png": [
-      64729,
-      "5ec30797bbd5229a8d11ade97875d41a050453a3ff2a92c900cbfef9883d52df"
+      23052,
+      "f3c9c583af353bd97ebde9757d153cdcc03af398569df10a767075dd7f4bacb3"
     ],
     "screens/select_race/assets/icons/traits/ground_combat.png": [
-      63757,
-      "6df9c4a876defebd562dc3f4e7d69a9a5e6d35491b6124c52cdcb114e326ff1f"
+      22761,
+      "61def9ef64924c4dce8fd006ebaebdbfa6d6e31ed672dcd760b571cca9c56e2b"
     ],
     "screens/select_race/assets/icons/traits/high_gravity.png": [
-      60478,
-      "6ea01437f442b60039122d3b55a8b0e891cb23a80cf57248cb3559da830233c9"
+      21645,
+      "95ce8407fabddff9e409742b206977b3250769729f521cc624d609157fbf008a"
     ],
     "screens/select_race/assets/icons/traits/industrial_production.png": [
-      63956,
-      "1524b5a30d5b08e8127e0f243df5c6818b08ed9d2a3ff72349f2c1dc69fe2da2"
+      22823,
+      "14c953eeca70c8dc0dae39dbbfce7af1b7c829115631b78b1a354cc006d4f279"
     ],
     "screens/select_race/assets/icons/traits/large_home_world.png": [
-      62750,
-      "764831a7fc7d051ccdc4df7a47e6b2d4c04c98afee56c62db9523223ebe40dfb"
+      22756,
+      "d9c9b041f8642d0ce11e54aa1ec85571c59d72bea614513376b26fd6fc7fbf0c"
     ],
     "screens/select_race/assets/icons/traits/lithovore.png": [
-      67112,
-      "f2c04ace9b949420604d4b5042c01bf6a6be8240a46ab8ddc770d243128b6fef"
+      24096,
+      "61c8a719eb06e351d9ee8a0397cb43638acf5b9bff0c9253e31723c970feed71"
     ],
     "screens/select_race/assets/icons/traits/low_gravity.png": [
-      61119,
-      "e85fd094e2f30a05111b653ca041fbab910ddf797600326116fa20f6dfbc43d5"
+      22030,
+      "8bbbb0516e57336e1ff4701db19f478f04ac5ae6267755129c1af11f9aca86c5"
     ],
     "screens/select_race/assets/icons/traits/lucky.png": [
-      60542,
-      "ee1b01fcda6ecfa63981127ae0059e86b30102573bcbbc1dd8dfae7af202fce4"
+      21670,
+      "acfee22bc4e0d3c3e8cecf8401b9079a705cf277253cb784c80da02dd83c81f3"
     ],
     "screens/select_race/assets/icons/traits/omniscient.png": [
-      67205,
-      "6386c739c005a7cd537e37376d93570f28a8274b6fcb68df5dc70b7764074b5b"
+      23829,
+      "db742be0fe82917208ea82d25422b52454a0d861c808c8796a8b1b4a214b5fce"
     ],
     "screens/select_race/assets/icons/traits/poor_home_world.png": [
-      63170,
-      "b96274020598a44581228bdd98cdbde84b9979252ccf4bb3098873ee7545521c"
+      22562,
+      "618205494a3ec9fe5a066c407037378102e7b67dedd4017813ed5189b1d1aec4"
     ],
     "screens/select_race/assets/icons/traits/population_growth.png": [
-      59911,
-      "1dfb75dc4fdfc4f545cbf3920dc66644ca71c3e8ddff8b9083f29116a620ca00"
+      21175,
+      "25d5cea2db4ac283304914b6b6783f6e3bba90113e57851d0d81473b844bd430"
     ],
     "screens/select_race/assets/icons/traits/repulsive.png": [
-      61122,
-      "63e80d60117d986a5e01bd24615c223e4f666db404df2a5906d210dbe3f7a78d"
+      21937,
+      "6776f555e18af23a7c11152ebb4087e8e533f124b61d19d4f3ea9822e332b0e7"
     ],
     "screens/select_race/assets/icons/traits/rich_home_world.png": [
-      69754,
-      "f99b1a469c0b80fd1f965b685d68f11d46773ef4c1f6970b3c921f2015089f2c"
+      25155,
+      "d9e98be60c4528d00c4d978d3d26963c57029bbfe5269e5e587a959af4a65a30"
     ],
     "screens/select_race/assets/icons/traits/scientific_research.png": [
-      65562,
-      "9b76b7cd1c88024f4e72c0ba0d3f426d008ceed9b3aae39a2b3cb3cba6870f15"
+      23496,
+      "cfe629518e339a21b025f4c02a0213e161adc61f50d49ec525c19ba3dd1498fb"
     ],
     "screens/select_race/assets/icons/traits/ship_defense.png": [
-      64030,
-      "df7662f41d189cbcd4054ab658a33177440548b2557f54a50511bd5c1f24daea"
+      22637,
+      "cd2429d804c5166c52fa4ce3f37461d2f6f4d380399b35be3fca9463991ab065"
     ],
     "screens/select_race/assets/icons/traits/ship_offense.png": [
-      68703,
-      "734cafaab5b42e2bbfd76719f8d8607c735262aec9ef0f7f6d816d980f712cd5"
+      24533,
+      "57c0c45f1d56ff9cf32472338aa9cad6404dd887fbe6ed2d19827ca16994c4f1"
     ],
     "screens/select_race/assets/icons/traits/stealth_ships.png": [
-      61369,
-      "0855e6543e5d57de21b8691291e0f66a1e70997708d270e01d53199214ef4aca"
+      21936,
+      "deb1ae3a79e033e546a9b496f75f3c86ede4366efddd027ef44dc0a6d92bf87e"
     ],
     "screens/select_race/assets/icons/traits/subterranean.png": [
-      66189,
-      "81eadf2f8a3ff0641a0b4e84657ff627707575cf06e8746a40eae4069641e436"
+      23860,
+      "b50d5425cad3c865a5df628a22fd7b436fac7d71298c22529bcc1a13528c8882"
     ],
     "screens/select_race/assets/icons/traits/tax.png": [
-      62047,
-      "37bd3aa4862e5e01c1df5f4717e5b2b819c62b99eac84f733397b0f401b21b19"
+      22003,
+      "138cdabb67b3f89a8e80312c2146d88749b76802b3b0b62c920500c2eef348d5"
     ],
     "screens/select_race/assets/icons/traits/telepathic.png": [
-      68721,
-      "01163a30d380d978e0fe9dd7f0f1241b0bb609484c8ddb92eaa595c41cf508b1"
+      24754,
+      "fab0700aad683467a4f2f6b42455089b2d2d0c8a009c4bb829fd5b67f3dee8bf"
     ],
     "screens/select_race/assets/icons/traits/tolerant.png": [
-      64989,
-      "01b11c4b28a15f38281f0b72216e32941c7a8abf78f325ad5875eff0450a1c70"
+      23608,
+      "2a3869ec4d4d97688bf2e2903f88f6551732bac6afb0e456e7fc30e695073135"
     ],
     "screens/select_race/assets/icons/traits/trans_dimensional.png": [
-      62706,
-      "6790aab57d086ee346c99aa23d0c5f7d96f8f02cb5fb3fa4241cc6ef16e72041"
+      22438,
+      "5775f52211c46749150bf2497d4401141ab28306a4e0c47e546dc6c6c409ef2b"
     ],
     "screens/select_race/assets/icons/traits/uncreative.png": [
-      61765,
-      "4a91817315965f88a0749b76b5faf37915327c3d19bb3b6ddd6a3a512a3a9ddc"
+      22191,
+      "c405c2e8f718e61933018a468bc4734d30aa38db9af1cf998c1f5e7e7f19a934"
     ],
     "screens/select_race/assets/icons/traits/warlord.png": [
-      58780,
-      "c610d138851a79bfb3e89707d7872634d1c7ca059a5602f79c22d3ec55f74134"
+      20852,
+      "f3cc7d1bfe576f1ec49f35699af6fbc51a694d7ad2fd368cc218634ed5585841"
     ],
     "screens/select_race/assets/portraits/alkari.png": [
-      3081763,
-      "5c6aa2e024356c16c92902755727ae66154018a72b0e07fe69580d643436b02b"
+      862110,
+      "f5560f0491393d2b5438e26687e69d3fe8b406e2fb8e5b8579c417a872b6f839"
     ],
     "screens/select_race/assets/portraits/bulrathi.png": [
-      3184613,
-      "bc5ae9d2e0508025e457402c7ce6ae74202211a4e486557e8232f3a9c02ef207"
+      879266,
+      "694ab1cea59ffa67d7132928267a2df92e3dc9666958db08c7a8fcb55b2d1d5f"
     ],
     "screens/select_race/assets/portraits/custom.png": [
       1585819,
       "5fbf2198f4010b40132954a483054f0acd6a17a227de9b2ab3d9c543f0da9eac"
     ],
     "screens/select_race/assets/portraits/darlok.png": [
-      3018605,
-      "602d40400e8a0a327d8792c573aaae1567c9d4668cbd36ec00c8ce9f4357714f"
+      857259,
+      "58e238ef1d9fe5d9f0460f3e5b166cd7240702b2725e25cc34ed7b06729f6fbd"
     ],
     "screens/select_race/assets/portraits/elerian.png": [
-      2894300,
-      "57f05bb122f507ddd65a1231b3824335fc42b73b32f64acb8d8be1ccb863770e"
+      834863,
+      "788c032f531a38a0cc9a6c9226f6656c966547ecb760848ff7ed16510f33c52e"
     ],
     "screens/select_race/assets/portraits/gnolam.png": [
-      3054307,
-      "ae08b1fc58892ecb4ee7fb51b99acb89dd6c1be3f97b5cdbd78dd7cb0df6799e"
+      870099,
+      "f1f4244634905a6f10ca69174439f4657d151d2583924b02615b066a03172ab5"
     ],
     "screens/select_race/assets/portraits/human.png": [
-      2825328,
-      "76f00751df3c4eff0a94cffbe67b535ff8ddb17cf60f4e5badc6c8f669b1d485"
+      785440,
+      "6308e307cc69c4b034eb90e97669f54ef8de5f36830e56ede5c54175fda59f6e"
     ],
     "screens/select_race/assets/portraits/klackon.png": [
-      2994429,
-      "8f1b906923b96b56d9c4252c85b672d353d445a3151636366431ed33ed106f1f"
+      855393,
+      "bd65104f2bf11079bbfd30489f7389839a974c4eb2aae41bd7c45862452164f0"
     ],
     "screens/select_race/assets/portraits/klackon.webp": [
       292638,
@@ -761,32 +761,32 @@
       "88cd2775c8b4d8649743675f28e0225c1184e4c5bb655f73eb812df8de8a8080"
     ],
     "screens/select_race/assets/portraits/meklar.png": [
-      3214959,
-      "2c39cf66c472c89ad11435ad1039124f0e7c3447eca594d2304f14e030f6ddf6"
+      911068,
+      "90496b0402170c42a21ae8e23ebae0edea545ef2dc1f2ae7fbbd483458468176"
     ],
     "screens/select_race/assets/portraits/mrrshan.png": [
-      2937611,
-      "732cb7e742c34076ac93e751d360aef655dab8644c03a23974c793d38657bb1e"
+      833325,
+      "7a89a198579c549e6e6f99dc23c3d8eae41ff37ea20d965cf2d0a31f8603bd56"
     ],
     "screens/select_race/assets/portraits/psilon.png": [
-      2931238,
-      "e08cffa351c8c27afb682eb4e5a5d4fb442b3a2a082eea8be1da57618e0b1711"
+      835611,
+      "1f2c8633ce6aa26e5fd4426b7a20c0734825c7c5d4222f0943524bc2093f1053"
     ],
     "screens/select_race/assets/portraits/sakkra.png": [
-      3311414,
-      "3e72e9e915a0839738f2b8f7928881190340a622cf7346c2d61c99eb5f070978"
+      918018,
+      "1d0062428ecb117c8ee7df9a2e9d6903f4506e4b68b05b03581da4c555e279c1"
     ],
     "screens/select_race/assets/portraits/silicoid.jpg": [
       511401,
       "5ba679baa7b7f7329997e1737cff50e55e90637e62421733f99e31ce76d3f0a4"
     ],
     "screens/select_race/assets/portraits/silicoid.png": [
-      3293014,
-      "5737cc05f13a3611cc9aebcb73aa4b8e21705613817eb451833406b4e553c87f"
+      920296,
+      "0a0ced697aad1239683a8c31442943b1463c35c381c27d6ee0a34b629d5dc9ae"
     ],
     "screens/select_race/assets/portraits/trilarian.png": [
-      3442586,
-      "3ec3f7b940ac6a765ace3a93ddaeb0de9fdec48c1209b5ec4af7d46a3f4889a8"
+      973189,
+      "4414b0f9d87812b2eb46f62f8cb282f00e3c1b2126a1b42473efb3a41076f59d"
     ]
   },
   "version": 1
