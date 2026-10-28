@@ -47,7 +47,8 @@ from core.hud import text as hudtext
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
-from screens.colony_summary import colonyfigures, colonyrows
+from core import colonyfacts
+from screens.colony_summary import colonyfigures
 
 ROWS = 6
 #: The original's row geometry, native px (colxport.cpp:232-262, :295-309).
@@ -181,7 +182,7 @@ class Popup:
             hudtables.table_row(surface, row, s, k, selected=row.collidepoint(
                 *mouse_input.pos()))
             rec = colony_struct.parse(raws[index])
-            name = colonyrows.planet_name(rec, planets, stars)
+            name = colonyfacts.planet_name(rec, planets, stars)
             red = False
             if 0 <= rec.planet < len(planets):
                 si = planet_struct.parse(planets[rec.planet]).star_index

@@ -32,7 +32,7 @@ DEVIATION `hud_frameless` (the audience's): a HUD panel behind the title
 and CANCEL and behind the hover's lines, where the original prints on the
 room.
 DEVIATION `picker_hud_box`: the galaxy box is a HUD panel and its stars
-the inset maps' dots in the owners' colours (`colonyrows.
+the inset maps' dots in the owners' colours (`colonyfacts.
 galaxy_inset_stars`, the colony screens' palette as the picker sets it,
 :715), where the original draws DIPSTARS.LBX's background and FLEET.LBX's
 star sprites (view mode 4, movebox.cpp:89-91) — neither is extracted.
@@ -48,7 +48,8 @@ from core import lang
 from core import systempickerwire as wire
 from core.hud import blocks as hud
 from core.hud import text as hudtext
-from screens.colony_summary import colonyinset, colonyrows
+from core import colonyfacts
+from screens.colony_summary import colonyinset
 from core import nativedraw as nd
 
 from . import augeom as geom
@@ -148,7 +149,7 @@ def _stars(surface, box, state):
     dot = max(2, int(round(3 * fx)))
     clip = surface.get_clip()
     surface.set_clip(box)
-    for sx, sy, cidx in colonyrows.galaxy_inset_stars(
+    for sx, sy, cidx in colonyfacts.galaxy_inset_stars(
             state, wire.MAP, black_hole=BLACK_HOLE):
         colour = colonyinset.INSET_COLORS.get(
             cidx, colonyinset.INSET_COLORS[8])[:3]

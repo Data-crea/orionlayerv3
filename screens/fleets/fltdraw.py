@@ -596,7 +596,7 @@ def fill_inset(surface, screen):
 def draw_inset(surface, screen, stars, game_state, art=None):
     """The galaxy inset: the stars on black, the ship stacks over them.
 
-    `stars` is `colonyrows.galaxy_inset_stars` for THIS screen's native
+    `stars` is `colonyfacts.galaxy_inset_stars` for THIS screen's native
     box, in the original's native pixels inside the box, so the only
     thing done here is the scale into the `inset_map` rect. The stacks
     are `core/shipstacks.draw_stacks` — the Leaders box's own drawing
@@ -696,7 +696,7 @@ def draw_relocation_lines(surface, screen, state, stars, ms):
     and this loop draws inside the same window), and `stroke` for every
     piece — decision 68, one routine for every line on an HD map.
 
-    `stars` is `colonyrows.galaxy_inset_stars`' output for THIS box, in
+    `stars` is `colonyfacts.galaxy_inset_stars`' output for THIS box, in
     star order, so a line's ends are the very positions the dots were
     drawn at: no second transform, and nothing here converts galaxy
     coordinates itself.

@@ -285,7 +285,7 @@ TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
 #: a live read that gets race, traits and this right and the sidebar
 #: scalars wrong is telling you about the scalars, not the record.
 #: Advanced City Planning lives in this table; see
-#: colonyrows.city_planning, which applies it (work order 322).
+#: colonyfacts.city_planning, which applies it (work order 322).
 #: THE SAME OFFSET AS THE SPEC FIELD ABOVE, kept as a constant because
 #: two callers want the NUMBER and not the parsed array: the live probe
 #: (`dev:tools/struct_probe.py`) slices a raw record with it, and the

@@ -202,135 +202,165 @@ class GameState:
         return f"{self.stardate // 10}.{self.stardate % 10}"
 
 
+class _Reader:
+    """A cursor over the snapshot: every block reader below moves the one
+    `pos`, and a block that refuses itself puts it back to its start."""
+
+    def __init__(self, data: bytes):
+        self.data = data
+        self.pos = 0
+
+    def i16(self):
+        v = struct.unpack_from('<h', self.data, self.pos)[0]
+        self.pos += 2
+        return v
+
+    def u8(self):
+        v = self.data[self.pos]
+        self.pos += 1
+        return v
+
+    def i8(self):
+        v = struct.unpack_from('<b', self.data, self.pos)[0]
+        self.pos += 1
+        return v
+
+    def i32(self):
+        v = struct.unpack_from('<i', self.data, self.pos)[0]
+        self.pos += 4
+        return v
+
+    def bytes(self, n):
+        v = self.data[self.pos:self.pos + n]
+        self.pos += n
+        return v
+
+
 def parse_state(data: bytes) -> GameState:
     """Parst einen STATE_SNAPSHOT Payload in ein GameState-Objekt."""
     gs = GameState()
-    pos = 0
+    r = _Reader(data)
+    _read_identity(gs, r)
+    _read_settings(gs, r)
+    n_icons = _read_records(gs, r)
+    _read_newgame_settings(gs, r)
+    _read_icon_owners(gs, r, n_icons)
+    _read_fsel(gs, r)
+    _read_flts(gs, r)
+    _read_offs(gs, r)
+    _read_infs(gs, r)
+    pos = _parse_chained_blocks(gs, data, r.pos)
+    # bytes left over: a block nobody read, said once (work order 326 H1)
+    wire_protocol.stopped_at(data, pos)
+    return gs
 
-    def read_i16():
-        nonlocal pos
-        v = struct.unpack_from('<h', data, pos)[0]
-        pos += 2
-        return v
 
-    def read_u8():
-        nonlocal pos
-        v = data[pos]
-        pos += 1
-        return v
-
-    def read_i8():
-        nonlocal pos
-        v = struct.unpack_from('<b', data, pos)[0]
-        pos += 1
-        return v
-
-    def read_i32():
-        nonlocal pos
-        v = struct.unpack_from('<i', data, pos)[0]
-        pos += 4
-        return v
-
-    def read_bytes(n):
-        nonlocal pos
-        v = data[pos:pos + n]
-        pos += n
-        return v
-
+def _read_identity(gs, r):
     # Game Identity
-    gs.current_screen = read_i16()
-    gs.previous_screen = read_i8()
-    gs.stardate = read_i32()
-    gs.player_num = read_i16()
-    gs.num_players = read_i16()
-    gs.num_stars = read_i16()
-    gs.num_ships = read_i16()
-    gs.num_colonies = read_i16()
-    gs.num_nebulas = read_u8()
-    gs.game_type = read_i8()
+    gs.current_screen = r.i16()
+    gs.previous_screen = r.i8()
+    gs.stardate = r.i32()
+    gs.player_num = r.i16()
+    gs.num_players = r.i16()
+    gs.num_stars = r.i16()
+    gs.num_ships = r.i16()
+    gs.num_colonies = r.i16()
+    gs.num_nebulas = r.u8()
+    gs.game_type = r.i8()
 
     # Map state
-    gs.map_scale = read_i16()
-    gs.map_x = read_i16()
-    gs.map_y = read_i16()
-    gs.map_max_x = read_i16()
-    gs.map_max_y = read_i16()
+    gs.map_scale = r.i16()
+    gs.map_x = r.i16()
+    gs.map_y = r.i16()
+    gs.map_max_x = r.i16()
+    gs.map_max_y = r.i16()
 
+
+def _read_settings(gs, r):
     # Settings
     # the engine's language (open fix 70) noted before any of its texts below
     gs.settings_raw = lang.engine_settings(
-        read_bytes(layout.size("s_settings", SETTINGS_SIZE)))
+        r.bytes(layout.size("s_settings", SETTINGS_SIZE)))
     settings = settings_struct.parse(gs.settings_raw)
     gs.difficulty = settings.game_difficulty
     gs.galaxy_size = settings.galaxy_size
     gs.galaxy_age = settings.galaxy_age
 
+
+def _read_records(gs, r):
+    """The fixed sections from the players to the ship icons; returns the
+    icon count, which the optional owner block after them is sized by."""
     # Players
     player_size = layout.size("s_player", PLAYER_SIZE)
     gs.player_raw = []
     for i in range(layout.constant("MAX_PLAYERS", MAX_PLAYERS)):
-        gs.player_raw.append(read_bytes(player_size))
+        gs.player_raw.append(r.bytes(player_size))
 
     # Stars (verified spec: core/structs/star.py)
-    n_stars = read_i16()
+    n_stars = r.i16()
     star_size = layout.size("s_star_data", STAR_SIZE)
-    star_raws = [read_bytes(star_size) for _ in range(n_stars)]
+    star_raws = [r.bytes(star_size) for _ in range(n_stars)]
     gs.stars = star_struct.parse_all(star_raws)
 
     # Ships
-    n_ships = read_i16()
+    n_ships = r.i16()
     ship_size = layout.size("s_ship_data", SHIP_SIZE)
     gs.ships_raw = []
     for i in range(n_ships):
-        gs.ships_raw.append(read_bytes(ship_size))
+        gs.ships_raw.append(r.bytes(ship_size))
 
     # Colonies
-    n_colonies = read_i16()
+    n_colonies = r.i16()
     colony_size = layout.size("s_colony", COLONY_SIZE)
     gs.colonies_raw = []
     for i in range(n_colonies):
-        gs.colonies_raw.append(read_bytes(colony_size))
+        gs.colonies_raw.append(r.bytes(colony_size))
 
     # Planets
-    n_planets = read_i16()
+    n_planets = r.i16()
     planet_size = layout.size("s_planet_data", PLANET_SIZE)
     gs.planets_raw = []
     for i in range(n_planets):
-        gs.planets_raw.append(read_bytes(planet_size))
+        gs.planets_raw.append(r.bytes(planet_size))
 
     # Nebulas
-    n_nebulas = read_u8()
+    n_nebulas = r.u8()
     nebula_size = layout.size("s_nebula", NEBULA_SIZE)
     gs.nebulas_raw = []
     for i in range(n_nebulas):
-        gs.nebulas_raw.append(read_bytes(nebula_size))
+        gs.nebulas_raw.append(r.bytes(nebula_size))
 
     # Leaders
     leader_size = layout.size("s_leader_data", LEADER_SIZE)
     gs.leaders_raw = []
     for i in range(layout.constant("MAX_LEADERS", MAX_LEADERS)):
-        gs.leaders_raw.append(read_bytes(leader_size))
+        gs.leaders_raw.append(r.bytes(leader_size))
 
     # Antarans
-    gs.antaran_raw = read_bytes(layout.size("s_antaran", ANTARAN_SIZE))
+    gs.antaran_raw = r.bytes(layout.size("s_antaran", ANTARAN_SIZE))
 
     # Ship icons (verified spec: core/structs/ship_icon.py)
-    n_icons = read_i16()
+    n_icons = r.i16()
     icon_size = layout.size("s_ship_icon", SHIP_ICON_SIZE)
-    icon_raws = [read_bytes(icon_size) for _ in range(n_icons)]
+    icon_raws = [r.bytes(icon_size) for _ in range(n_icons)]
     gs.ship_icons = ship_icon_struct.parse_all(icon_raws)
+    return n_icons
 
+
+def _read_newgame_settings(gs, r):
     # Newgame screen local settings (8 × int16, appended by ext_api)
-    if pos + 16 <= len(data):
-        gs.ng_difficulty = read_i16()
-        gs.ng_galaxy_size = read_i16()
-        gs.ng_galaxy_age = read_i16()
-        gs.ng_opponents = read_i16()
-        gs.ng_tactical_combat = read_i16()
-        gs.ng_tech_level = read_i16()
-        gs.ng_random_events = read_i16()
-        gs.ng_antarans = read_i16()
+    if r.pos + 16 <= len(r.data):
+        gs.ng_difficulty = r.i16()
+        gs.ng_galaxy_size = r.i16()
+        gs.ng_galaxy_age = r.i16()
+        gs.ng_opponents = r.i16()
+        gs.ng_tactical_combat = r.i16()
+        gs.ng_tech_level = r.i16()
+        gs.ng_random_events = r.i16()
+        gs.ng_antarans = r.i16()
 
+
+def _read_icon_owners(gs, r, n_icons):
     # Ship icon owners — OPTIONAL trailing block, one uint8 per icon,
     # 0xFF meaning "no ship behind this icon".
     #
@@ -345,11 +375,13 @@ def parse_state(data: bytes) -> GameState:
     # Deliberately LAST in the snapshot so an unpatched orion2re and a
     # patched one both parse — never insert a field above this line
     # without moving it.
-    if n_icons and pos + n_icons <= len(data):
+    if n_icons and r.pos + n_icons <= len(r.data):
         for icon in gs.ship_icons:
-            owner = read_u8()
+            owner = r.u8()
             icon.set_derived("owner", None if owner == 0xFF else owner)
 
+
+def _read_fsel(gs, r):
     # Ship node table and fleet box selection — OPTIONAL block after the
     # owners, open fix 20 revision 2 (doc/ext_fleet_selection.patch):
     # "FSEL", int16 the stack the fleet box shows (-1 while closed), int16
@@ -361,26 +393,26 @@ def parse_state(data: bytes) -> GameState:
     # then `fleet_selection` stays None — a state, said once as a refusal
     # because the blocks after it are lost with it (work order 326 H1).
     gs.fleet_selection = None
-    if data[pos:pos + 4] == b"FSEL" and pos + 8 <= len(data):
-        _start = pos
-        pos += 4
-        stack = read_i16()
-        nodes = read_i16()
+    if r.data[r.pos:r.pos + 4] == b"FSEL" and r.pos + 8 <= len(r.data):
+        _start = r.pos
+        r.pos += 4
+        stack = r.i16()
+        nodes = r.i16()
         chain = None
-        if 0 <= nodes and pos + 3 * nodes + 2 <= len(data):
+        if 0 <= nodes and r.pos + 3 * nodes + 2 <= len(r.data):
             ships, selected = [], []
             for _ in range(nodes):
-                ships.append(read_i16())
-                selected.append(read_u8() != 0)
-            length = read_i16()
-            if 0 <= length and pos + 2 * length <= len(data):
-                chain = [read_i16() for _ in range(length)]
+                ships.append(r.i16())
+                selected.append(r.u8() != 0)
+            length = r.i16()
+            if 0 <= length and r.pos + 2 * length <= len(r.data):
+                chain = [r.i16() for _ in range(length)]
         if chain is None:
             # a count outside the block has no end to step to: back to
             # the start, said (FLTS's rule, work order 326 H1)
             wire_protocol.refused("FSEL", "count outside the block",
                                   f"{nodes} nodes")
-            pos = _start
+            r.pos = _start
         elif all(0 <= n < nodes for n in chain) and (stack >= 0 or
                                                      not chain):
             gs.fleet_selection = {"stack": stack, "ships": ships,
@@ -389,6 +421,8 @@ def parse_state(data: bytes) -> GameState:
             wire_protocol.refused("FSEL", "chain outside the node table",
                                   f"{nodes} nodes", skipped=True)
 
+
+def _read_flts(gs, r):
     # The fleet SCREEN's view state — OPTIONAL block after FSEL, open
     # fix 27 (doc/ext_fleet_screen_state.patch). Written by the engine
     # only while screen 4 is up, so its ABSENCE is three different
@@ -402,29 +436,30 @@ def parse_state(data: bytes) -> GameState:
     # None, never a half-filled dict, because a half-filled one would
     # draw a grid that is missing its last ships without saying so.
     gs.fleet_screen = None
-    if data[pos:pos + 4] == b"FLTS" and pos + 4 + 26 + 2 <= len(data):
-        _start = pos
-        pos += 4
+    if r.data[r.pos:r.pos + 4] == b"FLTS" and \
+            r.pos + 4 + 26 + 2 <= len(r.data):
+        _start = r.pos
+        r.pos += 4
         _flt = {}
         for _key in ("stack", "head_node", "owner", "icons", "icons_added",
                      "rows", "first_row", "selected_count", "scanned_big",
                      "scanned_small", "support_filter", "combat_filter"):
-            _flt[_key] = read_i16()
-        _flt["relocate_mode"] = read_u8()
-        _flt["merging_relocations"] = read_u8() != 0
-        _n = read_i16()
-        if _n < 0 or pos + 3 * _n > len(data):
+            _flt[_key] = r.i16()
+        _flt["relocate_mode"] = r.u8()
+        _flt["merging_relocations"] = r.u8() != 0
+        _n = r.i16()
+        if _n < 0 or r.pos + 3 * _n > len(r.data):
             # no end to step to: back to the block's start (the rule of
             # every refused block, `wire_protocol.refused`) — left after
             # the count, the next tag compare read the middle of the block
             wire_protocol.refused("FLTS", "record count outside the block",
                                   f"{_n} records")
-            pos = _start
+            r.pos = _start
         elif _n == _flt["icons"]:
             _ships, _sel = [], []
             for _ in range(_n):
-                _ships.append(read_i16())
-                _sel.append(read_u8() != 0)
+                _ships.append(r.i16())
+                _sel.append(r.u8() != 0)
             _flt["ship_idx"] = _ships
             _flt["ship_selected"] = _sel
             gs.fleet_screen = _flt
@@ -435,8 +470,10 @@ def parse_state(data: bytes) -> GameState:
             wire_protocol.refused(
                 "FLTS", "records do not match the icons",
                 f"{_n} records for {_flt['icons']} icons", skipped=True)
-            pos += 3 * _n
+            r.pos += 3 * _n
 
+
+def _read_offs(gs, r):
     # The Leaders screen's view state — OPTIONAL block after FSEL, open
     # fix 30 (doc/ext_officer_screen_state.patch). Written only while
     # screen 29 is up, so it never meets FLTS. Four int8, sixteen int16,
@@ -444,25 +481,26 @@ def parse_state(data: bytes) -> GameState:
     # not at all, for FLTS's reason: a half-read block would draw a grid
     # missing its last ships without saying so.
     gs.officer_screen = None
-    if data[pos:pos + 4] == b"OFFS" and pos + 4 + 4 + 32 + 2 <= len(data):
-        _start = pos
-        pos += 4
+    if r.data[r.pos:r.pos + 4] == b"OFFS" and \
+            r.pos + 4 + 4 + 32 + 2 <= len(r.data):
+        _start = r.pos
+        r.pos += 4
         _off = {}
         for _key in ("view", "mode", "selected", "scanned"):
-            _off[_key] = read_i8()
+            _off[_key] = r.i8()
         for _key in ("star_displayed", "star_chosen", "n_officers"):
-            _off[_key] = read_i16()
-        _off["id_list"] = [read_i16() for _ in range(4)]
+            _off[_key] = r.i16()
+        _off["id_list"] = [r.i16() for _ in range(4)]
         for _key in ("stack", "head_node", "first_row", "picked_icon",
                      "scanned_big", "scanned_small", "scanned_star",
                      "popup_leader", "popup_state"):
-            _off[_key] = read_i16()
-        _n = read_i16()
-        if 0 <= _n and pos + 3 * _n <= len(data):
+            _off[_key] = r.i16()
+        _n = r.i16()
+        if 0 <= _n and r.pos + 3 * _n <= len(r.data):
             _ships, _sel = [], []
             for _ in range(_n):
-                _ships.append(read_i16())
-                _sel.append(read_u8() != 0)
+                _ships.append(r.i16())
+                _sel.append(r.u8() != 0)
             _off["ship_idx"] = _ships
             _off["ship_selected"] = _sel
             gs.officer_screen = _off
@@ -470,36 +508,44 @@ def parse_state(data: bytes) -> GameState:
             # FLTS's sibling (work order 326 H1): back to the start, said
             wire_protocol.refused("OFFS", "record count outside the block",
                                   f"{_n} records")
-            pos = _start
+            r.pos = _start
 
+
+def _read_infs(gs, r):
     # The Info screen's block — OPTIONAL, after OFFS's place, open fix 32
     # (doc/ext_info_screen_state.patch). Written only while screen 9 is up.
     # Six int16 (`MOX::_bill_savegame`), then N x (int16 length, bytes) —
     # the messages as `MSG_::sprintf_msg_` renders them. Whole or None.
     gs.info_screen = None
-    if data[pos:pos + 4] == b"INFS" and pos + 4 + 12 + 2 <= len(data):
-        _start = pos
-        pos += 4
-        _bill = [read_i16() for _ in range(6)]
-        _n = read_i16()
+    if r.data[r.pos:r.pos + 4] == b"INFS" and \
+            r.pos + 4 + 12 + 2 <= len(r.data):
+        _start = r.pos
+        r.pos += 4
+        _bill = [r.i16() for _ in range(6)]
+        _n = r.i16()
         _msgs, _ok = [], 0 <= _n
         for _ in range(max(0, _n)):
-            if pos + 2 > len(data):
+            if r.pos + 2 > len(r.data):
                 _ok = False
                 break
-            _len = read_i16()
-            if _len < 0 or pos + _len > len(data):
+            _len = r.i16()
+            if _len < 0 or r.pos + _len > len(r.data):
                 _ok = False
                 break
-            _msgs.append(read_bytes(_len))
+            _msgs.append(r.bytes(_len))
         if _ok:
             gs.info_screen = {"bill": _bill, "messages": _msgs}
         else:
             # FLTS's sibling (work order 326 H1): back to the start, said
             wire_protocol.refused("INFS", "message count or length "
                                   "outside the block", f"{_n} messages")
-            pos = _start
+            r.pos = _start
 
+
+def _parse_chained_blocks(gs, data, pos):
+    """The tagged blocks after INFS, each parser handed the position the
+    last one ended at; returns where the chain stopped. The ORDER is the
+    engine's write order (checked by the suite), not a free choice."""
     from core import colonyblocks, designblocks, diplblocks, moveblocks
     from core import msgboxwire
     pos = diplblocks.parse(gs, data, pos)
@@ -542,9 +588,7 @@ def parse_state(data: bytes) -> GameState:
     pos = colsumblock.parse(gs, data, pos)    # CSUM, open fix 110
     from core import filmblock
     pos = filmblock.parse(gs, data, pos)      # FILM, open fix 112, LAST
-    # bytes left over: a block nobody read, said once (work order 326 H1)
-    wire_protocol.stopped_at(data, pos)
-    return gs
+    return pos
 
 
 def parse_fields(data: bytes) -> list:

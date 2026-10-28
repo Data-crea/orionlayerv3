@@ -182,7 +182,7 @@ def hint_rect(region):
 def hint_collides(stars, region="inset_map"):
     """True when any star falls inside that region's hint strip.
 
-    The star list is `colonyrows.galaxy_inset_stars`, in the same
+    The star list is `colonyfacts.galaxy_inset_stars`, in the same
     native space `REGIONS` is in, and a star is drawn as a 5x5 sprite
     offset `-2, -2` (movebox.cpp:85) — so the sprite's own extent is
     tested, not its centre point. `REGIONS[region]` is the box and the

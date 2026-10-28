@@ -36,7 +36,7 @@ from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 
 from . import planetrange
 
@@ -46,7 +46,7 @@ MINERALS_PER_MINE = (1, 2, 3, 5, 8)     # COLCALC::_minerals_per_mine, colcalc.c
 MINERAL_ULTRA_POOR, MINERAL_POOR = 0, 1
 GRAVITY_LOW, GRAVITY_NORMAL, GRAVITY_HEAVY = 0, 1, 2
 TRAIT_LOW_G_WORLD, TRAIT_HEAVY_G_WORLD = 10, 11   # orion2_consts.h:959-960
-TRAIT_BIOSPHERE_BONUS = colonyrows.POP_BONUS_BIOSPHERES
+TRAIT_BIOSPHERE_BONUS = colonyfacts.POP_BONUS_BIOSPHERES
 #: `Find_Ship_Stacks_` gives no node to a ship with status >= 3
 #: (shipstak.cpp:56), so the enemy test's stack walk never sees one.
 STACK_SKIP = ship_struct.STATUS_STACK_SKIP
@@ -66,9 +66,9 @@ FILTER_GAPS = {}
 
 #: Advanced City Planning's application, status and bonus: one home,
 #: `colonyrows` (DEVIATION `city_planning_config`, see the docstring).
-TECH_APP_ADVANCED_CITY_PLANNING = colonyrows.TECH_APP_ADVANCED_CITY_PLANNING
-TECH_RESEARCH_STATUS_RESEARCHED = colonyrows.TECH_RESEARCH_STATUS_RESEARCHED
-CITY_PLANNING_BONUS = colonyrows.CITY_PLANNING_BONUS
+TECH_APP_ADVANCED_CITY_PLANNING = colonyfacts.TECH_APP_ADVANCED_CITY_PLANNING
+TECH_RESEARCH_STATUS_RESEARCHED = colonyfacts.TECH_RESEARCH_STATUS_RESEARCHED
+CITY_PLANNING_BONUS = colonyfacts.CITY_PLANNING_BONUS
 
 #: The three sort keys and the row value each sorts on, descending
 #: (qsort_by_climate_ / _minerals_ / _max_population_, plntsum.cpp:1216-1230).
@@ -144,7 +144,7 @@ def explored(view, star_index):
 def city_planning(view, player):
     """Has `player` researched Advanced City Planning?"""
     record = view.player(player) if 0 <= int(player) < MAX_PLAYERS else None
-    return colonyrows.city_planning(record)
+    return colonyfacts.city_planning(record)
 
 
 def productivity_penalty(traits, gravity):
@@ -200,14 +200,14 @@ def race_pop_limit(view, size, climate, race):
     race 8 always; the aquatic climate shift and the subterranean bonus only
     for a player index."""
     traits = view.traits(race) if race < MAX_PLAYERS else None
-    immune = bool(traits[colonyrows.TRAIT_ENVIRONMENT_IMMUNE]) if traits \
+    immune = bool(traits[colonyfacts.TRAIT_ENVIRONMENT_IMMUNE]) if traits \
         else race == MAX_PLAYERS
-    climate = colonyrows.player_climate(int(climate), traits)
+    climate = colonyfacts.player_climate(int(climate), traits)
     factor = min(100, (25 if immune else 0)
-                 + colonyrows.CLIMATE_FACTOR[max(0, min(9, climate))])
-    size = max(0, min(len(colonyrows.SIZE_BASE) - 1, int(size)))
-    limit = (factor * colonyrows.SIZE_BASE[size] + 50) // 100
-    if traits and traits[colonyrows.TRAIT_SUBTERRANEAN]:
+                 + colonyfacts.CLIMATE_FACTOR[max(0, min(9, climate))])
+    size = max(0, min(len(colonyfacts.SIZE_BASE) - 1, int(size)))
+    limit = (factor * colonyfacts.SIZE_BASE[size] + 50) // 100
+    if traits and traits[colonyfacts.TRAIT_SUBTERRANEAN]:
         limit += 2 * size + 2
     return limit
 
@@ -230,15 +230,15 @@ def max_population(view, planet):
             limit = race_pop_limit(view, planet.size, colony.climate, race)
             if city_planning(view, int(colony.owner)):
                 limit += CITY_PLANNING_BONUS
-            if colony.buildings[colonyrows.BUILDING_BIOSPHERES]:
+            if colony.buildings[colonyfacts.BUILDING_BIOSPHERES]:
                 limit += TRAIT_BIOSPHERE_BONUS
-            best = max(best, min(limit, colonyrows.POP_LIMIT_CAP))
+            best = max(best, min(limit, colonyfacts.POP_LIMIT_CAP))
         return best
     limit = race_pop_limit(view, planet.size, planet.climate,
                            view.player_num)
     if city_planning(view, view.player_num):
         limit += CITY_PLANNING_BONUS
-    return min(limit, colonyrows.POP_LIMIT_CAP)
+    return min(limit, colonyfacts.POP_LIMIT_CAP)
 
 
 def planet_row(view, index, planet):

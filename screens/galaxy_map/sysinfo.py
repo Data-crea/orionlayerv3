@@ -18,7 +18,7 @@ the engine:
   population              H 0x181 (n pops, maximum) for a colony, H 0x162
                           (maximum) otherwise; the maximum is the LOCAL
                           player's (`Planet_Max_Population_For_Player_`;
-                          `colonyrows.max_population`, with its marked
+                          `colonyfacts.max_population`, with its marked
                           deviations; Advanced City Planning the colony
                           owner's, since work order 322)
   minerals[, gravity]     gravity only when it is not normal
@@ -35,7 +35,7 @@ from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 from screens.planets import planetwords
 
 PLANET_TYPE_ASTEROID, PLANET_TYPE_GAS_GIANT = 1, 2
@@ -76,7 +76,7 @@ def lines(state, planet_index, words, buildings):
     stars = getattr(state, "stars", None) or []
     star = stars[planet.star_index] if 0 <= planet.star_index < len(stars) \
         else None
-    name = colonyrows.star_planet_name(star, planet_index) if star else "?"
+    name = colonyfacts.star_planet_name(star, planet_index) if star else "?"
     title = f"{name} "
     if colony is not None:
         owner = int(colony.owner)
@@ -97,8 +97,8 @@ def lines(state, planet_index, words, buildings):
     # player's for an unsettled planet (colcalc.cpp:927-929, :1021-1023;
     # work order 322)
     planner = int(colony.owner) if colony is not None else me
-    maximum = colonyrows.max_population(
-        stand_in, planet, traits, colonyrows.city_planning(
+    maximum = colonyfacts.max_population(
+        stand_in, planet, traits, colonyfacts.city_planning(
             player_struct.parse(players[planner])
             if 0 <= planner < len(players) else None))
     if colony is not None:

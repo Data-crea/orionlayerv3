@@ -64,7 +64,7 @@ pairs the reference save exposed, as palette RGB:
 
 **Colours 3, 4 and 5 have no witness**, and which index has been seen
 is recorded at `INSET_COLORS` rather than only here — the same shape
-`colonyrows.drawn_production` uses for its four branches. Seven of
+`colonyfacts.drawn_production` uses for its four branches. Seven of
 the ten indices were read off a live frame; three could not be,
 because no player in the reference save carries those colours.
 
@@ -137,7 +137,7 @@ from screens.galaxy_map.renderer import OWNER_COLORS
 #: are this panel's own and are skin-overridable beside them.
 #:
 #: **WHICH INDEX HAS A LIVE WITNESS**, in the shape
-#: `colonyrows.drawn_production` uses for its branches. Read off the
+#: `colonyfacts.drawn_production` uses for its branches. Read off the
 #: original's own framebuffer on 4 September 2026, reference save,
 #: 99 stars over 8 players — the pair is (dark, bright) as palette
 #: RGB, and the HD colour beside it is what this table draws:
@@ -246,7 +246,7 @@ def map_rect(area, native=(128, 91)):
 def star_points(stars, rect, native=(128, 91)):
     """(x, y, colour index, cell_w, cell_h) in screen pixels.
 
-    `stars` is `colonyrows.galaxy_inset_stars` output — native
+    `stars` is `colonyfacts.galaxy_inset_stars` output — native
     offsets inside the 128x91 box. One function makes this and both
     the drawing and any future hit-test call it (decision 5).
     """
@@ -302,7 +302,7 @@ def render(surface, stars, label, area, cfg, layout, style,
            native=(128, 91), marker=None, strong=None):
     """Draw the inset into `area`, the `galaxy_inset` cutout.
 
-    `stars` is `colonyrows.galaxy_inset_stars` output and `label` is
+    `stars` is `colonyfacts.galaxy_inset_stars` output and `label` is
     `galaxy_inset_label`'s — plain data, no structs.
 
     **NOTHING IS DRAWN BEHIND THE STARS, and that is the original's

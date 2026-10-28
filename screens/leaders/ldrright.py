@@ -2,7 +2,7 @@
 
 THE GALAXY BOX — TRANSCRIPTION. `MOVEBOX::Draw_Galaxy_Map_Box_(…, 306,
 235, 318, 169, …)` (officer.cpp:756): the stars through
-`colonyrows.galaxy_inset_stars` — the one transform all the inset maps
+`colonyfacts.galaxy_inset_stars` — the one transform all the inset maps
 share, given this screen's box — with the black-hole index 10, because
 this screen clears `_using_colony_screen_palette` (officer.cpp:866;
 movebox.cpp:70), and each star the original's own sprite, OFFICER.LBX
@@ -53,7 +53,7 @@ from core.hud import blocks as hud
 from core.structs import planet as planet_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 
 from . import ldrdraw as draw
 from core import nativedraw
@@ -93,7 +93,7 @@ def draw_galaxy_box(surface, screen, game_state, art):
     previous = surface.get_clip()
     surface.set_clip(box)
     dot = max(2, int(round(2 * layout.scale)))
-    for sx, sy, colour in colonyrows.galaxy_inset_stars(
+    for sx, sy, colour in colonyfacts.galaxy_inset_stars(
             game_state, geom.GALAXY_BOX_XYWH, black_hole=BLACK_HOLE_INDEX):
         x, y = box.x + sx * fx, box.y + sy * fy
         sprite = art.star(colour) if have_art else None
@@ -198,7 +198,8 @@ def _draw_system(surface, screen, view, game_state, art, star):
     stars = getattr(game_state, "stars", None) or []
     if not 0 <= star < len(stars):
         return
-    from screens.colony_summary import colonyplanets, colonyrows
+    from core import colonyfacts
+    from screens.colony_summary import colonyplanets
     layout = screen.layout
     r = nativedraw.rect(layout, (geom.SYSTEM_AT[0], geom.SYSTEM_AT[1],
                            geom.VIEW_BOX[2] - 8, geom.VIEW_BOX[3] - 8))
@@ -233,7 +234,7 @@ def _draw_system(surface, screen, view, game_state, art, star):
         ink = draw.text_colour(art, "selected" if p.colony_index >= 0
                                else "normal")
         nativedraw.blit_text(surface, screen.style,
-                       colonyrows.star_planet_name(stars[star], index),
+                       colonyfacts.star_planet_name(stars[star], index),
                        centre[0], top + disc_max + note // 2, cell - 4,
                        note, ink, "center")
 

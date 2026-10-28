@@ -95,6 +95,7 @@ import logging
 
 import pygame
 
+from core import colonyfacts
 from core import mouse as mouse_input
 from core import palette
 from core.screen_base import ScreenBase
@@ -605,14 +606,14 @@ class ColonySummaryScreen(ScreenBase):
         box = self.box_rect("galaxy_inset")
         if not box or self._state is None:
             return
-        stars = colonyrows.galaxy_inset_stars(self._state)
+        stars = colonyfacts.galaxy_inset_stars(self._state)
         colonyinset.render(
             surface, stars,
-            colonyrows.galaxy_inset_label(self._state, self._selected),
+            colonyfacts.galaxy_inset_label(self._state, self._selected),
             pygame.Rect(*self.layout.rect(box)),
             self._data.get("inset", {}), self.layout, self.style,
             marker=colonyinset.scanned_marker(
-                stars, colonyrows.scanned_star(self._state, self._selected)))
+                stars, colonyfacts.scanned_star(self._state, self._selected)))
 
     def _render_sidebar(self, surface):
         """The six empire readouts. Everything about them, including

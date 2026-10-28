@@ -16,7 +16,7 @@ because the value is the snapshot's and only the wording is missing.
 from core import hestrings
 from core.estrings import EStrings
 from core.structs import star as star_struct
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 
 from . import planetrows
 
@@ -143,7 +143,7 @@ def special_line(view, row, words):
 def planet_name(view, row):
     star = view.stars[row["star"]] if 0 <= row["star"] < len(view.stars) \
         else None
-    return colonyrows.star_planet_name(star, row["index"]) if star else "?"
+    return colonyfacts.star_planet_name(star, row["index"]) if star else "?"
 
 
 def cells(view, row, words):

@@ -62,7 +62,7 @@ from core import lang, palette
 from core import textfit
 
 from .colonyempire import format_value
-from .colonyrows import ECON_BC, ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH
+from core.colonyfacts import ECON_BC, ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH
 
 LABEL_COLOR = palette.col("colony_summary", "label", (140, 155, 190))
 VALUE_COLOR = palette.col("colony_summary", "value", (220, 228, 245))
@@ -86,7 +86,7 @@ SEPARATOR_COLOR = palette.col("colony_summary", "output_separator",
 HEADING_COLOR = palette.require("colony_summary", "header_text")
 
 #: Which row id wears which icon file. The morale row is not here: its
-#: mask depends on the value and `colonyrows.morale_icon` decides it.
+#: mask depends on the value and `colonyfacts.morale_icon` decides it.
 ICON_BY_ID = {"food": "food", "industry": "industry",
               "research": "research", "bc": "bc"}
 
@@ -154,7 +154,7 @@ def row_shortage(row, spec):
     0 covers three different things and deliberately does not tell
     them apart: the row is not a production row, the colony is not
     short, or the original refuses to draw a shortage there at all
-    (industry, or negative imports — `colonyrows.production_shortage`
+    (industry, or negative imports — `colonyfacts.production_shortage`
     is where that refusal is transcribed, from coldraw.cpp:152). All
     three mean the same thing here, which is that no marker is drawn.
     """
@@ -195,7 +195,7 @@ def row_values(row, words, climates):
         # THE NET, NOT THE STORED VALUE. The original computes what
         # it draws before it draws anything and only one of its four
         # branches is `production[t]` itself — see
-        # `colonyrows.drawn_production`, which carries all four and
+        # `colonyfacts.drawn_production`, which carries all four and
         # the (int8_t) cast that chooses between them. `production`
         # is still in the row and is still what the four SORT keys
         # read, because the original sorts on the record and not on

@@ -42,7 +42,7 @@ from core.hud import shell
 from core import mouse as mouse_input
 from core.screen_base import ScreenBase
 from core.shipparts import ShipPartNames
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 
 from . import monsterpanel, planetdraw, planetrows, planetsend, planetwords
 
@@ -184,7 +184,7 @@ class PlanetsScreen(ScreenBase):
             return []
         cache = getattr(self, "_stars_cache", None)
         if cache is None or cache[0] is not self._state:
-            cache = (self._state, colonyrows.galaxy_inset_stars(
+            cache = (self._state, colonyfacts.galaxy_inset_stars(
                 self._state, INSET_NATIVE))
             self._stars_cache = cache
         return cache[1]

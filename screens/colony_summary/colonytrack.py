@@ -25,8 +25,7 @@ import collections
 import pygame
 
 from core import zoomtables
-
-from .colonyrows import POP_LIMIT_CAP
+from core.colonyfacts import POP_LIMIT_CAP
 
 
 #: What is left of the row's own measurements once the columns are
@@ -314,7 +313,7 @@ def row_regions(row):
     Zones are laid down in ECON order and clipped at POP_LIMIT_CAP,
     which the engine cannot pass either. Cells past `max_pop` are
     kept, not clipped: a pop is a fact, `max_pop` a computation with
-    documented deviations (`colonyrows.max_population`), so they
+    documented deviations (`colonyfacts.max_population`), so they
     stay visible and the disagreement stays visible with them.
 
     The count is `row["cells"]` where the row carries it — one entry
@@ -492,72 +491,82 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
     part C.
     """
     from core import box  # noqa: F401
-    from . import colonyicons
     regions = row_regions(row)
     cells, targets = [], []
     for job, key in enumerate(JOB_KEYS):
         cx, cw = cols[key]
-        n_left, n_right = colonyicons.COLUMNS[job]
-        count = regions.spans[job][1]
-        # ONE PIXEL INSIDE THE PLATE'S LINE, and it is transcribed.
-        # The original's icons start at `left_x` — 101 / 236 / 378 —
-        # and its drawn cell boxes start at 100 / 235 / 377, measured
-        # on `colony_summary_native_split.png`. So the first icon sits
-        # exactly one pixel inside the box's own line, which is what
-        # keeps the line visible with a full column. The same `+1` at
-        # the top is what `figure_step` reserves.
-        start = cx + PLATE_LINE
-        room = max(1, cw - 2 * PLATE_LINE)
-        # THE FACTOR IS THE SPRITE STEP, NOT THE COLUMN RATIO.
-        # The step is the integer a 28 px native figure is drawn at
-        # (decision 26), derived from the band, and the stacking decision
-        # is that HD's extra width goes into the column RESERVATION
-        # and never into figure spacing. Scaling the pitch by the
-        # column ratio instead — 342 : 125, about 2.7 at 1080p —
-        # spends that reservation on spacing, and every cell and every
-        # drop target would move again the day Stage 3 draws sprites
-        # at the step. Corrected 7 September 2026; it was the ratio
-        # for one stop.
-        # ONE HOME for the step: `figure_step` above answers it from
-        # the band, `colonyfigures.FigureSet` loads the sprites at
-        # what it says, and a pitch and a sprite that disagree are a
-        # picture nothing would report. It was a hand-written table
-        # per resolution until 8 September 2026, which could agree
-        # with the band or not and nothing checked.
-        pitch = min(colonyicons.column_pitch(job, max(count, 1)),
-                    colonyicons.ICON_SPACING) * step
-        # AND A CLAMP THAT CAN EXPIRE, decision 44's shape. The
-        # original's own run is at most `right_x - left_x - 10` native
-        # px (the `spacing / -3` term in Calculate_Squish_Step_), so at
-        # the step it needs that times the step. Every supported
-        # window reserves more than that except 1280x720, where the
-        # reservation is 229 device px against 230 needed — see the
-        # status document for the table. Written as a min so the
-        # deviation ends the day the reservation is wide enough,
-        # rather than as a special case for one window.
-        if count and start + count * pitch > cx + cw - PLATE_LINE:
-            pitch = room / float(count)
-        # CELLS MAY NOT OVERLAP, and the arithmetic has to guarantee
-        # it rather than the numbers happening to. `int((k+1)*p) -
-        # int(k*p)` is either floor(p) or floor(p)+1, so a width of
-        # floor(p) can never reach the next cell. The gap is given up
-        # before the width is, because a cell narrower than a pixel is
-        # not a cell — at a small window a crowded column draws its
-        # squares touching, which is what the original's own squish
-        # does with its icons.
-        step_i = max(1, int(pitch))
-        gap = track.gap if step_i > track.gap + 1 else 0
-        cell_w = max(1, step_i - gap)
-        for k in range(count):
-            cells.append((job, k, pygame.Rect(
-                start + int(k * pitch), y, cell_w, h)))
-        targets.append((job, pygame.Rect(cx, y, cw, h)))
+        job_cells, target = _job_column(
+            job, cx, cw, regions.spans[job][1], y, h, track, step)
+        cells.extend(job_cells)
+        targets.append(target)
     name = None
     if "name" in cols:
         nx, nw = cols["name"]
         name = pygame.Rect(nx, y, nw, h)
     return RowBoxes(name, tuple(cells), tuple(targets),
                     cols[JOB_KEYS[-1]][0] + cols[JOB_KEYS[-1]][1])
+
+
+def _job_column(job, cx, cw, count, y, h, track, step):
+    """One job column of a row: its `(job, k, Rect)` cells and its
+    `(job, Rect)` drop target. The pitch arithmetic of `_column_boxes`,
+    split out because it is the one part that depends on a single
+    column and nothing else of the row."""
+    from . import colonyicons
+    # ONE PIXEL INSIDE THE PLATE'S LINE, and it is transcribed.
+    # The original's icons start at `left_x` — 101 / 236 / 378 —
+    # and its drawn cell boxes start at 100 / 235 / 377, measured
+    # on `colony_summary_native_split.png`. So the first icon sits
+    # exactly one pixel inside the box's own line, which is what
+    # keeps the line visible with a full column. The same `+1` at
+    # the top is what `figure_step` reserves.
+    start = cx + PLATE_LINE
+    room = max(1, cw - 2 * PLATE_LINE)
+    # THE FACTOR IS THE SPRITE STEP, NOT THE COLUMN RATIO.
+    # The step is the integer a 28 px native figure is drawn at
+    # (decision 26), derived from the band, and the stacking decision
+    # is that HD's extra width goes into the column RESERVATION
+    # and never into figure spacing. Scaling the pitch by the
+    # column ratio instead — 342 : 125, about 2.7 at 1080p —
+    # spends that reservation on spacing, and every cell and every
+    # drop target would move again the day Stage 3 draws sprites
+    # at the step. Corrected 7 September 2026; it was the ratio
+    # for one stop.
+    # ONE HOME for the step: `figure_step` above answers it from
+    # the band, `colonyfigures.FigureSet` loads the sprites at
+    # what it says, and a pitch and a sprite that disagree are a
+    # picture nothing would report. It was a hand-written table
+    # per resolution until 8 September 2026, which could agree
+    # with the band or not and nothing checked.
+    pitch = min(colonyicons.column_pitch(job, max(count, 1)),
+                colonyicons.ICON_SPACING) * step
+    # AND A CLAMP THAT CAN EXPIRE, decision 44's shape. The
+    # original's own run is at most `right_x - left_x - 10` native
+    # px (the `spacing / -3` term in Calculate_Squish_Step_), so at
+    # the step it needs that times the step. Every supported
+    # window reserves more than that except 1280x720, where the
+    # reservation is 229 device px against 230 needed — see the
+    # status document for the table. Written as a min so the
+    # deviation ends the day the reservation is wide enough,
+    # rather than as a special case for one window.
+    if count and start + count * pitch > cx + cw - PLATE_LINE:
+        pitch = room / float(count)
+    # CELLS MAY NOT OVERLAP, and the arithmetic has to guarantee
+    # it rather than the numbers happening to. `int((k+1)*p) -
+    # int(k*p)` is either floor(p) or floor(p)+1, so a width of
+    # floor(p) can never reach the next cell. The gap is given up
+    # before the width is, because a cell narrower than a pixel is
+    # not a cell — at a small window a crowded column draws its
+    # squares touching, which is what the original's own squish
+    # does with its icons.
+    step_i = max(1, int(pitch))
+    gap = track.gap if step_i > track.gap + 1 else 0
+    cell_w = max(1, step_i - gap)
+    cells = []
+    for k in range(count):
+        cells.append((job, k, pygame.Rect(
+            start + int(k * pitch), y, cell_w, h)))
+    return cells, (job, pygame.Rect(cx, y, cw, h))
 
 
 def drop_targets(area, cfg, scale, row):

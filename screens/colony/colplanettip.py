@@ -31,7 +31,7 @@ from core.hud import blocks as hud
 from core.hud import text as hudtext
 from core.structs import colony as colony_struct
 from core.structs import player as player_struct
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 from screens.planets import planetwords
 
 from . import coldraw
@@ -73,7 +73,7 @@ def lines(view, state, words, i):
     index = view.system_ids[i] if 0 <= i < len(view.system_ids) else -1
     if planet is None or view.star is None or index < 0:
         return []
-    name = colonyrows.star_planet_name(view.star, index)
+    name = colonyfacts.star_planet_name(view.star, index)
     e = words.e
     out = []
     if int(planet.planet_type) in (PLANET_TYPE_ASTEROID,
@@ -110,8 +110,8 @@ def lines(view, state, words, i):
         player_struct.parse(players[me]) if 0 <= me < len(players) else None)
     traits = player_struct.traits(who) if who is not None else None
     stand_in = colony if colony is not None else _bare(planet)
-    maximum = colonyrows.max_population(
-        stand_in, planet, traits, colonyrows.city_planning(who))
+    maximum = colonyfacts.max_population(
+        stand_in, planet, traits, colonyfacts.city_planning(who))
     if colony is None:
         out.append(_fmt(e(E_MAX_POP), "", " ", maximum))
     else:

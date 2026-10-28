@@ -64,7 +64,8 @@ from core.hud import hover as hud_hover
 from core.hud import text as hudtext
 from core.structs import colony as colony_struct
 from screens.colony_summary import colonyfigures, colonyoutputicons
-from screens.colony_summary import colonyrows, colonysurfaces, colonytrack
+from core import colonyfacts
+from screens.colony_summary import colonysurfaces, colonytrack
 from screens.colony_summary.colonyplanets import painted as painted_planet
 from screens.colony_summary.colonyplanets import set_for as planet_set_for
 from core import nativedraw as nd
@@ -341,7 +342,7 @@ def title_words(screen, view, words, names):
     """The colony's title: `Get_Planet_Name_` with the "Prime" word
     (colony.cpp:1019-1039; haccess.cpp:216-221), not the lists' No_Prime
     form (work order 223). On the shell's plate since work order 225."""
-    name = colonyrows.planet_name(view.colony, names.planets, names.stars,
+    name = colonyfacts.planet_name(view.colony, names.planets, names.stars,
                                   first=_first_planet_word(screen))
     return words.title(view, name)
 
@@ -441,21 +442,21 @@ def _production(surface, screen, view):
     HD EXTENSION `row_end_number` puts the row's value at its right end
     (Data's mockup). Without the extracted symbols, DEVIATION
     `label_number`: the original's own net as a number beside Data's icon
-    (`colonyrows.drawn_production`)."""
+    (`colonyfacts.drawn_production`)."""
     layout = screen.layout
     icons = _icons(screen)
     if not colprod.draw_rows(surface, screen, view, _bg_type(view),
                              geom.PROD_ROWS, font(layout, "number")):
         for econ, native in geom.PROD_ROWS.items():
-            value = colonyrows.drawn_production(view.colony, econ)
+            value = colonyfacts.drawn_production(view.colony, econ)
             name = colonyoutputicons.RESOURCE_NAMES[econ]
             _icon_value(surface, screen, icons, name, native, value)
     # Under Unification the original draws no marks at all, which is not
     # a morale of 0 — so nothing is drawn (`colony_morale`'s `applies`).
-    morale, applies = colonyrows.colony_morale(view.colony,
+    morale, applies = colonyfacts.colony_morale(view.colony,
                                                view.owner_traits)
     if applies:
-        _icon_value(surface, screen, icons, colonyrows.morale_icon(morale),
+        _icon_value(surface, screen, icons, colonyfacts.morale_icon(morale),
                     geom.MORALE, morale)
     return layout
 

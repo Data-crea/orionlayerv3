@@ -341,6 +341,50 @@ class Panel:
         self.all_buttons, self.help_rows = {}, []     # `cbhelp`'s
         self.left = self.mid = self.facts = self.map = None
         wins = self.windows(surface.get_size(), scale)
+        self._draw_windows(surface, scale, wins, ins, status)
+        if unit is None:
+            return
+        # the unit's name over its picture and bars, as the original's
+        # title box (cmbtdrw1.cpp:517-521: centred over the picture)
+        left = wins["status"]
+        head = pygame.Rect(left.x + ins, left.y + ins, left.w - 2 * ins,
+                           size + ins // 2)
+        hudtext.blit(surface, style.render_text(unit["name"], size,
+                                                hudtext.colour("value")[:3]),
+                     head, align="center")
+        self._draw_systems(surface, style, scale, unit, names, ken, wins, ins,
+                           size, small, specials, target)
+        # the original's status picture (work order 256, `cbstatus`); the
+        # planet, or a unit whose pictures are missing, keeps HD's rings
+        box = self.status_room(surface.get_size(), scale)
+        if status is None or not cbstatus.draw(
+                surface, box, self.status, *status, picture, style, scale,
+                ken=ken):
+            draw_shields(surface, box, unit, picture)
+        # the reduced map in its window at the right end (work order 209
+        # B1, `cbmap`), the original's 121:102
+        mid = wins["weapons"].inflate(-2 * ins, -2 * ins)
+        self.left, self.mid, self.facts = left, mid, wins["systems"]
+        right = wins["buttons"].inflate(-2 * ins, -2 * ins)
+        rows = (len(BUTTONS + HD_BUTTONS) + 1) // 2
+        bw = (right.w - pad) // 2
+        bh = max(small + 8, (right.h - (rows - 1) * (pad // 2)) // rows)
+        body = self._draw_tabs(surface, style, scale, mid, bh, small, specials)
+        row_h = max(small + 2, body.h // 8)
+        if specials:
+            self._draw_specials(surface, style, names, unit, body, row_h, small,
+                                pad)
+        else:
+            self._draw_weapons(surface, style, scale, unit, names, ken, actives,
+                               computer, hover, body, row_h, small, pad)
+        self._draw_buttons(surface, style, scale, right, bw, bh, pad,
+                           board_mode, live)
+        return band
+
+    def _draw_windows(self, surface, scale, wins, ins, status):
+        """The five windows, the star tiles in three of them and the
+        reduced map's place — everything drawn with or without an acting
+        unit."""
         # one window per group (work order 258): the shell's panel, its
         # fill and glass (decisions 93, 94), the shell's gap and inset
         for key in ("status", "weapons", "buttons", "systems", "map"):
@@ -362,16 +406,11 @@ class Panel:
         # `Draw_Reduced_Combat_Map` after the guarded block,
         # cmbtdrw1.cpp:608-636)
         self.map = cbmap.rect_for(wins["map"].inflate(-2 * ins, -2 * ins))
-        if unit is None:
-            return
-        # the unit's name over its picture and bars, as the original's
-        # title box (cmbtdrw1.cpp:517-521: centred over the picture)
-        left = wins["status"]
-        head = pygame.Rect(left.x + ins, left.y + ins, left.w - 2 * ins,
-                           size + ins // 2)
-        hudtext.blit(surface, style.render_text(unit["name"], size,
-                                                hudtext.colour("value")[:3]),
-                     head, align="center")
+
+    def _draw_systems(self, surface, style, scale, unit, names, ken, wins, ins,
+                      size, small, specials, target):
+        """The systems window: the unit's facts, or the target's box in
+        their place (`cbtarget`)."""
         # TRANSCRIPTION `systems_box` (work order 258): the systems in their
         # own window as `Draw_Internals_Display_` prints them (cmbtdrw1.cpp
         # :360-425) — the title (KENTEXT 36), then Drive (14) or "No Drive"
@@ -434,21 +473,10 @@ class Panel:
                 hudtext.blit(surface, style.render_text(
                     str(value), text, hudtext.colour("value")[:3]), row,
                     align="right")
-        # the original's status picture (work order 256, `cbstatus`); the
-        # planet, or a unit whose pictures are missing, keeps HD's rings
-        box = self.status_room(surface.get_size(), scale)
-        if status is None or not cbstatus.draw(
-                surface, box, self.status, *status, picture, style, scale,
-                ken=ken):
-            draw_shields(surface, box, unit, picture)
-        # the reduced map in its window at the right end (work order 209
-        # B1, `cbmap`), the original's 121:102
-        mid = wins["weapons"].inflate(-2 * ins, -2 * ins)
-        self.left, self.mid, self.facts = left, mid, wins["systems"]
-        right = wins["buttons"].inflate(-2 * ins, -2 * ins)
-        rows = (len(BUTTONS + HD_BUTTONS) + 1) // 2
-        bw = (right.w - pad) // 2
-        bh = max(small + 8, (right.h - (rows - 1) * (pad // 2)) // rows)
+
+    def _draw_tabs(self, surface, style, scale, mid, bh, small, specials):
+        """WEAPONS and SPECIALS tabs on the weapons window; returns the
+        body under them."""
         # TRANSCRIPTION `tab_words` (work order 200): the original's WEAPONS
         # and SPECIALS pictures (COMBAT.LBX 7 and 8, combinit.cpp:688, :697)
         # carry their word at the same 7-row cap height as the AUTO ... DONE
@@ -471,60 +499,69 @@ class Panel:
             self.tabs[key] = r
         body = pygame.Rect(mid.x, mid.y + tab_h + 4, mid.w,
                            mid.h - tab_h - 4)
-        row_h = max(small + 2, body.h // 8)
-        if specials:
-            have = listed_specials(unit.get("special_device_flags")
-                                   or [0] * 5)
-            damaged = set(special_bits(unit.get("special_device_damage_flags")
-                                       or [0] * 5))
-            ready = list(unit.get("weapon_ready_flags") or [1] * 8)
-            # TRANSCRIPTION `specials_list` (work order 213): no cap — the
-            # original prints row after row 11 px apart from y 0x17C
-            # (cmbtdrw1.cpp:557-582), so a ninth runs on past its 88 px
-            # list as here past the list's eight rows
-            for k, bit in enumerate(have):
-                r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
-                word = names.name("specials", bit) or f"special {bit}"
-                self.help_rows.append((r, k))
-                # the k-th system shown reads ready flag k (`Special_Is_On_
-                # (ship, visible_special_count)`, cmbtdrw1.cpp:566)
-                hudtext.blit(surface, style.render_text(
-                    word, small, ROW_COLOUR[special_mode(
-                        ready[k] if k < len(ready) else 0, bit in damaged)]),
-                    r.inflate(-pad, 0), align="left")
-            if not have:
-                hudtext.blit(surface, style.render_text(
-                    "No special systems", small, hudtext.colour("label")[:3]),
-                    body, align="center")
-        else:
-            for k, wpn in enumerate(unit["weapons"]):
-                if wpn["count"] <= 0 or wpn["weapon_id"] <= 0:
-                    continue
-                r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
-                state = actives[k] if k < len(actives) else 1
-                count, label, exhausted = weapon_row(wpn, names, ken)
-                # the row's frame says only that it is a switch (the
-                # original's hidden field has no picture); its state is the
-                # colour of its words, `row_colours`
-                hud.small_button(surface, r, scale, "normal")
-                mode = row_mode(state, exhausted, computer, None if hover
-                                is None else bool(hover >> k & 1))
-                # TRANSCRIPTION `row_columns` (work order 210 B4): the count
-                # right-aligned at x 127 and the name from x 131 of the list's
-                # 114..263 (`Print_Integer_Right_(127, …)`, `Print_(131, …)`,
-                # cmbtdrw1.cpp:2858, :2929): as fractions of the row, so the
-                # count stands clear of the row's frame at every size
-                col = r.x + int(r.w * COUNT_RIGHT)
-                name_x = r.x + int(r.w * NAME_LEFT)
-                hudtext.blit(surface, style.render_text(
-                    str(count), small, ROW_COLOUR[mode]),
-                    pygame.Rect(r.x, r.y, col - r.x, r.h), align="right")
-                hudtext.blit(surface, style.render_text(
-                    label, small, ROW_COLOUR[mode]),
-                    pygame.Rect(name_x, r.y, r.right - pad // 2 - name_x,
-                                r.h), align="left")
-                self.rows.append((r, k))
-                self.help_rows.append((r, k))
+        return body
+
+    def _draw_specials(self, surface, style, names, unit, body, row_h, small,
+                       pad):
+        """The SPECIALS tab's list."""
+        have = listed_specials(unit.get("special_device_flags")
+                               or [0] * 5)
+        damaged = set(special_bits(unit.get("special_device_damage_flags")
+                                   or [0] * 5))
+        ready = list(unit.get("weapon_ready_flags") or [1] * 8)
+        # TRANSCRIPTION `specials_list` (work order 213): no cap — the
+        # original prints row after row 11 px apart from y 0x17C
+        # (cmbtdrw1.cpp:557-582), so a ninth runs on past its 88 px
+        # list as here past the list's eight rows
+        for k, bit in enumerate(have):
+            r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
+            word = names.name("specials", bit) or f"special {bit}"
+            self.help_rows.append((r, k))
+            # the k-th system shown reads ready flag k (`Special_Is_On_
+            # (ship, visible_special_count)`, cmbtdrw1.cpp:566)
+            hudtext.blit(surface, style.render_text(
+                word, small, ROW_COLOUR[special_mode(
+                    ready[k] if k < len(ready) else 0, bit in damaged)]),
+                r.inflate(-pad, 0), align="left")
+        if not have:
+            hudtext.blit(surface, style.render_text(
+                "No special systems", small, hudtext.colour("label")[:3]),
+                body, align="center")
+
+    def _draw_weapons(self, surface, style, scale, unit, names, ken, actives,
+                      computer, hover, body, row_h, small, pad):
+        """The WEAPONS tab's rows, each a switch."""
+        for k, wpn in enumerate(unit["weapons"]):
+            if wpn["count"] <= 0 or wpn["weapon_id"] <= 0:
+                continue
+            r = pygame.Rect(body.x, body.y + k * row_h, body.w, row_h - 2)
+            state = actives[k] if k < len(actives) else 1
+            count, label, exhausted = weapon_row(wpn, names, ken)
+            # the row's frame says only that it is a switch (the
+            # original's hidden field has no picture); its state is the
+            # colour of its words, `row_colours`
+            hud.small_button(surface, r, scale, "normal")
+            mode = row_mode(state, exhausted, computer, None if hover
+                            is None else bool(hover >> k & 1))
+            # TRANSCRIPTION `row_columns` (work order 210 B4): the count
+            # right-aligned at x 127 and the name from x 131 of the list's
+            # 114..263 (`Print_Integer_Right_(127, …)`, `Print_(131, …)`,
+            # cmbtdrw1.cpp:2858, :2929): as fractions of the row, so the
+            # count stands clear of the row's frame at every size
+            col = r.x + int(r.w * COUNT_RIGHT)
+            name_x = r.x + int(r.w * NAME_LEFT)
+            hudtext.blit(surface, style.render_text(
+                str(count), small, ROW_COLOUR[mode]),
+                pygame.Rect(r.x, r.y, col - r.x, r.h), align="right")
+            hudtext.blit(surface, style.render_text(
+                label, small, ROW_COLOUR[mode]),
+                pygame.Rect(name_x, r.y, r.right - pad // 2 - name_x,
+                            r.h), align="left")
+            self.rows.append((r, k))
+            self.help_rows.append((r, k))
+
+    def _draw_buttons(self, surface, style, scale, right, bw, bh, pad,
+                      board_mode, live):
         # the buttons (right), each only while the live list carries it
         self.buttons = right
         every = BUTTONS + HD_BUTTONS
@@ -542,7 +579,7 @@ class Panel:
             self.all_buttons[key] = r
             if key in live or hotkey is None:
                 self.rects[key] = r
-        return band
+
 
     def button_at(self, x, y):
         return next((k for k, r in self.rects.items()

@@ -119,7 +119,7 @@ class Names:
     """The names the screen draws: planets, stars, buildings, products."""
 
     def __init__(self, state, buildings, strings):
-        # RAW records: `colonyrows.planet_name` parses them itself.
+        # RAW records: `colonyfacts.planet_name` parses them itself.
         self.planets = getattr(state, "planets_raw", None) or []
         self.stars = getattr(state, "stars", None) or []
         self._buildings, self._strings = buildings, strings

@@ -38,7 +38,7 @@ from core import hestrings
 from core import shipstacks
 from core import kentext
 from core.shipparts import ShipPartNames
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 
 from . import fltart
 from . import fltdraw
@@ -415,7 +415,7 @@ class FleetsScreen(ScreenBase):
 
     def _inset_stars(self):
         """Every star as (native_x, native_y, colour index) inside the
-        inset box — `colonyrows.galaxy_inset_stars` with THIS screen's
+        inset box — `colonyfacts.galaxy_inset_stars` with THIS screen's
         native box (15, 52, 305, 182), flt1.cpp:411. One transform for
         all three inset sites, given a different box each time, rather
         than a third copy of `MOVEBOX::Draw_Galaxy_Map_Box_`."""
@@ -425,7 +425,7 @@ class FleetsScreen(ScreenBase):
         # (movebox.cpp:70) and this screen clears the flag
         # (flt1.cpp:522); the eleventh sprite exists here and is loaded
         # (flt1.cpp:1441-1444, mox.h:110).
-        return colonyrows.galaxy_inset_stars(
+        return colonyfacts.galaxy_inset_stars(
             self._state, fltgeom.REGIONS["inset_map"], black_hole=10)
 
     # ── Input ─────────────────────────────────────────────

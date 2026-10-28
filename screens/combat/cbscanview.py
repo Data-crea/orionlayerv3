@@ -218,6 +218,107 @@ def title_strip(surface, box, scale, k, tab=False):
                       vertical=True)
 
 
+class _Pen:
+    """One frame's drawing tools, bound to the surface it is drawn on: the
+    window's reference-px grid (`R`), the scaled text sizes, text, the HUD
+    button and the state signs. A class instead of closures in `View.draw`
+    so that each box of the scan can be a method of its own."""
+
+    def __init__(self, view, surface, style, scale):
+        self.view, self.surface = view, surface
+        self.style, self.scale = style, scale
+        self.k = k_of(surface)
+        w, h = surface.get_size()
+        self.ox = (w - WINDOW[2] * self.k) / 2 - WINDOW[0] * self.k
+        self.oy = (h - WINDOW[3] * self.k) / 2 - WINDOW[1] * self.k
+        self.label = hudtext.colour("label")
+        self.value = hudtext.colour("value")
+        self.head = hudtext.colour("sub")
+
+    def R(self, x, y, rw, rh):
+        return pygame.Rect(round(self.ox + x * self.k),
+                           round(self.oy + y * self.k),
+                           round(rw * self.k), round(rh * self.k))
+
+    def px(self, n):
+        return max(9, int(n * self.k))
+
+    def thin(self, n):
+        """A line's width or a gap below `px`'s 9 device px."""
+        return max(1, round(n * self.k))
+
+    def width(self, t, size):
+        return self.style.render_text(str(t), self.px(size),
+                                      self.value[:3]).get_width()
+
+    def text(self, t, at, size, rgb, anchor="topleft", room=None):
+        """`room` (device px): the cell's width — cut to fit it."""
+        t = str(t)
+        whole = lang.tr(t)          # what is drawn when nothing is cut
+        if room is not None:
+            t = fitted(self.style, t, self.px(size), room)
+        img = self.style.render_text(t, self.px(size), rgb[:3])
+        r = img.get_rect(**{anchor: at})
+        self.surface.blit(img, r)
+        if t != whole:
+            self.view.cut.append((r, whole))
+        return r
+
+    def button(self, rect, word):
+        """A HUD small button whose word reaches the tables' floor
+        (Data, work order 299, P8 of 298): the HUD sizes a button's word
+        by its height (9-10 device px at 1280 x 720 against the floor's
+        12); the word, its colour and its centring stay the HUD's."""
+        hud.small_button(self.surface, rect, self.scale, "normal")
+        size = max(hudtext.size_for(self.style, "button", rect.h),
+                   self.px(FLOOR))
+        img = self.style.render_text(word.upper(), size,
+                                     hudtext.colour("button")[:3])
+        hudtext.blit(self.surface, img, rect)
+
+    def marker(self, right, cy, state):
+        """The state beside a coloured number, so it never rests on the
+        colour alone (work order 297): an "!" for damaged, a cross for
+        destroyed. Drawn, so no font need have the glyph — and both as
+        filled shapes on one square box with one stroke width, so the
+        "!" stands upright and straight with the cross's height and
+        weight (Data, work orders 300 and 301). Returns its left
+        edge."""
+        if state not in (cbscan.DAMAGED, cbscan.DESTROYED):
+            return right
+        box = marker_box(right, cy, self.k)
+        rgb = STATE_RGB[state]
+        # LOOK EXCEPTION marking: the state's sign beside a number (297)
+        for shape in marker_shapes(box, state, self.k):
+            pygame.draw.polygon(self.surface, rgb, shape)
+        return box.x
+
+    def bar(self, r, frac, rgb):
+        # LOOK EXCEPTION data: a part's hits as a bar (work order 290)
+        pygame.draw.rect(self.surface, BAR_BACK, r)
+        if frac > 0:
+            # LOOK EXCEPTION data: the hits left, in the part's state colour
+            pygame.draw.rect(self.surface, rgb,
+                             (r.x, r.y, int(r.w * min(1, frac)), r.h))
+
+    def fit_img(self, img, box):
+        if img is None:
+            return None
+        # the drawing's own pixels, not its canvas
+        img = img.subsurface(img.get_bounding_rect(min_alpha=8)) \
+            if img.get_bounding_rect(min_alpha=8).w else img
+        iw, ih = img.get_size()
+        s = min(box.w / iw, box.h / ih)
+        size = (max(1, int(iw * s)), max(1, int(ih * s)))
+        how = cbart.smooth if cbart.hd_factor(img) > 1 or s < 1 \
+            else pygame.transform.scale
+        return how(img, size)
+
+    def ink(self, state):
+        return STATE_RGB[state] if state in (
+            cbscan.DAMAGED, cbscan.DESTROYED) else self.value
+
+
 class View:
     def __init__(self):
         self.rects = {}
@@ -235,51 +336,37 @@ class View:
         selected look."""
         self.rects, self.cut = {}, []
         self.card = None
-        k = k_of(surface)
-        w, h = surface.get_size()
-        ox = (w - WINDOW[2] * k) / 2 - WINDOW[0] * k
-        oy = (h - WINDOW[3] * k) / 2 - WINDOW[1] * k
+        pen = _Pen(self, surface, style, scale)
+        self._chrome(pen, turn)
+        m = model
+        self._ship(pen, m, pics)
+        self._officer(pen, m, pics)
+        self._crew(pen, m)
+        self._shields(pen, m, pics)
+        self._values(pen, m, pointer)
+        self._hull(pen, m, pointer)
+        self._specials(pen, m)
+        self._weapons(pen, m)
+        R, button, label, value, k = \
+            pen.R, pen.button, pen.label, pen.value, pen.k
+        # ── the foot ───────────────────────────────────────────
+        cr = R(840, 996, 240, 42)
+        button(cr, "CLOSE")
+        self.rects["close"] = cr
+        # CLOSE alone in the foot: no state legend (the tables say each
+        # state in words) and no transparency slider (Data, work order 315)
+        self.boxes = {key: R(*b) for key, b in BOXES.items()}
+        self.window = R(*WINDOW)
+        if pointer is not None:
+            cbscancard.show(self, surface, style, scale, k, model, pointer,
+                            {"label": label, "value": value,
+                             "state": STATE_RGB}, R(80, 0, 520, 0))
 
-        def R(x, y, rw, rh):
-            return pygame.Rect(round(ox + x * k), round(oy + y * k),
-                               round(rw * k), round(rh * k))
-
-        def px(n):
-            return max(9, int(n * k))
-
-        def thin(n):
-            """A line's width or a gap below `px`'s 9 device px."""
-            return max(1, round(n * k))
-
-        def width(t, size):
-            return style.render_text(str(t), px(size), value[:3]).get_width()
-
-        def text(t, at, size, rgb, anchor="topleft", room=None):
-            """`room` (device px): the cell's width — cut to fit it."""
-            t = str(t)
-            whole = lang.tr(t)          # what is drawn when nothing is cut
-            if room is not None:
-                t = fitted(style, t, px(size), room)
-            img = style.render_text(t, px(size), rgb[:3])
-            r = img.get_rect(**{anchor: at})
-            surface.blit(img, r)
-            if t != whole:
-                self.cut.append((r, whole))
-            return r
-
-        def button(rect, word):
-            """A HUD small button whose word reaches the tables' floor
-            (Data, work order 299, P8 of 298): the HUD sizes a button's word
-            by its height (9-10 device px at 1280 x 720 against the floor's
-            12); the word, its colour and its centring stay the HUD's."""
-            hud.small_button(surface, rect, scale, "normal")
-            size = max(hudtext.size_for(style, "button", rect.h), px(FLOOR))
-            img = style.render_text(word.upper(), size,
-                                    hudtext.colour("button")[:3])
-            hudtext.blit(surface, img, rect)
-
-        label, value = hudtext.colour("label"), hudtext.colour("value")
-        head = hudtext.colour("sub")
+    def _chrome(self, pen, turn):
+        """The window, the boxes' fills and titles, the head and its X."""
+        R, px, text, button = pen.R, pen.px, pen.text, pen.button
+        label, value, head = pen.label, pen.value, pen.head
+        surface, scale, k = pen.surface, pen.scale, pen.k
         # DEVIATION `scan_fills`: Data's fills, the HUD's edges
         hud.popup(surface, R(*WINDOW), scale, fill=GROUND)
         for key, box in BOXES.items():
@@ -299,47 +386,12 @@ class View:
             text(TITLES[key], (r.x + px(14), r.y + px(8)), 24,
                  cbscancard.BLUE_TITLE if key == "specials" else head)
 
-        def marker(right, cy, state):
-            """The state beside a coloured number, so it never rests on the
-            colour alone (work order 297): an "!" for damaged, a cross for
-            destroyed. Drawn, so no font need have the glyph — and both as
-            filled shapes on one square box with one stroke width, so the
-            "!" stands upright and straight with the cross's height and
-            weight (Data, work orders 300 and 301). Returns its left
-            edge."""
-            if state not in (cbscan.DAMAGED, cbscan.DESTROYED):
-                return right
-            box = marker_box(right, cy, k)
-            rgb = STATE_RGB[state]
-            # LOOK EXCEPTION marking: the state's sign beside a number (297)
-            for shape in marker_shapes(box, state, k):
-                pygame.draw.polygon(surface, rgb, shape)
-            return box.x
 
-        def bar(r, frac, rgb):
-            # LOOK EXCEPTION data: a part's hits as a bar (work order 290)
-            pygame.draw.rect(surface, BAR_BACK, r)
-            if frac > 0:
-                # LOOK EXCEPTION data: the hits left, in the part's state colour
-                pygame.draw.rect(surface, rgb, (r.x, r.y, int(r.w * min(1, frac)),
-                                                r.h))
-
-        def fit_img(img, box):
-            if img is None:
-                return None
-            # the drawing's own pixels, not its canvas
-            img = img.subsurface(img.get_bounding_rect(min_alpha=8)) \
-                if img.get_bounding_rect(min_alpha=8).w else img
-            iw, ih = img.get_size()
-            s = min(box.w / iw, box.h / ih)
-            size = (max(1, int(iw * s)), max(1, int(ih * s)))
-            how = cbart.smooth if cbart.hd_factor(img) > 1 or s < 1 \
-                else pygame.transform.scale
-            return how(img, size)
-
-        m = model
-        ink = lambda state: STATE_RGB[state] if state in (
-            cbscan.DAMAGED, cbscan.DESTROYED) else value
+    def _ship(self, pen, m, pics):
+        """The SHIP box: picture, name field, hull, owner, date."""
+        R, px, text, fit_img = pen.R, pen.px, pen.text, pen.fit_img
+        label, value, surface = pen.label, pen.value, pen.surface
+        scale = pen.scale
         # ── A the ship ─────────────────────────────────────────
         r = R(*BOXES["ship"])
         pic_box = R(BOXES["ship"][0] + 16, BOXES["ship"][1] + 40, 140, 140)
@@ -365,6 +417,12 @@ class View:
             if line:
                 text(line, (tx, y), size, rgb, room=room)
                 y += px(28)
+
+
+    def _officer(self, pen, m, pics):
+        """The OFFICER box: portrait, name, level, skills."""
+        R, px, text, label = pen.R, pen.px, pen.text, pen.label
+        value, k, surface, scale = pen.value, pen.k, pen.surface, pen.scale
         # ── B the officer ──────────────────────────────────────
         r = R(*BOXES["officer"])
         o = m.officer
@@ -424,6 +482,12 @@ class View:
             if not skills:
                 text("no skill that acts in battle", (tx, y), 20, label,
                      room=room)
+
+
+    def _crew(self, pen, m):
+        """The CREW box: level stars, experience and marines."""
+        R, px, text, label = pen.R, pen.px, pen.text, pen.label
+        value, surface = pen.value, pen.surface
         # ── C the crew: the stars on the level's line, experience and
         # marines on one (work order 297) ───────────────────────
         r = R(*BOXES["crew"])
@@ -453,6 +517,13 @@ class View:
                       "topright")
             text(m.words["marines"], (vr.x - px(10), y2), 22, label,
                  "topright")
+
+
+    def _shields(self, pen, m, pics):
+        """The SHIELDS box: generator, upgrades, the ring and arcs."""
+        R, px, width, text = pen.R, pen.px, pen.width, pen.text
+        marker, fit_img, ink = pen.marker, pen.fit_img, pen.ink
+        label, surface = pen.label, pen.surface
         # ── D the shields ──────────────────────────────────────
         r = R(*BOXES["shields"])
         # the generator and its state in the title's line, the upgrades
@@ -524,6 +595,14 @@ class View:
             lr = text(names[arc], at, 22, label, "midtop")
             text(f"{m.arcs[arc]} / {m.shield_max}",
                  (lr.centerx, lr.bottom), 24, rgb, "midtop")
+
+
+    def _values(self, pen, m, pointer):
+        """The COMBAT VALUES box: four rows, marker and card sign."""
+        R, px, thin, text = pen.R, pen.px, pen.thin, pen.text
+        marker, ink = pen.marker, pen.ink
+        label, value, head, k = pen.label, pen.value, pen.head, pen.k
+        surface, scale = pen.surface, pen.scale
         # ── E the combat values: four rows spread evenly over the box,
         # nothing under them (Data, work order 301: the card shows every
         # part; the computer's sub-line of 297 showed one as the only one);
@@ -567,6 +646,13 @@ class View:
             text(lab, (r.x + px(16), cy), 24, label, "midleft",
                  room=vr.x - px(12) - (r.x + px(16)))
             self.rects["values"][key] = band
+
+
+    def _hull(self, pen, m, pointer):
+        """The HULL AND SYSTEMS box: a bar and a card sign a row."""
+        R, px, thin, text, bar = pen.R, pen.px, pen.thin, pen.text, pen.bar
+        label, value, head = pen.label, pen.value, pen.head
+        surface, scale = pen.surface, pen.scale
         # ── F hull and systems: a card for each row (HD EXTENSION
         # `scan_hull_cards`, Data, work order 302) — its ⓘ right of the
         # hits, the row under the pointer in the selected look ──────
@@ -623,6 +709,12 @@ class View:
                                      value if lit else head)
                 self.rects["hull"][key] = band
             y += px(HULL_ROW)
+
+
+    def _specials(self, pen, m):
+        """The SPECIAL SYSTEMS box: one or two columns."""
+        R, px, text, marker = pen.R, pen.px, pen.text, pen.marker
+        label, value = pen.label, pen.value
         # ── G the special systems: 8 rows; 9-16 in two columns; beyond
         # 16 the last cell says how many more (work order 297) ───────
         r = R(*BOXES["specials"])
@@ -673,6 +765,12 @@ class View:
                             label)
                 self.cut.append((more, ", ".join(
                     name for _b, name, _c, _m, _s in rows[len(cells):])))
+
+
+    def _weapons(self, pen, m):
+        """The WEAPONS table across the foot."""
+        R, px, text, label = pen.R, pen.px, pen.text, pen.label
+        value, k = pen.value, pen.k
         # ── W the weapons ──────────────────────────────────────
         r = R(*BOXES["weapons"])
         cols = WEAPON_COLUMNS
@@ -701,18 +799,6 @@ class View:
             y += step
         if not rows:
             text(m.words["none"], (r.x + px(210), r.y + px(40)), 22, label)
-        # ── the foot ───────────────────────────────────────────
-        cr = R(840, 996, 240, 42)
-        button(cr, "CLOSE")
-        self.rects["close"] = cr
-        # CLOSE alone in the foot: no state legend (the tables say each
-        # state in words) and no transparency slider (Data, work order 315)
-        self.boxes = {key: R(*b) for key, b in BOXES.items()}
-        self.window = R(*WINDOW)
-        if pointer is not None:
-            cbscancard.show(self, surface, style, scale, k, model, pointer,
-                            {"label": label, "value": value,
-                             "state": STATE_RGB}, R(80, 0, 520, 0))
 
     def card_at(self, x, y):
         """A card drawn in the frame drawn last for what is at (x, y): a

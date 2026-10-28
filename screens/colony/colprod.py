@@ -12,7 +12,7 @@ so it is drawn here too. Per row, left to right, one symbol per unit:
   the net         tens as the type's tens symbol, then the ones
                   (`Prod_Anims_(type, 1)` / `(type, 0)`, COLONY2.LBX
                   type + tens * 4, colony.cpp:325-333); the net is
-                  `colonyrows.drawn_production`, the four branches
+                  `colonyfacts.drawn_production`, the four branches
   the second      food: the industry imports as pickaxes
                   (`Prod_Anims_(1, ..)`); industry: the pollution as
                   `Import_Anims_(1, ..)` (COLONY2.LBX 8 + ..,
@@ -54,7 +54,8 @@ import pygame
 
 from core import nativedraw as nd
 from core.hud import text as hudtext
-from screens.colony_summary import colonyicons, colonyrows
+from core import colonyfacts
+from screens.colony_summary import colonyicons
 
 from . import colart
 
@@ -92,7 +93,7 @@ def plan(col, econ):
         sec_t, sec_u = _cdiv(int(col.pollution), 10)
     shortage = maint[econ] - imports[econ] - prod
     sh_t, sh_u = _cdiv(abs(shortage if shortage >= 1 else 0), 10)
-    net_t, net_u = _cdiv(colonyrows.drawn_production(col, econ), 10)
+    net_t, net_u = _cdiv(colonyfacts.drawn_production(col, econ), 10)
     counted = imp_t + sec_t + net_t + sh_t + imp_u + sec_u + net_u + sh_u
     if imports[econ] != 0 and econ != ECON_INDUSTRY:
         counted += 1
@@ -178,7 +179,7 @@ def draw_rows(surface, screen, view, ground, rows, number_size):
                  "rows": {}}
         screen._prod_cache = cache
     for econ, native in rows.items():
-        value = colonyrows.drawn_production(view.colony, econ)
+        value = colonyfacts.drawn_production(view.colony, econ)
         r = nd.rect(layout, native)
         got = _row(cache, screen, view.colony, econ, r, value, number_size,
                    step)

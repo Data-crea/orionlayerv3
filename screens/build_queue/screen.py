@@ -31,7 +31,7 @@ from core.hestrings import printf
 from core.hud import shell
 from core.estrings import EStrings
 from core.screen_base import ScreenBase
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 from core import nativedraw as nd
 
 from . import bqdraw, bqwire as w
@@ -55,7 +55,7 @@ class Names:
         return name or "", st
 
     def planet_name(self, colony):
-        return colonyrows.planet_name(
+        return colonyfacts.planet_name(
             colony, getattr(self._state, "planets_raw", None) or [],
             getattr(self._state, "stars", None) or [])
 

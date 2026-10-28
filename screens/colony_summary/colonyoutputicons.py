@@ -39,7 +39,7 @@ ICON_DIR = os.path.join("assets", "output")
 
 #: The file names, which are also what `colonyoutput.visible_rows`
 #: hands the renderer. The resource names are the panel's own row
-#: ids; the two morale names are what `colonyrows.morale_icon` answers.
+#: ids; the two morale names are what `colonyfacts.morale_icon` answers.
 RESOURCE_NAMES = ("food", "industry", "research", "bc")
 MORALE_NAMES = ("morale_normal", "morale_low")
 NAMES = RESOURCE_NAMES + MORALE_NAMES

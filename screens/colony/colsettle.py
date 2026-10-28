@@ -58,7 +58,7 @@ not a guarantee (P627): its name for success is `may_settle`.
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
 from core.structs import player as player_struct
-from screens.colony_summary import colonyrows
+from core import colonyfacts
 
 #: The game's own sentences (ESTRINGS), Send_Cluster_'s lines (colmove.cpp:
 #: 152-155, :385-470).
@@ -185,7 +185,7 @@ def settle_count(held, n_source, n_dest, room):
 
 def _room(state, dest, dest_index):
     """The target's population limit for its owner's race — the number the
-    system display prints after the slash (`colonyrows.max_population`) —
+    system display prints after the slash (`colonyfacts.max_population`) —
     or None where HD cannot read it."""
     planets = getattr(state, "planets_raw", None) or []
     if not 0 <= dest.planet < len(planets):
@@ -194,9 +194,9 @@ def _room(state, dest, dest_index):
     owner = (player_struct.parse(players[dest.owner])
              if 0 <= dest.owner < len(players) else None)
     traits = player_struct.traits(owner) if owner is not None else None
-    return colonyrows.max_population(
+    return colonyfacts.max_population(
         dest, planet_struct.parse(planets[dest.planet]), traits,
-        colonyrows.city_planning(owner))     # the owner's (work order 322)
+        colonyfacts.city_planning(owner))     # the owner's (work order 322)
 
 
 def _expected(source, source_index, dest, dest_index, held, count=None,

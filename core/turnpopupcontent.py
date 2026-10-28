@@ -33,7 +33,7 @@ def _star_name(state, index):
 
 def _planet_name(state, planet_index):
     from core.structs import planet as planet_struct
-    from screens.colony_summary.colonyrows import star_planet_name
+    from core.colonyfacts import star_planet_name
     planets = getattr(state, "planets_raw", None) or []
     stars = getattr(state, "stars", None) or []
     if not 0 <= planet_index < len(planets):
@@ -211,226 +211,303 @@ RIGHT_HELP = {"turn_summary": 247, "planet_choice": 563,
               "dragon_bribe": 561}
 
 
+def _act(state, index, how="activate"):
+    f = _field(state, index)
+    return (how, f) if f is not None else None
+
+
+def _anywhere(state):
+    """The full-screen field a popup that ends on any click answers on."""
+    return next((f for f in (getattr(state, "fields", None) or [])
+                 if getattr(f, "index", 0) > 0 and (f.x, f.y, f.x_end,
+                                                    f.y_end) ==
+                 (0, 0, 639, 479)), None)
+
+
+def _science(popup, state, words, app, anywhere):
+    a = popup["args"]
+    n = max(0, a[0])
+    names = []
+    i = 3
+    while i < 16 and len(names) < n:
+        tech = a[i]
+        i += 1
+        if tech < 0:
+            continue
+        names.append(_tech_name(tech) or f"#{tech & 0x1FF}")
+        # TRANSCRIPTION `science_weapon_mod` (work order 315 C2): a
+        # weapon-modification entry is listed by its weapon's name, as
+        # the room shows its help entry `& 0x1FF` (science.cpp:301-307,
+        # :320); its next slot is the mask, not an entry (:323-325).
+        # OMISSION `science_mod_names`: the mask's modification names
+        # (`weapon_modifications[].name`, :327-336) are not listed
+        if tech & 0x4000:
+            i += 1
+    lines = [f"• {nm}" for nm in names]
+    if popup.get("text"):
+        lines = [""] + lines
+        lines = [popup["text"]] + lines
+    return {"lines": lines,
+            "buttons": [(words["continue"], ("activate", anywhere)
+                         if anywhere else None)]}
+
+
+def _turn_summary(popup, state, words, app, anywhere):
+    a = popup["args"]
+    options, buttons = [], []
+    page = a[0]
+    for m in popup.get("messages", []):
+        if m["page"] != page:
+            continue
+        target = None
+        if m["jumps"] and m["first_field"] > 0:
+            target = _act(state, m["first_field"], "click")
+        options.append((m["text"], target))
+    if a[1] > 1:
+        buttons.append((words["prev"], _act(state, a[2], "click")
+                        if page > 1 else None))
+        buttons.append((words["next"], _act(state, a[3], "click")
+                        if page < a[1] else None))
+    buttons.append((words["close"], _act(state, a[4], "click")))
+    return {"options": options, "buttons": buttons,
+            "title": words["turn_summary"]}
+
+
+def _leader_hire(popup, state, words, app, anywhere):
+    a = popup["args"]
+    card = leader_card(state, a[0], app)
+    lines = list(card["skills"])
+    question = card["question"](a[1], a[8])
+    if question:
+        lines += ["", question]
+    # REJECT left, HIRE right, as the popup's own buttons stand
+    # (Update_Random_New_Officer_Fields_, mainpups.cpp:1721-1773)
+    buttons = [(words["reject"], _act(state, a[5], "click")),
+               (words["hire"], _act(state, a[4], "click"))]
+    right_buttons = [_field(state, a[5]), _field(state, a[4])]
+    # a skill line: its help field (`Add_Skill_Description_Help_
+    # Fields_`, officer.cpp:3893-3968 — 0xBE wide, one per skill in the
+    # order the card lists them), answered by `Print_Officer_Skill_
+    # Help_`'s box (mainpups.cpp:914, officer.cpp:3977-4003)
+    line_right = sorted(
+        (f for f in (getattr(state, "fields", None) or [])
+         if f.field_type == 7 and f.x_end - f.x == 0xBE),
+        key=lambda f: f.y)
+    if a[3] > 0:                    # the tutor's result states
+        buttons = [(words["continue"],
+                    _act(state, a[6]) or _act(state, a[5], "click"))]
+        right_buttons = []
+    return {"title": card["title"], "lines": lines,
+            "picture": card["portrait"],
+            # the HD picture replaces it in the same box (work order 234):
+            # `turnpopup.draw` asks `core.leaderportraits` with this record
+            "leader_rec": card.get("leader"),
+            "buttons": buttons, "right_buttons": right_buttons,
+            "line_right": line_right}
+
+
+def _system_choice(popup, state, words, app, anywhere):
+    """The planet choice and the discovery: the star's planets as options."""
+    kind, a = popup["kind"], popup["args"]
+    title = popup.get("title")
+    lines, options, buttons, right_opts = [], [], [], []
+    sysd = popup.get("system") or {}
+    title = title or _star_name(state, sysd.get("star", -1))
+    if popup.get("text"):
+        # TRANSCRIPTION `special_name` (work order 322 D): the special
+        # popup's title over its description (`Draw_System_Special_
+        # Popup_`, sys.cpp:626-632; mainpups.cpp:1781-1787, :1920-1926)
+        # — the special is arg 3 of the planet choice, 1 of a new system
+        # (open fix 49's TPOP, mainpups.cpp:890, :1155)
+        name = _special_name(app, a[3] if kind == "planet_choice"
+                             else a[1])
+        if name:
+            lines.append(name)
+        lines.append(popup["text"])
+    for slot in sysd.get("planets", []):
+        if slot["planet"] < 0:
+            continue
+        target = (_act(state, slot["field"], "click")
+                  if kind != "discovery" and slot["field"] > 0 else None)
+        options.append((_planet_name(state, slot["planet"]), target))
+        right_opts.append(_field(state, slot["field"])
+                          if kind != "planet_choice" else None)
+    # the original's button reads CLOSE (BUFFER0.LBX, the native frame
+    # of work order 188's planet choice)
+    cancel = {"planet_choice": 4}.get(kind)
+    if cancel is not None:
+        buttons.append((words["close"], _act(state, a[cancel], "click")))
+    else:
+        buttons.append((words["close"], _act(state, a[2])))
+    return {"title": title, "lines": lines, "options": options,
+            "buttons": buttons, "right_opts": right_opts}
+
+
+def _leader_level(popup, state, words, app, anywhere):
+    a = popup["args"]
+    out = {}
+    # the hire popup's card, as the original draws it here too: the
+    # full name as title (mainpups.cpp:2245), the portrait and the
+    # skills (`Wrapper_For_Colony_Officer_Popup_Data_`, :2224), then
+    # the sentence of the state (`leader_level_line`)
+    card = leader_card(state, a[0], app)
+    if card.get("leader") is None:      # no such leader on the wire
+        out["lines"] = [_leader_name(state, a[0])]
+    else:
+        out["title"] = card["title"]
+        out["lines"] = list(card["skills"]) + [
+            "", leader_level_line(card, a[1], app)]
+        out["picture"] = card["portrait"]
+        out["leader_rec"] = card["leader"]
+    out["buttons"] = [(words["close"], _act(state, a[3]) or (
+        ("activate", anywhere) if anywhere else None))]
+    return out
+
+
+def _gnn(popup, state, words, app, anywhere):
+    out = {"title": popup.get("title") or "GNN"}
+    if popup.get("text"):
+        out["lines"] = [popup["text"]]
+    out["buttons"] = [(words["continue"], ("activate", anywhere)
+                       if anywhere else None)]
+    return out
+
+
+def _troops(popup, state, words, app, anywhere):
+    a = popup["args"]
+    # the colony screen's troop popup (open fix 98, work order 274):
+    # one full-screen field ends it (`NEWPUP::Reset_Fields_`,
+    # newpup.cpp:193-197); the planet's name stands as its title. ONLY
+    # WHILE THE GAME REPORTS ITS ID: the colony screen's own full-screen
+    # field has the same shape and demolishes the building under the
+    # real pointer (`core.colony_guard`)
+    from core import troopwire
+    title = popup.get("title") or (
+        _planet_name(state, a[0]) if a[0] >= 0 else None)
+    lines = troopwire.rows(popup.get("troops") or {})
+    ours = getattr(state, "current_screen", None) == TROOPS_ID
+    return {"title": title, "lines": lines,
+            "buttons": [(words["close"], ("activate", anywhere)
+                         if anywhere and ours else None)]}
+
+
+def _slider(popup, state, words, app, anywhere):
+    a = popup["args"]
+    lines = []
+    # TRANSCRIPTION `slider_popup` (work order 316 E, open fix 104):
+    # `MAINPUPS::Slider_Popup_` (mainpups.cpp:747-794) — the message,
+    # then min, the value and max as `Draw_Slider_Popup_` prints them
+    # (:2386-2430); down / up step the value by one, unclamped as the
+    # original (`Evaluate_Slider_Input_`, :1953-1973); CANCEL answers
+    # -1, ACCEPT the value. OMISSION `slider_bar`: the bar's drag (the
+    # scroll field mp_fields[11], 207 px) is not drawn; the arrows do
+    # its work
+    if popup.get("text"):
+        lines = [popup["text"]]
+    lines.append(f"{a[0]}   [ {a[2]} ]   {a[1]}")
+    return {"lines": lines,
+            "buttons": [(words["slider_down"], _act(state, a[4])),
+                        (words["slider_up"], _act(state, a[5])),
+                        (words["slider_cancel"], _act(state, a[6])),
+                        (words["slider_ok"], _act(state, a[7]))]}
+
+
+def _antaran_room(popup, state, words, app, anywhere):
+    a = popup["args"]
+    lines = []
+    # TRANSCRIPTION `antaran_room` (work order 316 E, open fix 105):
+    # `ANTAROOM::Main_Antaran_Room_Screen_` (antaroom.cpp:26-80) prints
+    # one ANTARMSG.LBX message (:107-114) and ends on a click on its
+    # full-screen field or any key (:60-70); the room's picture and
+    # animation (ANTAROOM.LBX 0, 1) are not drawn (the HUD look of
+    # every turn popup, `hud_turn_popup` in core/turnpopup.py).
+    # UNVERIFIED `antaran_room_live`: drawn from the stand-in's bytes
+    # only; no test save brings an Antaran attack (work order 316)
+    if popup.get("text"):
+        lines = [popup["text"]]
+    return {"lines": lines,
+            "buttons": [(words["continue"], _act(state, a[1]) or (
+                ("activate", anywhere) if anywhere else None))]}
+
+
+def _dragon_bribe(popup, state, words, app, anywhere):
+    a = popup["args"]
+    lines = []
+    # TRANSCRIPTION `dragon_bribe` (work order 319, open fix 108):
+    # `MAINPUPS::Dragon_New_Star_Popup_` (mainpups.cpp:493-543) — the
+    # message as the engine formatted it (E 555 the offer, E 464 choose
+    # a star, E 583 too poor, :2594-2599); mp_fields[2] refuses (-1, the
+    # battle goes on) or closes, mp_fields[25] YES pays when the BC
+    # reach the bribe (:2611-2633). NO left, YES right, as the fields
+    # stand (186 and 381, :2135-2151). DEVIATION `dragon_button_words`:
+    # mp_fields[2] is one picture (MAINPUPS 0x46) in every mode; HD
+    # words it NO beside YES and CLOSE alone.
+    # UNVERIFIED `dragon_yes_after`: the YES field stays in the list
+    # after it is pressed (the fields are added once, :522); whether
+    # the original still draws it is not seen — HD does not offer it.
+    # Mode 1's star click is `screens/galaxy_map/dragonpopup.py`'s
+    # HD EXTENSION `dragon_picture` (work order 326 F): Data's dragon
+    # where the original's popup picture shows one (MAINPUPS.LBX 0x48,
+    # drawn in every mode, :2617), from the mod folder only (`ART`)
+    from core import dragonwire
+    art = ART["dragon_bribe"]
+    if popup.get("text"):
+        lines = [popup["text"]]
+    if dragonwire.mode(popup) == dragonwire.OFFER:
+        buttons = [(words["dragon_no"], _act(state, a[4])),
+                   (words["dragon_yes"], _act(state, a[5]))]
+    else:
+        buttons = [(words["close"], _act(state, a[4]))]
+    return {"lines": lines, "buttons": buttons, "art": art}
+
+
+def _landing(popup, state, words, app, anywhere):
+    a = popup["args"]
+    return {"title": popup.get("title") or _planet_name(state, a[0]),
+            "buttons": [(words["continue"], _act(state, a[3]) or (
+                ("activate", anywhere) if anywhere else None))],
+            "right_buttons": [_field(state, a[3]) or anywhere]}
+
+
+#: One builder per popup kind: each returns only what it sets of
+#: `{"title", "lines", "options", "buttons", "picture", "leader_rec",
+#: "art", "right_opts", "right_buttons", "line_right"}`; `content` fills
+#: the rest with the empty defaults. An unknown kind sets nothing.
+_BUILDERS = {"science": _science, "turn_summary": _turn_summary,
+             "leader_hire": _leader_hire, "planet_choice": _system_choice,
+             "discovery": _system_choice, "leader_level": _leader_level,
+             "gnn": _gnn, "troops": _troops, "slider": _slider,
+             "antaran_room": _antaran_room, "dragon_bribe": _dragon_bribe,
+             "landing": _landing}
+
+
 def content(popup, state, words, app=None):
     """`{"title", "lines", "options", "buttons"}` for one popup; options
     and buttons are `(label, action)`, an action `("activate" | "click",
     field)` or None when that field is not in the live list."""
-    kind, a = popup["kind"], popup["args"]
-    title = popup.get("title")
-    lines, options, buttons = [], [], []
-    picture = leader_rec = art = None
+    kind = popup["kind"]
+    popup["args"]       # no args is a malformed popup: fail as before, early
+    anywhere = _anywhere(state)
     # the right click (`RIGHT`): per option, per button, per table line,
     # else the popup's
-    right_opts, right_buttons, line_right = [], [], []
-
-    def act(index, how="activate"):
-        f = _field(state, index)
-        return (how, f) if f is not None else None
-    anywhere = next((f for f in (getattr(state, "fields", None) or [])
-                     if getattr(f, "index", 0) > 0 and (f.x, f.y, f.x_end,
-                                                        f.y_end) ==
-                     (0, 0, 639, 479)), None)
-
-    if kind == "science":
-        n = max(0, a[0])
-        names = []
-        i = 3
-        while i < 16 and len(names) < n:
-            tech = a[i]
-            i += 1
-            if tech < 0:
-                continue
-            names.append(_tech_name(tech) or f"#{tech & 0x1FF}")
-            # TRANSCRIPTION `science_weapon_mod` (work order 315 C2): a
-            # weapon-modification entry is listed by its weapon's name, as
-            # the room shows its help entry `& 0x1FF` (science.cpp:301-307,
-            # :320); its next slot is the mask, not an entry (:323-325).
-            # OMISSION `science_mod_names`: the mask's modification names
-            # (`weapon_modifications[].name`, :327-336) are not listed
-            if tech & 0x4000:
-                i += 1
-        lines = [f"• {nm}" for nm in names]
-        if popup.get("text"):
-            lines = [""] + lines
-            lines = [popup["text"]] + lines
-        buttons = [(words["continue"], ("activate", anywhere)
-                    if anywhere else None)]
-    elif kind == "turn_summary":
-        page = a[0]
-        for m in popup.get("messages", []):
-            if m["page"] != page:
-                continue
-            target = None
-            if m["jumps"] and m["first_field"] > 0:
-                target = act(m["first_field"], "click")
-            options.append((m["text"], target))
-        if a[1] > 1:
-            buttons.append((words["prev"], act(a[2], "click")
-                            if page > 1 else None))
-            buttons.append((words["next"], act(a[3], "click")
-                            if page < a[1] else None))
-        buttons.append((words["close"], act(a[4], "click")))
-        title = words["turn_summary"]
-    elif kind == "leader_hire":
-        card = leader_card(state, a[0], app)
-        title = card["title"]
-        lines = list(card["skills"])
-        question = card["question"](a[1], a[8])
-        if question:
-            lines += ["", question]
-        picture = card["portrait"]
-        # the HD picture replaces it in the same box (work order 234):
-        # `turnpopup.draw` asks `core.leaderportraits` with this record
-        leader_rec = card.get("leader")
-        # REJECT left, HIRE right, as the popup's own buttons stand
-        # (Update_Random_New_Officer_Fields_, mainpups.cpp:1721-1773)
-        buttons = [(words["reject"], act(a[5], "click")),
-                   (words["hire"], act(a[4], "click"))]
-        right_buttons = [_field(state, a[5]), _field(state, a[4])]
-        # a skill line: its help field (`Add_Skill_Description_Help_
-        # Fields_`, officer.cpp:3893-3968 — 0xBE wide, one per skill in the
-        # order the card lists them), answered by `Print_Officer_Skill_
-        # Help_`'s box (mainpups.cpp:914, officer.cpp:3977-4003)
-        line_right = sorted(
-            (f for f in (getattr(state, "fields", None) or [])
-             if f.field_type == 7 and f.x_end - f.x == 0xBE),
-            key=lambda f: f.y)
-        if a[3] > 0:                    # the tutor's result states
-            buttons = [(words["continue"], act(a[6]) or act(a[5], "click"))]
-            right_buttons = []
-    elif kind in ("planet_choice", "discovery"):
-        sysd = popup.get("system") or {}
-        title = title or _star_name(state, sysd.get("star", -1))
-        if popup.get("text"):
-            # TRANSCRIPTION `special_name` (work order 322 D): the special
-            # popup's title over its description (`Draw_System_Special_
-            # Popup_`, sys.cpp:626-632; mainpups.cpp:1781-1787, :1920-1926)
-            # — the special is arg 3 of the planet choice, 1 of a new system
-            # (open fix 49's TPOP, mainpups.cpp:890, :1155)
-            name = _special_name(app, a[3] if kind == "planet_choice"
-                                 else a[1])
-            if name:
-                lines.append(name)
-            lines.append(popup["text"])
-        for slot in sysd.get("planets", []):
-            if slot["planet"] < 0:
-                continue
-            target = (act(slot["field"], "click")
-                      if kind != "discovery" and slot["field"] > 0 else None)
-            options.append((_planet_name(state, slot["planet"]), target))
-            right_opts.append(_field(state, slot["field"])
-                              if kind != "planet_choice" else None)
-        # the original's button reads CLOSE (BUFFER0.LBX, the native frame
-        # of work order 188's planet choice)
-        cancel = {"planet_choice": 4}.get(kind)
-        if cancel is not None:
-            buttons.append((words["close"], act(a[cancel], "click")))
-        else:
-            buttons.append((words["close"], act(a[2])))
-    elif kind == "leader_level":
-        # the hire popup's card, as the original draws it here too: the
-        # full name as title (mainpups.cpp:2245), the portrait and the
-        # skills (`Wrapper_For_Colony_Officer_Popup_Data_`, :2224), then
-        # the sentence of the state (`leader_level_line`)
-        card = leader_card(state, a[0], app)
-        if card.get("leader") is None:      # no such leader on the wire
-            lines = [_leader_name(state, a[0])]
-        else:
-            title = card["title"]
-            lines = list(card["skills"]) + [
-                "", leader_level_line(card, a[1], app)]
-            picture = card["portrait"]
-            leader_rec = card["leader"]
-        buttons = [(words["close"], act(a[3]) or (
-            ("activate", anywhere) if anywhere else None))]
-    elif kind == "gnn":
-        title = title or "GNN"
-        if popup.get("text"):
-            lines = [popup["text"]]
-        buttons = [(words["continue"], ("activate", anywhere)
-                    if anywhere else None)]
-    elif kind == "troops":
-        # the colony screen's troop popup (open fix 98, work order 274):
-        # one full-screen field ends it (`NEWPUP::Reset_Fields_`,
-        # newpup.cpp:193-197); the planet's name stands as its title. ONLY
-        # WHILE THE GAME REPORTS ITS ID: the colony screen's own full-screen
-        # field has the same shape and demolishes the building under the
-        # real pointer (`core.colony_guard`)
-        from core import troopwire
-        title = title or (_planet_name(state, a[0]) if a[0] >= 0 else None)
-        lines = troopwire.rows(popup.get("troops") or {})
-        ours = getattr(state, "current_screen", None) == TROOPS_ID
-        buttons = [(words["close"], ("activate", anywhere)
-                    if anywhere and ours else None)]
-    elif kind == "slider":
-        # TRANSCRIPTION `slider_popup` (work order 316 E, open fix 104):
-        # `MAINPUPS::Slider_Popup_` (mainpups.cpp:747-794) — the message,
-        # then min, the value and max as `Draw_Slider_Popup_` prints them
-        # (:2386-2430); down / up step the value by one, unclamped as the
-        # original (`Evaluate_Slider_Input_`, :1953-1973); CANCEL answers
-        # -1, ACCEPT the value. OMISSION `slider_bar`: the bar's drag (the
-        # scroll field mp_fields[11], 207 px) is not drawn; the arrows do
-        # its work
-        if popup.get("text"):
-            lines = [popup["text"]]
-        lines.append(f"{a[0]}   [ {a[2]} ]   {a[1]}")
-        buttons = [(words["slider_down"], act(a[4])),
-                   (words["slider_up"], act(a[5])),
-                   (words["slider_cancel"], act(a[6])),
-                   (words["slider_ok"], act(a[7]))]
-    elif kind == "antaran_room":
-        # TRANSCRIPTION `antaran_room` (work order 316 E, open fix 105):
-        # `ANTAROOM::Main_Antaran_Room_Screen_` (antaroom.cpp:26-80) prints
-        # one ANTARMSG.LBX message (:107-114) and ends on a click on its
-        # full-screen field or any key (:60-70); the room's picture and
-        # animation (ANTAROOM.LBX 0, 1) are not drawn (the HUD look of
-        # every turn popup, `hud_turn_popup` in core/turnpopup.py).
-        # UNVERIFIED `antaran_room_live`: drawn from the stand-in's bytes
-        # only; no test save brings an Antaran attack (work order 316)
-        if popup.get("text"):
-            lines = [popup["text"]]
-        buttons = [(words["continue"], act(a[1]) or (
-            ("activate", anywhere) if anywhere else None))]
-    elif kind == "dragon_bribe":
-        # TRANSCRIPTION `dragon_bribe` (work order 319, open fix 108):
-        # `MAINPUPS::Dragon_New_Star_Popup_` (mainpups.cpp:493-543) — the
-        # message as the engine formatted it (E 555 the offer, E 464 choose
-        # a star, E 583 too poor, :2594-2599); mp_fields[2] refuses (-1, the
-        # battle goes on) or closes, mp_fields[25] YES pays when the BC
-        # reach the bribe (:2611-2633). NO left, YES right, as the fields
-        # stand (186 and 381, :2135-2151). DEVIATION `dragon_button_words`:
-        # mp_fields[2] is one picture (MAINPUPS 0x46) in every mode; HD
-        # words it NO beside YES and CLOSE alone.
-        # UNVERIFIED `dragon_yes_after`: the YES field stays in the list
-        # after it is pressed (the fields are added once, :522); whether
-        # the original still draws it is not seen — HD does not offer it.
-        # Mode 1's star click is `screens/galaxy_map/dragonpopup.py`'s
-        # HD EXTENSION `dragon_picture` (work order 326 F): Data's dragon
-        # where the original's popup picture shows one (MAINPUPS.LBX 0x48,
-        # drawn in every mode, :2617), from the mod folder only (`ART`)
-        from core import dragonwire
-        art = ART["dragon_bribe"]
-        if popup.get("text"):
-            lines = [popup["text"]]
-        if dragonwire.mode(popup) == dragonwire.OFFER:
-            buttons = [(words["dragon_no"], act(a[4])),
-                       (words["dragon_yes"], act(a[5]))]
-        else:
-            buttons = [(words["close"], act(a[4]))]
-    elif kind == "landing":
-        title = title or _planet_name(state, a[0])
-        buttons = [(words["continue"], act(a[3]) or (
-            ("activate", anywhere) if anywhere else None))]
-        right_buttons = [_field(state, a[3]) or anywhere]
+    out = {"title": popup.get("title"), "lines": [], "options": [],
+           "buttons": [], "picture": None, "leader_rec": None, "art": None,
+           "right_opts": [], "right_buttons": [], "line_right": []}
+    build = _BUILDERS.get(kind)
+    if build is not None:
+        out.update(build(popup, state, words, app, anywhere))
+    options, buttons = out["options"], out["buttons"]
+    right_opts, right_buttons = out["right_opts"], out["right_buttons"]
     right = [("field", f) if f is not None else None for f in
              right_opts + [None] * (len(options) - len(right_opts)) +
              right_buttons + [None] * (len(buttons) - len(right_buttons))]
-    return {"title": title, "lines": lines, "options": options,
-            "buttons": buttons, "right": right, "line_right": line_right,
+    return {"title": out["title"], "lines": out["lines"],
+            "options": options, "buttons": buttons, "right": right,
+            "line_right": out["line_right"],
             "right_help": RIGHT_HELP.get(kind),
-            "picture": picture if kind in LEADER_CARDS else None,
-            "leader": leader_rec if kind in LEADER_CARDS else None,
-            "art": art}
+            "picture": out["picture"] if kind in LEADER_CARDS else None,
+            "leader": out["leader_rec"] if kind in LEADER_CARDS else None,
+            "art": out["art"]}
 
 
 #: A popup's HD picture by kind: a tree path no file of OrionLayer's fills

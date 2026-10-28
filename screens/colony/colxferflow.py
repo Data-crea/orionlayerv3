@@ -310,7 +310,7 @@ def names(state, strings, source, dest, held):
     """The notice's noun (the first colonist in hand, `Colony_Pop_String_`
     at colmove.cpp:175) and the two planets' names (`HACCESS::
     Get_Planet_Name_`, :484-491)."""
-    from screens.colony_summary import colonyrows
+    from core import colonyfacts
     raws = getattr(state, "colonies_raw", None) or []
     planets = getattr(state, "planets_raw", None) or []
     stars = getattr(state, "stars", None) or []
@@ -323,8 +323,8 @@ def names(state, strings, source, dest, held):
     return {"noun": colxfer.pop_noun(strings, word,
                                      getattr(state, "player_raw", None) or [],
                                      src.owner),
-            "source": colonyrows.planet_name(src, planets, stars) or "",
-            "dest": colonyrows.planet_name(dst, planets, stars) or ""}
+            "source": colonyfacts.planet_name(src, planets, stars) or "",
+            "dest": colonyfacts.planet_name(dst, planets, stars) or ""}
 
 
 def rest_of(hand, state, w):

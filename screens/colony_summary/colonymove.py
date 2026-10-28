@@ -60,13 +60,13 @@ POP_STATE_NATIVE = 3
 POP_STATE_ANDROID = 4
 
 #: `Sum_Colonists_ >= 42` (colmove.cpp:540). The same 42 as
-#: `colonyrows.POP_LIMIT_CAP`, reached from the other side — that
+#: `colonyfacts.POP_LIMIT_CAP`, reached from the other side — that
 #: constant carries the three sources and this is a fourth site for
 #: the same ceiling, so it is named here rather than re-derived.
 JOB_LIMIT = 42
 
 #: ECON order, orion2_consts.h:119-123. Imported rather than
-#: re-declared: `colonyrows` is where these live.
+#: re-declared: `colonyfacts` is where these live.
 ECON_FOOD = 0
 ECON_INDUSTRY = 1
 ECON_RESEARCH = 2
