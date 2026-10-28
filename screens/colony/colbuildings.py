@@ -101,15 +101,12 @@ def sat_xy(slot):
 #: colony_main.cpp:658-670) and 8 is rubble (:672-673) — the orbital
 #: buildings are satellites and never enter the grid (:538-543).
 GRID_NOT_BUILDING = (3, 8, 14, 40, 41)
-#: HD EXTENSION `satellite_shape` (Data, 28 October 2026): a satellite's
-#: painting whose width-to-height ratio differs from the original sprite's
-#: by more than this share is not used; the original's sprite stands in the
-#: sky instead. A painted flat pod in place of the Star Fortress's tall tower
-#: (a 308 x 174 painting against a 110 x 130 ink box at step 2: 48 % of its
-#: area) read as another building, not as the same one repainted. The build
-#: and description box (`colroom`) has no sprite to compare with and keeps
-#: showing the painting.
-SAT_SHAPE_TOLERANCE = 0.25
+#: HD EXTENSION `satellite_height` (Data, 28 October 2026): a satellite's
+#: painting is drawn as tall as the original sprite's ink and as wide as its
+#: own shape makes it, not fitted into the sprite's box: a painting wider
+#: than the original's narrow tower would otherwise come out a half as tall
+#: and read as another, smaller building (an earlier rule, `satellite_shape`,
+#: handed such paintings back to the sprite; Data: the width does not matter).
 
 
 def entries(art, placement, climate, bg, lift=0):
@@ -222,19 +219,13 @@ def _ink_box(pic):
         int(ys.max() - ys.min() + 1)
 
 
-def _same_shape(pic, ink):
-    """`satellite_shape`: whether the painting's width-to-height ratio is
-    within `SAT_SHAPE_TOLERANCE` of the original sprite's ink box."""
-    ratio = (pic.get_width() / pic.get_height()) / (ink[2] / ink[3])
-    return 1 / (1 + SAT_SHAPE_TOLERANCE) <= ratio <= 1 + SAT_SHAPE_TOLERANCE
-
-
 def painted_layer(art, placement, climate, bg, step, lift=0, *, roads=()):
     """HD EXTENSION `building_pictures`: the layer at `step` times the
     original's size with the buildings the player painted (`core.
     buildingart`) in place of the original's drawings. A painted building
     stands on the foot of the ink of the drawing it replaces, centred on it,
-    and is fitted into that ink's size at this step; every other drawing is
+    and is fitted into that ink's size at this step (a satellite: as tall as
+    that ink, `satellite_height`); every other drawing is
     scaled by the whole step as before."""
     from core import buildingart
     surf = pygame.Surface((NATIVE_W * step, NATIVE_H * step),
@@ -246,11 +237,11 @@ def painted_layer(art, placement, climate, bg, step, lift=0, *, roads=()):
     for pic, (x, y), bid in entries(art, placement, climate, bg, lift):
         ink = _ink_box(pic) if bid is not None \
             and buildingart.picture(bid) is not None else None
-        hd = buildingart.fit(bid, ink[2] * step, ink[3] * step) \
-            if ink else None
-        if hd is not None and bid in SATELLITE_PIC \
-                and not _same_shape(buildingart.picture(bid), ink):
-            hd = None
+        if ink and bid in SATELLITE_PIC:
+            hd = buildingart.fit_height(bid, ink[3] * step)
+        else:
+            hd = buildingart.fit(bid, ink[2] * step, ink[3] * step) \
+                if ink else None
         if hd is None:
             surf.blit(pygame.transform.scale(
                 pic, (pic.get_width() * step, pic.get_height() * step)),

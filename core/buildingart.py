@@ -109,6 +109,24 @@ def fit(bid, w, h):
     return _fitted[key]
 
 
+def fit_height(bid, h):
+    """The building's picture scaled, aspect kept, to exactly `h` tall (its
+    width follows) — or None without a picture. A satellite's painting
+    stands as tall as the original's sprite (`colbuildings`,
+    `satellite_height`). Smooth, like `fit`."""
+    pic = picture(bid)
+    if pic is None or h < 1:
+        return None
+    key = (int(bid), 0, int(h))
+    if key not in _fitted:
+        import pygame
+        if len(_fitted) > 200:
+            _fitted.clear()
+        w = max(1, round(pic.get_width() * h / pic.get_height()))
+        _fitted[key] = pygame.transform.smoothscale(pic, (w, int(h)))
+    return _fitted[key]
+
+
 def forget():
     """Drop what was read (a check changes the mod folder under it)."""
     _pictures.clear()
