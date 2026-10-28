@@ -48,31 +48,20 @@ import copy
 import random
 import time
 
-from . import (cbart, cbbeam, cbbeamfx, cbblast, cbcloak, cbdraw, cbflare,
-               cbflight, cblightning, cbnumbers, cbqueue, cbreflect,
-               cbretreat, cbsfx, cbshot, cbsound)
+from . import (cbbeam, cbcloak, cbdraw, cbflare, cbflight, cblightning,
+               cbnumbers, cbpace, cbqueue, cbreflect, cbretreat, cbsfx,
+               cbshot, cbsound, cbstart)
 
 CELL = cbdraw.CELL
-MOVE_S = 0.15
-#: DEVIATION `untimed_pace` (decision 80, Data, work order 214): a loop of
-#: the source without a wait (the move, cmbtmov1.cpp:309-317; the plasma
-#: web's travel, cmbtspec.cpp:1075-1094; the gyro's random spin, :580-597;
-#: the teleport, cmbtmov1.cpp:816-886; a missile's flight and launch) is
-#: paced only by its page flip — 1.9 ms a pass measured (work order 213), a
-#: flight would be invisible; HD gives each of its frames a fixed 15 ms, the
-#: move's own pace, 10 frames a cell in 0.15 s (decision H of work order
-#: 202), so they keep one tempo with each other.
-UNTIMED_S = MOVE_S / 10
-FRAME_S = 0.055
-NUMBER_S = 9 * FRAME_S
-BOLT_S = 6 * FRAME_S
-#: The beams the colour table does not carry (beams.cpp:1124-1192):
-#: weapon id (orion2_consts.h:993-1035) -> (BEAMS.LBX 0's palette fragment,
-#: the bolt's length, its step a frame) — the spatial compressor, the
-#: mauler, the dragon and plasma breaths, weapon 46.
-FRAGMENT = {13: (2, 40, 55), 27: (5, 20, 40), 40: (5, 20, 40),
-            43: (5, 20, 40), 46: (6, 40, 50)}
-DEATH_SFX = {0: 3, 1: 4, 2: 4, 3: 5, 4: 5, 5: 5}
+MOVE_S = cbpace.MOVE_S
+UNTIMED_S = cbpace.UNTIMED_S
+FRAME_S = cbpace.FRAME_S
+NUMBER_S = cbpace.NUMBER_S
+BOLT_S = cbpace.BOLT_S
+FRAGMENT = cbpace.FRAGMENT
+DEATH_SFX = cbpace.DEATH_SFX
+sfx_times = cbpace.sfx_times
+sfx_frame = cbpace.sfx_frame
 
 
 class Player:
@@ -298,11 +287,11 @@ class Player:
         if k == "rotate":
             return FRAME_S * max(1, _turn(ev)[0])
         if k in ("special", "bomb", "blast_hit", "web_damage"):
-            length = self._start_effect(ev, now, k)
+            length = cbstart.effect(self, ev, now, k)
             if length is not None:
                 return length
         if k == "beam_shot":
-            return self._start_beam_shot(ev, now)
+            return cbstart.beam_shot(self, ev, now)
         if k == "flight":
             ev["_base"] = copy.deepcopy(self.ordnance)
             return ev["_flight"]["frames"] * UNTIMED_S
@@ -350,7 +339,7 @@ class Player:
             self._lightning_frame += 15
             return 15 * FRAME_S
         if k == "destroy":
-            return self._start_destroy(ev)
+            return cbstart.destroy(self, ev)
         if k == "retreat":
             u = self._unit(ev.get("unit", -1))
             p = ev["_retreat"] = None if int(ev.get("status", 0) or 0) or \
@@ -376,124 +365,6 @@ class Player:
                                     now, (0xe0, 0xe0, 0xff)))
             return 6 * FRAME_S
         return 0.0
-
-    def _start_effect(self, ev, now, k):
-        """The effect's length, or None when `_start` goes on to its word."""
-        w = int(ev.get("weapon", 0))
-        # a spherical blast is drawn on the special that fires it, every
-        # time (work order 210 C3, `cbblast`)
-        p = cbblast.plan(self, ev.get("source", -1), cbblast.AREA[w],
-                         self._art) if k == "special" and \
-            w in cbblast.AREA else None
-        if p is None and k == "special" and w == cbsfx.ANTI_MISSILE:
-            p = self._anti_missile(ev)
-        if k == "bomb" and self.planet is not None:
-            # the planet picture's size, for the Transporters' start
-            # point (cmbtdrw1.cpp:3026-3027)
-            w, h = cbart.native_size(self.planet[0])
-            ev["_planet_half"] = (w // 2, h // 2)
-        if k == "special" and w == cbsfx.GYRO:
-            self._take_spin(ev)
-        if p is None:
-            p = cbsfx.plan(ev, self._unit, self._art, self._last)
-        if p is not None:
-            ev["_sfx"] = p
-            if k == "special" and w == cbsfx.CONVERTER:   # work order 260
-                ev["_charges"] = cbqueue.take_converter(self._queue, ev)
-            u = self._unit(ev.get("unit", ev.get("target", -1)))
-            hit = ev.get("past_shields") or ev.get("hits")
-            length = sfx_times(p, p.get("step", ev["_step"]))
-            if u is not None and not ev.get("at_missile"):
-                self._number(u, hit, ev.get("absorbed"),
-                             now + p["_number_at"])
-            if ev.get("_destroyed"):
-                # the missiles destroyed, over the missile as the blast
-                # starts (`Add_Damage_Indicator_For_Missile_`,
-                # cmbtspec.cpp:772)
-                self._marks.append((str(ev["_destroyed"]), *ev["_at"],
-                                    now + p["fly"] * FRAME_S,
-                                    (0xff, 0xcc, 0x40)))
-            return length
-
-    def _start_beam_shot(self, ev, now):
-        """One FIRE as one loop (TRANSCRIPTION `firing`)."""
-        # TRANSCRIPTION `firing` (`cbshot`, work order 212): every shot
-        # of one FIRE is one loop — the queued shots at the same target
-        # go with this one
-        shots = [ev] + cbqueue.take_firing(ev, self._queue, self._charge)
-        # a reflection is drawn after its slot, the rest of the FIRE
-        # after it (`cbqueue.split_at_reflection`)
-        shots, back, rest = cbqueue.split_at_reflection(shots)
-        ev["_tail"] = shots[-1]["seq"]
-        self.last_beam = shots[-1]
-        u = None if ev.get("at_missile") else \
-            self._unit(ev.get("target", -1))
-        aims = self._take_aims(ev)
-        if back is not None:
-            n = len({e.get("slot") for e in shots})
-            if rest:
-                rest[0]["_aims"] = aims[n:]
-            self._queue[:0] = [back] + rest
-        planned, k, slot = [], -1, object()
-        for e in shots:
-            if e.get("slot") != slot:
-                k, slot = k + 1, e.get("slot")
-            aim = aims[k] if k < len(aims) and int(
-                aims[k].get("weapon", -1)) == int(e.get("weapon", 0)) \
-                else None
-            b = self._beam(e, aim)
-            if b is not None:
-                planned.append((e, b))
-        if not planned:
-            return BOLT_S
-        f = ev["_firing"] = cbshot.plan_firing(
-            planned, cbshot.flared(self, ev, u), self.fast,
-            cut=back is not None)
-        src = self._unit(ev.get("source", -1))
-        side = 1 if src is None or u is None else cbnumbers.side_of(
-            cbdraw.centre(u), cbdraw.centre(src), cbbeamfx.get_angle)
-        for (_e, _b, evs), hit in zip(f["entries"], f["hits"]):
-            if u is not None:
-                # the numbers appear in the pass the bolt strikes
-                # (beams.cpp:1660-1672), the pair the entry summed
-                self._number(u, *(sum(int(e.get(k, 0) or 0) for e in evs)
-                                  for k in ("past_shields", "absorbed")),
-                             now + hit * FRAME_S, side)
-        return len(f["rows"]) * FRAME_S
-
-    def _start_destroy(self, ev):
-        """A unit's death, in a blast or on its own."""
-        u = self._unit(ev.get("unit", -1))
-        state = int(ev.get("death_state", 1))
-        # HD STATE `view_pause`: `Destroy_Ship_FX_` waits 7 ticks before
-        # a ship off ITS 32 x 18 view explodes (cmbtspec.cpp:1175-1178),
-        # the view fix 65 centres on the action; HD's camera is not that
-        # view, and measured on the same battle (work order 212, run M4)
-        # the pause fell where the original took none — HD does not wait
-        delay = 0.0
-        if u is not None and state in (2, 3, 4) and \
-                int(ev.get("previous_owner", 0)) < 10:
-            # a ship dying in a blast (work order 210 C4, `cbblast`)
-            p = cbblast.plan(self, ev["unit"], state, self._art)
-            if p is not None:
-                p["delay"] = delay
-                ev["_sfx"] = p
-                return sfx_times(p, ev["_step"])
-        if u is None:
-            return 18 * FRAME_S / ev["_step"]
-        ev["_death"] = cbblast.death_plan(u, self._art)
-        ev["_dp"] = {"frames": ev["_death"][1], "delay": delay}
-        return sfx_times(ev["_dp"], ev["_step"])
-
-    def _anti_missile(self, ev):
-        """The anti-missile rocket's plan, or None: HD STATE
-        `anti_missile_count` (`cbsfx.anti_missile_for`) reads the stacks
-        it destroyed from the next state queued."""
-        later = next((o for seq, _c, o in self._after
-                      if seq is None or seq >= ev["seq"]), None)
-        return cbsfx.anti_missile_for(ev, self._unit(ev.get("source", -1)),
-                                      self.ordnance, later, self._queue,
-                                      self._art, self.fast)
 
     def _finish(self, ev):
         """The event's lasting effect on the shown battle."""
@@ -780,38 +651,6 @@ class Player:
                                    y - img.get_height() // 2))
             if t > 0.5:
                 u["unit_status"] = 5
-
-
-def sfx_times(p, step):
-    """TRANSCRIPTION `effect_pace` (work order 212, decision 2): when each
-    frame of an effect's plan is drawn — its `phases` [(frames, seconds a
-    frame)], by default all of them a 55 ms tick times `wait` (the
-    `Release_Time_(n)` of the source's loop) — every `step`-th one under
-    FAST ANIMATIONS, after `delay` seconds; then `hold` ticks in which the
-    damage numbers rise and nothing is drawn
-    (`Draw_Damage_Message_Queue_Until_Done_`, beams.cpp:495-508). Stores
-    `_times` [(start, end, frame)], `_length` and `_number_at` (when the
-    effect's number appears: at `number_frame`, else when the frames end) in
-    the plan; returns the length in seconds."""
-    phases = p.get("phases") or [(p["frames"], FRAME_S * p.get("wait", 1))]
-    times, t, base = [], float(p.get("delay", 0.0)), 0
-    for count, per in phases:
-        for f in range(0, count, max(1, step)):
-            times.append((t, t + per, base + f))
-            t += per
-        base += count
-    p["_times"], p["_length"] = times, t + p.get("hold", 0) * FRAME_S
-    at = p.get("number_frame")
-    p["_number_at"] = next((s for s, _e, i in times if i >= at), t) \
-        if at is not None else t
-    return p["_length"]
-
-
-def sfx_frame(p, t):
-    """The plan's frame at `t` (0..1 of its length), or None: before the
-    delay, in the hold, after the end."""
-    tau = t * p.get("_length", 0.0)
-    return next((i for s, e, i in p.get("_times", ()) if s <= tau < e), None)
 
 
 def _move_end(ev):
