@@ -16,6 +16,8 @@ TRANSCRIPTION, what the original draws (the engine's own source):
                  640 x 480 picture with the building ALREADY where its
                  cell is, drawn at (0, 0) (`Draw_Colony_Bldg_`, colony_main.
                  cpp:47-77), so no cell is projected anywhere
+  the roads      under all of it: `Draw_Road_List_` (colony_main.cpp:117-
+                 119) is drawn before the cells (`colroads`, `colplace`)
   the layers     a cell's vegetation first (`Draw_Veggie_CR_`, coldraw.cpp:
                  718) — OMISSION `veggies`, COLVEGGI is not extracted — then
                  its building; a later cell is over an earlier one
@@ -92,16 +94,28 @@ def sat_xy(slot):
     return (1 if slot % 2 == 0 else -1) * slot * SAT_STEP + SAT_CENTRE, SAT_Y
 
 
+#: What a grid cell holds under these ids is NOT the building of that name:
+#: housing is the houses' own ids 3, 14, 40, 41 (`Insert_Bldg_Into_Array_`,
+#: colony_main.cpp:658-670) and 8 is rubble (:672-673) — the orbital
+#: buildings are satellites and never enter the grid (:538-543).
+GRID_NOT_BUILDING = (3, 8, 14, 40, 41)
+
+
 def entries(art, placement, climate, bg, lift=0):
-    """[(surface, (x, y), building id)] — `sprites`, with whose picture each
-    is, so a painted building (`core.buildingart`) can stand where it."""
+    """[(surface, (x, y), building id or None)] — `sprites`, with whose
+    picture each is, so a painted building (`core.buildingart`) can stand
+    where it. None for a grid cell of `GRID_NOT_BUILDING`: a house or rubble,
+    which no building's painting is (work order 339: the Star Base's picture
+    was standing on the ground as a house)."""
     out = []
     grid = placement["grid"]
     for col, row in BACK_TO_FRONT:
         stem = art_stem(grid[col][row], col, row)
         got = art.picture(stem, climate, bg) if stem else None
         if got is not None:
-            out.append((got[0], got[1], grid[col][row]))
+            bid = grid[col][row]
+            out.append((got[0], got[1],
+                        None if bid in GRID_NOT_BUILDING else bid))
     for slot, bid in enumerate(placement["satellites"][:SAT_SLOTS]):
         pic = SATELLITE_PIC.get(bid)
         got = art.picture(f"satellite_{pic}", climate, bg, glassed=False) \
@@ -127,11 +141,27 @@ def art_stem(bid, col, row):
     return colart.bldg_stem(bid, col, row)
 
 
-def native_layer(art, placement, climate, bg, lift=0):
-    """The whole scene's buildings and satellites at the original's size,
-    over nothing (alpha): 640 x 480 — what the check lays over the original's
-    own frame (`lift` 0), and what `layer` scales."""
+def road_sprites(art, roads, climate, bg):
+    """TRANSCRIPTION `roads` (`colroads`): [(surface, (x, y))] of the road
+    pictures `roads` names, in drawing order, in the original's 640 x 480
+    coordinates; a picture the extraction lacks is skipped."""
+    out = []
+    for n in roads:
+        got = art.picture(f"road_{n}", climate, bg)
+        if got is not None:
+            out.append((got[0], got[1]))
+    return out
+
+
+def native_layer(art, placement, climate, bg, lift=0, *, roads=()):
+    """The whole scene's roads, buildings and satellites at the original's
+    size, over nothing (alpha): 640 x 480 — what the check lays over the
+    original's own frame (`lift` 0), and what `layer` scales. The roads go
+    first: `Draw_Road_List_` runs before `Draw_Colony_Bldgs_`
+    (colony_main.cpp:117-119)."""
     surf = pygame.Surface((NATIVE_W, NATIVE_H), pygame.SRCALPHA)
+    for pic, at in road_sprites(art, roads, climate, bg):
+        surf.blit(pic, at)
     for pic, at in sprites(art, placement, climate, bg, lift):
         surf.blit(pic, at)
     return surf
@@ -181,7 +211,7 @@ def _ink_box(pic):
         int(ys.max() - ys.min() + 1)
 
 
-def painted_layer(art, placement, climate, bg, step, lift=0):
+def painted_layer(art, placement, climate, bg, step, lift=0, *, roads=()):
     """HD EXTENSION `building_pictures`: the layer at `step` times the
     original's size with the buildings the player painted (`core.
     buildingart`) in place of the original's drawings. A painted building
@@ -191,8 +221,13 @@ def painted_layer(art, placement, climate, bg, step, lift=0):
     from core import buildingart
     surf = pygame.Surface((NATIVE_W * step, NATIVE_H * step),
                           pygame.SRCALPHA)
+    for pic, (x, y) in road_sprites(art, roads, climate, bg):
+        surf.blit(pygame.transform.scale(
+            pic, (pic.get_width() * step, pic.get_height() * step)),
+            (x * step, y * step))
     for pic, (x, y), bid in entries(art, placement, climate, bg, lift):
-        ink = _ink_box(pic) if buildingart.picture(bid) is not None else None
+        ink = _ink_box(pic) if bid is not None \
+            and buildingart.picture(bid) is not None else None
         hd = buildingart.fit(bid, ink[2] * step, ink[3] * step) \
             if ink else None
         if hd is None:
@@ -207,34 +242,37 @@ def painted_layer(art, placement, climate, bg, step, lift=0):
     return surf
 
 
-def layer(art, placement, climate, bg, step, lift=0):
+def layer(art, placement, climate, bg, step, lift=0, *, roads=()):
     """The native layer scaled by a whole `step`, kept per what it shows
     (grid, satellites, world, step, lift, the painted buildings) — one scale
     per snapshot and size, not one a frame (check 090zzzzzp)."""
     from core import buildingart
     painted = buildingart.present()
     key = (tuple(map(tuple, placement["grid"])),
-           tuple(placement["satellites"]), climate, bg, step, lift, painted)
+           tuple(placement["satellites"]), climate, bg, step, lift, painted,
+           tuple(roads))
     got = _cache.get(key)
     if got is None:
         if len(_cache) >= 4:
             _cache.clear()
-        got = painted_layer(art, placement, climate, bg, step, lift) \
+        got = painted_layer(art, placement, climate, bg, step, lift,
+                            roads=roads) \
             if painted else pygame.transform.scale(
-                native_layer(art, placement, climate, bg, lift),
+                native_layer(art, placement, climate, bg, lift, roads=roads),
                 (NATIVE_W * step, NATIVE_H * step))
         _cache[key] = got
     return got
 
 
-def draw(surface, rect, art, placement, climate, bg):
-    """Lay the city and the satellites in `rect` (the surface panel's
-    inside); False, and nothing drawn, without the pictures or the grid."""
+def draw(surface, rect, art, placement, climate, bg, *, roads=()):
+    """Lay the roads, the city and the satellites in `rect` (the surface
+    panel's inside; `roads` are `colroads.roads_for`'s); False, and nothing drawn, without the pictures or the grid."""
     if rect is None or placement is None or not art.available or \
             art.glass() is None or not art.has("bldgcell_1_0"):
         return False
     k, dest = block_rect(rect)
-    pic = layer(art, placement, climate, bg, k, sat_lift(rect, k))
+    pic = layer(art, placement, climate, bg, k, sat_lift(rect, k),
+                roads=roads)
     prev = surface.get_clip()
     surface.set_clip(rect.clip(prev))
     surface.blit(pic, dest.topleft)

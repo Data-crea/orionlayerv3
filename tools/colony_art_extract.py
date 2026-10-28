@@ -70,6 +70,11 @@ WHAT IT TAKES (colony_main.cpp, colsysdi.cpp, colony.cpp):
                          4-19, frame by `Bldg_Coords_To_Effective_Frame_`,
                          colony_main.cpp:229-236); stored as
                          `bldgcell_<id>_<frame>.bin`
+  COLROADS.LBX (work order 339)
+    n                    road picture n, 0..155, a whole 640 x 480 glassed
+                         picture each (`Draw_Road_List_`, coldraw.cpp:452-473;
+                         n is `Load_Road_List_Anims_`'s numbering, :475-493);
+                         stored as `road_<n>.bin`
   FONTS.LBX
     0                    its first 64 bytes: the 16 glass colours (`Load_Font_File_`,
                          fonts.cpp:894), stored as `glass.json`; pixels 0xF0..0xFF of
@@ -80,7 +85,7 @@ WHAT IT TAKES (colony_main.cpp, colsysdi.cpp, colony.cpp):
                          621-635; work order 226 G)
 
 NOT taken: the screen's frames, buttons and sprites (decision 71's HUD
-draws them), the buildings and roads on the ground (OMISSION `roads`), and
+draws them), the veggies between the cells (OMISSION `veggies`), and
 COLONY2's planet ball (0x32), which the map's planet popups draw, not this
 screen.
 """
@@ -109,6 +114,8 @@ SCREEN_PALETTE, PALETTE_BYTES = 2, 256 * 4
 BUILDINGS, BLDG_CELL, SATELLITES, RACES = 49, 30, 8, 13
 #: the grid's 6 x 6 cells; `video::glass_colors` is 16 x 4 bytes (orion2.h:979)
 CELLS, GLASS_BYTES = 36, 64
+#: COLROADS.LBX: 42 + 42 + 36 + 36 pictures (`colplace.new_road_list`)
+ROADS = 156
 #: ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH, ECON_BC (orion2_consts.h:119-122)
 PROD_TYPES = 4
 
@@ -142,6 +149,9 @@ def wanted():
         for f in range(CELLS):
             out[f"bldgcell_{b}_{f}"] = (f"BLDG{k // 10}.LBX",
                                         f + (k % 10) * 36)
+    # the roads under them (work order 339)
+    for n in range(ROADS):
+        out[f"road_{n}"] = ("COLROADS.LBX", n)
     out["android"] = ("RACEICON.LBX", 0xA9)
     for r in range(RACES):
         out[f"spy_{r}"] = ("RACEICON.LBX", r * 13 + 11)

@@ -72,6 +72,7 @@ from core import nativedraw as nd
 
 from . import colart
 from . import colbuildings
+from . import colroads
 from . import colprod
 from . import colsurface
 from . import colgeom as geom
@@ -597,6 +598,26 @@ def _build(surface, screen, view, state, words, names):
     return layout
 
 
+def _roads(view, placement):
+    """TRANSCRIPTION `roads` (work order 339, `colroads`): the road pictures
+    that go under the city; none without their extraction. The replay is
+    kept per colony and what it was made from — one a frame would run the
+    engine's placement 60 times a second."""
+    art = colart.load()
+    if not art.has("road_0"):
+        return ()
+    colony = view.colony
+    key = (view.index, tuple(colony.buildings), colony.n_pops,
+           tuple(map(tuple, placement["grid"])),
+           tuple(placement["satellites"]))
+    if _road_memo[0] != key:
+        _road_memo[:] = [key, colroads.roads_for(view, placement)]
+    return _road_memo[1]
+
+
+_road_memo = [None, ()]
+
+
 def _buildings(surface, screen, view, state, names):
     """TRANSCRIPTION `building_sprites` / HD EXTENSION `building_sprites`
     (work order 326, `colbuildings`): the colony's buildings as the
@@ -616,7 +637,8 @@ def _buildings(surface, screen, view, state, names):
     placement = colbuildings.shown(state)
     if placement is not None:
         colbuildings.draw(surface, scene_rect(screen), colart.load(),
-                          placement, view.colony.climate, _bg_type(view))
+                          placement, view.colony.climate, _bg_type(view),
+                          roads=_roads(view, placement))
     if not ids:
         return
     box, rows = colbuildings.list_geometry(screen, len(ids), placement)
