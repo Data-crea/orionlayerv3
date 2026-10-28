@@ -259,6 +259,7 @@ def init(enabled=True, root=None):
     _state["root"] = root
     from core.config import BASE_DIR
     by_layout = set()
+    old_names = 0
     for dirpath, _dirs, files in os.walk(root):
         _dirs.sort()
         for f in sorted(files):
@@ -291,8 +292,9 @@ def init(enabled=True, root=None):
                             if target.startswith(SHIP_PICTURE_DIR) else "")
                 continue
             if name.startswith("files/") and modlayout.themed(target):
-                log.info("mod: %s still works; the name is now %s",
-                         name, modlayout.from_tree(target, _screens()))
+                old_names += 1
+                log.debug("mod: %s still works; the name is now %s",
+                          name, modlayout.from_tree(target, _screens()))
             if target in _state["index"]:
                 # one picture, two names: the new name wins; two NEW names
                 # keep the first in name order, so the choice never depends
@@ -307,6 +309,13 @@ def init(enabled=True, root=None):
             if laid:
                 by_layout.add(target)
             _state["index"][target] = full
+    if old_names:
+        # HD EXTENSION `files_sunset` (work order 337): `files/` stays
+        # through the beta; this one line is how a modder learns of it
+        log.warning("mod: %d file(s) still use the old files/ names, which "
+                    "stop being offered after the beta — `python "
+                    "tools/mod_migrate.py` moves them (dry run first)",
+                    old_names)
     _build_mirror(root)
     log.info("mod folder %s: %d file(s) in use", root, len(_state["index"]))
     return len(_state["index"])
@@ -317,11 +326,14 @@ def _build_mirror(root):
     the resource root of the loaders that join a root and a tree path
     (`files_root`). The folder's own names are the modder's and no longer
     mirror the tree (`core.modlayout`), so the tree-shaped copy is made
-    here, by link where the platform allows and by copy where not, anew
-    at every start."""
+    here, by symlink where the platform allows, else by hard link (Windows
+    without the symlink right: the cache sits beside the folder, on its
+    volume), else by copy. HD EXTENSION `mirror_incremental` (work order
+    337): a copy or link that already stands is kept, so a start where
+    nothing changed writes nothing — the full copy at every start was the
+    cost of a platform without links. UNVERIFIED on Windows."""
     import shutil
     base = os.path.join(os.path.dirname(root), CACHE, FOLDER, "tree")
-    shutil.rmtree(base, ignore_errors=True)
     # what the loaders always saw: every file under `files/`, indexed or
     # not (a loader may name a file the index has no slot for) ...
     links = {}
@@ -332,26 +344,80 @@ def _build_mirror(root):
             links[os.path.relpath(full, legacy).replace(os.sep, "/")] = full
     # ... and over it the folder's own names, at their tree paths
     links.update(_state["index"])
+    # a disk that ignores case is told by asking for the path in other case
+    insensitive = base != base.swapcase() and os.path.exists(
+        base.swapcase())
+    fold = str.lower if insensitive else str
+    kept, plan = set(), []
     for target, src in sorted(links.items()):
         out = os.path.join(base, *target.split("/"))
-        if os.path.lexists(out):
+        if fold(out) in kept:
             # two paths that differ only in case on a case-insensitive disk:
             # the first stays, and the player's file is never written to
             log.warning("mod: %s is the same file as another name here — "
                         "left out", target)
             continue
+        kept.add(fold(out))
+        plan.append((target, src, out))
+    # pruned BEFORE the offers: a stale file where a folder is wanted (or
+    # the reverse) would otherwise keep the picture out for one start
+    _prune(base, kept, fold)
+    for target, src, out in plan:
         try:
             os.makedirs(os.path.dirname(out), exist_ok=True)
-            try:
-                # absolute: a relative target would be read from the link's
-                # own folder
-                os.symlink(os.path.abspath(src), out)
-            except (OSError, NotImplementedError):
-                shutil.copyfile(src, out)
+            _offer(os.path.abspath(src), out, shutil)
         except OSError as err:
             log.warning("mod: %s cannot be offered to the loaders (%s)",
                         target, err)
     _state["mirror"] = base if os.path.isdir(base) else None
+
+
+def _stands(src, out):
+    """True when `out` already offers `src`: a link to it, a hard link, or
+    a copy of the same size and modification time."""
+    try:
+        if os.path.islink(out):
+            return os.path.realpath(out) == os.path.realpath(src)
+        a, b = os.stat(src), os.stat(out)
+        return (os.path.samestat(a, b)
+                or (a.st_size == b.st_size and a.st_mtime_ns == b.st_mtime_ns))
+    except OSError:
+        return False
+
+
+def _offer(src, out, shutil):
+    """`src` at `out`: symlink (absolute — a relative target would be read
+    from the link's own folder), else hard link, else copy that keeps the
+    modification time (so `_stands` recognises it at the next start)."""
+    if _stands(src, out):
+        return
+    if os.path.lexists(out):
+        os.remove(out)
+    for make in (os.symlink, os.link):
+        try:
+            make(src, out)
+            return
+        except (OSError, NotImplementedError):
+            continue
+    shutil.copy2(src, out)
+
+
+def _prune(base, kept, fold=str):
+    """What the mirror holds that the folder no longer offers goes: a
+    removed picture must stop being found. `fold` is how paths compare on
+    this disk (case folded only where the disk ignores case)."""
+    for dirpath, dirs, names in os.walk(base, topdown=False):
+        for f in names:
+            if fold(os.path.join(dirpath, f)) not in kept:
+                try:
+                    os.remove(os.path.join(dirpath, f))
+                except OSError:
+                    pass
+        if dirpath != base and not os.listdir(dirpath):
+            try:
+                os.rmdir(dirpath)
+            except OSError:
+                pass
 
 
 def fills_a_picture(target):

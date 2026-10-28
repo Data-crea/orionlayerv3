@@ -54,6 +54,18 @@ A picture under its new name replaces the base-pack picture it stands for
 (`files/<path in the tree>` does the same by the tree's path). Never edit
 the base pack itself; your mod folder is the place.
 
+**See a change without starting by hand.** Open the layout editor (F3) and
+press **Reload** twice: OrionLayer restarts itself in place and reads the
+folder again; the game keeps running. Save a layout first, unsaved changes
+are lost. Nothing is reloaded inside the running window, because a picture
+is kept in many places until the program ends - a fresh start is the only
+reload that never shows a stale one.
+
+**The older `files/` names end after the beta.** They keep working during it;
+the log says how many files still use them, and `python tools/mod_migrate.py`
+moves them to the new names (it shows what it would do first, never
+overwrites, and writes an undo list).
+
 A file OrionLayer cannot read, or a name it does not know, is skipped
 with one line in the log; a picture of another size is scaled to fit.
 The GAME menu's SETTINGS has **Mod folder: Off / On** (takes effect at
@@ -542,6 +554,15 @@ Everything below is the **developer's** route: mods inside the tree,
 which can also replace data, layouts and whole screens.
 
 ## Mods inside the tree
+
+**Which of the two?** Your mod folder (above) is for pictures and texts:
+it is one folder, always the same, outside the program. A mod inside the
+tree (`mods/<name>/`, switched on in `settings.json`) is for what is not a
+picture or a text: layouts (`boxes.json`), data (`races.json`, `traits.json`),
+help texts, skins, fonts and new screens, and it mirrors OrionLayer's own
+folder tree, so you do need to know that tree. The layout editor writes
+its changes there. A picture can be put in either; use the mod folder.
+`mods/example_mod` is the smallest working example of the second kind.
 
 Every file OrionLayer loads — assets, data, skins, even whole
 screens — resolves through `core/resources.py`. Active mods are

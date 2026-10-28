@@ -2,7 +2,7 @@
 
 A side panel with what the hotkeys used to hide: the screen's boxes by
 name, what the chosen one is for, its position and size as numbers, and
-the buttons Save, Revert and Close. The mouse and the arrow keys still
+the buttons Save, Revert, Reload, Hide and Close. The mouse and the arrow keys still
 move and resize on the picture; the panel is the way to choose, read and
 type.
 
@@ -120,9 +120,9 @@ class Panel:
         x, w = r.panel.x + pad, width - 2 * pad
         y = top + int(42 * s)
         bh, gap = int(30 * s), int(6 * s)
-        bw = (w - 3 * gap) // 4
+        bw = (w - 4 * gap) // 5
         r.buttons = {}
-        for i, name in enumerate(("save", "revert", "hide", "close")):
+        for i, name in enumerate(("save", "revert", "reload", "hide", "close")):
             r.buttons[name] = pygame.Rect(x + i * (bw + gap), y, bw, bh)
         y += bh + int(8 * s)
         r.target_y = y
@@ -250,10 +250,28 @@ class Panel:
         elif name == "revert":
             ed.revert()
             self.message = "Unsaved changes dropped."
+        elif name == "reload":
+            self._reload()
         elif name == "hide":
             self.visible = False
         elif name == "close":
             ed.toggle()
+
+    def _reload(self):
+        """HD EXTENSION `mod_reload` (work order 337): a second click within
+        five seconds restarts the program in place so the mod folder is read
+        again (`core.modreload`); the first only says what it will do."""
+        now = time.monotonic()
+        if now - getattr(self, "_reload_at", -10.0) > 5.0:
+            self._reload_at = now
+            self.message = ("Reload restarts OrionLayer to read the mod "
+                            "folder again; the game keeps running. Unsaved "
+                            "changes are lost - Save first. Click Reload "
+                            "again to go on.")
+            return
+        self._reload_at = -10.0
+        from core import modreload
+        modreload.restart(self.ed.app)
 
     def drag_to(self, sx, sy):
         """The header is held and the pointer moved."""
@@ -378,7 +396,8 @@ class Panel:
                    f"{ed.app.win_w}x{ed.app.win_h}  -  drag here to move",
                    (r.x, r.top + int(26 * r.s)), 12, C_FTX)
         for key, text in (("save", "Save"), ("revert", "Revert"),
-                          ("hide", "Hide"), ("close", "Close")):
+                          ("reload", "Reload"), ("hide", "Hide"),
+                          ("close", "Close")):
             self._button_draw(surface, r.buttons[key], text)
         self._draw_target(surface, r)
         self._draw_list(surface, r)

@@ -54,7 +54,9 @@ GUIDE = """# Your OrionLayer mod folder
 
 This folder changes how OrionLayer looks. You do not need to know any
 programming: you put a picture in here with the right name, restart
-OrionLayer, and it is used instead of the built-in one.
+OrionLayer, and it is used instead of the built-in one. To see a change
+without starting by hand: open the layout editor (F3) and press Reload
+twice; OrionLayer restarts itself, the game keeps running.
 
 **Where it is:** `{folder}`
 
