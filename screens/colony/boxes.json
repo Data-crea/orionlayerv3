@@ -49,6 +49,16 @@
         651
       ],
       "anchor_v": "stretch"
+    },
+    {
+      "name": "col_buildings",
+      "rect": [
+        28,
+        417,
+        180,
+        564
+      ],
+      "anchor_v": "top"
     }
   ]
 }

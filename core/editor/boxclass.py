@@ -69,10 +69,22 @@ def _cutout_names(screen_name):
     return frame_holes.cutout_names(screen_name)
 
 
+#: Boxes that carry the column prefix by their name alone and are free
+#: content boxes all the same, as `{screen: {box}}`. The colony screen's
+#: building list (`col_buildings`, work order 341) is named after the
+#: screen's `col_*` panels but is no list column: its rect is its own on
+#: both axes, which is what a player resizes it for. Declared here, as the
+#: prefix rule is, because `core` may not import a screen; a smoke check
+#: holds the name to the screen's box file.
+FREE_NAMES = {"colony": {"col_buildings"}}
+
+
 def classify(screen_name, box_name):
     """FREE, BOUND or LOCKED for one box on one screen."""
     if box_name in _cutout_names(screen_name):
         return LOCKED
+    if box_name in FREE_NAMES.get(screen_name, ()):
+        return FREE
     if box_name.startswith(COLUMN_PREFIX):
         return BOUND
     return FREE

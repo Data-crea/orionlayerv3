@@ -59,6 +59,8 @@ of a live colony only through the offline transcription of the engine's
 placement (work order 326's check); a live engine's CBLD block was not
 read for this.
 """
+import json
+
 import pygame
 
 from core import nativedraw as nd
@@ -316,31 +318,103 @@ def panel_rect(screen):
     return coldraw.scene_rect(screen)
 
 
+#: HD EXTENSION `building_list_box` (work order 341): the building list is a
+#: box of the screen's own, `col_buildings`, so the F3 editor moves and
+#: resizes it and a mod's or the player's saved rect applies. Its default,
+#: in reference pixels (1920x1080), is the surface panel's inner top-left
+#: corner (28, 417: the panel's (20, 409) plus the shell's inset of 8), as wide as the longest of the 48 building names needs at the list's
+#: full font plus the row's padding in either language (the German
+#: "Verschmutzungsprozessor", 220 px at 1080p, 255 px with its padding,
+#: measured at 1080p, 1440p and 2160p by check 090pl) — the old margin the
+#: centred city leaves was 292 px — and as tall as the panel's inner height
+#: less the units' strip (635 - 71 = 564 at 1080p), so the rows are
+#: squeezed exactly as before. It stands in `boxes.json`; the entry here is
+#: the same box for a file that lacks it (a mod written before this box
+#: existed replaces the whole file), and check 090pl holds the two equal.
+LIST_BOX = "col_buildings"
+LIST_ENTRY = {"name": LIST_BOX, "rect": [28, 417, 180, 564],
+              "anchor_v": "top"}
+
+
+def seat_default(screen):
+    """Give the screen its `col_buildings` when the file it loaded has
+    none. A mod's boxes.json replaces the base file whole, so one saved
+    before work order 341 (or a hand-written one) names five boxes only."""
+    from core.box import Box
+    if not any(b.name == LIST_BOX for b in screen.boxes):
+        screen.boxes.append(Box(json.loads(json.dumps(LIST_ENTRY))))
+
+
 def list_geometry(screen, n, placement):
     """DEVIATION `building_list`, ONE geometry for its drawing and its
     clicks (`coldraw._buildings`, `colright.row_at`): (box, [row rects]) in
     window pixels, recomputed from the layout each time (P809).
 
     Without sprites (`placement` None) the original's own native rows
-    (`colgeom.building_row`). With them the list stands in the panel's
-    left margin — the space the centred city leaves — from the panel's
-    top, its rows squeezed to the panel's height when 37 of them would run
-    past it, so it neither covers the city nor leaves the panel; its
-    function (the right click's description, the demolish) is the same."""
+    (`colgeom.building_row`). With them the list stands in the box
+    `col_buildings` (HD EXTENSION `building_list_box`): the rows from its
+    top, each as tall as the original's row or, when `n` of them would run
+    past the box's foot (37 of them can), squeezed to it. The returned box
+    is the panel round the rows, never larger than the box; a box too small
+    for a row at all (below one pixel a row) lists the rows that fit and no
+    more, so nothing is drawn or hit outside it."""
     layout = screen.layout
-    r = panel_rect(screen) if placement is not None else None
-    if r is not None:
-        k, dest = block_rect(r)
-        margin = dest.x - r.x
+    box = screen.box_screen_rect(LIST_BOX) if placement is not None else None
+    if box is not None and n > 0:
         pad = max(2, nd.rect(layout, (0, 0, 2, 0)).w)
-        if margin >= 40 * pad // 4 and n > 0:
-            nat = nd.rect(layout, geom.building_row(0)).h
-            # above the units' strip, which stands at the panel's foot
-            foot = nd.rect(layout, geom.UNITS).h
-            pitch = max(1, min(nat, (r.h - 2 * pad - foot) // n))
-            x0, w = r.x + pad, margin - 2 * pad
-            rows = [pygame.Rect(x0, r.y + pad + i * pitch, w, pitch)
-                    for i in range(n)]
-            return pygame.Rect(r.x, r.y, margin, n * pitch + 2 * pad), rows
+        nat = nd.rect(layout, geom.building_row(0)).h
+        room = box.h - 2 * pad
+        if box.w > 2 * pad and room > 0:
+            pitch = max(1, min(nat, room // n))
+            shown = min(n, room // pitch)
+            x0, w = box.x + pad, box.w - 2 * pad
+            rows = [pygame.Rect(x0, box.y + pad + i * pitch, w, pitch)
+                    for i in range(shown)]
+            return pygame.Rect(box.x, box.y, box.w,
+                               shown * pitch + 2 * pad), rows
+        return box, []
     rows = [nd.rect(layout, geom.building_row(i)) for i in range(n)]
     return nd.rect(layout, geom.building_box(n)), rows
+
+
+def row_size(layout, row):
+    """The font of a row: the panel's small size, less when the row is
+    squeezed (a row as tall as the panel makes it: the words fit it)."""
+    from . import coldraw
+    return min(max(nd.MIN_FONT, int(row.h * 0.9)),
+               coldraw.font(layout, "small"))
+
+
+def label(style, text, size, max_w, colour):
+    """The row's words as one surface at most `max_w` wide: the largest
+    size at or below `size` that fits (`nd.fit`), and when even the
+    smallest font is too wide the end cut off and replaced by dots —
+    HD EXTENSION `building_list_box`, since a box the player narrows must
+    not let a name spill out of it."""
+    size = nd.fit(style, text, max(1, max_w), size)
+    surf = style.render_text(text, size, colour)
+    if surf.get_width() <= max_w:
+        return surf
+    cut = text
+    while len(cut) > 1:
+        cut = cut[:-1]
+        surf = style.render_text(cut.rstrip() + "...", size, colour)
+        if surf.get_width() <= max_w:
+            return surf
+    return surf
+
+
+def draw_list(surface, screen, names, rows, colour):
+    """The names, one per row, each clipped to its row (a squeezed row is
+    shorter than a font of the smallest size, which would run into the
+    next one). `names` are the words, in the rows' order."""
+    dx = max(2, nd.rect(screen.layout, (0, 0, geom.BUILDING_TEXT_DX, 0)).w)
+    prev = surface.get_clip()
+    for words, row in zip(names, rows):
+        if row.w <= dx:
+            continue
+        surf = label(screen.style, words, row_size(screen.layout, row),
+                     row.w - dx, colour)
+        surface.set_clip(row.clip(prev))
+        surface.blit(surf, (row.x + dx, row.y))
+    surface.set_clip(prev)

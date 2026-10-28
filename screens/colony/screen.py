@@ -103,8 +103,9 @@ from screens.colony_summary import (colonylist, colonymove, colonypick,
                                     colonysend)
 from core import nativedraw as nd
 
-from . import (colplanettip, coldemolish, coldraw, colgeom as geom, colright, colsettle,
-               coltransfer, colwire, colwords)
+from . import (colbuildings, colplanettip, coldemolish, coldraw,
+               colgeom as geom, colright, colsettle, coltransfer, colwire,
+               colwords)
 
 log = logging.getLogger("colony")
 
@@ -347,6 +348,12 @@ class ColonyScreen(ScreenBase):
             coltransfer.render(self, surface, lambda: self.carry.draw(
                 surface, mouse_input.pos(), self._draw_hand))
         self.render_help(surface)
+
+    def _reload_boxes(self):
+        """The file's boxes, and the building list's own when the file (a
+        mod's, which replaces the base file whole) does not name it."""
+        super()._reload_boxes()
+        colbuildings.seat_default(self)
 
     def _draw_hand(self, surface, hand, pointer):
         """The colonists in hand at the pointer: `Draw_Cluster_`'s +5 / -10

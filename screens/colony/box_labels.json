@@ -18,5 +18,9 @@
   "col_surface": {
     "title": "Surface Panel",
     "about": "Large lower window with the planet surface, the building list, units, officer and the LEADERS and RETURN buttons."
+  },
+  "col_buildings": {
+    "title": "Building List",
+    "about": "The building names beside the city: right click describes, click demolishes. A smaller box squeezes the rows."
   }
 }

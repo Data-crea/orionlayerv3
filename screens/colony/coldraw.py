@@ -624,9 +624,10 @@ def _buildings(surface, screen, view, state, names):
     original's sprites on the ground and its satellites in the sky, from
     open fix 36's grid; and DEVIATION `building_list`: the buildings as a
     list of names, which is how HD asks for a building's description and its
-    demolish (`colright`, `coldemolish`) — in the panel's left margin beside
-    the city when the sprites are drawn, the original's rows when they are
-    not (no extracted pictures).
+    demolish (`colright`, `coldemolish`) — in the box `col_buildings`, by
+    default the panel's left margin beside the city (HD EXTENSION
+    `building_list_box`, the F3 editor's), when the sprites are drawn, the
+    original's rows when they are not (no extracted pictures).
 
     UNVERIFIED `building_placement`: the grid's occupied cells are verified
     against the live fields (`colgeom.building_field`, check 090p); that a
@@ -642,15 +643,11 @@ def _buildings(surface, screen, view, state, names):
     if not ids:
         return
     box, rows = colbuildings.list_geometry(screen, len(ids), placement)
+    if not rows:      # a box too small for one row draws no empty frame
+        return
     hud.panel(surface, box, screen.layout.scale)
-    dx = max(2, nd.rect(screen.layout, (0, 0, geom.BUILDING_TEXT_DX, 0)).w)
-    for bid, row in zip(ids, rows):
-        # a row as tall as the panel makes it: the words fit it
-        nd.blit_text(surface, screen.style, names.building(bid),
-                     row.x + dx, row.y, row.w - dx,
-                     min(max(nd.MIN_FONT, int(row.h * 0.9)),
-                         font(screen.layout, "small")),
-                     hudtext.colour("label"))
+    colbuildings.draw_list(surface, screen, [names.building(b) for b in ids],
+                           rows, hudtext.colour("label"))
 
 
 #: `Military_Anim_` (colony.cpp:1308-1328): marines (0) are figure 1, or 2
