@@ -48,6 +48,7 @@ from core import nativeview as nat
 
 from . import infobox, infodraw, infogeom as geom, infopages as pages
 from . import infotexts, infoview
+from .infosearch import SearchField
 from .infotexts import PAGES
 
 log = logging.getLogger("info")
@@ -87,6 +88,10 @@ class InfoScreen(ScreenBase):
         self.page, self.tech_tab, self.race_page = REFERENCE, 0, 0
         self.ref_mode, self.ref_ix, self.topic = "index", 0, None
         self.tech_app = None
+        # HD EXTENSION `tech_review_groups` / `tech_review_search`: the groups
+        # the player folded, and the search row above the list.
+        self.tech_closed = set()
+        self.search = SearchField(max_len=24)
         self.hist_bits = 0xF
         self._scroll, self._boxes, self._hits, self._drawn = {}, {}, {}, []
         self._info = None
@@ -120,6 +125,7 @@ class InfoScreen(ScreenBase):
                        self._info, TechNames(lang))
         self._waited, self._scroll = 0, {}
         self.ref_mode, self.topic, self.tech_app = "index", None, None
+        self.search.value, self.search.focused = "", False
         self._entered = False
         self.update(game_state)
 
@@ -244,11 +250,15 @@ class InfoScreen(ScreenBase):
                 return None
         hit = self._hit(screen_x, screen_y)
         if self.page == TECH:
+            if self.search.handle_click(screen_x, screen_y):
+                return None
             for k in range(4):
                 if self._in(p, geom.tech_tab_rect(k)):
                     self.tech_tab, self.tech_app = k, None
                     return None
-            if hit is not None:
+            if isinstance(hit, tuple) and hit[0] == "group":
+                self.tech_closed ^= {hit[1]}
+            elif hit is not None:
                 self.tech_app = hit
         elif self.page == HISTORY:
             for k in range(4):
@@ -289,6 +299,16 @@ class InfoScreen(ScreenBase):
         if infobox.scroll(self, (mx, my), direction):
             return True
         return super().handle_mousewheel(direction, mx, my)
+
+    def handle_key_event(self, event):
+        """The search row takes the keys while it has the focus (a click
+        into it); ESC or Enter then leaves it, a second ESC leaves the
+        screen."""
+        if self.page == TECH and self.search.focused and \
+                not self.help_consumes_key(event.key):
+            self.search.handle_key_event(event)
+            return
+        super().handle_key_event(event)
 
     def handle_key(self, key):
         if self.help_consumes_key(key):

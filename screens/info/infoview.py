@@ -3,10 +3,12 @@ the surface and the local player's record (`screen.py` routes by page).
 Every text by its key through `core/modtexts`; see `screen.py` for what
 each page may send (nothing but RETURN) and `infotexts` for the keys.
 """
+import pygame
+
 from core import lang
 from core import modtexts
 
-from . import infodraw, infogeom as geom, infopages as pages
+from . import infodraw, infofacts, infogeom as geom, infopages as pages
 
 T = modtexts.text
 
@@ -50,18 +52,66 @@ def history(screen, surface, me):
     infodraw.draw_graph(surface, screen, graph, order, state.stardate)
 
 
+def _facts(me, app):
+    """The facts block's lines for the chosen application ("" for none or
+    for one without a research field)."""
+    got = infofacts.facts(app) if app is not None else None
+    if got is None:
+        return ""
+    field, cost, group, level, rungs, previous = got
+    hyper = field >= 75
+
+    def fill(key, **kw):
+        text = T(key, "") or ""
+        for name, value in kw.items():
+            text = text.replace("{" + name + "}", str(value))
+        return text
+
+    lines = [fill("info.tech.facts.cost_hyper" if hyper
+                  else "info.tech.facts.cost", n=cost),
+             fill("info.tech.facts.area",
+                  name=T(f"info.tech.branch.{group}.name", "") or f"#{group}"),
+             fill("info.tech.facts.level", n=level, m=rungs),
+             fill("info.tech.facts.requires",
+                  name=T(f"info.tech.field.{previous}.name", "")
+                  or f"#{previous}") if previous
+             else fill("info.tech.facts.requires_none")]
+    names = [T(f"info.tech.app.{a}.name", "") or f"#{a}"
+             for a in infofacts.same_field(
+                 app, {i for i, st in enumerate(me.tech_applications)
+                       if st == pages.RESEARCHED})]
+    if names:
+        lines.append(fill("info.tech.facts.same", names=", ".join(names)))
+    return "\n".join(lines)
+
+
 def tech(screen, surface, me):
     groups = pages.tech_review(me, screen.tech_tab)
+    totals = pages.tech_totals(screen.tech_tab)
+    query = screen.search.value.strip().lower()
     items = []
     for gid, apps in groups:
-        items.append((T(f"info.tech.group.{gid}", "") or "", None, True))
-        items += [(T(f"info.tech.app.{a}.name", "") or f"#{a}", a, False)
-                  for a in apps]
+        names = [(T(f"info.tech.app.{a}.name", "") or f"#{a}", a)
+                 for a in apps]
+        if query:
+            names = [n for n in names if query in n[0].lower()]
+            if not names:
+                continue
+        # a search shows what it finds, folded or not
+        opened = bool(query) or gid not in screen.tech_closed
+        items.append((T(f"info.tech.group.{gid}", "") or "", ("group", gid),
+                      True, f"{len(apps)} / {totals.get(gid, len(apps))}",
+                      opened))
+        if opened:
+            items += [(n, a, False) for n, a in names]
     if not items:
         items = [(T("info.tech.none", ""), None, True)]
     if screen.tech_app is None:
-        screen.tech_app = next((p for _t, p, h in items if p is not None),
-                             None)
+        screen.tech_app = next((i[1] for i in items
+                                if isinstance(i[1], int)), None)
+    screen.search.placeholder = T("info.tech.search", "")
+    screen.search.render(surface, screen,
+                         infodraw.R(screen, geom.TECH_SEARCH))
     infodraw.rows(surface, screen, "tech.list", geom.TECH_LIST, items,
                   screen.tech_app)
     title, body = pages.record(screen.tech_app) if screen.tech_app is not None \
@@ -76,10 +126,36 @@ def tech(screen, surface, me):
     # extracted by the player (`infoart`); none drawn while it is absent.
     art = getattr(screen, "_art", None)
     pic = art.picture(screen.tech_app) if art is not None else None
+    field = infodraw.R(screen, geom.TECH_PICTURE)
+    inside = field.inflate(-6, -6)
+    back = art.background_covering(inside.size) if art is not None else None
+    if back is not None and pic is not None:
+        # HD EXTENSION `tech_picture_background`: covers the field, cut to
+        # its inside (the field's outline stays).
+        keep = surface.get_clip()
+        surface.set_clip(inside)
+        surface.blit(back, back.get_rect(center=inside.center))
+        surface.set_clip(keep)
     if pic is not None:
-        big = infodraw.nd.magnified(pic, screen.layout)
-        surface.blit(big, big.get_rect(center=infodraw.R(
-            screen, geom.TECH_PICTURE).center))
+        nat_w = geom.TECH_PICTURE[2] - geom.TECH_PICTURE[0]
+        nat_h = geom.TECH_PICTURE[3] - geom.TECH_PICTURE[1]
+        if pic.get_width() > nat_w or pic.get_height() > nat_h:
+            # HD EXTENSION `tech_picture_fit`: a picture painted larger than
+            # the original's field is fitted whole, never stretched, into it
+            # (the integer step would overrun the field).
+            k = 0.94 * min(field.w / pic.get_width(),
+                           field.h / pic.get_height())
+            big = pygame.transform.smoothscale(
+                pic, (max(1, round(pic.get_width() * k)),
+                      max(1, round(pic.get_height() * k))))
+        else:
+            big = infodraw.nd.magnified(pic, screen.layout)
+        surface.blit(big, big.get_rect(center=field.center))
+    # HD EXTENSION `tech_review_facts`: the application's research field —
+    # its cost, category, place on the category's ladder, the field before
+    # it and the other applications of the field you have (`infofacts`).
+    infodraw.text(surface, screen, "tech.facts", geom.TECH_FACTS,
+                  _facts(me, screen.tech_app))
     infodraw.text(surface, screen, f"tech.body.{screen.tech_app}",
                   geom.TECH_BODY, body)
     for k, key in enumerate(pages.TECH_TABS):

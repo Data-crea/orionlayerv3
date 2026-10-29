@@ -42,10 +42,17 @@ HISTORY_GRAPH = (220, 132, 609, 413)
 HISTORY_BUTTON_X = (233, 323, 404, 457)      # `_graph_button_x`, y 427
 HISTORY_BUTTON_Y, HISTORY_BUTTON_SIZE = 427, ((86, 19), (77, 19), (49, 19),
                                               (41, 19))
-TECH_LIST = (218, 60, 425, 413)
+#: The Tech Review's search row stands on top of the list (HD EXTENSION
+#: `tech_review_search`): the original's list box, 60..413, gives it its
+#: first 24 rows of pixels.
+TECH_SEARCH = (218, 60, 425, 81)
+TECH_LIST = (218, 85, 425, 413)
 TECH_NAME = (433, 60, 612, 104)
 TECH_PICTURE = (433, 114, 612, 254)
-TECH_BODY = (433, 264, 612, 413)
+#: The facts block (HD EXTENSION `tech_review_facts`) takes the body box's
+#: first 64 rows of pixels; the description keeps the rest.
+TECH_FACTS = (433, 264, 612, 327)
+TECH_BODY = (433, 331, 612, 413)
 TECH_TAB_AT = ((216, 427), (318, 427), (373, 427), (438, 427))  # `_tech_rev_field`
 TECH_TAB_SIZE = ((102, 18), (55, 18), (65, 18), (77, 18))       # INFO.LBX 16-19
 RACE_PANELS = ((223, 60, 410, 230), (419, 60, 606, 230),

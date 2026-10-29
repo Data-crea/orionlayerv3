@@ -17,6 +17,7 @@ had a resolver of its own without it, the redundancy audit's N3).
 """
 import json
 import logging
+import os
 
 import pygame
 
@@ -62,6 +63,37 @@ class InfoArt:
     @property
     def available(self):
         return self._palette is not None
+
+    def background(self):
+        """HD EXTENSION `tech_picture_background`: a PNG the player put at
+        `tech_background.png` beside the pictures is drawn behind every
+        application's picture, covering its field; None when there is none
+        (OrionLayer ships none)."""
+        if "background" not in self._cache:
+            surface = None
+            path = self._src.path("tech_background.png")
+            if path and os.path.isfile(path):
+                try:
+                    surface = pygame.image.load(path)
+                    if pygame.display.get_surface():
+                        surface = surface.convert()
+                except (pygame.error, OSError):
+                    surface = None
+            self._cache["background"] = surface
+        return self._cache["background"]
+
+    def background_covering(self, size):
+        """The background scaled to cover `size`, once per size."""
+        back = self.background()
+        if back is None:
+            return None
+        key = ("cover", tuple(size))
+        if key not in self._cache:
+            k = max(size[0] / back.get_width(), size[1] / back.get_height())
+            self._cache[key] = pygame.transform.smoothscale(
+                back, (round(back.get_width() * k),
+                       round(back.get_height() * k)))
+        return self._cache[key]
 
     def picture(self, app_id):
         """Application `app_id`'s picture as a surface, or None."""

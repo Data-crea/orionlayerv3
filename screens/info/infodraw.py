@@ -150,16 +150,28 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
     y = inner.y - offset
     previous = surface.get_clip()
     surface.set_clip(inner)
-    for text, payload, header in items:
+    for item in items:
+        text, payload, header = item[:3]
+        # HD EXTENSION `tech_review_groups`: a group row may carry a count
+        # on its right and a fold mark (`opened` True / False) on its left.
+        count = item[3] if len(item) > 3 else None
+        opened = item[4] if len(item) > 4 else None
         r = pygame.Rect(inner.x, y, inner.w, step)
         if inner.contains(r):
             colour = HIGH if header or payload in (selected, lit) else NORMAL
             if payload is not None and payload == selected:
                 # The chosen entry is 'on' (work order 223, proposal C).
                 hud.field(surface, r, screen.layout.scale, on=True)
-            infobox.line(surface, screen, text,
-                         r.inflate(-4, 0) if header else r.inflate(-16, 0)
-                         .move(8, 0), px(screen, "skill"), colour)
+            if header and opened is not None:
+                text = ("v  " if opened else ">  ") + text
+            line = r.inflate(-4, 0) if header else r.inflate(-16, 0) \
+                .move(8, 0)
+            if count:
+                infobox.line(surface, screen, count, line,
+                             px(screen, "skill"), colour, "right")
+                line.w -= px(screen, "skill") * 4
+            infobox.line(surface, screen, text, line, px(screen, "skill"),
+                         colour)
             if payload is not None:
                 hits.append((r, payload))
         y += step

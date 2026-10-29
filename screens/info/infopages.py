@@ -124,6 +124,21 @@ def tech_review(player, tab):
     return out
 
 
+def tech_totals(tab):
+    """`{group id: how many applications the tab lists in it}` — the same
+    tables as `tech_review`, researched or not (info.cpp:35-70)."""
+    out, group = {}, None
+    for ident, flags in REVIEW[tab]:
+        if flags & 8:
+            break
+        if flags & 4:
+            group = ident
+            out[group] = 0
+        elif group is not None:
+            out[group] += 1
+    return out
+
+
 # ── Race Statistics (info.cpp:338-404) ─────────────────────
 
 TRAIT_GOVERNMENT, TRAIT_FOOD, TRAIT_TAX = 0, 2, 5

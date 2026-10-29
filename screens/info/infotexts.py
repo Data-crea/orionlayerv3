@@ -132,6 +132,14 @@ TEXTS.update({
     "info.tech.tab.weapons": ("Weapons", "own"),
     "info.tech.tab.equipment": ("Equipment", "own"),
     "info.tech.none": ("Nothing researched in this group yet.", "own"),
+    "info.tech.search": ("Search technologies ...", "own"),
+    "info.tech.facts.cost": ("Research cost: {n} RP", "own"),
+    "info.tech.facts.cost_hyper": ("Research cost: from {n} RP", "own"),
+    "info.tech.facts.area": ("Research area: {name}", "own"),
+    "info.tech.facts.level": ("Level: {n} of {m}", "own"),
+    "info.tech.facts.requires": ("Requires: {name}", "own"),
+    "info.tech.facts.requires_none": ("Requires: nothing", "own"),
+    "info.tech.facts.same": ("Same field: {names}", "own"),
     "info.missing": (
         "The game's own words for this page are not extracted on this "
         "computer. Run: python tools/billtext_extract.py, "
@@ -155,6 +163,30 @@ for _i in range(26):
     TEXTS[f"info.tech.group.{_i}"] = (_group(_i), "moo2")
 for _i in range(212):
     TEXTS[f"info.tech.app.{_i}.name"] = (_app(_i), "moo2")
+# The research fields' names (TECHNAME.LBX 1-74; the hyper-advanced fields
+# 75-82 are named by E_Strings 0x284, tech.cpp:1086-1099) and the eight
+# categories' names (BILLTEX2 64 + group), for the facts block.
+def _field_name(i):
+    def get():
+        if i >= 75:
+            e = _ok("estrings")
+            return e.string(0x284) if e is not None else None
+        t = _ok("tech")
+        return t.field_name(i) if t is not None else None
+    return get
+
+
+def _branch(i):
+    def get():
+        b = _ok("billtext")
+        return b.group_name(i) if b is not None else None
+    return get
+
+
+for _i in range(1, 83):
+    TEXTS[f"info.tech.field.{_i}.name"] = (_field_name(_i), "moo2")
+for _i in range(1, 9):
+    TEXTS[f"info.tech.branch.{_i}.name"] = (_branch(_i), "moo2")
 # HELP.LBX: every record the Info screen reads (0-211 the applications'
 # descriptions, 212-227 the "How to?" pages, up to 240 the topic lists'
 # ids), and every topic-list entry by its record id.
