@@ -143,4 +143,16 @@ def discover_screens(resources):
 def register_all(app, dispatcher, resources):
     """Discover and register all screens on the dispatcher."""
     for name, cls in discover_screens(resources).items():
-        dispatcher.register(name, cls(app))
+        try:
+            screen = cls(app)
+        except Exception:
+            # A MOD's screen whose constructor raises must not end the
+            # start for the player (audit TD-10); the base screen of the
+            # same name is gone too, so say which one. A BASE screen that
+            # cannot be built stays loud: that is the project's own fault.
+            if not cls.__module__.startswith("screens_mod_"):
+                raise
+            log.exception("Mod screen '%s' could not be built — skipped",
+                          name)
+            continue
+        dispatcher.register(name, screen)

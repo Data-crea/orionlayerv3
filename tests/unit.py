@@ -16,10 +16,13 @@ import socket
 import struct
 import sys
 import tempfile
+import threading
+import time
+import zlib
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core import lbx  # noqa: E402
+from core import imagecap, lbx  # noqa: E402
 from core.blockreader import BlockError, Reader  # noqa: E402
 from core.game_client import GameClient  # noqa: E402
 from core.structs import Spec, layout  # noqa: E402
@@ -191,6 +194,68 @@ def test_lbx_header_with_too_many_entries_is_an_lbx_error():
             except lbx.LbxError:
                 continue
             raise AssertionError("an oversized LBX header was read")
+
+
+def test_a_send_waits_for_a_full_buffer_instead_of_losing_the_connection():
+    a, b = pair()
+    c = client_on(b)
+    b.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 4096)
+    a.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 4096)
+    while True:                    # fill what the engine has not read yet
+        try:
+            b.send(b"\0" * 4096)
+        except BlockingIOError:
+            break
+    drained = []
+
+    def engine_reads():
+        time.sleep(0.3)
+        a.settimeout(1.0)
+        try:
+            while True:
+                drained.append(len(a.recv(65536)))
+        except OSError:
+            pass
+    t = threading.Thread(target=engine_reads, daemon=True)
+    t.start()
+    c._send_message(MSG_HELLO_REPLY, b"\x01\x00\x00\x00")
+    t.join(3)
+    assert not c.lost_reasons, c.lost_reasons
+    assert b.gettimeout() == 0.0, "the socket was left blocking"
+
+
+def _png(width, height):
+    """The smallest PNG whose header says width x height (never decoded)."""
+    def chunk(tag, data):
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data)))
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 0,
+                                         0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(b"")) + chunk(b"IEND", b""))
+
+
+def test_a_mod_picture_is_judged_by_its_header_before_it_is_decoded():
+    with tempfile.TemporaryDirectory() as d:
+        small, huge, junk = (os.path.join(d, n) for n in
+                             ("small.png", "huge.png", "junk.png"))
+        with open(small, "wb") as f:
+            f.write(_png(64, 48))
+        with open(huge, "wb") as f:
+            f.write(_png(30000, 30000))
+        with open(junk, "wb") as f:
+            f.write(b"not a picture")
+        try:
+            size = imagecap.header_size(small)
+        except ImportError:
+            return                        # no Pillow: the check is skipped
+        assert size in ((64, 48), None), size
+        for bad in (huge, junk, os.path.join(d, "missing.png")):
+            try:
+                imagecap.header_size(bad)
+            except ValueError:
+                continue
+            raise AssertionError(f"{os.path.basename(bad)} was accepted")
 
 
 def main():

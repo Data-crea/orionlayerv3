@@ -613,6 +613,8 @@ def _ship_cut(key):
     from core import shipcut
     name = os.path.relpath(master, _state["root"]).replace(os.sep, "/")
     try:
+        from core import imagecap
+        imagecap.header_size(master)
         with open(master, "rb") as handle:
             digest = hashlib.sha1(handle.read()).hexdigest()[:16]
         folder = os.path.join(os.path.dirname(_state["root"]), CACHE, FOLDER,
@@ -642,6 +644,8 @@ def _checked_image(key, src, default_path):
     import pygame
     name = os.path.relpath(src, _state["root"]).replace(os.sep, "/")
     try:
+        from core import imagecap
+        imagecap.header_size(src)
         img = pygame.image.load(src)
         if img.get_width() < 1 or img.get_height() < 1:
             raise ValueError("empty picture")

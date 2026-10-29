@@ -61,6 +61,8 @@ def layout_hash(res, screen):
 def painted_for(path):
     """The layout hash a frame PNG carries in its text chunk, or None."""
     try:
+        from core import imagecap
+        imagecap.header_size(path)
         from PIL import Image
         with Image.open(path) as img:
             return (img.text or {}).get(CHUNK) if hasattr(img, "text") \
@@ -105,8 +107,10 @@ def frame_for(res, screen, win_w, win_h):
         return _refuse(screen, f"painted for layout {have}, the screen's is "
                                f"{want} — repaint over a new template")
     try:
+        from core import imagecap
+        imagecap.header_size(path)
         img = pygame.image.load(path)
-    except (pygame.error, OSError) as err:
+    except (pygame.error, OSError, ValueError) as err:
         return _refuse(screen, f"cannot be read ({err})")
     if img.get_size() != SIZE:
         return _refuse(screen, f"{img.get_width()}x{img.get_height()}, "

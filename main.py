@@ -262,6 +262,22 @@ class App:
             getattr(screen, "FULL_RATE", False))
 
     def _handle_events(self):
+        """One frame's events. An exception in a handler used to throw away
+        the rest of the frame's events — a QUIT, a mouse release (the press
+        stayed held), a key-up; they are put back in the queue, so the next
+        frame reads them (audit TD-06). The event that raised is not."""
+        pending = []
+        try:
+            self._drain_events(pending)
+        except BaseException:
+            for event in pending:
+                try:
+                    pygame.event.post(event)
+                except pygame.error:
+                    pass
+            raise
+
+    def _drain_events(self, pending):
         # BEFORE the queue is drained, so anything posted here is in
         # this frame's events and not the next one's. It posts and
         # stops: from here on a debug click IS a click (decision 5).
@@ -270,7 +286,9 @@ class App:
         # a hold or F12 under a held right button spoils its press, even
         # when it is gone again by the release (work order 299)
         self._right_gate.watch(self._pointer_open())
-        for event in coalesce_motion(pygame.event.get()):
+        pending[:] = coalesce_motion(pygame.event.get())
+        while pending:
+            event = pending.pop(0)
             self._input_at = time.monotonic()
             # Adjust mouse positions for fullscreen offset
             if self._fs_offset and hasattr(event, 'pos'):

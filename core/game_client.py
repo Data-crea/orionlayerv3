@@ -78,6 +78,8 @@ KEEPALIVE = (10, 5, 3)
 #: a retry must not hold the window (`core/enginelink.py` paces them).
 CONNECT_TIMEOUT = 5.0
 RETRY_TIMEOUT = 0.5
+#: How long a send waits for the engine to take what it already holds.
+SEND_TIMEOUT = 2.0
 
 
 #: How long a tool waits for the first STATE_SNAPSHOT before giving
@@ -652,8 +654,20 @@ class GameClient:
         """Send a framed message."""
         if not self.connected or not self.sock:
             return
+        # The socket is non-blocking for the reads. `sendall` on it raises
+        # BlockingIOError when the engine's receive buffer is full, after
+        # part of the frame may be out: a retry cannot resume, and dropping
+        # the connection for it is the busy-engine reconnect decision 62's
+        # STALE_TIMEOUT forbids. So the send waits, up to SEND_TIMEOUT, for
+        # the buffer to drain; only a send that still fails is a loss
+        # (audit TD-08).
         try:
-            self.sock.sendall(self._frame(msg_type, payload))
+            self.sock.settimeout(SEND_TIMEOUT)
+            try:
+                self.sock.sendall(self._frame(msg_type, payload))
+            finally:
+                if self.sock is not None:
+                    self.sock.setblocking(False)
         except (BrokenPipeError, OSError) as e:
             self._lost(f"Send failed: {e}")
 
