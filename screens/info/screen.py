@@ -247,6 +247,7 @@ class InfoScreen(ScreenBase):
         for k in range(len(PAGES)):
             if self._in(p, geom.tab_rect(k)):
                 self.page = k
+                self.search.focused = False     # not still typing on return
                 return None
         hit = self._hit(screen_x, screen_y)
         if self.page == TECH:
