@@ -342,6 +342,21 @@ def read_boxes(path, win_w=1920, win_h=1080):
     return []
 
 
+def _write_atomic(path, text):
+    """Write `text` to `path` through a temp file and `os.replace`."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
 def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080, seed_dir=None):
     """Save boxes for the current resolution into boxes.json.
 
@@ -359,8 +374,7 @@ def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080, seed_dir=None):
         if os.path.exists(seed):
             os.makedirs(screen_dir, exist_ok=True)
             with open(seed, encoding="utf-8") as src:
-                with open(path, "w", encoding="utf-8") as dst:
-                    dst.write(src.read())
+                _write_atomic(path, src.read())
 
     # Load existing data to preserve other resolutions
     res_dict = {}
@@ -379,17 +393,19 @@ def save_boxes(screen_dir, boxes, win_w=1920, win_h=1080, seed_dir=None):
     # Write current resolution
     res_dict[key] = [b.to_dict() for b in boxes]
 
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(res_dict, f, indent=2)
-        # THE TREE'S JSON CONVENTION ENDS A FILE WITH A NEWLINE, and
-        # this writer dropped it — so every F3 save left boxes.json
-        # one byte short of it and the next hand edit showed up in the
-        # diff as "\ No newline at end of file" beside the real
-        # change. `tools/frame_holes.py` already worked round it on
-        # its own side and its comment named this line. Fixed at the
-        # source, 20 September 2026, and held by a smoke check over
-        # every tracked .json.
-        f.write("\n")
+    # Written whole to a neighbour and swapped in: a full disk or a kill
+    # mid-write used to leave boxes.json cut off, and a cut-off file is
+    # moved aside as damaged — the player lost every stored resolution.
+    # Audit TD-03.
+    # THE TREE'S JSON CONVENTION ENDS A FILE WITH A NEWLINE, and
+    # this writer dropped it — so every F3 save left boxes.json
+    # one byte short of it and the next hand edit showed up in the
+    # diff as "\ No newline at end of file" beside the real
+    # change. `tools/frame_holes.py` already worked round it on
+    # its own side and its comment named this line. Fixed at the
+    # source, 20 September 2026, and held by a smoke check over
+    # every tracked .json.
+    _write_atomic(path, json.dumps(res_dict, indent=2) + "\n")
 
 
 def get_stored_resolutions(screen_dir):

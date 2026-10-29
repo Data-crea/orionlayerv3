@@ -62,6 +62,10 @@ def read_entries(path):
         raise LbxError(f"Bad LBX magic 0x{magic:04X} (expected 0xFEAD).")
     offsets = struct.unpack_from(f"<{LBX_OFFSET_COUNT}I", data, 8)
     entries = []
+    # the table holds LBX_OFFSET_COUNT offsets, so at most one fewer entry
+    # can be read; a corrupt count raised IndexError, not LbxError (audit TD-12)
+    if entry_count >= LBX_OFFSET_COUNT:
+        raise LbxError(f"Entry count {entry_count} exceeds the offset table.")
     for i in range(entry_count):
         start, end = offsets[i], offsets[i + 1]
         if end < start or end > len(data):
@@ -84,7 +88,7 @@ def read_entry(path, index):
     entry_count, magic, _ = struct.unpack_from("<HHI", data, 0)
     if magic != LBX_MAGIC:
         raise LbxError(f"Not an LBX file (magic 0x{magic:04X}).")
-    if not 0 <= index < entry_count:
+    if not 0 <= index < min(entry_count, LBX_OFFSET_COUNT - 1):
         raise LbxError(f"Entry {index} is outside the file's {entry_count}.")
     offsets = struct.unpack_from(f"<{LBX_OFFSET_COUNT}I", data, 8)
     start, end = offsets[index], offsets[index + 1]

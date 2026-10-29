@@ -390,50 +390,63 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
                             cwd=paths.game_dir(), env=env,
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
-    deadline = time.time() + timeout
-    intro_named = False
-    skips = 0
-    # Found by NAME (`running_engines`): a binary not called `orion2re` is
-    # never found, the wait below never runs, and the TIMEOUT line must
-    # still be printable (work order 194 met it with a renamed copy).
-    text = ""
-    pid = _engine_pid(proc.pid, deadline)
-    while time.time() < deadline:
-        with open(log_path, encoding="utf-8", errors="replace") as f:
-            text = f.read()
-        if not intro and pid and HANG_LINE in text:
-            skips = intro_skip.step(pid, text, env, skips, out)
-        if READY in text:
-            out(f"READY: orion2re PID {pid} (launcher {proc.pid}), log {log_path}")
-            return pid
-        if proc.poll() is not None:
-            out(f"EXITED with {proc.returncode} before {READY!r}")
-            return None
-        if pid and time.time() - (deadline - timeout) > 10:
-            last = (text.strip().splitlines() or [""])[-1]
-            if last == HANG_LINE and (intro or skips == 0 or
-                                      time.time() - (deadline - timeout) > 20):
-                samples = []
-                for _ in range(6):
-                    samples.append(thread_waits(pid))
-                    time.sleep(0.5)
-                if is_hang(last, samples):
-                    out(f"HANG: PID {pid} waits in its first present "
-                        f"(open fix 31); stopping it (ours)")
-                    os.kill(pid, 15)
-                    time.sleep(2)
-                    return "hang"
-                if not intro_named:
-                    out(f"INTRO: the original's logos and intro are playing "
-                        f"(about {INTRO_SECONDS:.0f} s; not a hang) — waiting")
-                    intro_named = True
-        time.sleep(0.5)
-    last = text.strip().splitlines()[-1:] or ["<empty log>"]
-    out(f"TIMEOUT after {timeout} s: last line {last[0]!r}, state "
-        f"{_state(pid) if pid else 'unknown'}; stopping PID {pid} (ours)")
-    if pid:
-        os.kill(pid, 15)
-    return None
+    # Ctrl+C while waiting must not leave the engine behind: it lives in
+    # its own session (start_new_session), so the terminal never reaches
+    # it, and play.py enters its try/finally only after this returns a
+    # pid. The orphan would hold port 17362 and refuse the next start.
+    # Audit TD-02.
+    pid = None
+    try:
+        deadline = time.time() + timeout
+        intro_named = False
+        skips = 0
+        # Found by NAME (`running_engines`): a binary not called `orion2re` is
+        # never found, the wait below never runs, and the TIMEOUT line must
+        # still be printable (work order 194 met it with a renamed copy).
+        text = ""
+        pid = _engine_pid(proc.pid, deadline)
+        while time.time() < deadline:
+            with open(log_path, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+            if not intro and pid and HANG_LINE in text:
+                skips = intro_skip.step(pid, text, env, skips, out)
+            if READY in text:
+                out(f"READY: orion2re PID {pid} (launcher {proc.pid}), log {log_path}")
+                return pid
+            if proc.poll() is not None:
+                out(f"EXITED with {proc.returncode} before {READY!r}")
+                return None
+            if pid and time.time() - (deadline - timeout) > 10:
+                last = (text.strip().splitlines() or [""])[-1]
+                if last == HANG_LINE and (intro or skips == 0 or
+                                          time.time() - (deadline - timeout) > 20):
+                    samples = []
+                    for _ in range(6):
+                        samples.append(thread_waits(pid))
+                        time.sleep(0.5)
+                    if is_hang(last, samples):
+                        out(f"HANG: PID {pid} waits in its first present "
+                            f"(open fix 31); stopping it (ours)")
+                        os.kill(pid, 15)
+                        time.sleep(2)
+                        return "hang"
+                    if not intro_named:
+                        out(f"INTRO: the original's logos and intro are playing "
+                            f"(about {INTRO_SECONDS:.0f} s; not a hang) — waiting")
+                        intro_named = True
+            time.sleep(0.5)
+        last = text.strip().splitlines()[-1:] or ["<empty log>"]
+        out(f"TIMEOUT after {timeout} s: last line {last[0]!r}, state "
+            f"{_state(pid) if pid else 'unknown'}; stopping PID {pid} (ours)")
+        if pid:
+            os.kill(pid, 15)
+        return None
+    except BaseException:
+        try:
+            os.kill(pid or proc.pid, 15)
+        except OSError:
+            pass
+        raise
 
 
 def main():

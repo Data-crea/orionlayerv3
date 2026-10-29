@@ -99,7 +99,12 @@ class Dispatcher:
             return
 
         if self.active:
-            self.active.exit()
+            try:
+                self.active.exit()
+            except Exception:
+                # a faulty exit must not repeat every frame and keep the
+                # old screen on top (audit TD-01)
+                log.exception("screen %s: exit failed", self.active_name)
 
         screen = target
         if screen:
@@ -114,7 +119,14 @@ class Dispatcher:
             self.active = screen
             self.active_name = name
             self.use_original = False
-            screen.enter(game_state)
+            try:
+                screen.enter(game_state)
+            except BaseException:
+                # a screen that never finished entering must not stay the
+                # active one, or the `name == active_name` return above
+                # never lets `enter` run again (audit TD-01)
+                self.active, self.active_name = None, ""
+                raise
 
             # Check if this is a sub-screen (no GAME_SCREEN_ID). A screen
             # that SHARES an id is no sub-screen: its `claims` decides on

@@ -747,6 +747,10 @@ class GalaxyMapScreen(ScreenBase):
         return mapinput.right_button(self, down, mx, my)
 
     def handle_mousewheel(self, direction, mx, my):
+        # like the click and the keys: the map under a dialog or the
+        # distance mode does not zoom (audit TD-04)
+        if self._modal.active or self._distance.on:
+            return
         mapinput.mousewheel(self, direction, mx, my)
 
     def help_extra_rect(self, spec):

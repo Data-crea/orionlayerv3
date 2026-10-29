@@ -267,8 +267,16 @@ class Editor:
         # made now keeps that file's other resolutions.
         base = None if self.developer else (
             getattr(scr, "_boxes_dir", None) or scr._screen_dir)
-        save_boxes(tgt.folder, scr.boxes, self.app.win_w, self.app.win_h,
-                   seed_dir=base)
+        try:
+            save_boxes(tgt.folder, scr.boxes, self.app.win_w, self.app.win_h,
+                       seed_dir=base)
+        except OSError as err:
+            # a full disk or a read-only folder: say so in the editor
+            # instead of raising into the frame guard (audit TD-03)
+            self._save_note = f"NOT SAVED: {err}"
+            log.error("Saving boxes for %s failed: %s", tgt.folder, err)
+            self._save_flash = time.monotonic()
+            return
         res_key = f"{self.app.win_w}x{self.app.win_h}"
         note = f"SAVED [{res_key}] -> {tgt.label}"
         if not tgt.active:

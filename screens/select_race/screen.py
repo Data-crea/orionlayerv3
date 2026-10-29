@@ -130,8 +130,8 @@ class SelectRaceScreen(ScreenBase):
                     try:
                         img = pygame.image.load(path).convert_alpha()
                         self._portraits[race["id"]] = img
-                    except Exception:
-                        pass
+                    except Exception as err:
+                        log.warning("portrait %s not loaded: %s", path, err)
                     break
 
     def set_mode(self, mode):

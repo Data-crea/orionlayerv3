@@ -23,6 +23,7 @@ from core.wire_protocol import (
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
+from core import colony_guard
 from core.structs import layout as engine_layout
 
 log = logging.getLogger("game_client")
@@ -507,6 +508,16 @@ class GameClient:
         index this list does not carry goes alone, unchecked, as before."""
         f = next((f for f in (getattr(self.state, "fields", None) or [])
                   if getattr(f, "index", None) == field_id), None)
+        # The colony screens' safety rule at the one chokepoint, so a screen
+        # or mod that sends through the base class cannot bypass the senders'
+        # own check (audit TD-13).
+        if f is not None:
+            why = colony_guard.refusal(
+                f, getattr(self.state, "current_screen", -1))
+            if why is not None:
+                log.warning("activate_field %s refused: %s — nothing sent",
+                            field_id, why)
+                return
         payload = struct.pack('<h', field_id)
         if f is not None:
             payload += struct.pack('<4h', f.x, f.y, f.x_end, f.y_end)

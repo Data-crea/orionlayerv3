@@ -6,8 +6,17 @@
    screen (see SCREEN enum in the orion2re index doc), or leave
    it at None for sub-screens opened via dispatcher.switch_to().
 4. Edit boxes.json (F3 editor in-game).
+5. Optional files, as the real screens carry them (see
+   screens/research_change/ for a small complete one): layout.json
+   (geometry), help.json (right-click help) and box_labels.json. The
+   boxes.json written by the F3 editor is a dict keyed by resolution,
+   e.g. "1920x1080"; this template's list form is the legacy one the
+   loader still reads.
+6. Beyond the folder, a screen is also named in the status-bar names
+   (core/screen_names.py), has a smoke-check group and a state file
+   (dev:doc/state/<screen>.md).
 
-That's it — screens are auto-discovered, no registration needed.
+Screens are auto-discovered, no registration is needed in the loader.
 This also works from inside a mod: put the same folder structure
 under mods/<your_mod>/screens/my_screen/.
 

@@ -1,6 +1,7 @@
 """orion2re Extension API — wire-protocol constants and raw parsing.
 
-Pure stdlib (only `struct`), no other project imports, so this can
+Stdlib (`struct`) plus `core.lang`, which itself imports only the
+stdlib at top level, so this can
 be imported by dev:tools/ext_diag.py and dev:tools/ext_diag_race.py without
 compromising their "must still work if the rest of the project is
 broken" design goal — while still being the single place the byte

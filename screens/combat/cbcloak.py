@@ -279,7 +279,10 @@ def _cache(art):
     if len(c) > _CACHE_MAX:
         keep = c.get(("plasma",))
         c.clear()
-        c[("plasma",)] = keep
+        # an unloaded plasma must stay absent: writing None back made the
+        # key "present" and the overlay never loaded again (audit TD-22)
+        if keep is not None:
+            c[("plasma",)] = keep
     return c
 
 

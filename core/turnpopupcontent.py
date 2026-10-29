@@ -4,6 +4,10 @@ The content half of `core/turnpopup.py` (split for decision 6): from a
 popup (TPOP) and the snapshot, a title, lines, options and buttons, each
 bound to the popup's OWN field — see `core/turnpopup.py` for the rules.
 """
+import logging
+
+log = logging.getLogger("turnpopupcontent")
+
 DEFAULT_WORDS = {"close": "CLOSE",
                  "prev": "PREV", "next": "NEXT", "continue": "CONTINUE",
                  "hire": "HIRE", "reject": "REJECT",
@@ -143,7 +147,8 @@ def leader_card(state, index, app=None):
         art = ldrart.load()
         if art is not None and art.available:
             portrait = art.portrait(rec.pict_num)
-    except Exception:       # absent extraction: no picture, stated
+    except Exception as err:    # absent extraction: no picture, stated
+        log.debug("leader portrait %s: %s", rec.pict_num, err)
         portrait = None
     return {"title": name, "skills": skills, "portrait": portrait,
             "leader": rec, "question": question,
@@ -179,7 +184,8 @@ def _tech_name(tech):
         # in the language shown (the German walk found this one English)
         return technames.TechNames(lang.current()).application_name(
             tech & 0x1FF)
-    except Exception:
+    except Exception as err:
+        log.debug("tech name %s: %s", tech, err)
         return None
 
 

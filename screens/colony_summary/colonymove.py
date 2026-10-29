@@ -65,8 +65,8 @@ POP_STATE_ANDROID = 4
 #: the same ceiling, so it is named here rather than re-derived.
 JOB_LIMIT = 42
 
-#: ECON order, orion2_consts.h:119-123. Imported rather than
-#: re-declared: `colonyfacts` is where these live.
+#: ECON order, orion2_consts.h:119-123. Declared here again with the
+#: same values as `colonyfacts` — keep the two in step (audit TD-19).
 ECON_FOOD = 0
 ECON_INDUSTRY = 1
 ECON_RESEARCH = 2
