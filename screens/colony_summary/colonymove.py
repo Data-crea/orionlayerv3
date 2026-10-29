@@ -60,7 +60,7 @@ POP_STATE_NORMAL = 2
 POP_STATE_NATIVE = 3
 POP_STATE_ANDROID = 4
 
-#: `Sum_Colonists_ >= 42` (colmove.cpp:540). The same 42 as
+#: `Sum_Colonists_ >= 42` (colmove.cpp:556). The same 42 as
 #: `colonyfacts.POP_LIMIT_CAP`, reached from the other side — that
 #: constant carries the three sources and this is a fourth site for
 #: the same ceiling, so it is named here rather than re-derived.
@@ -124,14 +124,14 @@ def sum_colonists(pops, n_pops, job):
 
 def _can_take_job(pops, n_pops, max_farms, index, new_job,
                   inter_colony_transfer=False):
-    """`COLMOVE::Give_Colonist_New_Job_` (colmove.cpp:518-558).
+    """`COLMOVE::Give_Colonist_New_Job_` (colmove.cpp:535-571).
 
     Returns `(True, None)` or `(False, reason)`. The four rules, in
     the source's own order, each with the fields it decides from and
     what those fields rest on under decision 23:
 
     1. **Natives take neither research nor industry**
-       (colmove.cpp:524-529). Decides from the pop word's low nibble
+       (colmove.cpp:542-545). Decides from the pop word's low nibble
        via `pop_state`. The nibble is VERIFIED live for 0..7 as a
        player index, and **9 meaning native is VERIFIED too** as of
        5 September 2026 — data, picture and the game's own label,
@@ -152,7 +152,7 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
        resolve here: the code is what runs, so the code is what is
        mirrored, and which side is wrong is not ours to decide.
 
-    2. **Androids keep the job they have** (colmove.cpp:531-537).
+    2. **Androids keep the job they have** (colmove.cpp:547-553).
        Same nibble, value 8, and this one is **still UNVERIFIED**:
        no save this project holds contains an android, so the rule
        is mirrored from the source alone. Note it
@@ -160,12 +160,12 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
        dropped back on its own column is allowed — that path does
        not even reach here, see `plan_drop`.
 
-    3. **At most 42 in a job** (colmove.cpp:539-543). Decides from
+    3. **At most 42 in a job** (colmove.cpp:555-559). Decides from
        every pop's profession and assigned bit. `POP_MASK_PROF` is
        the one mask of the five with a second source; the assigned
        bit is header-only.
 
-    4. **A farmer needs `max_farms > sum`** (colmove.cpp:546-554).
+    4. **A farmer needs `max_farms > sum`** (colmove.cpp:562-566).
        The comparison is transcribed as written. What the field
        actually holds is 0 or 255 and nothing between —
        `Colony_Calculation_` writes -1 into a `uint8_t` when the
