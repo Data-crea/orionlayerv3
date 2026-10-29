@@ -72,7 +72,7 @@ E_NO_ROOM = 0xFD
 E_FAILED = 0xE4
 
 #: `Room_For_Another_`'s ceiling on every colony (settler.cpp:96-98).
-MAX_POPS = 42
+MAX_POPS = colonyfacts.POP_LIMIT_CAP
 
 
 class Refusal:

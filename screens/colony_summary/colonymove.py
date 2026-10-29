@@ -51,6 +51,7 @@ reason this module is.
 Masks and accessors come from `core/structs/colony.py`, which is
 their one home. This module adds no mask of its own.
 """
+from core import colonyfacts
 from core.structs import colony as colony_struct
 
 #: `Pop_To_Pop_State_` (colony.cpp:1240) returns exactly these three:
@@ -63,13 +64,13 @@ POP_STATE_ANDROID = 4
 #: `colonyfacts.POP_LIMIT_CAP`, reached from the other side — that
 #: constant carries the three sources and this is a fourth site for
 #: the same ceiling, so it is named here rather than re-derived.
-JOB_LIMIT = 42
+JOB_LIMIT = colonyfacts.POP_LIMIT_CAP
 
-#: ECON order, orion2_consts.h:119-123. Declared here again with the
-#: same values as `colonyfacts` — keep the two in step (audit TD-19).
-ECON_FOOD = 0
-ECON_INDUSTRY = 1
-ECON_RESEARCH = 2
+#: ECON order, orion2_consts.h:119-123: `colonyfacts` is where these live
+#: (audit TD-19: they were declared a second time here).
+ECON_FOOD = colonyfacts.ECON_FOOD
+ECON_INDUSTRY = colonyfacts.ECON_INDUSTRY
+ECON_RESEARCH = colonyfacts.ECON_RESEARCH
 
 #: Why a move was refused. OUR OWN strings live in layout.json under
 #: `move` (decision 15) — these are ids, not wording. The original's
@@ -417,8 +418,8 @@ CROSS_COLONY_FIELDS = ("imports",)
 NEEDY_COLONY_FIELDS = ("pop_growth", "pop_roundoff", "specialty")
 
 #: Index of ECON_FOOD in the per-economy arrays, so the neediness
-#: test below reads the same slot `Pass_Out_Imports_` does.
-ECON_FOOD = 0
+#: test below reads the same slot `Pass_Out_Imports_` does (`ECON_FOOD`
+#: above is `colonyfacts`' own).
 
 
 def is_needy(colony):

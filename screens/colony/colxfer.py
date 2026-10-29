@@ -48,6 +48,7 @@ ask (fundament 52): `next_question` names the first question the answers so
 far do not carry, the player answers it in HD's box, and the command goes
 out with the answers (`colxferflow`).
 """
+from core import colonyfacts
 from core import settlewire
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
@@ -82,7 +83,7 @@ MAX_IN_TRANSIT = 25
 #: (`engine_decides`).
 CONFIG_BOUND = ("only_one_pop_left", "max_settlers_in_transit")
 #: `Room_For_Another_`'s ceiling (settler.cpp:98).
-MAX_POPS = 42
+MAX_POPS = colonyfacts.POP_LIMIT_CAP
 #: The pop strings `Colony_Pop_String_` builds the notice's noun from
 #: (colmove.cpp:577-602; colony.cpp:878-961): E 0x4C over the conquered
 #: word, the race, the state word and the job.

@@ -251,6 +251,11 @@ class InjectionChain:
         self._setup_logged = False
         self._pacing = None       # iterator of sends while a paced step runs
         self._pace_sig = None
+        self._pace_left = 0       # sends of the paced step not yet made
+        self._pace_rebase = False  # take the typing dialog's shape again
+        self._pace_has_text = False  # ... did it hold a text field
+        self._pace_first = False     # the first send of the step is next
+        self._pace_at = 0.0       # when the paced step last sent or began
         self._pace_mark = None
 
     @staticmethod
@@ -377,6 +382,33 @@ class InjectionChain:
             self._started = now
 
         if self._pacing is not None:
+            # A paced step types into ONE dialog. If that dialog's text
+            # field is gone, or the game has sent nothing for a whole
+            # step's timeout, the rest of the keys and the Enter would go
+            # where they were not meant (audit TD-07). The shape is taken
+            # AGAIN after the first send: that send is often the click
+            # that opens the text field, and a lobby or a save list may
+            # change its rectangles while typing, so rectangles are not
+            # compared. After the last send the dialog is SUPPOSED to
+            # change, so only a step with sends left is watched.
+            if self._pace_left > 0:
+                if fields and self._pace_rebase:
+                    self._pace_has_text = any(
+                        f.field_type == TYPE_STRING for f in fields)
+                    self._pace_rebase = False
+                elif (fields and self._pace_has_text and not any(
+                        f.field_type == TYPE_STRING for f in fields)):
+                    self._pacing = None
+                    self._fail("Paced step '%s' stopped: its text field is "
+                               "gone with %d send(s) left", name,
+                               self._pace_left)
+                    return
+                if now - self._pace_at > timeout:
+                    self._pacing = None
+                    self._fail("Paced step '%s' stopped: no progress for "
+                               "%.1fs with %d send(s) left", name,
+                               now - self._pace_at, self._pace_left)
+                    return
             self._pace(now, name)
             return
 
@@ -391,7 +423,12 @@ class InjectionChain:
                 # A LIST, and nothing else: `click_banner` returns a
                 # bool, which the first smoke run read as a sequence.
                 self._pacing = iter(sends)
+                self._pace_left = len(sends)
+                self._pace_at = now
                 self._pace_sig = _signature(fields)
+                self._pace_has_text = False
+                self._pace_rebase = False
+                self._pace_first = True
                 self._pace_mark = None
                 self._pace(now, name)
                 return
@@ -425,6 +462,11 @@ class InjectionChain:
             self._fire(now, self._pace_sig)
             return
         send(self.client)
+        if self._pace_first:
+            self._pace_first = False
+            self._pace_rebase = True        # the first send may open the field
+        self._pace_left -= 1
+        self._pace_at = now
         self._pace_mark = count
 
     def _fail(self, msg, *args):

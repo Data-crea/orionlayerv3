@@ -210,7 +210,11 @@ class GameClient:
         # apart from "we are not asking it to do anything" is to look
         # at what arrived while we waited; both look like a frozen
         # screen. Monotonic, never reset — callers take deltas.
-        self.stats = {"state": 0, "fields": 0, "visual": 0,
+        # `state_ok` counts the snapshots that PARSED; `state` counts every
+        # one that arrived. The connection is only "reached again" on a
+        # parsed one (audit TD-05): a layout this client cannot read used
+        # to count as the new connection's first snapshot.
+        self.stats = {"state": 0, "state_ok": 0, "fields": 0, "visual": 0,
                       "bytes": 0}
         # A REQUESTED END IS NOT A LOST CONNECTION (decision 62).
         # `expect_shutdown` is called before the GAME menu's QUIT is
@@ -720,6 +724,7 @@ class GameClient:
                 self.state.fields = old_fields
                 self.state.save_slots = old_slots
                 self._carry_combat_events()
+                self.stats["state_ok"] += 1
             except Exception as e:
                 self._parse_failed("state", e)
 
@@ -731,6 +736,8 @@ class GameClient:
                 # it belongs to, so a list with none has no slots.
                 self.state.save_slots = None
             except Exception as e:
+                # an old list is a lie nobody can detect; none is "unknown"
+                self.state.fields = []
                 self._parse_failed("fields", e)
 
         elif msg_type == MSG_VISUAL:

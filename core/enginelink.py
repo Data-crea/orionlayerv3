@@ -102,6 +102,13 @@ def process_state(pid, proc="/proc"):
     return rest[0] not in ("Z", "X", "x"), rest[19]
 
 
+def _parsed(client):
+    """Snapshots that parsed (a client without the counter, a test double,
+    is read by the count of every one that arrived)."""
+    stats = client.stats
+    return stats.get("state_ok", stats.get("state", 0))
+
+
 class Link:
     """The App's view of its engine: connected, lost or gone."""
 
@@ -200,12 +207,12 @@ class Link:
                 else:
                     self.retries += 1
                     if client.retry():
-                        self._await = client.stats.get("state", 0)
+                        self._await = _parsed(client)
             return app.connected
         if self.state == LOST:
             if self._await is None:
-                self._await = client.stats.get("state", 0)
-            elif client.stats.get("state", 0) > self._await:
+                self._await = _parsed(client)
+            elif _parsed(client) > self._await:
                 # the first snapshot of the new connection: the world now
                 log.info("orion2re reached again after %d retries",
                          self.retries)
