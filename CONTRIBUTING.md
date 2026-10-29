@@ -62,4 +62,6 @@ original's (F12 shows it, F8 saves a picture).
 The maintainer's test suite is not in this repository: he runs it on every
 change before it is merged, and tells you what it found. What you can run
 yourself is `python tools/setup.py --check` (reports what is missing and
-changes nothing) and the program itself.
+changes nothing), `python tests/unit.py` (a second, no display and no game
+needed: the wire frame reader, the record parsers on short input, the block
+reader, the engine layout) and the program itself.
