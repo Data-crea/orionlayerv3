@@ -21,6 +21,7 @@ from core import modtexts
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
+from core import lang
 from core import nativedraw as nd
 
 from . import infobox, infogeom as geom, infopages as pages
@@ -83,7 +84,7 @@ def pages_names():
 def draw_stardate(surface, screen, stardate):
     x, y = geom.STARDATE_AT
     r = R(screen, (x - 60, y - 9, x + 60, y + 9))
-    text = f"{stardate // 10}.{stardate % 10}"
+    text = pages.stardate_text(stardate, lang.engine_language_number())
     infobox.line(surface, screen, text, r, px(screen, "name"), HIGH, "center")
 
 
@@ -216,7 +217,8 @@ def draw_graph(surface, screen, graph, order, stardate):
     w = max(1, int(nd.native_scale(layout)))
     pygame.draw.line(surface, axis, P(232, 390), P(588, 390), w)
     pygame.draw.line(surface, axis, P(237, 140), P(237, 396), w)
-    for k, label in enumerate(pages.x_labels(stardate)):
+    language = lang.engine_language_number()
+    for k, label in enumerate(pages.x_labels(stardate, language)):
         x = 239 + 50 * k
         infobox.line(surface, screen, label, R(screen, (x - 24, 396, x + 24,
                                                         408)),

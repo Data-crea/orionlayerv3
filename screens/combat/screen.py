@@ -194,6 +194,7 @@ class CombatScreen(CombatInput, ScreenBase):
         if combat["serial"] != self._serial:
             self._serial = combat["serial"]
             self._cam, self._board, self._held = None, False, None
+            self._press = None       # a right press held over a battle change
             self._logwin.open = False
             self._play.reset()
             self._fades.reset()

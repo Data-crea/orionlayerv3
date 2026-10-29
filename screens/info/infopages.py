@@ -275,7 +275,13 @@ def x_step(stardate):
         else 1
 
 
-def x_labels(stardate):
+def stardate_text(stardate, language=0):
+    """The stardate as the Info screen prints it: "%i.%i", and "%i,%i" when
+    `_settings.language` is not 0 (info.cpp:594)."""
+    return f"{stardate // 10}{'.' if not language else ','}{stardate % 10}"
+
+
+def x_labels(stardate, language=0):
     """The eight stardate labels under the graph (:1599-1643): from 3500.0
     stepping 5/10/25/50 tenths — past 350 turns from the stardate 34.5
     years back — "%i.%i" where it is not a whole number."""
@@ -288,7 +294,9 @@ def x_labels(stardate):
     out = []
     for _ in range(8):
         whole, frac = value // 10, value % 10
-        out.append(f"{whole}.{frac}" if value % 5 == 0 and frac else
+        # "%i,%i" when `_settings.language` is not 0 (info.cpp:1632-1634)
+        sep = "." if not language else ","
+        out.append(f"{whole}{sep}{frac}" if value % 5 == 0 and frac else
                    f"{whole}")
         value += step
     return out

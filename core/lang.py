@@ -298,6 +298,12 @@ def engine_settings(raw):
     return raw
 
 
+def engine_language_number():
+    """`_settings.language` as the engine reports it (0 English, 1 German,
+    2.. the other languages HD does not offer)."""
+    return _state["engine"]
+
+
 def engine_language():
     """The engine's language as a code ("en", "de"), None for one HD does
     not offer."""

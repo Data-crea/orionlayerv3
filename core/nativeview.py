@@ -61,6 +61,8 @@ The wire carries it on every snapshot; a copy in this file would be the
 second copy that goes stale the day the art changes, and the lookup
 that already works would then have a constant to disagree with.
 """
+import math
+
 
 NATIVE_W, NATIVE_H = 640, 480
 
@@ -215,8 +217,10 @@ def from_hd_point(hd_point, layout):
     outside the picture — there is no native pixel there.
     """
     scale, off_x, off_y = _scale(layout)
-    nx = int((hd_point[0] - off_x) / scale)
-    ny = int((hd_point[1] - off_y) / scale)
+    # floor: `int()` cut toward zero, so a point just left of or above the
+    # picture counted as its first native pixel
+    nx = math.floor((hd_point[0] - off_x) / scale)
+    ny = math.floor((hd_point[1] - off_y) / scale)
     if not (0 <= nx < NATIVE_W and 0 <= ny < NATIVE_H):
         return None
     return (nx, ny)

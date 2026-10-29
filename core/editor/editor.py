@@ -262,12 +262,12 @@ class Editor:
         if not scr:
             return
         tgt = self.target()
-        target.prepare(tgt)
         # The seed is the file the boxes were LOADED from, so a mod file
         # made now keeps that file's other resolutions.
         base = None if self.developer else (
             getattr(scr, "_boxes_dir", None) or scr._screen_dir)
         try:
+            target.prepare(tgt)      # makes the mod folder: it can fail too
             save_boxes(tgt.folder, scr.boxes, self.app.win_w, self.app.win_h,
                        seed_dir=base)
         except OSError as err:
