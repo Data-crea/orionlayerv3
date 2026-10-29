@@ -230,19 +230,44 @@ def place(planet, s, cx, cy):
     return cx + ax * s, cy + ay * s
 
 
-def ring(surface, orbit, s, cx, cy, hole=None, colours=None):
-    """One orbit's ellipse, antialiased, with `hole` (x, y, r) kept clear;
-    `colours` (core, side) in place of the original's; side None draws
-    the core alone; a core with a fourth value is drawn at that alpha."""
-    core_rgb, side_rgb = colours or (RING, RING_SIDE)
-    core_a = core_rgb[3] if len(core_rgb) > 3 else 255
-    core_rgb = tuple(core_rgb[:3])
+#: Made once, drawn every frame (audit pass 3, measured: 5-20 ms a ring at the
+#: sizes of a 1080p window, up to 1332 dots a belt). Both caches are keyed on
+#: EVERY value that goes into the picture — the integers handed to pygame, not
+#: the floats they came from — so a cached picture is the one the same call
+#: would have drawn; a bounded dict, cleared when full.
+_RINGS, _BELTS, _CACHE_MAX = {}, {}, 96
+#: ... and by memory as well: a ring is up to 8 MB at 4K, so the count alone
+#: says nothing. Each cache is cleared when its pictures pass this many bytes.
+_CACHE_BYTES = 48 * 1024 * 1024
+_held = {"rings": 0, "belts": 0}
+
+
+def _remember(cache, name, key, value, picture):
+    """Keep `value` under `key`; start the cache over when it is full by
+    count or by the bytes of its pictures."""
+    size = picture.get_width() * picture.get_height() * 4 if picture else 0
+    if len(cache) >= _CACHE_MAX or _held[name] + size > _CACHE_BYTES:
+        cache.clear()
+        _held[name] = 0
+    cache[key] = value
+    _held[name] += size
+
+
+def _ring_picture(orbit, s, hole_at, core_rgb, core_a, side_rgb):
+    """The ring's antialiased picture (w x h) and its size. `hole_at`
+    is (x, y, r) in the supersampled picture's own pixels, or None."""
     rx, ry = radii(orbit, s)
     k = SUPERSAMPLE
     w, h = int(2 * rx + 6), int(2 * ry + 6)
-    big = pygame.Surface((w * k, h * k), pygame.SRCALPHA)
     side = max(1, int(round(RING_WIDTH * s * k)))
     core = max(1, int(round(s * k)))
+    key = (w, h, int(2 * rx * k), int(2 * ry * k), side, core,
+           core_rgb, core_a, None if side_rgb is None else tuple(side_rgb),
+           hole_at(w, h) if callable(hole_at) else hole_at)
+    hit = _RINGS.get(key)
+    if hit is not None:
+        return hit, w, h
+    big = pygame.Surface((w * k, h * k), pygame.SRCALPHA)
     half = (side - core) // 2
     if side_rgb is not None:
         pygame.draw.ellipse(big, tuple(side_rgb) + (255,), pygame.Rect(
@@ -250,27 +275,62 @@ def ring(surface, orbit, s, cx, cy, hole=None, colours=None):
             int(2 * ry * k) + 2 * half), side)
     pygame.draw.ellipse(big, core_rgb + (core_a,), pygame.Rect(
         3 * k, 3 * k, int(2 * rx * k), int(2 * ry * k)), core)
-    if hole is not None:
-        hx, hy, hr = hole
-        pygame.draw.circle(big, (0, 0, 0, 0),
-                           (int((hx - cx + w / 2) * k), int((hy - cy + h / 2) * k)),
-                           int(hr * k))
+    if key[-1] is not None:
+        hx, hy, hr = key[-1]
+        pygame.draw.circle(big, (0, 0, 0, 0), (hx, hy), hr)
     small = pygame.transform.smoothscale(big, (w, h))
+    _remember(_RINGS, "rings", key, small, small)
+    return small, w, h
+
+
+def ring(surface, orbit, s, cx, cy, hole=None, colours=None):
+    """One orbit's ellipse, antialiased, with `hole` (x, y, r) kept clear;
+    `colours` (core, side) in place of the original's; side None draws
+    the core alone; a core with a fourth value is drawn at that alpha."""
+    core_rgb, side_rgb = colours or (RING, RING_SIDE)
+    core_a = core_rgb[3] if len(core_rgb) > 3 else 255
+    core_rgb = tuple(core_rgb[:3])
+    k = SUPERSAMPLE
+    # the hole's integers are what pygame is handed, as before
+    at = None if hole is None else (lambda w, h: (
+        int((hole[0] - cx + w / 2) * k), int((hole[1] - cy + h / 2) * k),
+        int(hole[2] * k)))
+    small, w, h = _ring_picture(orbit, s, at, core_rgb, core_a, side_rgb)
     surface.blit(small, (int(cx - w / 2), int(cy - h / 2)))
 
 
 def belt(surface, orbit, s, cx, cy, seed):
     """DEVIATION `belt_drawn`: the belt's dots, the same on every frame."""
-    rng = random.Random(seed * 7 + orbit)
-    rx, ry = radii(orbit, s)
-    dot = max(1, int(round(s)))
-    for _ in range(BELT_DOTS[orbit] if 0 <= orbit < len(BELT_DOTS) else 0):
-        a = rng.uniform(0.0, 2 * math.pi)
-        r = rng.uniform(*BELT_BAND)
-        x = cx + math.cos(a) * rx * r
-        y = cy + math.sin(a) * ry * r
-        # LOOK EXCEPTION picture: an asteroid of the belt, the picture's greys
-        surface.fill(rng.choice(BELT_GREYS), (int(x), int(y), dot, dot))
+    key = (seed, orbit, s, cx, cy)
+    hit = _BELTS.get(key)
+    if hit is None:
+        rng = random.Random(seed * 7 + orbit)
+        rx, ry = radii(orbit, s)
+        dot = max(1, int(round(s)))
+        dots = []
+        for _ in range(BELT_DOTS[orbit] if 0 <= orbit < len(BELT_DOTS) else 0):
+            a = rng.uniform(0.0, 2 * math.pi)
+            r = rng.uniform(*BELT_BAND)
+            x = cx + math.cos(a) * rx * r
+            y = cy + math.sin(a) * ry * r
+            # LOOK EXCEPTION picture: an asteroid of the belt, the
+            # picture's greys
+            dots.append((rng.choice(BELT_GREYS), int(x), int(y)))
+        if dots:
+            left = min(d[1] for d in dots)
+            top = min(d[2] for d in dots)
+            pic = pygame.Surface(
+                (max(d[1] for d in dots) + dot - left,
+                 max(d[2] for d in dots) + dot - top), pygame.SRCALPHA)
+            for colour, x, y in dots:     # in order: a later dot covers
+                pic.fill(tuple(colour)[:3] + (255,),
+                         (x - left, y - top, dot, dot))
+            hit = (pic, left, top)
+        else:
+            hit = (None, 0, 0)
+        _remember(_BELTS, "belts", key, hit, hit[0])
+    if hit[0] is not None:
+        surface.blit(hit[0], (hit[1], hit[2]))
 
 
 def draw(surface, view, model, draw_planet, at=None, colours=None):
