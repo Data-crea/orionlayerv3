@@ -37,8 +37,8 @@ DESIGN_TEXT = (168, 248, 305, 169)
 
 
 def design_row(k):
-    """Design row k (0-4) and k = 6 the last row: `179 (k + 1) / 8 + 49`
-    to `179 (k + 2) / 8 + 48` (:612-628)."""
+    """Design row k (0-5, one per hull size) and k = 6 the last row:
+    `179 (k + 1) / 8 + 49` to `179 (k + 2) / 8 + 48` (:612-628)."""
     return (0xA1, 179 * (k + 1) // 8 + 49, 0x1DE, 179 * (k + 2) // 8 + 48)
 
 

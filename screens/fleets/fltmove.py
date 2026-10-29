@@ -135,7 +135,12 @@ def refusal(game_state, view, star_index):
         # 602-611, :655-664) — the engine answers with its box (H 0x77).
         stars = getattr(game_state, "stars", None) or []
         return None if 0 <= star_index < len(stars) else "no such star"
-    if not view.selected_ships():
+    # `First_Selected_Ship()` scans EVERY icon (flt1.cpp:320-335); `view.rows`
+    # holds only the displayed cells (at most 20), so a selection scrolled out
+    # of sight read as "nothing selected" — the block carries all of them
+    # (audit pass 2)
+    selected = (view.block or {}).get("ship_selected")
+    if not (any(selected) if selected else view.selected_ships()):
         return ("no ship is selected — `First_Selected_Ship_()` is -1 "
                 "and the original's own click does nothing")
     if int((view.block or {}).get("relocate_mode", 0)) == 1:

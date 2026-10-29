@@ -78,6 +78,11 @@ class Sources:
         if r is None or r[0] != turn or len(r[1]) != len(units):
             self._round = (turn, [dict(u) for u in units])
 
+    def reset(self):
+        """A new battle: the first-frame snapshot of the last one is not
+        this one's (it matched on turn and unit count alone)."""
+        self._round = None
+
     def round_start(self, shown):
         r = self._round
         if r is None or r[0] != int(shown.get("turn", 0)):

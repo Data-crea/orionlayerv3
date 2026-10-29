@@ -198,6 +198,7 @@ class CombatScreen(CombatInput, ScreenBase):
             self._play.reset()
             self._fades.reset()
             self._pops.reset()
+            self._scan.reset()
             # what it brought while the last battle's tail played (`cbfeed`)
             events = self._next.start(self._play, combat, events) + events
         self._pops.update(game_state)

@@ -65,7 +65,7 @@ def draw_ships(surface, screen, cells, hover, first, total):
 
 
 def draw_designs(surface, screen, rows, hover):
-    """`rows`: [(row index, name, hull, matches)] for the five slots that
+    """`rows`: [(row index, name, hull, matches)] for the six slots that
     hold a design, then the last row's word as (6, word, "", True)."""
     layout = screen.layout
     hud.field(surface, nd.rect(layout, geom.DESIGN_BOX), layout.scale)

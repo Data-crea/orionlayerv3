@@ -324,6 +324,8 @@ class View:
         self.rects = {}
         self.ring = self.window = None
         self.boxes = {}
+        #: the card drawn last (see `card_at`); None before the first draw
+        self.card = None
         #: the cells drawn cut this frame: [(rect, the whole text)] — what
         #: the card shows under the pointer (work order 297 part B)
         self.cut = []

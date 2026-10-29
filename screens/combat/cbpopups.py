@@ -123,6 +123,9 @@ class Popups:
     def reset(self):
         self.scan_mode, self.local_unit, self._pending = False, None, None
         self._drag = None
+        # a closed popup's last card must not answer the next click
+        self.view.card = None
+        self.view.rects = {}
 
     def showing(self, state):
         """'board', 'scan' (the engine's), 'local' or None."""

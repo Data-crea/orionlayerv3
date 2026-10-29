@@ -250,7 +250,10 @@ class RefitScreen(ScreenBase):
         if me is None:
             return []
         rows = []
-        for k in range(5):
+        # SIX slots, one per hull size (`SHIP_SIZE_COUNT`, colrefit.cpp's
+        # Add2_Fields and click loop): the list stopped at five and a Doom
+        # Star design could never be listed or picked (audit pass 2)
+        for k in range(player_struct.DESIGN_SLOTS):
             name = player_struct.design_name(me, k)
             if not name:
                 continue
@@ -352,7 +355,7 @@ class RefitScreen(ScreenBase):
             self._hover = next((i for i in range(geom.CELLS)
                                 if self._in(p, geom.cell(i))), None)
         elif self.kind == "designs":
-            self._hover = next((k for k in list(range(5)) + [geom.GOTO_ROW]
+            self._hover = next((k for k in list(range(player_struct.DESIGN_SLOTS)) + [geom.GOTO_ROW]
                                 if self._in(p, geom.design_row(k))), None)
         return super().handle_mouse_motion(screen_x, screen_y)
 
@@ -415,7 +418,7 @@ class RefitScreen(ScreenBase):
                         self._picked = self._ships[self.first + i]
                     return None
         else:
-            for k in list(range(5)) + [geom.GOTO_ROW]:
+            for k in list(range(player_struct.DESIGN_SLOTS)) + [geom.GOTO_ROW]:
                 if self._in(p, geom.design_row(k)):
                     self.send(self._field(geom.design_row(k),
                                           geom.TYPE_HIDDEN), f"row {k}")

@@ -1,4 +1,5 @@
 """Main Menu Screen — Logo + Credit Scrolling + Buttons."""
+import logging
 import re
 import time
 import pygame
@@ -7,6 +8,8 @@ from core.config import ORION2RE_VERSION
 from core.hud import shell
 from core.screen_base import ScreenBase
 from screens.main_menu.easteregg import EasterEgg
+
+log = logging.getLogger("main_menu")
 
 # A credit line is "role <dots> name". The dot run is a separator, not
 # a length: the source file keeps the original's fixed-width columns,
@@ -113,7 +116,11 @@ class MainMenuScreen(ScreenBase):
     def _load_logo(self):
         path = self.asset_path("assets", "logo.png")
         if path:
-            self._logo_orig = pygame.image.load(path).convert_alpha()
+            try:
+                self._logo_orig = pygame.image.load(path).convert_alpha()
+            except pygame.error as err:      # a corrupt mod file (audit pass 2)
+                log.warning("logo %s not loaded: %s", path, err)
+                return
             self._scale_logo()
 
     def _scale_logo(self):

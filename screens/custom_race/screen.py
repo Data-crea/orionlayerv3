@@ -151,7 +151,11 @@ class CustomRaceScreen(ScreenBase):
             path = self.asset_path("assets", f"{name}.png")
             if not path:
                 continue
-            img = pygame.image.load(path).convert_alpha()
+            try:
+                img = pygame.image.load(path).convert_alpha()
+            except pygame.error as err:      # a corrupt mod file (audit pass 2)
+                log.warning("%s not loaded: %s", path, err)
+                continue
             if name != "radio_on":
                 img = self._tint(img, tint)
             self._icons[name] = img

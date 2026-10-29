@@ -18,11 +18,14 @@ Input routing:
   Accept/Cancel (type=0 buttons)  -> ACTIVATE_FIELD via frame bars
   ESC                             -> inject_key
 """
+import logging
 import pygame
 
 from core.hud import blocks as hud
 from core import backgrounds, palette
 from core.screen_base import ScreenBase
+
+log = logging.getLogger("new_game")
 
 TOGGLE_LABEL_COLOR = palette.col("new_game", "toggle_label", (160, 180, 210))
 TITLE_COLOR = palette.col("new_game", "category_title", (160, 180, 210))
@@ -135,8 +138,13 @@ class NewGameScreen(ScreenBase):
         key = f"{category}/{filename}"
         if key not in self._setting_imgs:
             path = self.asset_path("assets", category, f"{filename}.png")
-            self._setting_imgs[key] = (
-                pygame.image.load(path).convert() if path else None)
+            img = None
+            if path:
+                try:
+                    img = pygame.image.load(path).convert()
+                except pygame.error as err:  # a corrupt mod file (audit pass 2)
+                    log.warning("%s not loaded: %s", path, err)
+            self._setting_imgs[key] = img
         return self._setting_imgs[key]
 
     def _get_scaled(self, surf, w, h):

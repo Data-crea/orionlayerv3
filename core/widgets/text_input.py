@@ -73,7 +73,10 @@ class TextInput:
             self.value = self.value[:-1]
             return True
         ch = getattr(event, "unicode", "")
-        if ch and len(self.value) < self.max_len and self.allowed(ch):
+        # one character: an IME may hand over a composed string, and the
+        # filters take `ord(ch)`
+        if ch and len(ch) == 1 and len(self.value) < self.max_len \
+                and self.allowed(ch):
             self.value += ch
             return True
         # Swallow other keys while focused so hotkeys (F-keys pass

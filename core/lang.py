@@ -112,15 +112,33 @@ def configure(language, res=None):
     table = {}
     if language != DEFAULT and res is not None:
         table = res.load_json(f"assets/shared/lang/{language}.json", {}) or {}
-        table = {k: v for k, v in table.get("words", {}).items()
+        # a mod's table may replace the file (decision C-3), so its shape is
+        # the mod author's: a list, or `words` as one, ended the start
+        # (audit pass 2)
+        words = table.get("words") if isinstance(table, dict) else None
+        if not isinstance(words, dict):
+            if table:
+                log.warning("lang/%s.json has no \"words\" object — English",
+                            language)
+            words = {}
+        table = {k: v for k, v in words.items()
                  if isinstance(k, str) and isinstance(v, str)}
     _state["language"], _state["table"] = language, table
     # a label the HUD draws in capitals ("COLONIES") is the table's word
     # ("Colonies") in capitals: German capitals, `str.upper` (ß -> SS)
     _state["upper"] = {k.upper(): v.upper() for k, v in table.items()
                        if k.upper() not in table}
-    _state["templates"] = [t for t in (_template(k, v) for k, v in
-                                       table.items()) if t]
+    templates = []
+    for k, v in table.items():
+        try:
+            t = _template(k, v)
+        except re.error as err:
+            log.warning("lang: %r is not a usable template (%s) — read "
+                        "as a plain key", k, err)
+            continue
+        if t:
+            templates.append(t)
+    _state["templates"] = templates
     _state["memo"] = {}
     return language
 
@@ -139,7 +157,9 @@ def _template(english, german):
     parts, names, at = [], [], 0
     for i, m in enumerate(fields):
         parts.append(re.escape(english[at:m.start()]))
-        name = m.group(1) or f"_{i}"
+        # `{0}` and `{2x}` are not group names: positional, like `%s`
+        name = m.group(1) if m.group(1) and m.group(1).isidentifier() \
+            else f"_{i}"
         if name in names:              # the same value twice: one group
             parts.append(f"(?P={name})")
         else:
@@ -177,8 +197,10 @@ def _fill(german, values):
 
     def put(m):
         name = m.group(1)
-        if not name:
+        if not name or not name.isidentifier():
             return next(seq, m.group())
+        if name not in values:      # a placeholder the English key lacks
+            return m.group()
         return tr(values[name]) if name in WORDS else values[name]
     return _FIELD.sub(put, german)
 
@@ -203,10 +225,11 @@ def tr(text):
         if m:
             out = _fill(german, m.groupdict())
             break
-    if len(memo) < 20000:
-        memo[text] = out
-        if out is text and _MISSES is not None:
-            _MISSES.add(text)
+    if len(memo) >= 20000:      # a long session: start over, never scan on
+        memo.clear()
+    memo[text] = out
+    if out is text and _MISSES is not None:
+        _MISSES.add(text)
     return out
 
 
