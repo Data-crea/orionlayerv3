@@ -91,7 +91,15 @@ class Spec:
             return cls._WIDTH[m.group(1)] * int(m.group(2))
         return cls._WIDTH[kind]
 
-    def __init__(self, name, size, fields, verified=False, note=""):
+    def __init__(self, name, size, fields, verified=False, note="",
+                 keep_kind=()):
+        #: field names whose own kind stays under an engine LAYOUT: the
+        #: layout gives offset and count, but its C type is not what a
+        #: reader wants (audit TD-34: `current_research_application` is
+        #: int8_t in the header and reaches 196, so the engine's type read
+        #: it as -60 on every engine that sends a LAYOUT).
+        #: Scalars only: an array keeps the spec's own count.
+        self.keep_kind = frozenset(keep_kind)
         self.name = name
         self.size = size
         self.fields = fields
@@ -125,6 +133,8 @@ class Spec:
         m = _layout.member(self.name, name)
         if m is None:
             return None, None
+        if name in self.keep_kind:
+            return m.offset, kind
         if kind.startswith("str") or m.kind == _layout.TEXT:
             return m.offset, f"str{m.size}"
         arr = self._ARRAY_RE.match(kind)
@@ -154,16 +164,24 @@ class Spec:
                     _lang.wire_text(chunk.split(b"\x00")[0]))
                 continue
             m = self._ARRAY_RE.match(kind)
-            if m:
-                scalar, count = m.group(1), int(m.group(2))
-                width = self._WIDTH[scalar]
-                values[name] = [
-                    _struct.unpack_from(self._FMT[scalar], raw,
-                                        offset + i * width)[0]
-                    for i in range(count)]
-            else:
-                values[name] = _struct.unpack_from(
-                    self._FMT[kind], raw, offset)[0]
+            try:
+                if m:
+                    scalar, count = m.group(1), int(m.group(2))
+                    width = self._WIDTH[scalar]
+                    values[name] = [
+                        _struct.unpack_from(self._FMT[scalar], raw,
+                                            offset + i * width)[0]
+                        for i in range(count)]
+                else:
+                    values[name] = _struct.unpack_from(
+                        self._FMT[kind], raw, offset)[0]
+            except _struct.error:
+                # an engine layout that puts a member past the record's
+                # own size: the callers catch ValueError, not struct.error
+                # (audit TD-35)
+                raise ValueError(
+                    f"{self.name}.{name}: offset {offset} runs past the "
+                    f"{len(raw)}-byte record") from None
         return StructView(raw, values)
 
     def pack(self, values):

@@ -275,7 +275,7 @@ SPEC = Spec("s_player", SIZE, [
     # for all 473 players of 100 saves — inside its 0..1 range, but no save
     # has a lore leader, so no 1 has been seen (work order 322).
     ("has_galactic_lore",    3802, "i8"),
-], verified=True)
+], verified=True, keep_kind=("current_research_application",))
 
 CONTACT_OFFSET = 1512      # sbyte contact[MAX_PLAYERS]
 TRAITS_OFFSET = 2308       # int8_t traits[TRAIT_COUNT]
