@@ -32,11 +32,20 @@ def plan(player, ev):
     if ref is None or shooter is None:
         return None
     last = player.last_beam or {}
+    mine = last.get("source") == ev["shooter"] and \
+        last.get("target") == ev["reflector"]
     weapon = ev["weapon"] if "weapon" in ev else last.get("weapon", 3) \
-        if last.get("source") == ev["shooter"] and \
-        last.get("target") == ev["reflector"] else 3
+        if mine else 3
+    # the reflected beam keeps the shot's mods (Continuous, Enveloping,
+    # Autofire): `reflected_fx[0].specials = next_fx->specials`
+    # (v2 beams.cpp:1431-1432), so its look is that weapon's with them
+    weapons = shooter.get("weapons") or []
+    slot = last.get("slot", -1) if mine else -1
+    specials = int(weapons[slot]["specials"] or 0) \
+        if 0 <= slot < len(weapons) else 0
     b = player._beam({"source": ev["reflector"], "target": ev["shooter"],
-                      "weapon": weapon, "slot": -1, "result": 2})
+                      "weapon": weapon, "slot": -1, "result": 2,
+                      "specials": specials})
     if b is None:
         return None
     size = cbflare.SHIP_SIZE.get(int(ref["size_class"]), 1)

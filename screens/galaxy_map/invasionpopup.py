@@ -232,8 +232,8 @@ def render(screen, surface, popup, state, app=None, words=None):
         if counts[kind] > 0:
             ny = y0 + LIST_Y + row * LIST_PITCH
             icon(military(defender, kind), x0 + LEFT_ICON_X, ny)
-            line(printf(e.string(14) or "%d %s", counts[kind],
-                        gcdraw.troop_name(e, defender, kind)),
+            line(gcdraw.troop_line(e, counts[kind],
+                                   gcdraw.troop_name(e, defender, kind)),
                  x0 + LEFT_TEXT_X, ny)
             row += 1
     # right: the attacker (:2768-2808)

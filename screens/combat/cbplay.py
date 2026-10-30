@@ -459,7 +459,7 @@ class Player:
         slot = ev.get("slot", 0)
         weapons = src.get("weapons") or []
         specials = weapons[slot]["specials"] if 0 <= slot < len(weapons) \
-            else 0
+            else int(ev.get("specials", 0) or 0)
         f = cbbeam.fx(ev.get("weapon", 0), specials)
         total = self._art.frame_count("beams", 67) if self._art else 0
         cols = None

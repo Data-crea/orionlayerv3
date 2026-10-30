@@ -629,7 +629,8 @@ def hull_cards(unit, m, traits_of):
         "Losing armor changes none of this ship's values.",
         "Skipped by armor piercing (not against Heavy or Xentronium Armor) "
         "and by Achilles Targeting; the Ion Pulse Cannon skips armor and "
-        "structure and hits the systems."])
+        "structure and hits the systems (a quarter of its damage against a "
+        "monster)."])
     if m.drive is not None:
         cur, most = m.drive
         speed = drive_speed(unit)

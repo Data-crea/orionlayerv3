@@ -137,8 +137,12 @@ def describe(ev, units, turn, weapon_name, special_name=None):
     if k == "capture":
         line["src"], line["src_owner"] = _unit(units, ev.get("attacker"))
         line["tgt"], line["tgt_owner"] = _unit(units, ev.get("defender"))
-        line["what"], line["note"] = "boarding", (
-            "captured" if ev.get("result") else "repelled")
+        # `result` is the KEN message id (cmbtfir2.cpp:1809-1825): 0x32 the
+        # ship is taken, 0x31 it is taken and destroyed, 0x33 the boarding
+        # failed — not a flag, so a non-zero value is not "captured"
+        line["what"], line["note"] = "boarding", {
+            0x32: "captured", 0x31: "destroyed"}.get(
+                ev.get("result"), "repelled")
         return line
     if k in ("special", "bomb"):
         if k == "special" and (ev.get("weapon") == CONVERTER or

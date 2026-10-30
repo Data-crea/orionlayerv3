@@ -39,6 +39,7 @@ import pygame
 
 from core.hestrings import printf
 from screens.colony import colart
+from core import lang
 from core import nativedraw as nd
 
 from . import gcart, gcgeom as geom
@@ -73,6 +74,18 @@ def fmt(template, *values):
         return template % values
     except (TypeError, ValueError):
         return printf(template, *values)
+
+
+ITALIAN = 4        # `_settings.language` of the Italian game
+
+
+def troop_line(e, count, name):
+    """A count and its troop's name: the E 14 string, and "%s: %d" for an
+    Italian game — TRANSCRIPTION `italian_troops` (mainpups.cpp:2839-2843;
+    colgcbt.cpp:1013-1017)."""
+    if lang.engine_language_number() == ITALIAN:
+        return f"{name}: {count}"
+    return fmt(e.string(14) or "%d %s", count, name)
 
 
 def player(state, idx):
@@ -328,8 +341,7 @@ def _totals(surface, f, bm, side, me):
             surface.blit(big, (fx - big.get_width() // 2,
                                fy - big.get_height()))
         hits = e.string(22 if t["hits"] <= 1 else 23) or "%d"
-        for line, ny in zip((fmt(e.string(14) or "%d %s", t["count"],
-                                 troop_name(e, p, kind)),
+        for line, ny in zip((troop_line(e, t["count"], troop_name(e, p, kind)),
                              fmt(hits, t["hits"]),
                              fmt(e.string(13) or "%+d", t["combat"])),
                             geom.TOTALS_LINES):
