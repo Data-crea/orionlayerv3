@@ -25,6 +25,15 @@ The side: a beam's is `Do_Get_SFX_Draw_Shield_Facing` (beams.cpp:2092-
 2095, the facing from target to attacker, right when `(f + 4) % 16 < 8`);
 every other caller passes 1, right.
 
+HD EXTENSION `number_spacing` (work order 357, Data: the blue and the red
+number lay over each other): the shields' number is 20 native px left of
+the damage in the original, whose digits are 5 px wide; HD's digits are
+wider and, zoomed out, kept at a readable size while the 20 px shrink with
+the camera, so the two overlapped. The shields' number now stays where the
+original puts it unless that would touch the damage, and then stands left
+of it with a gap of half a digit's height; both keep the original's rise
+and drift.
+
 DEVIATION `number_size`: Font 1's digits are 6 native px tall (measured on
 the original running alone, work order 260's capture at +2.85 s: "480",
 rows 211-216 of 480); HD draws them 6 world px tall at the camera's scale,
@@ -113,6 +122,7 @@ def draw(surface, cam, style, marks, now, frame_s, palette, cache):
             continue
         keep.append(m)
         dx = frame if m["side"] else -frame
+        total_x = None
         for kind, value, steps, ox in (("total", m["total"], TOTAL_STEPS, 0),
                                        ("hull", m["hull"], HULL_STEPS,
                                         HULL_DX)):
@@ -122,6 +132,10 @@ def draw(surface, cam, style, marks, now, frame_s, palette, cache):
             x, y = cam.to_window(m["x"] + ox + dx, m["y"] - frame)
             down = max(1, int(round(px / DIGIT_PX)))
             img = _text(style, str(value), px, glyph, cache)
+            if kind == "total":
+                total_x = x
+            elif total_x is not None:     # HD EXTENSION `number_spacing`
+                x = min(x, total_x - img.get_width() - px / 2)
             top = y - img.get_bounding_rect().y
             surface.blit(_text(style, str(value), px, shadow, cache),
                          (x, top + down))
