@@ -41,10 +41,9 @@ from core import planetsblock
 from core.hud import shell
 from core import mouse as mouse_input
 from core.screen_base import ScreenBase
-from core.shipparts import ShipPartNames
 from core import colonyfacts
 
-from . import monsterpanel, planetdraw, planetrows, planetsend, planetwords
+from . import planetdraw, planetrows, planetsend, planetwords
 
 log = logging.getLogger("planets")
 
@@ -75,10 +74,6 @@ class PlanetsScreen(ScreenBase):
         self._hover = None          # list index under the pointer, or None
         self._selected = None       # planet index of the scanned row
         self._scanned = None        # star index + 1000, MOX::_scanned_field
-        self._parts = None          # ship part names, core.shipparts
-        self._monster_sprites = {}  # owner -> panel sprite or None
-        self._monster_scaled = {}   # the one scaled copy on screen
-        self._monster_shown = False  # the last frame drew the panel
         # THE SHELL (work order 225): the title plate; RETURN is a box of
         # the side panel, so the shell carries no buttons here.
         self.shell = shell.Shell(title=self._title)
@@ -100,7 +95,6 @@ class PlanetsScreen(ScreenBase):
         self._words = planetwords.Words.load(
             language, self._data.get("words", {}).get("food", "%s Food"),
             hestrings.for_app(self.app))
-        self._parts = ShipPartNames(language)
         self._list = planetrows.PlanetList(
             self._data.get("sort", {}).get("default", "climate"))
         # MOX::_scanned_field = -1 on entry (plntsum.cpp:1945).
@@ -171,12 +165,6 @@ class PlanetsScreen(ScreenBase):
         return [planetwords.cells(self._view, row, self._words)
                 for row in self._list.rows]
 
-    def _selected_row(self):
-        for row in self._list.rows:
-            if row["index"] == self._selected:
-                return row
-        return None
-
     def _inset_stars(self):
         """The inset's stars, built once per snapshot (work order 226 C):
         a pointer motion off the list asked for them on every event."""
@@ -219,20 +207,8 @@ class PlanetsScreen(ScreenBase):
             self._view, self._scanned, self._words)
             if self._view is not None else None)
         self._render_controls(surface)
-        row = self._selected_row()
-        if row is not None:
-            planetdraw.render_planet_panel(
-                self, surface, row,
-                planetwords.cells(self._view, row, self._words)["planet"])
-        self._monster_shown = monsterpanel.render(self, surface, row)
         self.render_shell(surface)
         self.render_help(surface)
-
-    def editor_dormant(self, box):
-        """The monster panel's boxes show only for a guarded star."""
-        if box.name in monsterpanel.BOXES:
-            return not self._monster_shown
-        return super().editor_dormant(box)
 
     def _marker(self):
         if self._scanned is None or self._view is None:

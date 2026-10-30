@@ -29,7 +29,7 @@ window's geometry, the only place the rows' rects are computed.
 
 **VALUES APPLY AT ONCE, THE FILE IS WRITTEN LATER.** The floor step
 shows on the map behind the popup on the next frame (`floorlift` reads
-it at draw time), and the monster switch on the next Planets frame. The
+it at draw time), and the monster switch on the next map frame. The
 player-colour preset too since work order 312 (`palette.apply_preset`,
 HD EXTENSION `preset_at_once`); the mod folder and the language need a
 restart, and the note that says so is shown only while a saved choice
@@ -65,7 +65,7 @@ COL_STATE = palette.require("game_menu", "hd_state")
 #: Floor steps in the order a click cycles them (screens/galaxy_map/floorlift).
 FLOOR_STEPS = ("off", "light", "haze")
 
-#: The monster values switch (screens/planets/monsterpanel), default on.
+#: The monster values switch (screens/galaxy_map/monsterbox), default on.
 MONSTER_STEPS = ("on", "off")
 
 #: The galaxy map's ship pictures (work order 311, `galaxy_map/shippics`),

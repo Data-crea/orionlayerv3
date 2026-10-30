@@ -11,8 +11,14 @@ of its native rectangle (`infogeom`, through the Leaders screen's
   DEVIATION    `button_words` — the tabs, the tech categories, the metric
                toggles, BACK and RETURN are words the original bakes into
                INFO.LBX; HD writes OrionLayer's words (moddable, `own`)
-  DEVIATION    `chart_colours` — the chart's bars in the HUD's colours, not
+  DEVIATION    `chart_colours` — the chart's bars in the original's colours
+               (order from info.cpp:311, RGB measured off a screenshot), flat
+               where the original shades them in 3D; the texts in HUD tones, not
                INFO.LBX 22-25 recoloured by `_maintenance_bar_colors`
+  HD EXTENSION `legend_bars` — the legend rows are the bars themselves, as
+               in the original, the word in the tone that reads best on each
+  HD EXTENSION `legend_columns` — the legend's numbers right-aligned in
+               one column, the words left-aligned beside it
   HD EXTENSION `wrap_and_scroll` — `infobox`
 """
 import pygame
@@ -31,9 +37,37 @@ T = modtexts.text
 #: body indices (info.cpp:111-113) as HUD tones — INFO.LBX's palette is
 #: not extracted (DEVIATION `chart_colours` covers the text too).
 NORMAL, HIGH, RED = (150, 190, 215), (235, 240, 245), (225, 70, 60)
-BAR_COLOURS = ((210, 190, 90), (120, 170, 230), (110, 200, 150),
-               (220, 140, 80), (190, 110, 200), (200, 90, 90),
-               (150, 150, 160))
+#: The chart's seven bars and legend rows. TRANSCRIPTION of the ORDER
+#: (`maintenance_bar_colors`, info.cpp:311: orange, grey, red, purple,
+#: yellow, blue, green); the RGB are measured off a native screenshot of
+#: the original's legend (mid-tone of each row, Data's picture of 30 October
+#: 2026) because INFO.LBX's palette is not extracted (DEVIATION
+#: `chart_colours`: the bars' flat colour for the original's shaded 3D bars).
+BAR_COLOURS = ((228, 152, 0), (143, 143, 143), (133, 12, 12),
+               (123, 0, 143), (175, 175, 0), (0, 0, 207), (12, 125, 12))
+
+
+#: The text on a legend bar: the darker or the lighter of two tones,
+#: whichever stands at the higher contrast on the bar's colour (WCAG; every
+#: bar clears 4.5:1, the word floor of decision 94). HD EXTENSION
+#: `legend_bars`: the original's rows are shaded bars with the word in the
+#: game's own text colour; HD picks it by contrast so each stays readable.
+BAR_TEXT = ((14, 14, 16), (250, 250, 252))
+
+
+#: Native width of the legend's number column, from the row's left edge:
+#: "100%" at the status size with a margin each side.
+LEGEND_NUMBER_W = 52
+
+
+def bar_text(bar):
+    from core.hud import tint
+    lum = float(tint.luminance(bar))
+
+    def ratio(t):
+        other = float(tint.luminance(t))
+        return (max(lum, other) + 0.05) / (min(lum, other) + 0.05)
+    return max(BAR_TEXT, key=ratio)
 
 
 def R(screen, native):
@@ -117,20 +151,31 @@ def draw_chart(surface, screen, player):
                      R(screen, (x - 40, y - 5, x + 40, y + 5)),
                      px(screen, "note"), NORMAL, "center")
     x0, y0 = geom.LABEL_AT
-    w, hh = geom.LABEL_SIZE
+    w = geom.LABEL_SIZE[0]
     names = ("income", "buildings", "freighters", "ships", "spies",
              "tribute", "leaders")
     for k, name in enumerate(names):
         y = y0 + k * geom.LABEL_STEP
-        label = T(f"info.chart.label.{name}", "") or ""
-        text = f"{income}{label}" if k == 0 else f"{pct[k]:3d}%  {label}"
-        r = R(screen, (x0, y, x0 + w - 1, y + hh - 2))
+        label = (T(f"info.chart.label.{name}", "") or "").strip()
+        number = f"{income}" if k == 0 else f"{pct[k]}%"
+        # a row is no taller than its step: the original's 20 px sprites
+        # overlap by their shading, flat fills would show the overlap
+        r = R(screen, (x0, y, x0 + w - 1, y + geom.LABEL_STEP - 2))
         # LOOK EXCEPTION data: an expense's bar, one colour per expense
-        pygame.draw.rect(surface, BAR_COLOURS[k], r.inflate(-r.w + 6, -4)
-                         .move(-(r.w // 2) + 4, 0))
-        infobox.line(surface, screen, text, r.inflate(-12, 0).move(6, 0),
-                     px(screen, "status"), NORMAL,
-                     "center" if k == 0 else "left")
+        pygame.draw.rect(surface, BAR_COLOURS[k], r)
+        # HD EXTENSION `legend_columns` (Data, 30 October 2026): the numbers
+        # stand right-aligned in one column and the words left-aligned in
+        # the next, so the rows read as a table (the original's proportional
+        # text left the digits and words ragged).
+        tone = bar_text(BAR_COLOURS[k])
+        size = px(screen, "status")
+        infobox.line(surface, screen, number,
+                     R(screen, (x0 + 4, y, x0 + LEGEND_NUMBER_W, y + geom.LABEL_STEP - 2)),
+                     size, tone, "right")
+        infobox.line(surface, screen, label,
+                     R(screen, (x0 + LEGEND_NUMBER_W + 8, y, x0 + w - 4,
+                                y + geom.LABEL_STEP - 2)),
+                     size, tone, "left")
 
 
 def rows(surface, screen, key, native, items, selected=None, lit=None):

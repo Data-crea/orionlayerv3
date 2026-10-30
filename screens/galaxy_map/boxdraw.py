@@ -102,8 +102,8 @@ from core import hestrings
 from core import mouse
 from core import palette
 from screens.galaxy_map import (boxcells, boxmodel, boxpaint, fleetorders,
-                                mapboxes, sysextras, sysfleets, sysorbits,
-                                syswindow)
+                                mapboxes, monsterbox, sysextras, sysfleets,
+                                sysorbits, syswindow)
 from screens.galaxy_map import ships as ship_icons
 from screens.galaxy_map.syswindow import TEXT_COLOR
 
@@ -113,6 +113,16 @@ SYSTEM_BOXES = ("system_box", "system_title", "system_view",
                 "system_text", "system_close")
 FLEET_BOXES = ("fleet_box", "fleet_title", "fleet_grid",
                "fleet_status", "fleet_close")
+#: A monster stack's window replaces the fleet box (`monsterbox`).
+MONSTER_BOXES = monsterbox.BOXES
+def is_monster_window(model):
+    """The fleet model `drawable` marked for the monster window. NOT the
+    key `"monster"`: the system model carries that one already (an unvisited
+    star with a sighted monster, `boxmodel.window_texts`) and would be drawn
+    with the fleet box's rects and no ship records."""
+    return model.get("kind") == "fleet" and bool(model.get("monster_window"))
+
+
 #: A hover refusal's line — the original's second colour set
 #: (fleetpop.cpp:1122-1150, `use_primary_colors = false`).
 REFUSED = palette.col("galaxy_map", "fleet_refused", (226, 96, 72))
@@ -149,6 +159,9 @@ def drawable(screen):
             model, why = boxmodel.fleet_model(state, ident, box,
                                               _texts(screen))
             names = FLEET_BOXES
+            if model is not None and monsterbox.applies(screen, model):
+                model["monster_window"] = True
+                names = MONSTER_BOXES
         if model is None:
             if getattr(screen, "_box_refusal", None) != why:
                 log.info("%s box not drawn: %s", box.kind, why)
@@ -162,20 +175,24 @@ def dormant(screen, box):
     """True for a popup box (system window, fleet box) whose popup is
     not open: they exist as boxes all the time and are drawn only while
     the game has the popup open."""
-    for names in (SYSTEM_BOXES, FLEET_BOXES):
+    for names in (SYSTEM_BOXES, FLEET_BOXES, MONSTER_BOXES):
         if box.name in names:
             return not any(n is names for n, _b, _m in drawable(screen))
     return False
 
 
 def _placed(screen, names, box):
-    """HD rects for a box group, moved to the original's side of the map."""
+    """HD rects for a box group, moved to the original's side of the map
+    (the monster window stands where its boxes are: it belongs to no
+    star, Data's mockup)."""
     rects = {}
     for name in names:
         ref = screen.box_rect(name)
         if not ref:
             return None
         rects[name] = pygame.Rect(*screen.layout.rect(ref))
+    if names is MONSTER_BOXES:
+        return rects
     view = screen._map_view()
     if view is None:
         return None
@@ -203,7 +220,8 @@ def _draw_system(screen, surface, r, model, hits):
     s = sysorbits.frame(view)[0]
     gates = []
     if model["viewable"]:
-        fleets = sysfleets.draw_bar(screen, surface, bar, model["fleets"], s)
+        fleets = sysfleets.draw_bar(screen, surface, bar, model["fleets"], s,
+                                    screen._state, model["star"])
         # TRANSCRIPTION `gate_icons` (sys.cpp:891-892, `sysextras`)
         stars = getattr(screen._state, "stars", None) or []
         gates = sysextras.draw_gates(
@@ -433,6 +451,14 @@ def render(screen, surface):
         if r is None:
             continue
         offer = None
+        if is_monster_window(model):
+            monsterbox.draw(screen, surface, r, model)
+            hits.append((r[names[0]], None))
+            close = r["monster_close"]
+            syswindow.close_button(screen, surface, close,
+                                   syswindow.close_label(screen))
+            hits.append((close, model["close"]))
+            continue
         if model["kind"] == "fleet":
             # the order buttons under CLOSE grow the box (work order 229 C)
             offer = fleetorders.offered(screen._state, model)

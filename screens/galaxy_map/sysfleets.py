@@ -24,6 +24,11 @@ hulls and hull_plurals), then the colony ships (H 0x164 / 0x165), outposts
 (0x166 / 0x167) and transports (0x168 / 0x169) by `N_Ships_By_Type_In_
 Stack_` (:859-895).
 
+HD EXTENSION `fleet_bar_hd_ship` (Data, 30 October 2026): a player's icon in
+the bar is HIS strongest ship at the star, drawn by the map's own picture
+rule (`hd_picture`); the original's bar picture below is what stays where
+that gives none (a monster, the setting `map_ship_pictures` off).
+
 TRANSCRIPTION `fleet_bar_picture` (work order 326 C, `sysshipart`): each
 icon is the original's own bar picture, BUFFER0.LBX 273 + the player's
 colour for a player, 281 for owner 8, (owner - 9) + 282 for a monster
@@ -196,9 +201,37 @@ def bar_cells(bar, bar_entries, s):
     return cells
 
 
-def bar_picture(screen, owner, cell, s):
-    """The bar's picture for `owner` in `cell` (`fleet_bar_picture`), the
-    tinted map icon while it is not extracted (`fleet_icon_drawn`)."""
+def hd_picture(screen, state, star, owner, cell):
+    """HD EXTENSION `fleet_bar_hd_ship` (Data, 30 October 2026: the bar still
+    showed the original's ships): the owner's strongest ship at the star,
+    drawn by the map's own picture rule (`ships.ship_picture`, as the fleet
+    box's cells and the map's stacks are), or None — a monster, no snapshot,
+    the setting `map_ship_pictures` off, no pictures extracted."""
+    if state is None or star is None or ship_icons.kind_for_owner(owner) != \
+            ship_icons.PLAYER_KIND:
+        return None
+    from screens.galaxy_map import shippics
+    ships = stack(state, star, owner)
+    if not ships:
+        return None
+    best = max(ships, key=shippics.strength)
+    side = min(cell.w, cell.h)
+    wide = int(best.ship_type) != ship_struct.SHIP_TYPE_COMBAT
+    return ship_icons.ship_picture(
+        getattr(screen, "_tints", None), best, owner,
+        getattr(screen, "_players", None), getattr(state, "player_num", None),
+        getattr(getattr(screen, "app", None), "user_settings", None),
+        side * (92 if wide else 80) // 100, side * 80 // 100)
+
+
+def bar_picture(screen, owner, cell, s, state=None, star=None):
+    """The bar's picture for `owner` in `cell`: the strongest ship's HD
+    picture (`fleet_bar_hd_ship`), else the original's own (`fleet_bar_
+    picture`), else the tinted map icon while that is not extracted
+    (`fleet_icon_drawn`)."""
+    img = hd_picture(screen, state, star, owner, cell)
+    if img is not None:
+        return img
     from screens.galaxy_map import sysshipart
     colour = ship_icons._player_color(getattr(screen, "_players", None),
                                       owner)
@@ -207,11 +240,12 @@ def bar_picture(screen, owner, cell, s):
     return img if img is not None else icon(screen, owner, cell.h * 8 // 10)
 
 
-def draw_bar(screen, surface, bar, bar_entries, s):
-    """The icons left to right in `bar`; returns [(rect, owner, field)]."""
+def draw_bar(screen, surface, bar, bar_entries, s, state=None, star=None):
+    """The icons left to right in `bar`; returns [(rect, owner, field)].
+    `state` and `star` name the ships the HD pictures are chosen from."""
     hits = bar_cells(bar, bar_entries, s)
     for cell, owner, _field in hits:
-        img = bar_picture(screen, owner, cell, s)
+        img = bar_picture(screen, owner, cell, s, state, star)
         if img is not None:
             surface.blit(img, img.get_rect(center=cell.center))
     return hits

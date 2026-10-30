@@ -7,14 +7,6 @@
     "title": "Side Panel",
     "about": "The glass panel at the right holding the sort and filter buttons, the send buttons and RETURN."
   },
-  "planet_panel": {
-    "title": "Planet Panel",
-    "about": "The glass panel behind the picked planet's disc, name and special."
-  },
-  "picture_panel": {
-    "title": "Picture Panel",
-    "about": "The glass panel at the lower edge behind the guarding monster's picture and data."
-  },
   "header": {
     "title": "List Header",
     "about": "The column headings of the planet table; the column widths of the rows follow it."
@@ -86,58 +78,6 @@
   "return": {
     "title": "Return Button",
     "about": "Slanted button at the foot of the side panel that closes the screen."
-  },
-  "planet_disc": {
-    "title": "Planet Disc",
-    "about": "The picture of the picked planet in the planet panel."
-  },
-  "planet_name": {
-    "title": "Planet Name",
-    "about": "The name of the picked planet, drawn in the planet panel."
-  },
-  "planet_special": {
-    "title": "Planet Special",
-    "about": "The picked planet's special resource, drawn in the planet panel."
-  },
-  "monster_sprite": {
-    "title": "Monster Picture",
-    "about": "Shown only for a star guarded by a monster; its picture."
-  },
-  "monster_type": {
-    "title": "Monster Type",
-    "about": "Shown only for a guarded star; the monster's name."
-  },
-  "monster_stage": {
-    "title": "Monster Stage",
-    "about": "Shown only for a guarded star; the monster's stage of growth."
-  },
-  "monster_size": {
-    "title": "Monster Size",
-    "about": "Shown only for a guarded star; the monster's hull size."
-  },
-  "monster_structure": {
-    "title": "Monster Structure",
-    "about": "Shown only for a guarded star; the monster's structure value."
-  },
-  "monster_armour": {
-    "title": "Monster Armour",
-    "about": "Shown only for a guarded star; the monster's armour value."
-  },
-  "monster_shield": {
-    "title": "Monster Shield",
-    "about": "Shown only for a guarded star; the monster's shield type."
-  },
-  "monster_weapons": {
-    "title": "Monster Weapons",
-    "about": "Shown only for a guarded star; the Weapons heading and the monster's weapon names."
-  },
-  "monster_weapon_counts": {
-    "title": "Monster Weapon Counts",
-    "about": "Shown only for a guarded star; the weapon counts, right-aligned beside the weapon names."
-  },
-  "monster_specials": {
-    "title": "Monster Specials",
-    "about": "Shown only for a guarded star; the Specials heading and the monster's special abilities."
   },
   "help_popup": {
     "title": "Help Panel",

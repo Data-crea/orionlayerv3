@@ -384,6 +384,123 @@
         "font_size": 18,
         "align": "center"
       }
+    },
+    {
+      "name": "monster_box",
+      "rect": [
+        35,
+        164,
+        854,
+        600
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "monster_title",
+      "rect": [
+        46,
+        173,
+        831,
+        46
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 26,
+        "align": "center"
+      }
+    },
+    {
+      "name": "monster_close",
+      "rect": [
+        752,
+        175,
+        126,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    },
+    {
+      "name": "monster_picture",
+      "rect": [
+        50,
+        240,
+        368,
+        395
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "monster_class",
+      "rect": [
+        431,
+        237,
+        208,
+        139
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_hitpoints",
+      "rect": [
+        641,
+        237,
+        243,
+        139
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_weapons",
+      "rect": [
+        431,
+        381,
+        225,
+        256
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 19
+      }
+    },
+    {
+      "name": "monster_specials",
+      "rect": [
+        656,
+        381,
+        227,
+        256
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 17
+      }
+    },
+    {
+      "name": "monster_text",
+      "rect": [
+        46,
+        647,
+        831,
+        104
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
     }
   ],
   "2560x1440": [
@@ -770,6 +887,123 @@
         "skin": "text",
         "font_size": 18,
         "align": "center"
+      }
+    },
+    {
+      "name": "monster_box",
+      "rect": [
+        35,
+        164,
+        854,
+        600
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "monster_title",
+      "rect": [
+        46,
+        173,
+        831,
+        46
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 26,
+        "align": "center"
+      }
+    },
+    {
+      "name": "monster_close",
+      "rect": [
+        752,
+        175,
+        126,
+        42
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 18,
+        "align": "center"
+      }
+    },
+    {
+      "name": "monster_picture",
+      "rect": [
+        50,
+        240,
+        368,
+        395
+      ],
+      "style": {
+        "skin": "thin_border"
+      }
+    },
+    {
+      "name": "monster_class",
+      "rect": [
+        431,
+        237,
+        208,
+        139
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_hitpoints",
+      "rect": [
+        641,
+        237,
+        243,
+        139
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
+      }
+    },
+    {
+      "name": "monster_weapons",
+      "rect": [
+        431,
+        381,
+        225,
+        256
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 19
+      }
+    },
+    {
+      "name": "monster_specials",
+      "rect": [
+        656,
+        381,
+        227,
+        256
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 17
+      }
+    },
+    {
+      "name": "monster_text",
+      "rect": [
+        46,
+        647,
+        831,
+        104
+      ],
+      "style": {
+        "skin": "text",
+        "font_size": 20
       }
     }
   ]

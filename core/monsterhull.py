@@ -58,8 +58,6 @@ ARMOR_SHIPS_BONUS = (-100, 0, 100, 300, 500, 700, 900)
 SPECIAL_HEAVY_ARMOR = 14
 SPECIAL_REINFORCED_HULL = 27
 
-START, EVENT = "start", "event"
-
 
 def _cdiv(a, b):
     """C integer division: truncates toward zero. Python's // floors, which
@@ -76,17 +74,6 @@ def _bit(view, index):
 
 def _table(table, index):
     return table[index] if 0 <= index < len(table) else None
-
-
-def stage(view):
-    """START or EVENT for the five fixed-table monsters, None otherwise.
-
-    The one distinction the templates make (SHIP_CONFIG [0] and [1],
-    ship_config.cpp:86-139), and it is the same test Get_Ship_Structure_
-    makes: no drive is the start monster."""
-    if int(view.previous_owner) not in MONSTER_STRUCTURE:
-        return None
-    return START if view.ftl_type <= 0 else EVENT
 
 
 def structure(view):

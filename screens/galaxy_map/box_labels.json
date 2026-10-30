@@ -122,5 +122,41 @@
   "fleet_close": {
     "title": "Fleet Close Button",
     "about": "The close button of the fleet box; shown only while the fleet box is open."
+  },
+  "monster_box": {
+    "title": "Monster Window",
+    "about": "The frame of the space monster's window; shown only while a monster's fleet box is open and Monster values is on."
+  },
+  "monster_title": {
+    "title": "Monster Window Title",
+    "about": "The monster's own name in capitals."
+  },
+  "monster_close": {
+    "title": "Monster Close Button",
+    "about": "Closes the monster window, the fleet box's own CLOSE."
+  },
+  "monster_picture": {
+    "title": "Monster Picture",
+    "about": "The monster's type, from the map's own master picture; empty for a type without one."
+  },
+  "monster_class": {
+    "title": "Monster Class",
+    "about": "The monster's hull class."
+  },
+  "monster_hitpoints": {
+    "title": "Monster Hit Points",
+    "about": "Structure and armour (tactical hull points) and the shield's name."
+  },
+  "monster_weapons": {
+    "title": "Monster Weapons",
+    "about": "The mounted weapons with their counts."
+  },
+  "monster_specials": {
+    "title": "Monster Specials",
+    "about": "The special devices the monster carries."
+  },
+  "monster_text": {
+    "title": "Monster Description",
+    "about": "The monster's description."
   }
 }

@@ -30,9 +30,10 @@ typed in `assets/shared/turnpopup/labels.json` (decision 15).
 **DEVIATION `hud_turn_popup`**: the HUD panel instead of each popup's own
 artwork (SCIENCE.LBX and the technology animations, TURNSUM.LBX, the
 BUFFER0.LBX popup frames with the system display, EVENTS.LBX's GNN picture
-and animation, COLONY's landing art); the planet choice's and the
-discovery's system display is a list of the star's planets (named) instead
-of the planets' pictures; the troop popup (open fix 98, work order 274) is a
+and animation, COLONY's landing art); the planet choice's (with a special's
+text) and the discovery's panel (the latter only the fallback since
+`discovery_window`) list the star's planets (named) instead of the planets'
+pictures; the troop popup (open fix 98, work order 274) is a
 table of its lines under the planet's name, without the troops' figures; the science room
 lists every discovery at once where the original shows one per click (each
 click is still sent, as the original counts them); the GNN picture is not
@@ -57,6 +58,9 @@ from core.turnpopupcontent import (  # noqa: F401
     DEFAULT_WORDS, content, leader_card)
 
 REF_W, REF_PAD, REF_FONT, REF_TITLE_FONT = 1000, 30, 28, 38
+#: Frames of nothing a new system's window may take before the panel stands
+#: in (`View.render`): the engine's field list comes a tick after the block.
+DISCOVERY_PATIENCE = 8
 REF_BUTTON = (220, 58)
 REF_OPTION_H = 46
 #: The most height a popup's HD picture takes (`c["art"]`), in reference
@@ -109,6 +113,28 @@ class View:
             # `SYS::Draw_System_Display_Popup`); a system special's text
             # (the popup's `text`) keeps the panel
             return self._render_window(surface, popup, state, backdrop, app)
+        if popup["kind"] == "discovery" and app is not None and \
+                "galaxy_map" in app.dispatcher.screens:
+            # TRANSCRIPTION `discovery_window` (Data, 30 October 2026): the
+            # new system's popup is the system window too, as the original
+            # draws it (`Draw_Discovery_Popup`, mainpups.cpp:1146-1170 calls
+            # `SYS::Draw_System_Display_Popup`), the special's text beside
+            # it. The window needs the engine's fields (they come a tick
+            # after the block) and the planets of its snapshot: until it can
+            # draw, a few frames of nothing; if it never can, the panel,
+            # so the popup is never undismissable.
+            drawn = self._render_window(surface, popup, state, backdrop, app)
+            key = (tuple(popup["args"]), (popup.get("system") or {}).get(
+                "star"))
+            if getattr(self, "_window_key", None) != key:
+                # another popup: its patience starts again
+                self._window_key, self._window_misses = key, 0
+            if drawn:
+                self._window_misses = 0
+                return drawn
+            self._window_misses = getattr(self, "_window_misses", 0) + 1
+            if self._window_misses < DISCOVERY_PATIENCE:
+                return drawn
         if popup["kind"] == "colony_combat":
             return self._render_invasion(surface, popup, state, backdrop,
                                          app, labels)

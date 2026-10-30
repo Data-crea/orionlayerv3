@@ -57,10 +57,9 @@ BOX_NAME = _cplates.BOX_NAME
 #: then; they are parts of `colony_panel` now (`colonyplates.PARTS`).
 BAND_KEYS = ["planet_info", "colony_panel", "galaxy_inset"]
 
-#: The Planets screen's five cutouts — brief 101: the list and the right
-#: column on top, then three bottom windows left to right.
-PLANETS_KEYS = [["list_area", "side_panel"],
-                ["planet_panel", "picture_panel", "button_panel"]]
+#: The Planets screen's cutouts: the list and the right column, both the
+#: full height (the bottom windows went, work order 358).
+PLANETS_KEYS = [["list_area", "side_panel"]]
 
 #: The Fleets screen's cutouts, in the order the ORIGINAL adds the fields.
 #: Every name here is a control `screens/fleets/fltwire.CONTROL_ORIGINS`

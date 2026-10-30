@@ -49,13 +49,13 @@ PANEL_BG = _hudstyle.get().colour("panel.fill")
 INSET_FILL = palette.require("colony_summary", "galaxy_inset_fill")
 OUTLINE = palette.col("panel", "thin_border", (55, 65, 85))
 
-#: The screen's four panels in the shell's content rectangle (work order
-#: 225, `shell_planets.png`): the table, the side panel, and under the
-#: table the two boxes the screen always had — the scanned planet and the
-#: space monster's values (decision 64) — two contents, so two boxes in one
-#: row. The bottom-right button panel went: its three buttons stand at the
-#: side panel's foot.
-PANELS = ("list_area", "side_panel", "planet_panel", "picture_panel")
+#: The screen's two panels in the shell's content rectangle (work order
+#: 225, `shell_planets.png`): the table and the side panel, both the full
+#: height. The bottom-right buttons stand at the side panel's foot. The
+#: monster's values left for the galaxy map's monster window (`galaxy_map/
+#: monsterbox`, decision 64) and the panel under the table, which showed
+#: one planet's disc, name and special, went (Data, 30 October 2026).
+PANELS = ("list_area", "side_panel")
 COLUMN_KEYS = ("planet", "climate", "gravity", "minerals", "size")
 
 
@@ -355,31 +355,6 @@ def inset_star_at(screen, stars, x, y):
             if best_d is None or d < best_d:
                 best, best_d = index, d
     return best
-
-
-def render_planet_panel(screen, surface, row, words):
-    """HD EXTENSION: panel — the scanned row's disc, name and special line,
-    larger (layout.json panel._hd_extension_panel)."""
-    if row is None:
-        return
-    disc_rect = window(screen, "planet_disc")
-    if disc_rect:
-        size = min(disc_rect.width, disc_rect.height)
-        disc = colonyplanets.set_for(screen, size)
-        image = (disc.get(row["climate"], row["index"])
-                 if disc is not None else None)
-        if image is not None:
-            surface.blit(image, image.get_rect(center=disc_rect.center))
-    colour = row_color(row, False)
-    for name, text in (("planet_name", words["name"]),
-                       ("planet_special", words["special"])):
-        rect = window(screen, name)
-        if rect and text:
-            surf = _text(screen.style, text,
-                         screen.layout.font_size(_font(screen, name, 22)),
-                         colour, rect.width)
-            surface.blit(surf, (rect.x, rect.y + (rect.height
-                                                  - surf.get_height()) // 2))
 
 
 def _font(screen, name, default):

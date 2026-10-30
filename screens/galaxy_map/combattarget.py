@@ -104,6 +104,8 @@ def model(state, popup, text, estrings, omniscient=False, close_arg=2,
         return None, f"the close field {a[close_arg]} is not in the live list"
     # The planets' places off the orbit centre, as `boxmodel.match_planets`
     # reads the map's: the window's corner is CLOSE's place less its offset.
+    # the orbit centre off CLOSE's place (not used for a new system's popup,
+    # which has no CLOSE field: its planets come from `orbit_place`)
     ox = close.x - CLOSE_AT[0] + boxmodel.ORBIT_CENTRE[0]
     oy = close.y - CLOSE_AT[1] + boxmodel.ORBIT_CENTRE[1]
     known = {p["planet"]: p for p in boxmodel.star_planets(state, stars[star])}
@@ -115,8 +117,19 @@ def model(state, popup, text, estrings, omniscient=False, close_arg=2,
         if f is None or p is None:
             return None, (f"planet {slot['planet']}'s field {slot['field']} "
                           f"is not in the live list or not at {stars[star].name}")
-        cx, cy = f.x + (f.x_end - f.x) // 2, f.y + (f.y_end - f.y) // 2
-        planets.append(dict(p, field=f.index, at=(cx - ox, cy - oy)))
+        if popup["kind"] == "discovery":
+            # TRANSCRIPTION `discovery_places`: the new system's popup has no
+            # CLOSE field to take the window's corner from (its one dismiss
+            # field is the whole screen, `Update_Discovery_Fields_`,
+            # mainpups.cpp:1729-1743), so each planet stands where the
+            # engine puts it — the same function that gives its field's
+            # place (`sysorbits.orbit_place`, `GEO::Get_Orbit_Display_X_Y`)
+            at = sysorbits.orbit_place(star, int(p["orbit"]),
+                                       int(getattr(state, "stardate", 0) or 0))
+        else:
+            cx, cy = f.x + (f.x_end - f.x) // 2, f.y + (f.y_end - f.y) // 2
+            at = (cx - ox, cy - oy)
+        planets.append(dict(p, field=f.index, at=at))
     out = boxmodel.window_texts(state, star, text, omniscient)
     out.update({"star": star, "name": stars[star].name, "close": close.index,
                 "title": title_text or title(state, star, estrings),
@@ -127,9 +140,11 @@ def model(state, popup, text, estrings, omniscient=False, close_arg=2,
     return out, None
 
 
-def rects(screen, size):
+def rects(screen, size, lift=0):
     """The map's system window rects (boxes.json), centred in the window as
-    the original centres its picture; the bar is CLOSE's row left of it."""
+    the original centres its picture; the bar is CLOSE's row left of it.
+    `lift`: device px the window stands higher (the special's text under it,
+    `special_block`)."""
     out = {}
     for name in boxdraw.SYSTEM_BOXES:
         ref = screen.box_rect(name)
@@ -138,11 +153,59 @@ def rects(screen, size):
         out[name] = pygame.Rect(*screen.layout.rect(ref))
     panel = out["system_box"]
     dx = size[0] // 2 - panel.centerx
-    dy = size[1] // 2 - panel.centery
+    dy = size[1] // 2 - panel.centery - lift
     out = {n: r.move(dx, dy) for n, r in out.items()}
     out["system_fleets"] = sysfleets.bar_rect(out["system_view"],
                                               out["system_close"])
     return out
+
+
+#: The gap between the window and the special's panel, reference px.
+SPECIAL_GAP = 10
+
+
+def special_block(screen, popup, app, width):
+    """HD EXTENSION `discovery_special` for a new system's special: the
+    special's name over its description in a panel under the window.
+    `(name surface, [line surfaces], height)` or None. The original draws
+    the same two texts in a box over the window's view (`Draw_System_Special_
+    Popup_`, mainpups.cpp:1133-1138 at the popup's corner + (6, 76)); HD
+    keeps the view clear, because the planets stand where that box would."""
+    from core import textfit
+    from core import turnpopupcontent
+    from core.hud import text as hudtext
+    if popup["kind"] != "discovery" or not popup.get("text"):
+        return None
+    scale = screen.layout.scale
+    pad = max(6, int(14 * scale))
+    size = syswindow.font(screen, "system_text", 16)
+    name = turnpopupcontent._special_name(app, popup["args"][1])
+    head = screen.style.render_text(
+        name, int(size * 1.25), tuple(hudtext.colour("title")[:3])) \
+        if name else None
+    body = [screen.style.render_text(t, size,
+                                     tuple(hudtext.colour("value")[:3]))
+            for t in textfit.wrap_text(screen.style, popup["text"], size,
+                                       width - 2 * pad)]
+    step = int(size * 1.3)
+    height = 2 * pad + (head.get_height() + pad // 2 if head else 0) + \
+        step * len(body)
+    return head, body, height, pad, step
+
+
+def _draw_special(screen, surface, box, block, gap):
+    """The special's panel under the window's frame, as wide as it."""
+    from core.hud import blocks as hud
+    head, body, height, pad, step = block
+    panel = pygame.Rect(box.x, box.bottom + gap, box.w, height)
+    hud.popup(surface, panel, screen.layout.scale)
+    y = panel.y + pad
+    if head is not None:
+        surface.blit(head, head.get_rect(midtop=(panel.centerx, y)))
+        y += head.get_height() + pad // 2
+    for line in body:
+        surface.blit(line, line.get_rect(midtop=(panel.centerx, y)))
+        y += step
 
 
 class Drawn:
@@ -159,7 +222,19 @@ def render(screen, surface, popup, state, app=None):
     from core import hestrings, mouse
     from core.estrings import EStrings
     out = Drawn()
-    r = rects(screen, surface.get_size())
+    block = special_block(screen, popup, app, int(
+        pygame.Rect(*screen.layout.rect(screen.box_rect("system_box"))).w)) \
+        if screen.box_rect("system_box") else None
+    gap = int(SPECIAL_GAP * screen.layout.scale)
+    lift = (block[2] + gap) // 2 if block else 0
+    r = rects(screen, surface.get_size(), lift)
+    if r is not None and block:
+        # a long text must not push its panel off the window: lift the
+        # whole block by what hangs over the foot
+        over = r["system_box"].bottom + gap + block[2] \
+            - (surface.get_height() - gap)
+        if over > 0:
+            r = rects(screen, surface.get_size(), lift + over)
     if r is None:
         log.info("combat target window: the map has no system window boxes")
         return out
@@ -173,13 +248,14 @@ def render(screen, surface, popup, state, app=None):
     text = hestrings.for_app(screen.app)
     text = text if text.state == "ok" else None
     choice = popup["kind"] == "planet_choice"
+    discovery = popup["kind"] == "discovery"
     close_arg = 4 if choice else 2
     if choice:
         from core.turnpopupcontent import RIGHT_HELP
         out.right_help = RIGHT_HELP["planet_choice"]
     m, why = model(state, popup, text, estrings,
                    getattr(screen, "_omniscient", False), close_arg,
-                   popup.get("title") if choice else None)
+                   popup.get("title") if choice or discovery else None)
     # UNDER A BOX (the engine's answer to a click, E 0x24E, 0x253 …) the
     # live list is the box's, not the window's: the window is drawn as it
     # last stood for this popup, as the original's stays under its help
@@ -192,7 +268,7 @@ def render(screen, surface, popup, state, app=None):
     stale = not live and last is not None and last[0] == key
     if stale:
         m = last[1]
-    if m is None and choice:
+    if m is None and (choice or discovery):
         # The engine's field list comes a tick after the popup's block: until
         # it does there is nothing to click and nothing to say — not the
         # reason in the view's middle, which flashed on the first frame
@@ -215,7 +291,7 @@ def render(screen, surface, popup, state, app=None):
     drawn = syswindow.draw_view(screen, surface, view, m, state)
     s = sysorbits.frame(view)[0]
     fleets = sysfleets.draw_bar(screen, surface, r["system_fleets"],
-                                m["fleets"], s)
+                                m["fleets"], s, state, m["star"])
     pointer = mouse.pos()
     if not sysfleets.hover(screen, surface, view, state, m["star"], fleets,
                            pointer, text):
@@ -226,11 +302,16 @@ def render(screen, surface, popup, state, app=None):
     close = r["system_close"]
     syswindow.close_button(screen, surface, close, syswindow.close_label(screen))
     syswindow.finish(screen, surface, corners)      # work order 235
+    if block is not None:
+        _draw_special(screen, surface, r["system_box"], block, gap)
     if stale:
         return out
     for p, rect in drawn:
         f = _field(state, p["field"])
-        out.rects.append((rect, ("click", f) if f is not None else None))
+        # the new system's planets take no left click (`_system_choice`):
+        # the window is there to look at; only the right click informs
+        out.rects.append((rect, ("click", f) if f is not None and
+                          not discovery else None))
         # the planet choice answers a right click with its whole-popup help
         # (`turnpopupcontent.RIGHT_HELP`), the combat target with the
         # planet's colony information
@@ -240,7 +321,10 @@ def render(screen, surface, popup, state, app=None):
         out.rects.append((rect, ("click", f)))
         out.right.append((rect, None))
     cf = _field(state, m["close"])
-    close_action = ("click", cf) if cf is not None else None
+    # the new system's dismiss field is the whole screen: activated by its
+    # id, as the panel's CLOSE did (`turnpopupcontent._system_choice`)
+    close_action = (("activate" if discovery else "click", cf)
+                    if cf is not None else None)
     out.rects.append((close, close_action))
     out.right.append((close, None))
     out.buttons = [close_action]

@@ -147,7 +147,7 @@
           "label": "8 Players"
         }
       },
-      "_values_v2_source": "orion2re v2 (work order 243) adds a random player count as the last value (newgame.cpp NEW_GAME_PLAYER_COUNT_RANDOM = MAX_PLAYERS - 1); the base pack has no picture for it yet.",
+      "_values_v2_source": "orion2re v2 (work order 243) adds a random player count as the last value (newgame.cpp NEW_GAME_PLAYER_COUNT_RANDOM = MAX_PLAYERS - 1); its picture is Data's stone question mark, cut to the slot's 2:1 (30 October 2026, base pack players/random_players.png).",
       "values_v2": {
         "0": {
           "image": "2_players",
@@ -178,7 +178,7 @@
           "label": "8 Players"
         },
         "7": {
-          "image": null,
+          "image": "random_players",
           "label": "Random"
         }
       }

@@ -36,6 +36,8 @@ right- or centre-justified one up to the column the next X names: the
 boarding result's two sides side by side (cmbtfir2.cpp:1650-1666). The words on the buttons are artwork in the original
 and typed in `assets/shared/msgbox/labels.json` (decision 15).
 """
+import re
+
 import pygame
 
 from core import helpformat, lang
@@ -175,8 +177,79 @@ def dimmed_base(surface, base, alpha, backdrop=None):
     return out
 
 
+#: A line of nothing but these, at least five of them, is a rule the game
+#: typed out in dashes ("--------------------"); HD draws it as a line.
+RULE_CHARS = "-_=~"
+#: A line that starts with a number and goes on in words ("13 from 13
+#: Frigates"); three of them make a table of numbers and words.
+NUMBER_LINE = re.compile(r"^\s*(\d[\d,.]*%?)\s+(.*\S)\s*$")
+NUMBER_LINES_FOR_TABLE = 3
+#: The smallest the text is stepped down to when a box would not fit the
+#: window, as a share of its size (a clipped list lost its last lines).
+FIT_FLOOR = 0.6
+
+
+def is_rule(plain):
+    t = plain.strip()
+    return len(t) >= 5 and not t.strip(RULE_CHARS)
+
+
+def build_rows(style, box, size, inner, colour, emphasis):
+    """The box's text as rows at font `size`: None a gap, a surface a
+    centred line, a list its columns, a tuple a label and its right-hand
+    value, `{"num": (number, words)}` a row of the numbers-and-words table
+    and `{"rule": True}` a line. TRANSCRIPTION of the text itself; the
+    table and the rules are HD EXTENSION `box_table` (below)."""
+    from core.textfit import wrap_rendered
+    parsed = list(helpformat.parse(box["text"] or "", box.get("items")))
+    numbered = sum(1 for ln in parsed if NUMBER_LINE.match(ln.plain()))
+    table = numbered >= NUMBER_LINES_FOR_TABLE
+    rows = []
+    for i, ln in enumerate(parsed):
+        plain = ln.plain()
+        if not plain.strip():
+            rows.append(None)
+            continue
+        cols = column_runs(ln)
+        pair = split_right(ln)
+        hit = NUMBER_LINE.match(plain) if table else None
+        nxt = parsed[i + 1].plain() if i + 1 < len(parsed) else ""
+        if is_rule(plain):
+            rows.append({"rule": True})
+        elif cols is not None:
+            rows.append([(style.render_text(t, size, colour[:3]), a, x0, x1)
+                         for t, a, x0, x1 in cols])
+        elif pair is not None:
+            # a table row: the label left and the value right, in a column
+            # of the box's text width (FMTPARA's justification codes)
+            rows.append((style.render_text(pair[0], size, colour[:3]),
+                         style.render_text(pair[1], size, colour[:3])))
+        elif hit is not None:
+            # the row a rule closes is the sum: set in the title's tone
+            tone = emphasis if is_rule(nxt) else colour
+            rows.append({"num": (style.render_text(hit.group(1), size,
+                                                   tone[:3]),
+                                 style.render_text(hit.group(2), size,
+                                                   tone[:3]))})
+        else:
+            rows.extend(wrap_rendered(style, plain, size, inner, colour))
+        if ln.paragraph_break:
+            rows.append(None)
+    while rows and rows[-1] is None:
+        rows.pop()
+    return rows
+
+
 def draw(surface, style, labels, box):
-    """The panel: title, the text, the buttons. `(panel, {key: rect})`."""
+    """The panel: title, the text, the buttons. `(panel, {key: rect})`.
+
+    HD EXTENSION `box_table` (Data, 30 October 2026, on the Command Summary):
+    three or more lines that start with a number are set as a table — the
+    numbers right-aligned in one column, the words left-aligned beside it,
+    the row a rule closes in the title's tone — and a line of dashes is
+    drawn as a line. A box too tall for the window steps its text down to
+    `FIT_FLOOR` instead of clipping its last lines (the Command Summary's
+    maintenance sum was cut off)."""
     win_w, win_h = surface.get_size()
     s = win_h / 1080
     words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
@@ -184,43 +257,36 @@ def draw(surface, style, labels, box):
     pad = int(REF_PAD * s)
     w = int(REF_W * s)
     inner = w - 2 * pad
-    size = max(10, int(REF_FONT * s))
+    full = max(10, int(REF_FONT * s))
     colour = hudtext.colour("value")
+    emphasis = hudtext.colour("title")
+    bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
     # the box's text and title are the game's: no word of them is
     # OrionLayer's to translate (work order 200 C, `core/lang.verbatim`)
     with lang.verbatim():
-        rows = []
-        from core.textfit import wrap_rendered
-        for ln in helpformat.parse(box["text"] or "", box.get("items")):
-            plain = ln.plain()
-            if not plain.strip():
-                rows.append(None)
-                continue
-            cols = column_runs(ln)
-            pair = split_right(ln)
-            if cols is not None:
-                rows.append([(style.render_text(t, size, colour[:3]), a, x0,
-                              x1) for t, a, x0, x1 in cols])
-            elif pair is not None:
-                # a table row: the label left and the value right, in a column
-                # of the box's text width (FMTPARA's justification codes)
-                rows.append((style.render_text(pair[0], size, colour[:3]),
-                             style.render_text(pair[1], size, colour[:3])))
-            else:
-                rows.extend(wrap_rendered(style, plain, size, inner, colour))
-            if ln.paragraph_break:
-                rows.append(None)
-        while rows and rows[-1] is None:
-            rows.pop()
-        step = int(size * 1.3)
         title = style.render_text(box["title"], max(12, int(REF_TITLE_FONT * s)),
-                                  tuple(hudtext.colour("title")[:3])) \
+                                  tuple(emphasis[:3])) \
             if box.get("title") else None
-    bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
-    text_h = sum(step if r is not None else step // 2 for r in rows)
-    h = pad + (title.get_height() + pad // 2 if title else 0) + text_h + \
-        pad + bh + pad
-    h = min(h, win_h - 2 * pad)
+        room = win_h - 2 * pad
+        size = full
+        while True:
+            rows = build_rows(style, box, size, inner, colour, emphasis)
+            step = int(size * 1.3)
+            text_h = sum(step if r is not None else step // 2 for r in rows)
+            h = pad + (title.get_height() + pad // 2 if title else 0) + \
+                text_h + pad + bh + pad
+            # a table's block (number + gap + the widest words) must fit the
+            # text width too, as the height must fit the window
+            nums = [r["num"] for r in rows
+                    if isinstance(r, dict) and "num" in r]
+            wide = bool(nums) and max(n.get_width() for n, _t in nums) + \
+                max(6, int(size * 0.7)) + max(
+                    t.get_width() for _n, t in nums) > inner
+            if (h <= room and not wide) or size <= max(
+                    10, int(full * FIT_FLOOR)):
+                break
+            size -= 1
+    h = min(h, room)
     panel = pygame.Rect((win_w - w) // 2, (win_h - h) // 2, w, h)
     hud.popup(surface, panel, s)
     y = panel.y + pad
@@ -229,13 +295,30 @@ def draw(surface, style, labels, box):
         y += title.get_height() + pad // 2
     col = pygame.Rect(0, 0, int(inner * 0.72), 1)
     col.centerx = panel.centerx
+    # the numbers-and-words table: one block, centred, its two columns
+    nums = [r["num"] for r in rows if isinstance(r, dict) and "num" in r]
+    block = None
+    if nums:
+        num_w = max(n.get_width() for n, _t in nums)
+        gap = max(6, int(size * 0.7))
+        text_w = max(t.get_width() for _n, t in nums)
+        left = max(panel.x + pad, panel.centerx - (num_w + gap + text_w) // 2)
+        block = (left, left + num_w, left + num_w + gap,
+                 num_w + gap + text_w)
     for r in rows:
         if r is None:
             y += step // 2
             continue
         if y + step > panel.bottom - pad - bh:
             break                   # the original clips at its window too
-        if isinstance(r, list):
+        if isinstance(r, dict) and "num" in r:
+            num, text = r["num"]
+            surface.blit(num, num.get_rect(topright=(block[1], y)))
+            surface.blit(text, (block[2], y))
+        elif isinstance(r, dict):
+            x0, width = (block[0], block[3]) if block else (col.x, col.w)
+            hud.separator(surface, x0, x0 + width, y + step // 2, s)
+        elif isinstance(r, list):
             left = panel.x + pad
             for img, a, x0, x1 in r:
                 p0, p1 = (left + inner * v // TEXT_W for v in (x0, x1))

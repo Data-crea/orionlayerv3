@@ -289,5 +289,38 @@
       "50%"
     ],
     "accept": "ACCEPT"
+  },
+  "monster_window": {
+    "_hd_extension": "HD EXTENSION (fundament 64): the space monster's window over the map, Data's mockup of 30 October 2026 - the Planets screen's monster values moved here. Drawn in place of the fleet box when the stack's head ship is a monster (owners 9..14) and the OrionLayer switch in Game Settings (user_settings monster_values, default on) is not off. Numbers, not judgements: no rating word, no warning colour. Nothing is sent; CLOSE is the fleet box's own field.",
+    "_deviation_sprite": "DEVIATION: the sprite is the monster's TYPE, from the galaxy map's own master (tools/make_ship_icons.py, panel.png). The original's monster picture - in a system popup no running game reaches - is chosen by star index % 5 (RUSS::Star_To_Monster_, mainpups.cpp:1082), which can show a creature that is not the one there. A type without a master (the amoeba today) leaves the picture empty.",
+    "_values_note": "Structure and armour are the tactical hull points as two lines (core/monsterhull.py, held to initship.cpp by dev:tools/monster_hull_check.py); the five monsters show 'Armour 0', which is what ARMOR_NO_ARMOR gives. Class, shield, weapon and special names from TECHNAME.LBX (core/shipparts.py); without the extracted file the numbers show as unnamed. Weapon counts are the template count, not the current count - monsters are fully repaired each turn.",
+    "_description_note": "DEVIATION monster_description: the original has no text per monster. 'descriptions' maps an owner to its sentence (the Guardian's is Data's mockup text); every other type shows the original's description of the space-monster special (MAINTEXT 9).",
+    "descriptions": {
+      "9": "The Guardian is a powerful, autonomous warship that protects this star system. It will attack and destroy any intruders."
+    },
+    "headings": {
+      "class": "Class",
+      "hit_points": "Hit points",
+      "weapons": "Weapons:",
+      "specials": "Specials:"
+    },
+    "structure": "Structure",
+    "armour": "Armour",
+    "count": "x%d",
+    "unnamed": "#%d",
+    "unknown": "?",
+    "weapons_heading": 157,
+    "specials_heading": 158,
+    "none": 159,
+    "_heading_note": "HESTRNGS 0x9D 'Weapons:', 0x9E 'Specials:' and 0x9F 'None' - the fleet screen's own words for the same lists (FLT2::Print_Scanned_Ship_Data_, flt2.cpp:524-750). The English words in monsterpanel.py are used only while HESTRNGS is not extracted.",
+    "star_scale": 2.0,
+    "_star_note": "HD EXTENSION monster_stars: device px per native px of the star field behind the creature (sysstars); 2.0 is about the system window's own density at 1920x1080.",
+    "rows": {
+      "class": 4,
+      "hit_points": 4,
+      "weapons": 6,
+      "specials": 9
+    },
+    "_rows_note": "Row bands in each list box, heading included: the Guardian mounts five weapons (six rows) and carries eight specials (nine rows), the most of any monster."
   }
 }

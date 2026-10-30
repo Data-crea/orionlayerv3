@@ -79,8 +79,8 @@ def migrate(new=None, old=OLD_PATH):
     return new
 
 #: The original's look: no floor lift, the game's own player colours.
-#: One exception, Data's decision: the monster values in the Planets
-#: panel (fundament 64) are ON by default — they level a field newcomers
+#: One exception, Data's decision: the monster window on the galaxy map
+#: (fundament 64) is ON by default — they level a field newcomers
 #: and veterans do not share, and a switch nobody finds does not.
 DEFAULTS = {
     "floor_lift": "off",
