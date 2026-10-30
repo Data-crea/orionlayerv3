@@ -35,7 +35,7 @@ import os
 
 import pygame
 
-from core import monsterhull
+from core import monsterhull, textfit
 from core import zoomtables as zt
 from core.structs import ship as ship_struct
 from core.usersettings import DEFAULTS
@@ -162,8 +162,12 @@ def _line(screen, surface, name, text, colour, align="left", rect=None):
     rect = rect or planetdraw.window(screen, name)
     if not rect or not text:
         return
-    surf = planetdraw._text(screen.style, text, screen.layout.font_size(
-        planetdraw._font(screen, name, 20)), colour, rect.width)
+    # HD EXTENSION `font_scale` (WO 356): a list's rows are bands of fixed
+    # height, so a larger text is fitted to its band (core.textfit); at
+    # 1.0 the size is untouched.
+    size = textfit.fit_height_size(screen.style, screen.layout.font_size(
+        planetdraw._font(screen, name, 20)), rect.height)
+    surf = planetdraw._text(screen.style, text, size, colour, rect.width)
     x = rect.right - surf.get_width() if align == "right" else rect.x
     surface.blit(surf, (x, rect.y + (rect.height - surf.get_height()) // 2))
 

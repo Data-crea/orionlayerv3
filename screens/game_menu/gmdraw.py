@@ -15,7 +15,7 @@ game's own strings from HESTRNGS.
 """
 import pygame
 
-from core import lang, mouse as mouse_input
+from core import fontscale, lang, mouse as mouse_input
 from core.hud import blocks as hud
 from core.hud import glyphs
 
@@ -113,11 +113,20 @@ def fit_size(screen, b, word):
     the button (the text-fit rule, work order 200 C: ÜBERNEHMEN was wider
     than its button); English is drawn exactly as before."""
     size = _size(screen, b, default=30)
-    if lang.current() == lang.DEFAULT:
+    scaled = fontscale.factor() != 1.0
+    if lang.current() == lang.DEFAULT and not scaled:
         return size
     r = b.screen_rect
+    room = r.w * 0.9
+    if scaled:
+        # HD EXTENSION `font_scale` (work order 356): the text-size factor
+        # grows the word, not the button, so English is fitted too, and
+        # the word leaves room for the button's glyph (RETURN lost its
+        # arrow at 1.20). At 1.0 nothing changes.
+        room = r.w - 2 * int(r.h * 0.2) - int(r.h * 0.6) - int(r.h * 0.12) \
+            if glyphs.for_button("game_menu", b.name) else room
     while size > 8 and screen.style.render_text(
-            word, size, (255, 255, 255)).get_width() > r.w * 0.9:
+            word, size, (255, 255, 255)).get_width() > room:
         size -= 1
     return size
 
@@ -130,7 +139,7 @@ def group_size(screen, items):
     button and none looks larger than its neighbours. `items` is
     [(box name, word)]; None in English, where each button keeps its own
     size as before."""
-    if lang.current() == lang.DEFAULT:
+    if lang.current() == lang.DEFAULT and fontscale.factor() == 1.0:
         return None
     sizes = []
     for name, text in items:

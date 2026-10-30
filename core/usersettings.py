@@ -144,6 +144,10 @@ DEFAULTS = {
     "livery_core": "strong",
     "livery_second": None,
     "livery_strength": 1.0,
+    # The player's text size (work order 356, `core/fontscale`): a factor
+    # on every font, 0.85 .. 1.20 in steps of 0.05; None is 1.0. Applied
+    # at once.
+    "font_scale": None,
 }
 
 #: Keys a build retired, by the work order that did: read and dropped, so

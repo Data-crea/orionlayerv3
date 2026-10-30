@@ -612,6 +612,11 @@
       "orionlayer_band": "fill_tone"
     },
     {
+      "help_id": "orionlayer.text_size",
+      "node": "orionlayer",
+      "orionlayer_band": "text_size"
+    },
+    {
       "help_id": "orionlayer.mods",
       "node": "orionlayer",
       "orionlayer_band": "mods"

@@ -80,6 +80,10 @@ class TextCache:
         self._cache = Cache(max_items, max_bytes)
         #: how many pictures were really rendered (a check counts it)
         self.built = 0
+        # a picture of text is drawn at a size the player's text size
+        # (`core.fontscale`, work order 356) changes: forget them all
+        from core import fontscale
+        fontscale.on_change(self.clear)
 
     def __len__(self):
         return len(self._cache)

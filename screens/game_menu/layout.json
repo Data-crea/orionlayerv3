@@ -225,6 +225,7 @@
       },
       "restart": "Restart to apply",
       "glass": "Panel glass",
+      "text_size": "Text size",
       "frame_rate": "Frame rate",
       "frame_rate_steps": {
         "30": "30",
@@ -451,6 +452,10 @@
     "orionlayer.glass": {
       "title": "PANEL GLASS",
       "body": "Whether the background shows through OrionLayer's boxes. Off: every box is filled with the box fill colour, solid. On: the boxes are glass, and the bar sets how much shows through \u2014 further left clearer, at the right end solid; a box over a bright background stays dense enough for its words to be read. The bar works only while the glass is on and keeps its value while it is off. Applied at once."
+    },
+    "orionlayer.text_size": {
+      "title": "TEXT SIZE",
+      "body": "How large the text of every OrionLayer window is, from 85 to 120 percent in steps of 5. Click the bar to choose; RESET returns to 100. Boxes keep their size, so a large text fits its box rather than growing it, and the original's own picture text does not change. Ctrl and the mouse wheel change it anywhere. Applied at once."
     },
     "orionlayer.mods": {
       "title": "MOD FOLDER",

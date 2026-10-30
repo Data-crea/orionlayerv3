@@ -46,7 +46,7 @@ NODE = "orionlayer"
 #: livery row is there only while the livery window can do something
 #: (work order 220, decision 2).
 TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
-                        "fill_tone")),
+                        "fill_tone", "text_size")),
         ("gameplay", ("floor", "map_black", "monsters", "map_ships")),
         ("graphics", ("frame_rate", "idle_rate", "painted", "livery")),
         ("system", ("mods", "mod_files", "mod_open", "language")))

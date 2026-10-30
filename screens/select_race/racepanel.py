@@ -21,9 +21,11 @@ boxes are fixed for the longest; the traits are cards, two to a row, the
 government a card at the box's foot (`render_traits`), and the full texts
 are the tooltip's (`traittip`), never on the card.
 """
+import math
+
 import pygame
 
-from core import imagebox
+from core import fontscale, imagebox
 from core.hud import art as hud_art
 from core.hud import blocks as hud
 from screens.select_race import renderer as rnd
@@ -143,24 +145,33 @@ def _card(surface, L, style, find, cache, trait, rect, fs_scale, hover):
         ("traits", TRAIT_KEYS.get(trait.get("trait"), ""))
     _draw_icon(surface, find, cache, folder, key, rect.x + pad,
                rect.y + (rect.h - px) // 2, px)
-    font = style.get_font(L.font_size(int(rnd.TRAIT_FONT * fs_scale)))
+    size = L.font_size(int(rnd.TRAIT_FONT * fs_scale))
     # the government card's own words are the form of government
     label = trait["value"] if trait.get("government") else trait["name"]
-    name = font.render(label, True, rnd.COL_NEUTRAL
-                       if trait.get("government") else rnd.COL_VALUE)
+    value = trait.get("value", "")
     tx = rect.x + 2 * pad + px
     room = rect.right - pad - tx
+    if fontscale.factor() > 1.0:
+        # HD EXTENSION `font_scale` (WO 356): the card is a fixed width, so
+        # above 1.0 name and value are fitted TOGETHER (a '+2' was cut
+        # off); at 1.0 and below the size is the card's own, as before.
+        gap = int(8 * L.scale)
+        floor = max(8, math.ceil(size / fontscale.factor() - 1e-6))  # the 1.0 size
+        while size > floor and style.get_font(size).size(label)[0] + (
+                gap + style.get_prop_font(size).size(value)[0]
+                if value and not trait.get("government") else 0) > room:
+            size -= 1
+    font = style.get_font(size)
+    name = font.render(label, True, rnd.COL_NEUTRAL
+                       if trait.get("government") else rnd.COL_VALUE)
     ty = rect.y + (rect.h - name.get_height()) // 2
     surface.blit(name, (tx, ty), area=(0, 0, min(name.get_width(), room),
                                        name.get_height()))
-    value = trait.get("value", "")
     if value and not trait.get("government"):
         good = trait.get("good")
         col = (rnd.COL_GOOD if good is True else rnd.COL_BAD
                if good is False else rnd.COL_NEUTRAL)
-        vs = style.get_prop_font(
-            L.font_size(int(rnd.TRAIT_FONT * fs_scale))).render(
-            value, True, col)
+        vs = style.get_prop_font(size).render(value, True, col)
         vx = tx + name.get_width() + int(8 * L.scale)
         if vx + vs.get_width() <= rect.right - pad:
             surface.blit(vs, (vx, rect.y + (rect.h - vs.get_height()) // 2))

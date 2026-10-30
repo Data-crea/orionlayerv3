@@ -20,6 +20,7 @@ race the report is about.
 from core.hud import blocks as hud
 from screens.info import infodraw
 from screens.info import infopages as pages
+from core import fontscale
 from core import nativedraw as nd
 from screens.races import racesdraw, racesleaders
 
@@ -94,7 +95,9 @@ def _centred(surface, screen, rows, box, key, colour, top=False):
     x, y, w, h = box
     r = nd.rect(layout, (x, y, x + w - 1, y + h - 1))
     size = nd.font_px(layout, key)
-    step = max(1, int(size * 1.15))
+    # HD EXTENSION `font_scale` (WO 356): the row pitch follows the text
+    # size; the factor 1.0 leaves the pitch as it was.
+    step = max(1, int(size * fontscale.factor() * 1.15))
     rows = [t for t in rows if t is not None]
     total = step * len(rows)
     ty = r.y if top else r.y + max(0, (r.h - total) // 2)

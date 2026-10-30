@@ -27,7 +27,7 @@ def cap_ratio(style_renderer):
     # the app never showed it.
     ratio = getattr(style_renderer, "_hud_cap_ratio", None)
     if ratio is None:
-        font = style_renderer.get_font(200)
+        font = getattr(style_renderer, "raw_font", style_renderer.get_font)(200)
         ink = font.render("H", True, (255, 255, 255)).get_bounding_rect()
         ratio = max(0.3, ink.h / 200.0)
         style_renderer._hud_cap_ratio = ratio

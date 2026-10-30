@@ -38,7 +38,7 @@ import pygame
 
 from core.hud import blocks as hud
 
-from core import helpformat, lang
+from core import fontscale, helpformat, lang
 from core import palette
 from core import textfit
 
@@ -257,7 +257,8 @@ class HelpPopup:
         column scaled to the panel width — never wrapped, because
         wrapping is exactly what would destroy it.
         """
-        key = (self.help_id, title_size, body_size, width)
+        key = (self.help_id, title_size, body_size, width,
+               fontscale.factor())
         cached = self._cache.get(key)
         if cached is not None:
             return cached

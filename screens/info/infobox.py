@@ -19,7 +19,7 @@ it in), so nothing is ever cut in half.
 import pygame
 
 from core.hud import blocks as hud
-from core import helpformat
+from core import fontscale, helpformat
 
 MIN_FONT = 8
 
@@ -80,7 +80,9 @@ class Box:
         self.inner = self.rect.inflate(-2 * pad, -2 * pad)
         bar = max(6, self.size // 2)
         lines = wrap(style, self.text, self.size, self.inner.w)
-        step = int(self.size * self.line_gap)
+        # HD EXTENSION `font_scale` (WO 356): leading follows the scaled
+        # text; at the default factor 1.0 it is the unscaled product.
+        step = int(self.size * fontscale.factor() * self.line_gap)
         if len(lines) * step > self.inner.h:
             # Room for the scroll bar, then wrap again to the narrower box.
             self.inner.w -= bar + 2

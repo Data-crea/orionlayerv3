@@ -39,7 +39,7 @@ which writes nothing when nothing changed.
 """
 import pygame
 
-from core import (lang, modsetup, palette, playercolors, usermod,
+from core import (fontscale, lang, modsetup, palette, playercolors, usermod,
                   usersettings)
 from core import mouse as mouse_input
 from core.hud import blocks as hud
@@ -51,7 +51,8 @@ from . import gmfill, gmlang
 
 #: Every row, in Data's order of the tabs (`olwin.TABS`): what the right-
 #: click help regions name (help.json `orionlayer_band`).
-BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone", "floor",
+BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone",
+         "text_size", "floor",
          "map_black", "monsters", "map_ships", "frame_rate", "idle_rate",
          "painted", "livery", "mods", "mod_files", "mod_open", "language")
 
@@ -125,6 +126,42 @@ def colour_geometry(out, rule):
     # the glass switch is the row's drop-down field (`oldrop`), the bar
     # right of it; the fill colour in the frame colour's columns (`gmfill`)
     gmfill.geometry(out, rule)
+    text_size_geometry(out)
+
+
+def text_size_geometry(out):
+    """The Text size row (work order 356, HD EXTENSION): a bar in the
+    frame colour's columns, shortened by the room its percent needs, and
+    RESET in the same column as the other rows'. Drawing and clicking both
+    read these (decision 5)."""
+    if "text_size" not in out:
+        return
+    hb, rr, ts = out["hue_bar"], out["hue_reset"], out["text_size"]
+    bw = int(hb.w * 0.68)
+    out["text_size_bar"] = pygame.Rect(hb.x, ts.y + (ts.h - hb.h) // 2, bw,
+                                       hb.h)
+    out["text_size_pct"] = pygame.Rect(out["text_size_bar"].right
+                                       + max(6, int(hb.w * 0.05)), ts.y,
+                                       hb.right - out["text_size_bar"].right
+                                       - max(6, int(hb.w * 0.05)), ts.h)
+    out["text_size_reset"] = pygame.Rect(rr.x, ts.y, rr.w, ts.h)
+
+
+def text_size_at(bar, x):
+    """The factor under window x on the bar: the position on the step
+    grid, the one mapping for the click and (inverted) the thumb."""
+    return fontscale.clamp(bar_value(bar, x, *fontscale.RANGE))
+
+
+def set_text_size(screen, value):
+    """The Text size row (work order 356, HD EXTENSION): applied at once
+    through `core.fontscale`, stored as `font_scale` — None for 1.0, the
+    default, so a file never carries the default."""
+    fontscale.set_factor(value)
+    settings = _settings(screen)
+    if settings is not None:
+        settings.set("font_scale", None if fontscale.factor() == 1.0
+                     else fontscale.factor())
 
 
 def row_font(screen):
@@ -241,6 +278,12 @@ def handle_click(screen, x, y):
         pass                     # the colour rows are on APPEARANCE only
     elif gmfill.handle_click(screen, geo, x, y):
         pass
+    elif "text_size" in geo and geo["text_size_reset"].collidepoint(x, y):
+        set_text_size(screen, None)
+    elif "text_size" in geo and geo["text_size"].collidepoint(x, y):
+        bar = geo["text_size_bar"]
+        if bar.left <= x <= bar.right:
+            set_text_size(screen, text_size_at(bar, x))
     elif geo["glass_reset"].collidepoint(x, y):
         set_glass(screen, None)
     elif geo["glass"].collidepoint(x, y) and \
@@ -337,6 +380,7 @@ def render(screen, surface):
         _render_frame_row(screen, surface, geo, words, size, lx)
         _render_glass_row(screen, surface, geo, words, size, lx)
         gmfill.render(screen, surface, geo, words, size, lx)
+        _render_text_size_row(screen, surface, geo, words, size, lx)
     if "livery_button" in geo:
         _render_livery_button(screen, surface, geo, words, size)
     if "mod_files" in geo:
@@ -361,6 +405,28 @@ def _render_glass_row(screen, surface, geo, words, size, lx):
     reset = geo["glass_reset"]
     _text(screen, surface, words.get("reset", "Reset"), size,
           reset_colour(), reset.x, reset, _reset_room(screen, reset))
+
+
+def _render_text_size_row(screen, surface, geo, words, size, lx):
+    """Text size: a grey bar, the thumb at the factor, its percent, RESET
+    lit while the value is the player's."""
+    row, bar = geo["text_size"], geo["text_size_bar"]
+    _text(screen, surface, words.get("text_size", "Text size"), size,
+          COL_OPTION, lx, row, row.w * 0.34, fit=True)
+    gmfill._bar(screen, surface, bar,
+                lambda v: (tuple(int(60 + 150 * (v - fontscale.RANGE[0]) /
+                                    (fontscale.RANGE[1] - fontscale.RANGE[0]))
+                                 for _ in range(3))),
+                fontscale.factor(), *fontscale.RANGE,
+                key=("text_size", gmfill._look()))
+    pct = geo["text_size_pct"]
+    _text(screen, surface, "%d %%" % round(fontscale.factor() * 100), size,
+          COL_STATE if fontscale.factor() != 1.0 else COL_OPTION, pct.x,
+          pct, pct.w, fit=True)
+    reset = geo["text_size_reset"]
+    _text(screen, surface, words.get("reset", "Reset"), size,
+          COL_OPTION if fontscale.factor() == 1.0 else COL_STATE, reset.x,
+          reset, _reset_room(screen, reset))
 
 
 def reset_colour():

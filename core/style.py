@@ -15,7 +15,7 @@ import hashlib
 import logging
 import pygame
 
-from core import lang
+from core import fontscale, lang
 from core.hud import blocks as hud
 
 log = logging.getLogger("style")
@@ -87,7 +87,14 @@ class StyleRenderer:
         self.frame = FrameRenderer(frame_dir)
 
     def get_font(self, size):
-        """Get cached display font at pixel size."""
+        """Get cached display font at pixel size, times the player's text
+        size (`core.fontscale`)."""
+        return self.raw_font(fontscale.scaled(max(8, size)))
+
+    def raw_font(self, size):
+        """The display font at exactly `size` px — no text-size factor.
+        For a measurement of the font itself (the HUD's cap-height probe,
+        the glyph probe)."""
         size = max(8, size)
         if size not in self._font_cache:
             if self._font_path and os.path.exists(self._font_path):
@@ -97,13 +104,24 @@ class StyleRenderer:
                 self._font_cache[size] = _TrFont(pygame.font.Font(None, size))
         return self._font_cache[size]
 
+    def raw_width(self, text, size):
+        """The width of `text` at `size` px with NO text-size factor — the
+        width it has at 1.0, run by run as `render_text` splits it."""
+        size = max(8, size)
+        prop = ("prop", size)
+        if prop not in self._font_cache:
+            self._font_cache[prop] = _TrFont(pygame.font.Font(None, size))
+        main, alt = self.raw_font(size), self._font_cache[prop]
+        return sum((alt if blocked else main).size(run)[0]
+                   for blocked, run in self.split_runs(lang.tr(text)))
+
     def get_prop_font(self, size):
         """Get cached proportional (system default) font at pixel size.
 
         Use for body text, trait values, notes — anything where
         a substituting font's glyphs on +/- would be a problem.
         """
-        size = max(8, size)
+        size = fontscale.scaled(max(8, size))
         key = ("prop", size)
         if key not in self._font_cache:
             self._font_cache[key] = _TrFont(pygame.font.Font(None, size))
@@ -143,7 +161,7 @@ class StyleRenderer:
         if self._blocked is not None:
             return self._blocked
 
-        font = self.get_font(self._GLYPH_PROBE_SIZE)
+        font = self.raw_font(self._GLYPH_PROBE_SIZE)
         groups = {}
         for code in range(33, 127):
             ch = chr(code)
@@ -227,7 +245,7 @@ class StyleRenderer:
         fonts in `clear_caches`."""
         size = max(8, size)
         text = lang.tr(text)
-        key = (text, size)
+        key = (text, size, fontscale.factor())
         hit = self._width_cache.get(key)
         if hit is not None:
             return hit

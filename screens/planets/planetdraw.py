@@ -12,7 +12,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import shell
 
-from core import listgrid, palette
+from core import listgrid, palette, textfit
 from screens.colony_summary import colonyinset, colonyplanets
 from screens.galaxy_map.renderer import OWNER_COLORS
 
@@ -267,6 +267,10 @@ def render_control(screen, surface, name, label, active=False, enabled=True,
     size = screen.layout.font_size(_font(screen, name, 19))
     # CAPITALS AND NO GLYPH (work order 225, decisions 88 and 91): a
     # control inside a panel is a rectangular button with its word alone.
+    # HD EXTENSION `font_scale` (WO 356): above 1.0 a long word keeps a
+    # visible margin (12 px a side) instead of the 4 px the fit leaves.
+    size = textfit.fit_width_size(screen.style, label.upper(), size,
+                                  rect.width - 24)
     surf = _text(screen.style, label.upper(), size,
                  CONTROL_TEXT if enabled else CONTROL_DISABLED,
                  rect.width - 8)

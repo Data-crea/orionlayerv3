@@ -25,7 +25,7 @@ instead, and if there is nothing left to shrink it prints the string
 anyway, which is what the original does when its own loop runs out
 of steps (`BILL::Squeeze_Print_Paragraph_`).
 """
-from core import lang
+from core import fontscale, lang
 
 
 def measure(style, text, size):
@@ -138,3 +138,33 @@ def block_height(rendered, gap=0):
         return 0
     return (sum(s.get_height() for s in rendered)
             + gap * (len(rendered) - 1))
+
+
+def fit_height_size(style, size, max_h):
+    """The size to render at so a line of text fits `max_h` px of height.
+
+    HD EXTENSION `font_scale` (work order 356): a row pitch or a band that
+    boxes.json fixes does not grow with the player's text size, so above
+    1.0 the size is stepped down until the scaled font is no taller than
+    the band — but never below what the font was at 1.0, which is the
+    look the screen was accepted with. At 1.0 and below `size` comes back
+    unchanged, so the picture is pixel-identical to before the factor.
+    """
+    if fontscale.factor() <= 1.0:
+        return size
+    limit = max(max_h, style.raw_font(size).get_height())
+    while size > 8 and style.get_font(size).get_height() > limit:
+        size -= 1
+    return size
+
+
+def fit_width_size(style, text, size, max_w):
+    """The same for a line of text that must fit `max_w` px of width
+    (a button label, a table cell): above 1.0 only, down to the width it
+    had at 1.0 if that is wider than `max_w`."""
+    if fontscale.factor() <= 1.0:
+        return size
+    limit = max(max_w, style.raw_width(text, size))
+    while size > 8 and measure(style, text, size) > limit:
+        size -= 1
+    return size

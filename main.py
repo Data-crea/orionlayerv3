@@ -7,7 +7,7 @@ import pygame
 from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,  # noqa: F401
                          build_line, display_line, environment_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
-from core import framerate
+from core import framerate, textsize, wheelroute
 from core import lastword
 from core import hdkeys
 from core import cursor as cursor_gfx
@@ -408,13 +408,7 @@ class App:
             elif event.type == pygame.WINDOWLEAVE:
                 self.dispatcher.route_leave()
             elif event.type == pygame.MOUSEWHEEL:
-                if not pointergate.PointerGate.passes(self._pointer_open()):
-                    pass                 # a held frame / F12 (D13)
-                elif not self.editor.handle_event(event):
-                    top = self.dispatcher.top
-                    if top and hasattr(top, "handle_mousewheel"):
-                        mx, my = mouse_input.pos()
-                        top.handle_mousewheel(event.y, mx, my)
+                wheelroute.route(self, event)
             if self._input_log is not None:
                 self._input_log.end()
 
@@ -621,6 +615,7 @@ class App:
             # order 197 E; HD EXTENSION, `core.frameslot`).
             frameslot.draw(self.surface, self.res,
                            self.dispatcher.active_name)
+            textsize.render(self)
             self._surface_hd = True
         else:
             self.surface.fill((6, 8, 16))

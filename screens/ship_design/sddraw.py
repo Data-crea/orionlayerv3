@@ -32,7 +32,7 @@ from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import hover as hud_hover
 from screens.colony import coldraw
-from core import nativedraw as nd
+from core import nativedraw as nd, textfit
 
 from . import sdart, sdgeom as geom, sdwire
 
@@ -66,10 +66,26 @@ def draw(surface, screen, view, names):
     _bottom(surface, screen, view, names)
 
 
+#: share of a native row pitch a line of text may fill above factor 1.0,
+#: so two rows keep a gap.
+ROW_FILL = 0.75
+
+
 def _t(surface, screen, words, x, y, w, key="value", role="value",
-       align="left"):
+       align="left", pitch=None):
+    """`pitch`: the native row pitch this line sits on. HD EXTENSION
+    `font_scale` (WO 356): the rows do not move with the text size, so
+    above 1.0 the size is fitted to `ROW_FILL` of the pitch
+    (`core.textfit.fit_height_size`); at 1.0 and below it is the key's own
+    size, as before."""
+    size = None
+    if pitch is not None:
+        base = coldraw.font(screen.layout, key)
+        size = textfit.fit_height_size(
+            screen.style, base,
+            int(pitch * nd.native_scale(screen.layout) * ROW_FILL))
     return coldraw.text(surface, screen, words, x, y, w, key, role,
-                        align=align)
+                        align=align, size=size)
 
 
 def _ship(surface, screen, view, names):
@@ -149,8 +165,11 @@ def _systems(surface, screen, d, names):
     for (x, y), label, value in (
             (geom.BEAM_DEFENSE, h(0x5C), f"{sign}{d['beam_defense']}"),
             (geom.MISSILE_EVASION, h(0x5D), f"{d['missile_evasion']}%")):
-        _t(surface, screen, label, x, y, 0x80, "value", "label")
-        _t(surface, screen, value, geom.VALUE_RIGHT, y, 0x30, align="right")
+        pitch = geom.MISSILE_EVASION[1] - geom.BEAM_DEFENSE[1]
+        _t(surface, screen, label, x, y, 0x80, "value", "label",
+           pitch=pitch)
+        _t(surface, screen, value, geom.VALUE_RIGHT, y, 0x30, align="right",
+           pitch=pitch)
 
 
 def _weapons(surface, screen, view, names):
@@ -167,18 +186,19 @@ def _weapons(surface, screen, view, names):
             name = f"{name} ({w['ammo']})"
         per = lambda v: str(max(1, v // w["count"] if w["count"] else 0))  # noqa: E731
         _t(surface, screen, str(w["count"]), cols["count"], y, 0x20,
-           align="right")
-        _t(surface, screen, name, cols["name"], y, 0x90)
+           align="right", pitch=geom.ROW_STEP)
+        _t(surface, screen, name, cols["name"], y, 0x90,
+           pitch=geom.ROW_STEP)
         _t(surface, screen, w["damage"], cols["damage"], y, 0x40,
-           align="center")
+           align="center", pitch=geom.ROW_STEP)
         _t(surface, screen, names.arc(w["arc"]), cols["arc"], y, 0x2E,
-           align="center")
+           align="center", pitch=geom.ROW_STEP)
         _t(surface, screen, per(w["cost"]), cols["cost"], y, 0x28,
-           align="center")
+           align="center", pitch=geom.ROW_STEP)
         _t(surface, screen, per(w["space"]), cols["space"], y, 0x28,
-           align="center")
+           align="center", pitch=geom.ROW_STEP)
         _t(surface, screen, w["mods_text"], cols["mods"], y, 0x90,
-           align="center")
+           align="center", pitch=geom.ROW_STEP)
     # plus / minus: the live button where the list has one, and DULL where
     # a loaded row has none — `Draw_Down_Buttons_` draws the dull minus
     # and plus for every row that holds a weapon but has no active button.
@@ -205,9 +225,10 @@ def _specials(surface, screen, view, names):
     for row, (_slot, sp) in enumerate(view.specials()):
         y = geom.SPECIAL_TEXT_Y0 + row * geom.ROW_STEP
         _t(surface, screen, names.part("specials", sp),
-           geom.SPECIAL_COLS["name"], y, 0xE0)
+           geom.SPECIAL_COLS["name"], y, 0xE0, pitch=geom.ROW_STEP)
         _t(surface, screen, names.description(sp),
-           geom.SPECIAL_COLS["description"], y, 0x160, "line", "sub")
+           geom.SPECIAL_COLS["description"], y, 0x160, "line", "sub",
+           pitch=geom.ROW_STEP)
 
 
 def _bottom(surface, screen, view, names):

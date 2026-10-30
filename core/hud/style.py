@@ -191,6 +191,17 @@ def on_change(fn):
     _listeners.append(fn)
 
 
+def _text_size_changed():
+    """The player's text size (`core.fontscale`) moved: the same caches
+    as for a colour, since a block's pieces hold drawn text."""
+    for fn in _listeners:
+        fn()
+
+
+from core import fontscale  # noqa: E402  (after the listener list it feeds)
+fontscale.on_change(_text_size_changed)
+
+
 def set_tone(hue=None, sat=None, bright=None):
     """Set the frame colour — hue, saturation, brightness; None each for
     the DEFAULT — and invalidate every cache built for the old one.
@@ -217,6 +228,7 @@ def apply_settings(user_settings):
     start."""
     from core.hud import fill, glass
     glass.set_value(user_settings.get("hud_glass"))
+    fontscale.apply_settings(user_settings)
     fill.apply_settings(user_settings)
     return set_tone(user_settings.get("hud_hue"),
                     user_settings.get("hud_sat"),

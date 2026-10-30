@@ -17,7 +17,7 @@ of its native rectangle (`infogeom`, through the Leaders screen's
 """
 import pygame
 
-from core import modtexts
+from core import fontscale, modtexts, textfit
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
@@ -139,7 +139,9 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
     `screen._hits[key]` as (rect, payload)."""
     box = field(surface, screen, native)
     inner = hud.panel_inner(box, screen.layout.scale).inflate(-4, -4)
-    step = int(px(screen, "skill") * 1.35)
+    # HD EXTENSION `font_scale` (WO 356): the pitch follows the text size
+    # (the factor is 1.0 by default, so the product is unchanged).
+    step = int(px(screen, "skill") * fontscale.factor() * 1.35)
     total = step * len(items)
     overflow = max(0, total - inner.h)
     if overflow:
@@ -205,8 +207,13 @@ def button(surface, screen, native, words, active=False):
     hud.small_button(surface, r, screen.layout.scale,
                      "active" if active else "normal")
     # Capitals (work order 225): a control's word, as every button's.
-    infobox.line(surface, screen, (words or "").upper(), r.inflate(-6, 0),
-                 px(screen, "cost"), hudtext.colour("button"), "center")
+    # HD EXTENSION `font_scale` (WO 356): above 1.0 a long word keeps a
+    # 10 px margin a side instead of filling the button (core.textfit).
+    label = (words or "").upper()
+    size = textfit.fit_width_size(screen.style, label, px(screen, "cost"),
+                                  r.w - 20)
+    infobox.line(surface, screen, label, r.inflate(-6, 0), size,
+                 hudtext.colour("button"), "center")
 
 
 def player_colour(player):
