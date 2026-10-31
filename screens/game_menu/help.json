@@ -582,6 +582,11 @@
       "orionlayer_band": "map_ships"
     },
     {
+      "help_id": "orionlayer.map_colours",
+      "node": "orionlayer",
+      "orionlayer_band": "map_colours"
+    },
+    {
       "help_id": "orionlayer.map_black",
       "node": "orionlayer",
       "orionlayer_band": "map_black"

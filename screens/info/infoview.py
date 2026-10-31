@@ -8,7 +8,7 @@ import pygame
 from core import lang
 from core import modtexts
 
-from . import infodraw, infofacts, infogeom as geom, infopages as pages
+from . import infochart, infodraw, infofacts, infogeom as geom, infopages as pages
 
 T = modtexts.text
 
@@ -229,7 +229,9 @@ def reference(screen, surface, me):
             infodraw.rows(surface, screen, "ref.howto",
                           geom.REFERENCE_LISTS[1],
                           [(t, ("howto", i), False) for t, i in
-                           pages.topics(screen._info, 15, sort=False)])
+                           pages.topics(screen._info, 15, sort=False)]
+                          + [(infochart.words(), ("howto", infochart.CHART),
+                              False)])
         return
     back = geom.BACK_BUTTON
     if screen.ref_mode == "category":
@@ -248,6 +250,11 @@ def reference(screen, surface, me):
                           [(t, i, False) for t, i in items], screen.topic)
             infodraw.text(surface, screen, f"ref.cat.text.{screen.topic}",
                           geom.CATEGORY_TEXT, f"{title}\n\n{body}".strip())
+    elif screen.ref_ix == infochart.CHART:
+        infodraw.text(surface, screen, "ref.howto.head", geom.HOWTO_HEAD,
+                      (T("info.reference.howto_prefix", "") or "")
+                      + infochart.title(), "name", infodraw.HIGH, "center")
+        infochart.draw(surface, screen, geom.HOWTO_TEXT)
     else:
         title, body = pages.record(screen.ref_ix)
         infodraw.text(surface, screen, "ref.howto.head", geom.HOWTO_HEAD,

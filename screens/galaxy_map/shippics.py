@@ -82,6 +82,12 @@ log = logging.getLogger("galaxy_map.shippics")
 
 #: The user setting and its values (`core.usersettings.DEFAULTS`).
 SETTING = "map_ship_pictures"
+#: HD EXTENSION `map_ship_colours` (work order 358, Data: the map's ships
+#: coloured as the Fleets screen draws them): "vivid" (the default) draws a
+#: picture in the player's livery as `core.shippicture` does, "muted" in
+#: `map_livery`'s full strength over the plating, darker; see
+#: `ShipPictures.icon`.
+COLOUR_SETTING = "map_ship_colours"
 STEPS = ("on", "off")
 #: The map's own picture slot, a tree path the mod folder's `files/` and the
 #: base pack fill (`core.usermod.SLOTS`).
@@ -200,7 +206,12 @@ class ShipPictures:
             return None
         if settings is not None and settings.get(SETTING) == "off":
             return None
-        liv = map_livery(self._livery(settings, own), own)
+        liv = self._livery(settings, own)
+        if settings is not None and settings.get(COLOUR_SETTING) == "muted":
+            liv = map_livery(liv, own)
+        elif liv is None:
+            from core import livery
+            liv = livery.DEFAULT
         key = (int(colour), int(shape), int(ship.picture_num),
                int(ship.ship_type), palette.active_preset(), liv.key())
         pic, painted = self._unscaled(ship, key, liv, 1)

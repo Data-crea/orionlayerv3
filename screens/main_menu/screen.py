@@ -351,31 +351,23 @@ class MainMenuScreen(ScreenBase):
             if fade <= 0.01:
                 continue
 
-            # Color with fade
-            base = COLOR_ROLE if typ == "role" else COLOR_NAME
-            col = (int(base[0] * fade), int(base[1] * fade),
-                   int(base[2] * fade))
-
             # Font and position
+            base = COLOR_ROLE if typ == "role" else COLOR_NAME
             fs = self.FONT_ROLE if typ == "role" else self.FONT_NAME
-            text_surf = self.style.render_text(text, L.font_size(fs), col)
+            text_surf = self.style.render_text(text, L.font_size(fs), base)
+            # DEVIATION `credits_fade` (Data, 31 October 2026: "remove the
+            # black background of the credits"): a line fades by its alpha,
+            # not by darkening its colour toward black, and stands on no
+            # shadow (the work order 335 `credits_shadow` is gone): over the
+            # HD picture a darkened line was a black smear.
+            text_surf.set_alpha(int(255 * fade))
 
             x = self.CREDIT_X
             if typ == "name":
                 x += self.CREDIT_INDENT
 
             # Reference to window, in the content area as the logo
-            pos = L.pos(x, ref_y)
-            # HD EXTENSION `credits_shadow`: the original's roll is thin
-            # text on a dark picture; over the HD ships it dissolves into
-            # the hulls, so each line stands on a dark drop shadow that
-            # fades with it (Data, work order 335, question 18).
-            shade = self.style.render_text(text, L.font_size(fs), (0, 0, 0))
-            shade.set_alpha(int(230 * fade))
-            d = max(1, int(round(L.scale * 2)))
-            for dx, dy in ((d, d), (0, d), (d, 0), (-d, d)):
-                surface.blit(shade, (pos[0] + dx, pos[1] + dy))
-            surface.blit(text_surf, pos)
+            surface.blit(text_surf, L.pos(x, ref_y))
 
     def on_resize(self):
         super().on_resize()

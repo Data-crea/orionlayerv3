@@ -47,7 +47,8 @@ NODE = "orionlayer"
 #: (work order 220, decision 2).
 TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
                         "fill_tone", "text_size")),
-        ("gameplay", ("floor", "map_black", "monsters", "map_ships")),
+        ("gameplay", ("floor", "map_black", "monsters", "map_ships",
+                      "map_colours")),
         ("graphics", ("frame_rate", "idle_rate", "painted", "livery")),
         ("system", ("mods", "mod_files", "mod_open", "language")))
 TAB_NAMES = tuple(name for name, _ in TABS)

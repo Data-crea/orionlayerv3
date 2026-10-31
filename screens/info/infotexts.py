@@ -111,6 +111,11 @@ TEXTS.update({
     "info.reference.category_prefix": (_bill(12), "moo2"),
     "info.reference.howto_prefix": (_bill(13), "moo2"),
     "info.reference.back": ("BACK", "own"),
+    "info.chart.row": ("Planet Transformation", "own"),
+    "info.chart.shield": ("Radiation Shield", "own"),
+    "info.chart.terraforming": ("Terraforming", "own"),
+    "info.chart.gaia": ("Gaia Transformation", "own"),
+    "info.chart.growth": ("Increase of population maximum", "own"),
     "info.stardate": ("", "game"),
     # OrionLayer's own: what HD says on an engine without open fix 32
     # (applied since work order 176), the history metrics and the tech categories whose words the

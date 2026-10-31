@@ -60,6 +60,7 @@ placement (work order 326's check); a live engine's CBLD block was not
 read for this.
 """
 import json
+import logging
 
 import pygame
 
@@ -68,6 +69,8 @@ from core import nativeview as nat
 
 from . import colart
 from . import colgeom as geom
+
+log = logging.getLogger("colony")
 
 #: `Bldg_Back_To_Front_`'s table (colony.cpp:484-491): 36 (col, row).
 BACK_TO_FRONT = tuple(zip(*[iter((
@@ -219,14 +222,114 @@ def _ink_box(pic):
         int(ys.max() - ys.min() + 1)
 
 
+#: HD EXTENSION `footprint_fit` (Data, 31 October 2026: the farm's green
+#: field lay higher than the road beside it): the least average gap, in
+#: shares of the drawing's height, between the lower edges of the original's
+#: silhouette and of the painting that is worth a move, and the most a
+#: painting is moved down or up.
+FOOT_DEAD, FOOT_MAX = 0.025, 0.12
+_drops = {}
+
+
+def foot_drop(bid, pic, ink, hd, step):
+    """HD EXTENSION `footprint_fit`: rows (at `step`) to move the painting
+    `hd` of building `bid` down — negative: up — so that its lower edge
+    stands on the original drawing's lower edge on average, column by
+    column, and not only the bottom of its box on the foot of the original's
+    ink. The original's roads and neighbours were laid to its footprint; a
+    painting whose ground (a farm's field) is drawn higher in its box lay
+    off the road. 0 where the two already agree (`FOOT_DEAD`)."""
+    import numpy as np
+    x, y, w, h = ink
+    key = (int(bid), w, h, hd.get_size())
+    if key not in _drops:
+        try:
+            o = pygame.surfarray.pixels_alpha(
+                pic.subsurface((x, y, w, h))) == 255
+        except (ValueError, pygame.error):
+            return 0                           # no drawing to measure
+        p = pygame.surfarray.pixels_alpha(hd) >= 128
+        hw, hh = p.shape
+        px, top = (w * step - hw) // 2, h * step - hh
+        gaps = []
+        for c in range(hw):
+            col = px + c
+            if not 0 <= col < w * step or not p[c].any():
+                continue
+            ys = np.nonzero(o[col // step])[0]
+            if not len(ys):
+                continue
+            gaps.append((ys.max() + 1) * step
+                        - (top + np.nonzero(p[c])[0].max() + 1))
+        d = float(np.mean(gaps)) if gaps else 0.0
+        full = h * step
+        _drops[key] = 0 if abs(d) < FOOT_DEAD * full else \
+            int(round(max(-FOOT_MAX * full, min(FOOT_MAX * full, d))))
+    return _drops[key]
+
+
+#: HD EXTENSION `building_shadows` (Data, 31 October 2026: "fake shadows so the
+#: city looks believable", then "stronger"): the shadow's darkness, how far it
+#: falls to the side per height at the picture's edge (the sun stands at the
+#: horizon's middle, so a shadow falls away from it) and toward the viewer, the
+#: blur in steps, and the contact shadow under the foot (width and height in
+#: shares of the drawing's ink, darkness 0..255).
+SHADOW_ALPHA, SHADOW_LATERAL, SHADOW_FORWARD, SHADOW_BLUR = 0.95, 1.0, 0.6, 1.3
+CONTACT_W, CONTACT_H, CONTACT_DARK = 1.0, 0.42, 215
+#: a shadow fades out over this many native columns at the layer's sides, where
+#: the picture ends (no hard edge in the ground).
+SHADOW_FADE = 40
+
+
+def _paste(dst, src, x, y):
+    """`src` (PIL RGBA) composited onto `dst` at (x, y), clipped to it."""
+    x0, y0 = max(0, -x), max(0, -y)
+    x1, y1 = min(src.width, dst.width - x), min(src.height, dst.height - y)
+    if x1 > x0 and y1 > y0:
+        dst.alpha_composite(src.crop((x0, y0, x1, y1)), (x + x0, y + y0))
+
+
+def shadow_of(hd, foot_x, foot_y, ink_w, ink_h, step, width):
+    """HD EXTENSION `building_shadows`: (PIL RGBA, x, y) pieces of the
+    shadow of the painting `hd` standing at `foot_x`/`foot_y` (the middle of
+    its foot, in the layer): its silhouette laid flat on the ground
+    (a point at height z lands `lateral` * z to the side and `forward` * z
+    toward the viewer), blurred; and a contact shadow under its foot."""
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+    hw, hh = hd.get_size()
+    a = SHADOW_LATERAL * (foot_x - width / 2.0) / (width / 2.0)
+    b = SHADOW_FORWARD
+    pad = int(abs(a) * hh) + 40
+    sil = Image.fromarray(np.where(
+        pygame.surfarray.pixels_alpha(hd).T > 100, 255, 0).astype(np.uint8))
+    flat = sil.transform((hw + 2 * pad, int(b * hh) + 40), Image.AFFINE,
+                         (1, -a / b, -pad, 0, -1 / b, hh),
+                         resample=Image.BILINEAR)
+    flat = flat.filter(ImageFilter.GaussianBlur(max(2, step * SHADOW_BLUR)))
+    cast = Image.new("RGBA", flat.size, (0, 0, 0, 0))
+    cast.putalpha(flat.point(lambda v: int(v * SHADOW_ALPHA)))
+    ew, eh = int(ink_w * step * CONTACT_W), int(ink_h * step * CONTACT_H)
+    disc = Image.new("L", (ew + 40, eh + 40), 0)
+    ImageDraw.Draw(disc).ellipse((20, 20, 20 + ew, 20 + eh), fill=CONTACT_DARK)
+    disc = disc.filter(ImageFilter.GaussianBlur(max(2, step * 1.4)))
+    contact = Image.new("RGBA", disc.size, (0, 0, 0, 0))
+    contact.putalpha(disc)
+    return [(contact, foot_x - disc.width // 2,
+             foot_y - disc.height // 2 - eh // 6),
+            (cast, foot_x - hw // 2 - pad, foot_y)]
+
+
 def painted_layer(art, placement, climate, bg, step, lift=0, *, roads=()):
     """HD EXTENSION `building_pictures`: the layer at `step` times the
     original's size with the buildings the player painted (`core.
     buildingart`) in place of the original's drawings. A painted building
     stands on the foot of the ink of the drawing it replaces, centred on it,
     and is fitted into that ink's size at this step (a satellite: as tall as
-    that ink, `satellite_height`); every other drawing is
-    scaled by the whole step as before."""
+    that ink, `satellite_height`) and moved by `foot_drop`; every other
+    drawing is scaled by the whole step as before. HD EXTENSION
+    `building_shadows`: under the buildings and over the roads every painted
+    ground building casts a shadow (`shadow_of`)."""
     from core import buildingart
     surf = pygame.Surface((NATIVE_W * step, NATIVE_H * step),
                           pygame.SRCALPHA)
@@ -234,6 +337,7 @@ def painted_layer(art, placement, climate, bg, step, lift=0, *, roads=()):
         surf.blit(pygame.transform.scale(
             pic, (pic.get_width() * step, pic.get_height() * step)),
             (x * step, y * step))
+    items = []                       # (hd, left, top, foot, ink) | (pic, x, y)
     for pic, (x, y), bid in entries(art, placement, climate, bg, lift):
         ink = _ink_box(pic) if bid is not None \
             and buildingart.picture(bid) is not None else None
@@ -243,14 +347,48 @@ def painted_layer(art, placement, climate, bg, step, lift=0, *, roads=()):
             hd = buildingart.fit(bid, ink[2] * step, ink[3] * step) \
                 if ink else None
         if hd is None:
-            surf.blit(pygame.transform.scale(
-                pic, (pic.get_width() * step, pic.get_height() * step)),
-                (x * step, y * step))
+            items.append((pic, x, y, None, None))
             continue
         foot_x = (x + ink[0]) * step + ink[2] * step // 2
         foot_y = (y + ink[1] + ink[3]) * step
-        surf.blit(hd, (foot_x - hd.get_width() // 2,
-                       foot_y - hd.get_height()))
+        drop = 0 if bid in SATELLITE_PIC \
+            else foot_drop(bid, pic, ink, hd, step)
+        items.append((hd, foot_x - hd.get_width() // 2,
+                      foot_y - hd.get_height() + drop,
+                      None if bid in SATELLITE_PIC else (foot_x, foot_y + drop),
+                      ink))
+    try:
+        from PIL import Image
+        canvas = Image.new("RGBA", surf.get_size(), (0, 0, 0, 0))
+        for hd, left, top, foot, ink in items:
+            if foot is not None:
+                for piece, px, py in shadow_of(hd, foot[0], foot[1], ink[2],
+                                               ink[3], step, canvas.width):
+                    _paste(canvas, piece, px, py)
+        from PIL import ImageChops
+        m = max(1, SHADOW_FADE * step)
+        ramp = Image.new("L", (canvas.width, 1))
+        ramp.putdata([int(255 * min(1.0, (x + 1) / m,
+                                    (canvas.width - x) / m))
+                      for x in range(canvas.width)])
+        alpha = ImageChops.multiply(canvas.getchannel("A"),
+                                    ramp.resize(canvas.size))
+        canvas.putalpha(alpha)
+        import numpy as np
+        arr = np.asarray(canvas)
+        shade = pygame.Surface(canvas.size, pygame.SRCALPHA)
+        pygame.surfarray.pixels3d(shade)[:] = arr[..., :3].transpose(1, 0, 2)
+        pygame.surfarray.pixels_alpha(shade)[:] = arr[..., 3].T
+        surf.blit(shade, (0, 0))
+    except (ImportError, ValueError, pygame.error) as err:
+        log.warning("building shadows are not drawn (%s)", err)
+    for hd, left, top, foot, ink in items:
+        if ink is None:
+            surf.blit(pygame.transform.scale(
+                hd, (hd.get_width() * step, hd.get_height() * step)),
+                (left * step, top * step))
+        else:
+            surf.blit(hd, (left, top))
     return surf
 
 

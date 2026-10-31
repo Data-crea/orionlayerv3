@@ -89,6 +89,11 @@ DEFAULTS = {
     # The galaxy map's stacks as their strongest ship's picture (work order
     # 311, `screens/galaxy_map/shippics`), on or off; applied at once.
     "map_ship_pictures": "on",
+    # The colours of those pictures (work order 358, Data): "vivid" draws
+    # them as the Fleets screen does (the player's livery), "muted" in the
+    # owner's colour at full strength over the plating, as before; applied
+    # at once (`screens/galaxy_map/shippics`).
+    "map_ship_colours": "vivid",
     # The galaxy map's background picture replaced by black (work order
     # 326, Data's decision; `screens/galaxy_map/floorlift`), on or off;
     # applied at once. Off: the picture, as decision 71 has it.
