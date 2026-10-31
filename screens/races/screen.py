@@ -189,7 +189,8 @@ class RacesScreen(ScreenBase):
                             surf, self, held, pointer, art))
         racesdraw.draw_buttons(surface, self,
                                view.buttons if view is not None else {},
-                               self._armed if who else None)
+                               (self._armed or self._last_sent) if who
+                               else None)
         self.render_shell(surface)
         if view is not None and view.state == raceswire.IN_BOX:
             from screens.fleets import fltbox
@@ -330,6 +331,7 @@ class RacesScreen(ScreenBase):
                 self._last_sent = None
                 self._send(view.field(racesgeom.who_field(i)), f"race {i}")
             else:
+                self._last_sent = None
                 self._send(view.field(racesgeom.CATCHER), "cancel")
         return None
 

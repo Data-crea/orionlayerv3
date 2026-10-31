@@ -319,6 +319,11 @@ def _draw_fleet(screen, surface, r, model, hits):
     screen._box_paint_area = pygame.Rect(box.x, head.bottom, box.w,
                                          max(0, box.bottom - head.bottom))
     cw, ch = grid.w // 3, grid.h // 3
+    # HD EXTENSION `fleet_box_wheel`: the wheel over the box steps its bar
+    # through the same buttons the arrows are; INVENTION, the original has
+    # no wheel here. Remembered for `wheel`, below.
+    sc = model.get("scroll") or {}
+    screen._fleet_wheel = (box, sc.get("up"), sc.get("down"))
     if model.get("scroll"):
         _draw_scroll(screen, surface, r["fleet_box"], grid, model["scroll"],
                      hits)
@@ -440,6 +445,7 @@ def render(screen, surface):
     screen._box_planets = []
     screen._box_help = []
     screen._box_belts = None
+    screen._fleet_wheel = None
     screen._box_paint_area = None
     screen._box_own_cells = []
     screen._box_cell_fields = []
@@ -560,6 +566,19 @@ def handle_click(screen, x, y):
                 _activate(screen, action, "field")
             return True
     return False
+
+
+def wheel(screen, x, y, direction):
+    """True when the wheel was over the open fleet box: it steps the box's
+    bar one row (up for a turn away from the player) and the map does not
+    zoom under it. A short stack has no bar: the wheel then does nothing."""
+    box, up, down = getattr(screen, "_fleet_wheel", None) or (None,) * 3
+    if box is None or not box.collidepoint(x, y):
+        return False
+    field = up if direction > 0 else down
+    if field is not None:
+        _activate(screen, field, "fleet box wheel")
+    return True
 
 
 def _inside(screen, x, y):

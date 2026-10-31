@@ -410,6 +410,8 @@ def mousewheel(screen, direction, mx, my):
         return
     if screen.help_consumes_wheel(direction):
         return
+    if boxdraw.wheel(screen, mx, my, direction):
+        return                           # the fleet box's own bar
     if not pygame.Rect(*view.box).collidepoint(mx, my):
         return
     if boxdraw.system_open(screen):
