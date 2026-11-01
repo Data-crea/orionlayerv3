@@ -53,7 +53,9 @@ class AudienceScreen(ScreenBase):
     SCREEN_NAME = "audience"
     #: Its picture moves only with input, the game and the window: a frame
     #: that would draw it again is not drawn (work order 273, `core/drawgate`).
-    STILL = True
+    #: not still: the ambassador's clip moves with time (`auvideo`, work
+    #: order 359); the gate draws every frame while this screen is up.
+    STILL = False
     # Literal, as every screen's is (the id check reads them off the
     # source); `augeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 57
@@ -74,8 +76,16 @@ class AudienceScreen(ScreenBase):
         super().__init__(app)
         self._state = None
         self._view = None
+        #: the gold menu's rows as drawn over a film, else None (`audraw`)
+        self.film_rows = self.film_box = None
 
     # ── The dispatcher's and the gate's questions ────────────────────
+
+    def exit(self):
+        from . import aumood, auvideo
+        auvideo.PLAYER.stop()
+        aumood.leave()
+        super().exit()
 
     def claims(self, game_state):
         return auwire.claims(game_state)
@@ -137,6 +147,11 @@ class AudienceScreen(ScreenBase):
         state = getattr(self.app.client, "state", None)
         p = nat.from_hd_point(self.layout.to_ref(screen_x, screen_y),
                               self.layout)
+        row = self._film_row(screen_x, screen_y)
+        if row is not None and self._view is not None:
+            # over a film the rows stand elsewhere: help at the field's own
+            f = self._view.items()[row][1]
+            p = ((f.x + f.x_end) // 2, (f.y + f.y_end) // 2)
         hid = helplist.help_at(getattr(state, "help_list", None), *p) \
             if p is not None else None
         if hid is None:
@@ -144,6 +159,13 @@ class AudienceScreen(ScreenBase):
         self.help.open(hid, *(self.helptext.entry(hid) or
                               self.helptext.missing_entry(hid)))
         return True
+
+    def _film_row(self, x, y):
+        """The index of the gold menu's row under (x, y), or None."""
+        for n, r in enumerate(self.film_rows or ()):
+            if r.collidepoint(x, y):
+                return n
+        return None
 
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
@@ -162,9 +184,11 @@ class AudienceScreen(ScreenBase):
             if got is not None:
                 self.send(*got)
             return None
-        for item, f in live.items():
-            if nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end)) \
-                    .collidepoint(screen_x, screen_y):
+        for n, (item, f) in enumerate(live.items()):
+            where = self.film_rows[n] if self.film_rows and \
+                n < len(self.film_rows) else \
+                nd.rect(self.layout, (f.x, f.y, f.x_end, f.y_end))
+            if where.collidepoint(screen_x, screen_y):
                 if item["enabled"]:
                     self.send(f, f"item {item['text'].strip()!r}")
                 return None           # a disabled item: refused

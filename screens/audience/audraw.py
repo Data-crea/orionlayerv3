@@ -39,10 +39,11 @@ def _rect(f):
 def draw(surface, screen, view):
     # every word of the audience is the game's (work order 200 C)
     with lang.verbatim():
-        _stage(surface, screen, view)
-        _statement(surface, screen, view)
+        screen.film_box = screen.film_rows = None
+        film = _stage(surface, screen, view)
+        _statement(surface, screen, view, film)
         if view.items():
-            _menu(surface, screen, view)
+            (_gold_menu if film else _menu)(surface, screen, view)
     if view.picker is not None:
         from . import aupicker
         aupicker.draw(surface, screen, view, screen.pointer_native())
@@ -51,10 +52,12 @@ def draw(surface, screen, view):
 def _stage(surface, screen, view):
     import pygame
     stage = nd.rect(screen.layout, geom.STAGE)
+    if _video(surface, screen, view, stage):
+        return True
     art = auart.load()
     room = art.picture("rooms", view.race) if view.race is not None else None
     if room is None:
-        return                    # no stage: the panels on the background
+        return False              # no stage: the panels on the background
     # The original fills black and draws the room over it
     # (`Setup_Back_Page_`): the room's index 0 shows black.
     # LOOK EXCEPTION picture: the ambassador's stage, black as the original's
@@ -65,19 +68,46 @@ def _stage(surface, screen, view):
         r = nd.rect(screen.layout, (0, 0, amb.get_width() - 1,
                                     amb.get_height() - 1))
         surface.blit(pygame.transform.scale(amb, r.size), r.topleft)
+    return False
 
 
-def _statement(surface, screen, view):
+def _video(surface, screen, view, stage):
+    """HD EXTENSION `ambassador_video` (`auvideo`): the clip in the 4:3
+    stage in place of the room and the ambassador. False: draw the still."""
+    import pygame
+    if view.refused or view.audience is None or view.race is None:
+        return False
+    from . import aumood, auvideo
+    mood = aumood.mood(view.game_state, view.audience)
+    if not auvideo.PLAYER.want(view.race, mood):
+        return False
+    got = auvideo.PLAYER.frame(stage, surface.get_rect())
+    if got is None:
+        return False
+    surface.blit(*got)
+    screen.film_box = pygame.Rect(got[1], got[0].get_size())
+    return True
+
+
+def _statement(surface, screen, view, film=False):
     words = view.statement
     if not words:
         return
-    panel = nd.draw_box(surface, screen, geom.STATEMENT_PANEL)
     size = _size(screen)
     width = nd.rect(screen.layout, (0, 0, geom.STATEMENT_W, 1)).w
-    lines = wrap_text(screen.style, words, size, width)
-    step = int(size * 1.25)
     x, cy = nd.point(screen.layout, geom.STATEMENT_X + geom.STATEMENT_W // 2,
                      geom.STATEMENT_CY)
+    if film:
+        # HD EXTENSION `audience_gold_menu`: the gold bar of the mockup
+        from . import audeco
+        audeco.bar(surface, screen, view, audeco.Layout(
+            screen.film_box, len(view.items())), _text_at(surface, screen),
+            audeco.header_line(view))
+        return
+    else:
+        panel = nd.draw_box(surface, screen, geom.STATEMENT_PANEL)
+    lines = wrap_text(screen.style, words, size, width)
+    step = int(size * 1.25)
     y = max(panel.top + 4, cy - len(lines) * step // 2)
     for line in lines:
         nd.blit_text(surface, screen.style, line, x, y, width, size,
@@ -109,6 +139,28 @@ def disabled_colour():
 #: The menu title's text role: the items' (`value`) — the original draws
 #: the title in the items' colour (work order 188 part 2).
 TITLE_ROLE = ITEM_ROLE = "value"
+
+
+def _gold_menu(surface, screen, view):
+    from . import audeco
+    lay = audeco.Layout(screen.film_box, len(view.items()))
+    screen.film_rows = lay.rows     # where a click and a help look hit
+    audeco.menu(surface, screen, view, lay, _text_at(surface, screen),
+                screen.hovered)
+
+
+def _text_at(surface, screen):
+    """`text_at(words, x, cy, w, colour, px, centre)`: one line whose
+    MIDDLE is at `cy` (its drawn height, not a guessed line box), shrunk
+    to `w`; `x` is its left, or its centre when `centre`."""
+    def text_at(words, x, cy, w, colour, px, centre):
+        if not words:
+            return
+        size = nd.fit(screen.style, words, max(1, w), px)
+        pic = screen.style.render_text(words, size, colour)
+        left = x - pic.get_width() // 2 if centre else x
+        surface.blit(pic, (left, cy - pic.get_height() // 2))
+    return text_at
 
 
 def _menu(surface, screen, view):

@@ -553,6 +553,15 @@ your installation has them, and stay English where it has none.
 Everything below is the **developer's** route: mods inside the tree,
 which can also replace data, layouts and whole screens.
 
+## The ambassador's film
+
+A clip per race replaces the audience's room and ambassador. Make one with
+`python tools/audience_video_install.py <race> <folder>` (needs ffmpeg), where
+`<folder>` holds `default.mp4` (every mood) and/or `first_contact.mp4`,
+`friendly.mp4`, `neutral.mp4`, `pleading.mp4`, `threatening.mp4`; add
+`--lights` to hold the last frame and keep only the green light and the helix
+moving. The format is described in `screens/audience/auvideo.py`.
+
 ## Mods inside the tree
 
 **Which of the two?** Your mod folder (above) is for pictures and texts:
