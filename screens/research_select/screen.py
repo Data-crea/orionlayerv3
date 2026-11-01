@@ -40,9 +40,10 @@ is its entry in the state, `[research_select.screen]`.
 MARKED, and each held by a smoke check so the marking cannot quietly
 disappear (decision 61):
 
-  OMISSION      the science room animation on the left strip
-                (`SR_R%x_SC.LBX`, tech.cpp:245-273) — artwork, not
-                extracted
+  HD EXTENSION  `science_room_picture`: the science room of the player's
+                race on the left strip (`SR_R%x_SC.LBX`, tech.cpp:271-290)
+                as a still from the player's mod folder (`srroom`);
+  OMISSION      its animation, and the strip without such a picture
   DEVIATION     the category list popup (`_Tech_List_`, tech.cpp:847+)
                 is BUILT, work order 165 part C, and it sends nothing:
                 it is display-only in the original, so HD draws its own
@@ -113,6 +114,7 @@ from core.researchscreen import (            # noqa: F401  (re-exported)
 #: docstring and left in the code or the other way round.
 MARKED = {
     "science_room_animation": "OMISSION",
+    "science_room_picture": "HD EXTENSION",
     "category_list_popup": "DEVIATION",
     "radio_index_skew": "DEVIATION",
     "description_box": "DEVIATION",
@@ -137,6 +139,12 @@ REGIONS_NATIVE = (("science_room", (0, 0, 160, 479)),
                   ("panel", (165, 4, 632, 472)))
 
 
+#: The strip's share of the split, in the panel's native units (468 wide):
+#: 368 gives it about 44 % of the content width, the room for a figure of
+#: a third of a wide picture's width at the picture's own height.
+SCIENCE_ROOM_SPLIT = 368.0
+
+
 class ResearchSelectScreen(ResearchPanelScreen):
     SCREEN_NAME = "research_select"
     #: Its picture moves only with input, the game and the window: a frame
@@ -153,6 +161,29 @@ class ResearchSelectScreen(ResearchPanelScreen):
         from core.hud import shell
         self.shell = shell.Shell(title=lambda: self._data.get("title", ""))
 
+    def update(self, game_state=None):
+        super().update(game_state)
+        self._race = None
+        raws = getattr(game_state, "player_raw", None) or []
+        me = getattr(game_state, "player_num", 0) or 0
+        if 0 <= me < len(raws) and raws[me]:
+            from core.structs import player as player_spec
+            try:
+                self._race = player_spec.SPEC.parse(raws[me]).race
+            except (AttributeError, IndexError, ValueError, TypeError):
+                pass
+
+    def render_shell(self, surface):
+        """The shell draws each region as its panel, over the content: the
+        science room's picture goes on that panel, under the help popup."""
+        super().render_shell(surface)
+        if self._state != READY:     # a panel that hands over has no room
+            return
+        rect = self.box_screen_rect("science_room")
+        if rect is not None and getattr(self, "_race", None) is not None:
+            from . import srroom
+            srroom.draw(surface, rect.inflate(-4, -4), self._race)
+
     def build_native_map(self):
         """The two regions' panels are the shell's split of the content
         rectangle, not boxes: every box of this screen is SEATED from the
@@ -162,6 +193,11 @@ class ResearchSelectScreen(ResearchPanelScreen):
         from core.hud import shell
         L = self.app.layout
         widths = [float(n[2] - n[0] + 1) for _k, n in REGIONS_NATIVE]
+        # HD EXTENSION `science_room_picture`: the strip takes more of the
+        # window's width than its 160 native px, so the scientist stands
+        # whole beside the panel (srroom); the regions' native rectangles,
+        # and so every click and every box, stay the original's.
+        widths[0] = SCIENCE_ROOM_SPLIT
         parts = shell.split(shell.content(L), L, widths)
         self._native_map = panelmap.PanelMap(L, [
             (k, n, r, True) for (k, n), r in zip(REGIONS_NATIVE, parts)])

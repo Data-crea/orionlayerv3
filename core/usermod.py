@@ -174,6 +174,16 @@ ORIGINALS = "originals"
 #: replacement — not scanned, so they cost no "not a name" line at every
 #: start (work order 219: 22 of them); a real misnamed file still does.
 TEMPLATES = "templates"
+#: Folders of `files/` that a screen reads ITSELF, with the player's folder
+#: first, and that are not slots of the index: the ambassador's films (JPEG
+#: frames, `audio.ogg`, `clip.json`, `screens/audience/assets/video/`), the
+#: audience menu's icons and the science room's race pictures. They replace
+#: no picture of OrionLayer's, so they are not scanned: indexed they cost
+#: thousands of "replaces nothing" lines at every start (work order 360: 2675
+#: of them hid every other message); a misnamed file elsewhere still does.
+READ_BY_THE_SCREEN = ("files/screens/audience/assets/video/",
+                      "files/screens/audience/assets/icons/",
+                      "files/screens/research_select/assets/science_room/")
 
 #: What `files/` lists for the template, and every other picture in the
 #: tree with the reason it is not listed: `core.modart` (work order 199 D).
@@ -266,7 +276,8 @@ def init(enabled=True, root=None):
             full = os.path.join(dirpath, f)
             name = os.path.relpath(full, root).replace(os.sep, "/")
             if (name in (STYLE, COLOUR, PLANETS, MOD_JSON) or name in GUIDE
-                    or name.startswith((ORIGINALS + "/", TEMPLATES + "/"))
+                    or name.startswith((ORIGINALS + "/", TEMPLATES + "/")
+                                       + READ_BY_THE_SCREEN)
                     or _is_notice(name)):
                 continue
             if name.startswith(TEXTS):
