@@ -20,13 +20,23 @@ anywhere or ESC. Nothing else: the original's "C" re-creates the default
 file ON DISK (score.cpp:329-334), and no key but ESC reaches the game from
 here (OMISSION `reset_key`).
 
+WITH A PAINTED FRAME (work order 361, HD EXTENSION `plate_frame`): when a
+mod's `frames/hall_of_fame.png` is drawn (`core.frameslot`) it fills the
+whole window, and the title, the rank numbers and the ten rows' four
+columns sit in the plate's own fields, `layout.json`'s `frame_fields`
+(measured off the picture in the frame's 3840x2160 pixels); the picture
+is empty there, so the words stay the player's language, and no HUD panel
+is drawn.
+
 Marks (`layout.json`): DEVIATION `hud_table`, DEVIATION `flash`, HD
-EXTENSION `exit_button`, OMISSION `reset_key`.
+EXTENSION `plate_frame`, OMISSION `reset_key`. Work order 361 removed HD
+EXTENSION `exit_button`: the original has no button either.
 """
 import logging
 
 import pygame
 
+from core import frameslot
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
@@ -66,11 +76,10 @@ class HallOfFameScreen(ScreenBase):
         super().__init__(app)
         self._state = None
         self._data = {}
-        # THE SHELL (work order 225): the title plate, the table in the
-        # content rectangle, CLOSE the closing action bottom right.
-        self.shell = shell.Shell(title=lambda: self.words("title"),
-                                 buttons=[("close", lambda: self.words(
-                                     "close"), "action")], row=True)
+        # THE SHELL (work order 225): the title plate and the table in the
+        # content rectangle. NO BUTTON (work order 361): the original has
+        # none — a click anywhere or ESC leaves (score.cpp:549).
+        self.shell = shell.Shell(title=lambda: self.words("title"))
 
     def enter(self, game_state=None):
         super().enter(game_state)
@@ -100,6 +109,9 @@ class HallOfFameScreen(ScreenBase):
         s = L.scale
         size = max(10, int(REF_FONT * s))
         rows = hof["rows"]
+        if self._render_plate(surface, rows, hof):
+            self.render_shell(surface)
+            return
         # ONE PANEL, the shell's whole rectangle above the row (work order
         # 225): the `table` box — the screen's own box, so the mod frame
         # slot has a layout to paint for — and the ten rows share its
@@ -147,6 +159,62 @@ class HallOfFameScreen(ScreenBase):
             y += row_h
         self.render_shell(surface)
 
+    def _plate(self, surface):
+        """`frame_fields` and the window's rect when a frame is drawn this
+        frame and the layout names its fields, else None."""
+        spec = self._data.get("frame_fields")
+        if not spec or frameslot.frame_for(
+                self.app.res, self.SCREEN_NAME, *surface.get_size()) is None:
+            return None
+        return spec, surface.get_rect()
+
+    def _render_plate(self, surface, rows, hof):
+        """The painted plate fills the window (HD EXTENSION `plate_frame`):
+        its fields are in the 3840x2160 frame's own pixels, and the rank
+        numbers and the title, empty in the picture, are written here (a
+        word the player's language can change). False without a plate."""
+        plate = self._plate(surface)
+        if plate is None:
+            return False
+        spec, box = plate
+        pw, ph = spec["picture"]
+
+        def at(x0, x1, y0, y1):
+            return pygame.Rect(box.x + x0 * box.w // pw,
+                               box.y + y0 * box.h // ph,
+                               max(1, (x1 - x0) * box.w // pw),
+                               max(1, (y1 - y0) * box.h // ph))
+        ink = hudtext.colour("value")
+        label = hudtext.colour("label")
+        tx0, ty0, tx1, ty1 = spec["title"]
+        tr = at(tx0, tx1, ty0, ty1)
+        hud.panel(surface, tr, self.ref_layout.scale, dense=True)
+        hudtext.blit(surface, self.style.render_text(
+            self.words("title"), max(10, int(tr.h * 0.5)), label[:3]), tr,
+            align="center")
+        flash_on = (pygame.time.get_ticks() // FLASH_MS) % 2 == 0
+        pad = int(spec.get("pad", 12) * box.w / pw)
+        for n, (row, (y0, y1)) in enumerate(zip(rows, spec["rows"]), 1):
+            field = at(spec["columns"][0][1], spec["columns"][-1][2], y0, y1)
+            size = max(10, int(field.h * spec.get("font", 0.62)))
+            if row["record"] == hof["flash"] and hof["flash"] >= 0 and \
+                    flash_on:
+                hud.panel(surface, field, self.ref_layout.scale, lit=True,
+                          dense=True)
+            hudtext.blit(surface, self.style.render_text(
+                str(n), size, label[:3]),
+                at(spec["rank"][0], spec["rank"][1], y0, y1), align="center")
+            values = {"name": row["name"], "race": row["race"],
+                      "difficulty": row["difficulty_word"],
+                      "score": str(row["score"])}
+            for (key, x0, x1, align) in spec["columns"]:
+                r = at(x0, x1, y0, y1).inflate(-2 * pad, 0)
+                t = self.style.render_text(values[key], size, ink[:3])
+                if t.get_width() > r.w and align == "left":
+                    t = t.subsurface(pygame.Rect(0, 0, r.w, t.get_height()))
+                hudtext.blit(surface, t, r, align=align)
+        return True
+
     # ── input: the one way out ─────────────────────────────────────────
     def _leave(self, why):
         state = getattr(self.app.client, "state", None)
@@ -158,9 +226,7 @@ class HallOfFameScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
-        # A click anywhere, as the original — CLOSE included; the shell
-        # only lends CLOSE its pressed look.
-        self.shell_click(screen_x, screen_y)
+        # A click anywhere, as the original (score.cpp:549)
         self._leave("click")
         return None
 

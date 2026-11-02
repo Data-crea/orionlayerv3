@@ -99,6 +99,24 @@ can be answered with a `mod.json` in the folder:
 `{"frames": {"galaxy_map": "<stamp>"}}` — the tool prints every stamp.
 Screens whose geometry is code (the battle) have no frame slot.
 
+### The weapon picker's buttons and dial
+
+The ship designer's weapon picker draws four filter buttons (Beam, Missile,
+Bomb, Special) and an arc dial from the original's art. A mod folder may
+replace them, by these exact names:
+
+```
+design_box/filter_beam.png      design_box/filter_missile.png
+design_box/filter_bomb.png      design_box/filter_special.png
+design_box/compass.png
+```
+
+A filter picture is the button switched ON; switched off it is drawn
+darkened. The compass is the dial with all four quarters lit, in blue
+glass; the five arcs are made by greying the glass where the arc does not
+reach. Each picture is fitted into the place the original's own stood,
+proportion kept. Without the files the original's art is drawn.
+
 ### Buildings in HD
 
 Each of the 48 buildings can have one painted picture, in your mod folder
@@ -505,6 +523,16 @@ popups/dragon_bribe.png
 
 Any size; it is fitted whole, never stretched, into the panel's width and
 at most about half the window's height. Without it the popup is text only.
+
+The build list's picture box shows your grid picture behind the product:
+
+```
+popups/build_grid.png
+```
+
+Any size, best on transparency; it covers the box in its own proportion and
+is cut at the middle, never stretched. Without it the box shows the
+original's grid room.
 
 ### Texts
 

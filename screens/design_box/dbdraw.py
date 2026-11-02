@@ -28,6 +28,16 @@ and where it comes from:
   HD EXTENSION   `box_titles` — the title plate; the original paints the
                  headline into its box art, and the shield / computer box
                  wears the special box's ("Select Special System")
+  HD EXTENSION   `designer_pictures` — the four filter buttons and the arc
+                 dial from the mod folder (`dbpics`), the original's art
+                 without them (Data, 2 November 2026)
+  HD EXTENSION   `picker_words` — the arc and rack words beside the dial in
+                 the HUD font (their text in `layout.json`, German in
+                 `de.json`), where the original draws DESIGN.LBX's pictures
+                 of them (Data, 2 November 2026)
+  HD EXTENSION   `solid_panel` — the picker's box is opaque: the designer's
+                 page under it showed through the glass (Data, 2 November
+                 2026)
   INVENTION      `chosen_fill` — the chosen weapon row lit by a HUD fill
                  where the original draws an arrow sprite, and a
                  modification that is on, where it draws the lit frame
@@ -47,7 +57,7 @@ from screens.colony import coldraw
 from core import nativedraw as nd
 from screens.ship_design import sdart
 
-from . import dbgeom as geom
+from . import dbpics, dbgeom as geom
 
 
 def _t(surface, screen, words, x, y, w, key="value", role="value",
@@ -65,7 +75,10 @@ def _rect(f):
 
 def draw(surface, screen, box, names):
     layout = screen.layout
-    r = nd.draw_box(surface, screen, _rect(box.base))
+    # HD EXTENSION `solid_panel` (Data, 2 November 2026): the picker's box
+    # is opaque — the designer's page under it showed through the glass
+    r = nd.rect(layout, _rect(box.base))
+    hud.panel(surface, r, layout.scale, solid=True)
     hud.title_plate(surface, r.centerx, r.top, layout.scale,
                     screen.word(f"box_{box.kind}"),
                     style_renderer=screen.style)
@@ -143,9 +156,16 @@ def _weapon(surface, screen, box, names):
     _mods(surface, screen, box, names)
     for i, (f, status) in enumerate(zip(box.filter_fields(),
                                         box.box["filters"])):
-        if f is not None:
-            _sprite(surface, screen, art.label("filter", i, status),
-                    (f.x, f.y))
+        if f is None:
+            continue
+        # HD EXTENSION `designer_pictures`: the mod folder's button where
+        # it has one, in the footprint of the original's own sprite
+        sprite = art.label("filter", i, status)
+        w = sprite.get_width() if sprite is not None else f.x_end - f.x
+        if not dbpics.draw_filter(surface, screen.app.res, nd.rect(
+                screen.layout, (f.x, f.y, f.x + w, f.y + 24)), i,
+                status >= 1):
+            _sprite(surface, screen, sprite, (f.x, f.y))
 
 
 def _sprite(surface, screen, sprite, native_xy):
@@ -163,22 +183,42 @@ def _arc_box(surface, screen, box, art):
     b = field.y - geom.ARC_BOX_DY
     nd.draw_box(surface, screen, _rect(field))
     racks = box.rack_fields()
+    ax, ay = bx + geom.ARC_PICT[0], b + geom.ARC_PICT[1]
     if racks:
-        _sprite(surface, screen, art.arc(4),
-                (bx + geom.ARC_PICT[0], b + geom.ARC_PICT[1]))
+        _dial(surface, screen, art, 4, ax, ay)
         for i in range(5):
             frame = 2 if box.box["rack"] == i else 1 if i < len(racks) else 0
-            _sprite(surface, screen, art.label("rack", i, frame),
-                    (bx + geom.RACK_TEXT[0],
-                     b + geom.RACK_TEXT[1] + i * geom.RACK_STEP))
+            _pick_word(surface, screen, f"rack_{i}", frame,
+                       bx + geom.RACK_TEXT[0],
+                       b + geom.RACK_TEXT[1] + i * geom.RACK_STEP)
         return
     lit = lit_arc(box.box["arcs"])
-    _sprite(surface, screen, art.arc(lit),
-            (bx + geom.ARC_PICT[0], b + geom.ARC_PICT[1]))
+    _dial(surface, screen, art, lit, ax, ay)
     for i in range(5):
-        _sprite(surface, screen, art.label("arc", i, 1 if i == lit else 0),
-                (bx + geom.ARC_TEXT[0],
-                 b + geom.ARC_TEXT[1] + i * geom.ARC_STEP))
+        _pick_word(surface, screen, f"arc_{i}", 1 if i == lit else 0,
+                   bx + geom.ARC_TEXT[0],
+                   b + geom.ARC_TEXT[1] + i * geom.ARC_STEP)
+
+
+def _pick_word(surface, screen, key, frame, native_x, native_y):
+    """An arc or rack word in OrionLayer's own font where the original
+    prints DESIGN.LBX's picture of it (HD EXTENSION `picker_words`): the
+    chosen one lit, an offered one plain, one not offered dim — the
+    original's three frames (2, 1, 0)."""
+    _t(surface, screen, screen.word(key), native_x, native_y, 0x60, "value",
+       {2: "title", 1: "value", 0: "sub"}[frame] if key.startswith("rack_")
+       else "title" if frame else "value")
+
+
+def _dial(surface, screen, art, arc, native_x, native_y):
+    """The arc dial: the mod folder's compass lit for `arc` where it has
+    one (HD EXTENSION `designer_pictures`), else the original's picture."""
+    sprite = art.arc(arc)
+    w, h = sprite.get_size() if sprite is not None else (83, 89)
+    if not dbpics.draw_compass(surface, screen.app.res, nd.rect(
+            screen.layout, (native_x, native_y, native_x + w,
+                            native_y + h)), arc):
+        _sprite(surface, screen, sprite, (native_x, native_y))
 
 
 def lit_arc(arcs):

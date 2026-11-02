@@ -6,7 +6,17 @@
     "box_weapon": "Select Weapon System",
     "box_special": "Select Special System",
     "cancel": "CANCEL",
-    "accept": "ACCEPT"
+    "accept": "ACCEPT",
+    "arc_0": "Forward",
+    "arc_1": "Fwd Ext",
+    "arc_2": "Back Ext",
+    "arc_3": "Rear",
+    "arc_4": "360 Degree",
+    "rack_0": "Shot x2",
+    "rack_1": "Shot x5",
+    "rack_2": "Shot x10",
+    "rack_3": "Shot x15",
+    "rack_4": "Shot x20"
   },
   "marks": {
     "deviation_hud_frameless": "The boxes are HUD glass panels where the original draws DESIGN.LBX's box sprites; every position is the original's, from the box's base the wire gives.",
@@ -18,6 +28,7 @@
     "omission_no_weapon_damage": "'No Weapon''s damage '0' is TECHDATA _weapons[0]'s; DSBX formats a damage string only for a weapon, so HD leaves the cell empty.",
     "omission_fit_colour": "A special that does not fit is dimmed by the original from its slot's space and the exclusions (desbox.cpp:2825-2846), neither on the wire; HD draws every special row alike.",
     "omission_flashing_hover": "The original flashes the hovered row in a cycling palette index; an RGB surface has none. Not drawn.",
-    "transcription_picker_right": "TRANSCRIPTION \u2014 a right click in a picker answers as the original's (desbox.cpp:225-256, :873-948, :1462-1516; evanhelp.cpp:419-465): the weapon picker's help list (filters 392-395, Cancel 396, Accept 397, arcs 398 / racks 399), the help entries for Clear, OK, the box and the none row (681-693), and an item's or modification's description, which is the game's own Text_Box_ \u2014 HD sends the right click to that field and shows the box that comes back (core/rightinfo.py). Work order 200; it replaces 185's omission."
+    "transcription_picker_right": "TRANSCRIPTION \u2014 a right click in a picker answers as the original's (desbox.cpp:225-256, :873-948, :1462-1516; evanhelp.cpp:419-465): the weapon picker's help list (filters 392-395, Cancel 396, Accept 397, arcs 398 / racks 399), the help entries for Clear, OK, the box and the none row (681-693), and an item's or modification's description, which is the game's own Text_Box_ \u2014 HD sends the right click to that field and shows the box that comes back (core/rightinfo.py). Work order 200; it replaces 185's omission.",
+    "hd_extension_picker_words": "The arc words (Forward ... 360 Degree) and the rack words (Shot x2 ... x20) beside the dial are OrionLayer's own text in the HUD font; the original prints them from DESIGN.LBX's pictures 38-47."
   }
 }

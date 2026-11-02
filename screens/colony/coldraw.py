@@ -195,6 +195,14 @@ def _room(surface, screen, view, state):
         return
     win = colroom.PLACES["colony"]["window"]
     r = nd.rect(screen.layout, win)
+    # HD EXTENSION `build_grid_room` (the build list's grid, Data, 2
+    # November 2026): the same picture stands in the colony's box, the
+    # product alone in it as in the build list (`bqdraw`)
+    from screens.build_queue import bqgrid
+    if bqgrid.draw(surface, screen.app.res, r):
+        colroom.draw_product(surface, r, spec, view.colony.climate,
+                             _bg_type(view), "colony", colour)
+        return
     big = nd.magnified(t, screen.layout)
     clip = surface.get_clip()
     surface.set_clip(r)
@@ -586,15 +594,33 @@ def _build(surface, screen, view, state, words, names):
     # 279, frame 0 of the empty art — seen live, work order 231 E, Kif IV),
     # so HD draws no bar either: the empty box Data's picture showed was
     # HD's own.
+    # HD EXTENSION `build_grid_room` (Data, 2 November 2026): with the
+    # grid picture in the box the bar stands on the grid's bottom edge and
+    # its outer (right) edge, and the turns line under it reaches back from
+    # the bar's right edge.
+    from screens.build_queue import bqgrid
+    from . import colroom
+    ink = bqgrid.ink_rect(screen.app.res, nd.rect(
+        layout, colroom.PLACES["colony"]["window"]))
+    turns_at = None
     if cost > 0:
         bar = nd.rect(layout, geom.BUILD_BAR_BOX)
+        if ink is not None:
+            bar.bottomright = ink.bottomright
+            turns_at = (bar.right, bar.bottom + 1)
         pygame.draw.rect(surface, hudtext.colour("label"), bar, 1)
         filled = max(0, min(bar.h - 2, (bar.h - 2) * spent // cost))
         pygame.draw.rect(surface, hudtext.colour("button"),
                          (bar.x + 1, bar.bottom - 1 - filled,
                           bar.w - 2, filled))
-    text(surface, screen, words.turns(turns), *geom.BUILD_TURNS_RIGHT, 80,
-         "small", "value", align="right")
+    if turns_at is not None:
+        nd.blit_text(surface, screen.style, words.turns(turns), *turns_at,
+                     nd.rect(layout, (0, 0, 80, 0)).w,
+                     font(layout, "small"), hudtext.colour("value"),
+                     align="right")
+    else:
+        text(surface, screen, words.turns(turns), *geom.BUILD_TURNS_RIGHT,
+             80, "small", "value", align="right")
     return layout
 
 

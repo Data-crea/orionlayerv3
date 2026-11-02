@@ -122,8 +122,10 @@ class DesignBoxScreen(ScreenBase):
         layout's as the default (`screens/ship_design/sdtexts.py`)."""
         from core import modtexts
         default = (self._data.get("words") or {}).get(key, key.upper())
-        name = f"ship_design.box.{key[4:]}" if key.startswith("box_") else \
-            f"ship_design.button.{key}"
+        name = (f"ship_design.box.{key[4:]}" if key.startswith("box_") else
+                "ship_design." + key.replace("_", ".")
+                if key.startswith(("arc_", "rack_")) else
+                f"ship_design.button.{key}")
         return modtexts.text(name, default) or default
 
     def ready(self):

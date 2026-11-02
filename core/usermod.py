@@ -123,7 +123,9 @@ SLOTS = ("screens/*/assets/frame.png",
 #: are PLANET_CLIMATE's (`colonyplanets.NAMES`, orion2_consts.h:362-374) —
 #: so a misspelt one is said, not silently unused.
 PLANET_PICTURE_DIR = "screens/colony_summary/assets/planet_pictures/"
-SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",) + tuple(
+SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",
+          # HD EXTENSION `build_grid_room`: the build list's picture box
+          "assets/shared/turnpopup/build_grid.png") + tuple(
     f"{PLANET_PICTURE_DIR}{n}.png" for n in (
         "toxic", "radiated", "barren", "desert", "tundra",
         "ocean", "swamp", "arid", "terran", "gaia"))
@@ -131,6 +133,11 @@ SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",) + tuple(
 #: (`core.buildingart`), by exact name.
 from core import buildingart  # noqa: E402
 SLOTS += buildingart.slots()
+#: HD EXTENSION `designer_pictures`: the weapon picker's four filter buttons
+#: and its arc dial (`screens/design_box/dbpics`), by exact name.
+SLOTS += tuple(f"screens/design_box/assets/{n}.png" for n in (
+    "filter_beam", "filter_missile", "filter_bomb", "filter_special",
+    "compass"))
 #: HD EXTENSION `star_shape_by_size`: a class's three star pictures by
 #: star.size (`galaxy_map.renderer.SIZE_DIRS`), drawn at the zoom's width.
 SLOTS += tuple(f"screens/galaxy_map/assets/stars/*/{n}.png"

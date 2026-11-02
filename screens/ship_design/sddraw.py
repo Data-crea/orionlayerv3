@@ -26,11 +26,18 @@ anchor, fitted to a native width). What is drawn and where it comes from:
                  over an empty row need `Space_For_Weapon_Replacement_`,
                  which is not on the wire; `flashing_hover` — the cycling
                  palette index of a hovered row
+  HD EXTENSION   `hull_blue` — the hull column's box and the chosen hull's
+                 band in the original's blue, and its words in the
+                 original's grey and white, mixed case (Data, 2 November
+                 2026)
 """
+
+import pygame
 
 from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import hover as hud_hover
+from core.hud import text as hudtext
 from screens.colony import coldraw
 from core import nativedraw as nd, textfit
 
@@ -54,6 +61,8 @@ def draw(surface, screen, view, names):
             hud.field(surface, r, layout.scale)
             continue
         nd.draw_box(surface, screen, native)
+        if k == geom.HULL_PANEL:
+            _hull_blue(surface, hud.panel_inner(r, layout.scale))
         if k in geom.FIELD_PANELS:
             hud.field(surface, hud.panel_inner(r, layout.scale),
                       layout.scale)
@@ -122,16 +131,72 @@ def _ship(surface, screen, view, names):
        geom.SPACE_LABEL[1], 0x40, align="right")
 
 
+#: THE ORIGINAL'S BLUE, measured off Data's native screenshot of the hull
+#: list (2 November 2026, a 347x319 crop): the box (4, 0, 56); the chosen
+#: row's band (12, 4, 154) on its top and bottom rows and (16, 8, 200)
+#: between — a band the width of the box.
+HULL_BOX = (4, 0, 56)
+HULL_BAND_EDGE, HULL_BAND = (12, 4, 154), (16, 8, 200)
+
+
+def _hull_blue(surface, inner):
+    """The hull column's box in the original's blue (HD EXTENSION
+    `hull_blue`, Data, 2 November 2026)."""
+    # LOOK EXCEPTION transcription: the hull list's box in the original's own blue, measured off Data's native screenshot
+    surface.fill(HULL_BOX, inner)
+
+
+def _hull_band(surface, rect, inner):
+    """The chosen row's band across the box, edge rows lighter-dimmed as the
+    original's three-step band."""
+    band = pygame.Rect(inner.x, rect.y, inner.w, rect.h)
+    edge = max(1, band.h // 8)
+    # LOOK EXCEPTION transcription: the chosen hull's band in the original's blue, measured off Data's native screenshot
+    surface.fill(HULL_BAND, band)
+    # LOOK EXCEPTION transcription: the band's dimmer top and bottom rows, measured off Data's native screenshot
+    surface.fill(HULL_BAND_EDGE, (band.x, band.y, band.w, edge))
+    surface.fill(HULL_BAND_EDGE, (band.x, band.bottom - edge, band.w, edge))
+
+
+#: The hull words as the original prints them, measured off the same
+#: screenshot (the brightest pixels of the words): the unchosen grey, the
+#: chosen one white. Mixed case ("Frigate"), one size for all six rows and
+#: about three quarters of a row (the rows differ by a pixel or two
+#: natively; the words do not).
+HULL_WORD, HULL_WORD_ON = (126, 126, 134), (240, 240, 248)
+HULL_WORD_FRAC, HULL_ROW_NATIVE = 0.78, 15
+
+
+def _hull_word(surface, screen, rect, label, colour):
+    if not label:
+        return
+    size = int(nd.rect(screen.layout, (0, 0, 0, HULL_ROW_NATIVE)).h
+               * HULL_WORD_FRAC)
+    hudtext.blit(surface, screen.style.render_text(label, size, colour),
+                 rect)
+
+
 def _hulls(surface, screen, view, names):
     d = view.design
+    layout = screen.layout
+    inner = hud.panel_inner(nd.rect(layout, geom.PANELS[geom.HULL_PANEL]),
+                            layout.scale)
     for size, (y1, y2) in enumerate(geom.HULL_ROWS):
-        r = nd.rect(screen.layout, (geom.HULL_X[0], y1, geom.HULL_X[1], y2))
-        state = ("active" if size == d["size"] else
-                 hud_hover.pointer_state(r)
-                 if view.hull_offered(size) else "disabled")
-        hud.small_button(surface, r, screen.layout.scale, state,
-                         names.part("hulls", size) or "",
-                         style_renderer=screen.style)
+        r = nd.rect(layout, (geom.HULL_X[0], y1, geom.HULL_X[1], y2))
+        label = names.part("hulls", size) or ""
+        if size == d["size"]:
+            # the chosen hull is the blue band with a white word, and
+            # stays one under the pointer; the other rows show the HUD's
+            # hover highlight under their grey word
+            _hull_band(surface, r, inner)
+            _hull_word(surface, screen, r, label, HULL_WORD_ON)
+            continue
+        state = (hud_hover.pointer_state(r) if view.hull_offered(size)
+                 else "disabled")
+        if state != "normal":
+            hud.small_button(surface, r, layout.scale, state)
+        _hull_word(surface, screen, r, label, HULL_WORD if state != "disabled"
+                   else tuple(c // 2 for c in HULL_WORD))
 
 
 def _systems(surface, screen, d, names):

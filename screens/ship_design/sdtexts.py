@@ -20,4 +20,16 @@ TEXTS = {
     "ship_design.box.generic": ("Select Special System", "own"),
     "ship_design.box.weapon": ("Select Weapon System", "own"),
     "ship_design.box.special": ("Select Special System", "own"),
+    # The weapon picker's arc and rack words (`picker_words`, Data, 2
+    # November 2026), DESIGN.LBX's own pictures until then
+    "ship_design.arc.0": ("Forward", "own"),
+    "ship_design.arc.1": ("Fwd Ext", "own"),
+    "ship_design.arc.2": ("Back Ext", "own"),
+    "ship_design.arc.3": ("Rear", "own"),
+    "ship_design.arc.4": ("360 Degree", "own"),
+    "ship_design.rack.0": ("Shot x2", "own"),
+    "ship_design.rack.1": ("Shot x5", "own"),
+    "ship_design.rack.2": ("Shot x10", "own"),
+    "ship_design.rack.3": ("Shot x15", "own"),
+    "ship_design.rack.4": ("Shot x20", "own"),
 }

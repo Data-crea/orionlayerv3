@@ -49,6 +49,18 @@ HUD = basepack.source(os.path.join("assets", "shared", "hud", "galaxy_hud.png"),
                       ROOT)
 OUT = os.path.join(ROOT, "assets", "shared", "hud", "cut")
 
+#: HD EXTENSION `hud_4k` (Data, 1 November 2026: "nothing above 4K"). The
+#: sheet is 6704 px wide and every region below is in ITS pixels; the pieces
+#: are cut at that size (the lift is done on the full artwork) and then
+#: reduced by `SHIP_K`, so a piece is 3840 px wide as the sheet would be —
+#: one HUD px of the style (`source.to_ref`, 1920 / 6704) is 0.573 px
+#: here, which is what a 4K screen shows (2 px per reference px). The sheet
+#: itself stays in the base pack: it is what `hud_measure.py` measures, and
+#: no screen loads it.
+SOURCE_W = 6704
+PIECE_W = 3840
+SHIP_K = PIECE_W / SOURCE_W
+
 #: See the module docstring: the difference that counts as opaque icon.
 KEY = 72
 #: HD EXTENSION `icon_alpha_floor`: a difference below this is the panel's
@@ -192,16 +204,26 @@ def mask(a, region):
     return np.round(out).astype(np.uint8)
 
 
+def reduced(arr, k=SHIP_K):
+    """`arr` (RGBA uint8) at `k` of its size, LANCZOS on premultiplied
+    alpha (Pillow does that for RGBA), at least one px each way."""
+    h, w = arr.shape[:2]
+    size = (max(1, int(round(w * k))), max(1, int(round(h * k))))
+    return np.asarray(Image.fromarray(arr, "RGBA").resize(
+        size, Image.LANCZOS))
+
+
 def cut(hud=HUD):
-    """name -> (RGBA uint8 array, box in HUD px)."""
+    """name -> (RGBA uint8 array reduced to `PIECE_W`'s scale, box in HUD
+    px of the full sheet)."""
     a = load(hud)
     pieces = {}
     for name, (region, how) in ICONS.items():
         box = find_box(a, region, how)
-        pieces[f"icon_{name}"] = (lift(a, box, how), box)
+        pieces[f"icon_{name}"] = (reduced(lift(a, box, how)), box)
     x0, y0, x1, y1 = TITLE
-    pieces["title_plate"] = (np.round(a[y0:y1, x0:x1]).astype(np.uint8),
-                             TITLE)
+    pieces["title_plate"] = (
+        reduced(np.round(a[y0:y1, x0:x1]).astype(np.uint8)), TITLE)
     s = load(SETTINGS)
     for name, region in SETTINGS_ICONS.items():
         pieces[f"icon_{name}"] = (mask(s, region), region)

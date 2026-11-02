@@ -14,6 +14,8 @@
     "deviation_hd_font": "Text in the HD font at a size from the native line pitch, fitted to the original's width (the Leaders screen's rule).",
     "omission_delete_hint": "The original prints 'delete %s' over the queue row ITS pointer is on (colbldg.cpp:714-750); HD's pointer is not the game's, and the hint is not drawn.",
     "hd_extension_summary_follows_hd_pointer": "The summary shows the item under HD's pointer, where the original's follows its own (_scanned_prod, colbldg.cpp:825); hovering sends nothing.",
-    "deviation_one_edge": "Work order 226 D: a list column is its shell panel, the original's inner box round the list is not drawn again inside it; the picture, summary and description boxes are cells of the middle panel (the shell's field); the lists' words stand at the shell's inset from the panel's inner line (Data's screenshot of 9 October 2026: no inset, two edges)."
+    "deviation_one_edge": "Work order 226 D: a list column is its shell panel, the original's inner box round the list is not drawn again inside it; the picture, summary and description boxes are cells of the middle panel (the shell's field); the lists' words stand at the shell's inset from the panel's inner line (Data's screenshot of 9 October 2026: no inset, two edges).",
+    "hd_extension_build_colours": "Data's mockup of 1 November 2026: the product's name and the row of the chosen product (the one under the pointer, else the queue's first) in orange, the summary's lines gold, a design's table labels and heads orange over white values, its weapons and specials light grey two to a line, the other list rows grey (bqcolour.py, measured off the mockup).",
+    "hd_extension_build_grid_room": "Data's grid picture (mod folder popups/build_grid.png) fills the picture box instead of the original's room (COLBLDG.LBX 0); the product stands in it by its own pixels (colroom.product_only). Without the file the original's room is drawn."
   }
 }

@@ -360,7 +360,12 @@ class MainMenuScreen(ScreenBase):
             # not by darkening its colour toward black, and stands on no
             # shadow (the work order 335 `credits_shadow` is gone): over the
             # HD picture a darkened line was a black smear.
-            text_surf.set_alpha(int(255 * fade))
+            # The fade is multiplied into the line's own pixels, not set
+            # as a surface alpha: on Data's window (1 Nov 2026) a surface
+            # alpha left the faded lines as solid colour bars.
+            text_surf = text_surf.convert_alpha()
+            text_surf.fill((255, 255, 255, int(255 * fade)),
+                           special_flags=pygame.BLEND_RGBA_MULT)
 
             x = self.CREDIT_X
             if typ == "name":

@@ -94,3 +94,5 @@ PANELS = ((0x0E, 0x14, 0x9A, 0x2A), (0x0E, 0x2E, 0x72, 0x96),
 #: boxes, so a field stands inside each of those panels; the picture box
 #: is a field in its panel.
 NAME_PANEL, FIELD_PANELS = 0, (3, 4, 5, 6)
+#: The hull column's panel (`HULL_ROWS` stand in it): the original's blue box.
+HULL_PANEL = 2

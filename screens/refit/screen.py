@@ -222,9 +222,16 @@ class RefitScreen(ScreenBase):
             held = fltrows.player_colour(self._state, view.owner)
             pic = None
             if built is not None:
-                pic = refart.picture(view.picture_num, built, *self._world())
-                if pic is None and art.available:
+                # DEVIATION `ship_colours` (Data, 2 November 2026: "the
+                # ships have no colour"): the ship in its owner's colours,
+                # the Fleets picture, where the original draws every ship
+                # in the colony screen's silver ramp (`refart`, which
+                # stands in when the Fleets pictures are absent)
+                if art.available:
                     pic = art.ship(int(view.picture_num), built, owner=held)
+                if pic is None:
+                    pic = refart.picture(view.picture_num, built,
+                                         *self._world())
             out.append((i, view, pic, self.refusal(view)))
         return out
 

@@ -12,6 +12,7 @@
     "hd_state_picked_ship": "HD STATE \u2014 the ship being refitted (_g_ship_n) is not on the wire; the design list names the ship HD picked.",
     "deviation_hud_parts": "DEVIATION \u2014 REFITPUP.LBX 0 / 4 and its buttons are the HUD's popup, fields and buttons; the ship pictures, the refusal words and every game word are the original's.",
     "deviation_alone": "DEVIATION \u2014 the original draws its window over the build popup; HD shows it alone over the background, the popup unchanged under it.",
-    "omission_weapon_mods": "OMISSION \u2014 a weapon's modification words are not printed in the paragraph; its count and name are."
+    "omission_weapon_mods": "OMISSION \u2014 a weapon's modification words are not printed in the paragraph; its count and name are.",
+    "deviation_ship_colours": "A ship in the list is drawn in its owner's colours (the Fleets picture), where the original recolours every ship into the colony screen's silver ramp (colony.cpp:459-482, refart.py); the silver stands in without the Fleets pictures."
   }
 }

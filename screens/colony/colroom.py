@@ -346,3 +346,66 @@ def draw(surface, rect, spec, climate, bg, place="popup", colour=None):
     overlay(surface, spec, colour, climate, bg, place, at.topleft, k)
     surface.set_clip(clip)
     return True
+
+
+_only = {}
+
+
+def product_only(spec, climate, bg, place="popup", colour=None):
+    """The tile with the ROOM left out: the product's own pixels on
+    transparency, or None without the extraction. The room is the tile of
+    `("room",)`; a pixel that differs from it belongs to the product (the
+    palette is exact, so no halo of room colour stays but where a ship's
+    soft edge blended into it). HD EXTENSION `build_grid_room`: the build
+    list stands its product in a picture of Data's instead of the room."""
+    t = tile(spec, climate, bg, place, colour)
+    room = tile(("room",), climate, bg, place, colour)
+    if t is None or room is None:
+        return None
+    key = (id(t), id(room))
+    hit = _only.get(key)
+    if hit is not None:
+        return hit[0]
+    differs = (pygame.surfarray.array3d(t) !=
+               pygame.surfarray.array3d(room)).any(axis=2)
+    out = pygame.Surface(t.get_size(), pygame.SRCALPHA, 32)
+    out.blit(t, (0, 0))
+    alpha = pygame.surfarray.pixels_alpha(out)
+    alpha[:] = np.where(differs, 255, 0)
+    del alpha
+    if len(_only) > 64:
+        _only.clear()
+    # `t` and `room` are held too: their ids stay theirs while cached
+    _only[key] = (out, t, room)
+    return out
+
+
+def draw_product(surface, rect, spec, climate, bg, place="popup",
+                 colour=None):
+    """`draw`, the room left out (`product_only`) and the product CENTRED by
+    what is drawn: a building stands on the original's floor (its foot at
+    y 93 of a window 9 to 103) and a ship or satellite at the middle, so
+    their ink sat low or aside in Data's grid. The product and its painted
+    overlay are drawn on a scratch twice the box, the ink's bounding box is
+    measured, and the scratch is laid so that box's middle is the box's
+    middle (HD EXTENSION `build_grid_room`). True if drawn."""
+    t = product_only(spec, climate, bg, place, colour)
+    if t is None:
+        return False
+    rect = pygame.Rect(rect)
+    k = step(t.get_size(), rect.size)
+    big = pygame.transform.scale(t, (t.get_width() * k, t.get_height() * k))
+    scratch = pygame.Surface((rect.w * 2, rect.h * 2), pygame.SRCALPHA, 32)
+    mid = pygame.Rect(rect.w // 2, rect.h // 2, rect.w, rect.h)
+    at = big.get_rect(center=mid.center)
+    scratch.blit(big, at)
+    overlay(scratch, spec, colour, climate, bg, place, at.topleft, k)
+    ink = scratch.get_bounding_rect()
+    if ink.w == 0 or ink.h == 0:
+        return True
+    clip = surface.get_clip()
+    surface.set_clip(rect.clip(clip) if clip else rect)
+    surface.blit(scratch, (rect.centerx - ink.centerx,
+                           rect.centery - ink.centery))
+    surface.set_clip(clip)
+    return True

@@ -34,7 +34,7 @@ from core.screen_base import ScreenBase
 from core import colonyfacts
 from core import nativedraw as nd
 
-from . import bqdraw, bqwire as w
+from . import bqdraw, bqscene, bqwire as w
 
 log = logging.getLogger("build_queue")
 
@@ -188,7 +188,10 @@ class BuildQueueScreen(ScreenBase):
             self._view = w.View(game_state)
 
     def render(self, surface):
-        self._render_background(surface)
+        # HD EXTENSION `build_scene_background`: the colony's landscape,
+        # else the background as for every screen
+        if not bqscene.draw(surface, self, self._view):
+            self._render_background(surface)
         if self._view is not None and self._view.draws:
             names = Names(self._state, self._buildings, self._strings)
             bqdraw.draw(surface, self, self._view, self._state, names,

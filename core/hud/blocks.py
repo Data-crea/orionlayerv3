@@ -47,10 +47,12 @@ _CACHE_MAX = 400
 _CACHE_BYTES = 192 * 2 ** 20
 _CACHE = lru.Cache(_CACHE_MAX, _CACHE_BYTES)
 
-#: The title plate's lit inner hexagon, in `title_plate.png` px
-#: (x0, y0, x1, y1): measured on the cut piece, the inside of the rim the
-#: word sits in. The piece is 4780x240; the box is its middle.
+#: The title plate's lit inner hexagon, in the SHEET's px (the plate before
+#: `hud_cut` reduces it to 3840; x0, y0, x1, y1): measured on the cut piece
+#: at 4780x240, the inside of the rim the word sits in; the box is its middle.
 TITLE_TEXT_BOX = (1737, 27, 3024, 190)
+#: The plate in the sheet's px (`hud_cut.TITLE`); the piece is smaller.
+TITLE_PLATE_PX = (4780, 240)
 #: The box is widest at its top; the plate's inner slanted line runs inward
 #: as it goes down and, in the rows the title's ink stands in (the middle
 #: 0.404 of the box's height, `text.title.cap`), stands 35 and 36 raw px
@@ -120,7 +122,7 @@ def colour(path):
 
 
 def panel(surface, rect, scale, lit=False, filled=True, dense=False,
-          fill=None):
+          fill=None, solid=False):
     """A HUD panel. `lit` gives it the action button's edge: a popup.
 
     `filled=False` draws the edge, its glow and the soft inner band but
@@ -138,7 +140,12 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False,
     are Data's own exception to decision 94 (the battle's ship scan, work
     order 315; its marking stands in `cbscanview`), so such a window
     gets its edge, inner band and glow from here and never draws a panel
-    of its own."""
+    of its own.
+
+    `solid`: the player's fill colour, opaque and flat, with the glass on
+    as with it off (HD EXTENSION `solid_panel`, Data, 2 November 2026) —
+    for a dialog that lies over a busy page and must not show it through:
+    the designer's pickers."""
     rect = pygame.Rect(rect)
     if rect.w < 4 or rect.h < 4:
         return
@@ -149,12 +156,12 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False,
     # 253): a translucent layer over what is drawn under the panel, which
     # depends on that only through the transparency the floor allows.
     own = None if fill is None or not filled else tuple(fill[:3])
-    see = filled and own is None and boxfill.glass_on()
+    see = filled and own is None and not solid and boxfill.glass_on()
     t = glass.t_for(surface, rect, dense) if see else None
     if see:
         glass.keep_ground(surface, rect)
     key = ("panel", rect.w, rect.h, round(scale, 4), lit, filled, dense, t,
-           own, _BLUE[0])
+           own, _BLUE[0], solid)
 
     def build():
         edge = _col(st, "popup.edge" if lit else "panel.edge")
@@ -163,6 +170,10 @@ def panel(surface, rect, scale, lit=False, filled=True, dense=False,
             fill_a, col = glass.profile(rect.h, t)
             fill_px = np.broadcast_to(col[:, None, :],
                                       (rect.h, rect.w, 3))
+        elif solid and filled and own is None:
+            flat = boxfill.member("dense" if dense else "panel")
+            fill_px = np.broadcast_to(np.array(flat, np.float32),
+                                      (rect.h, rect.w, 3)).copy()
         elif filled and own is None:
             fill_px = glass.fill(None, rect.w, rect.h, dense, rect=rect)
         return raster.shape(
@@ -548,8 +559,11 @@ def title_plate_rect(center_x, top_y, scale):
     """(plate rect, text rect) in device px: the cut piece at the HUD's
     own proportion — its width in the HUD times 1920/6704 reference px
     — centred on `center_x`, its top at `top_y`."""
-    raw = art.raw(art.TITLE_PLATE)
-    pw, ph = raw.get_size() if raw is not None else (4780, 240)
+    # The plate's size in the SHEET's px, whatever size the cut piece has:
+    # since the HUD pieces are derived at 3840 px (HD EXTENSION `hud_4k`,
+    # `tools/hud_cut.py`) the file is smaller than the sheet, and the plate
+    # is placed by the sheet's own numbers (`TITLE_PLATE_PX`, TEXT_BOX).
+    pw, ph = TITLE_PLATE_PX
     k = hudstyle.get().get("source.to_ref") * scale
     w, h = pw * k, ph * k
     plate = pygame.Rect(int(center_x - w / 2), int(top_y), int(w), int(h))

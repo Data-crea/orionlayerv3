@@ -36,6 +36,8 @@ check 090q:
                  picture (17 for DESIGN, 16 for REPEAT, colbldg.cpp:21-22);
                  HD has one pointer drawing (`core/cursor.py`)
 """
+import pygame
+
 from core import prodname
 from core.hestrings import printf
 from core.hud import blocks as hud
@@ -44,6 +46,8 @@ from core.hud import text as hudtext
 from screens.colony.coldraw import font, text
 from core import nativedraw as nd
 
+from . import bqcolour as col
+from . import bqgrid
 from . import bqwire as w
 
 E_TITLE, E_COST, E_MAINT, E_TIME, E_TURNS = 210, 242, 367, 211, 544
@@ -140,6 +144,7 @@ def _lists(surface, screen, view, state, names, hover=None):
     dim = hudtext.colour("sub")
     ticks = pygame.time.get_ticks()
     pad = shell.inset(screen.ref_layout)
+    chosen = hover if hover is not None else view.items[0]
     for entries, rows, x, width, building, panel in (
             (view.buildings, view.building_rows, 13, 171, True, "left_panel"),
             (view.others, view.other_rows, 485, 138, False, "right_panel")):
@@ -156,9 +161,15 @@ def _lists(surface, screen, view, state, names, hover=None):
             if inner is not None:
                 px = max(px, inner.x + pad)
                 pw = min(pw, inner.right - pad - px)
+            # HD EXTENSION `build_colours`: the row of the product the
+            # middle shows in orange, the others grey (Data's mockup)
+            ink = col.SELECTED if e["id"] == chosen else col.ROW
+            # a building the colony is not queueing stays white too (Data,
+            # 1 November 2026: the left list is white as the right is);
+            # only a design that needs a base is dimmed
             nd.blit_text(surface, screen.style, name, px, py, pw,
                          font(screen.layout, "value"),
-                         hudtext.colour("value") if bright else dim)
+                         ink if bright or building else dim)
 
 
 def _world(view, state):
@@ -210,8 +221,15 @@ def _picture(surface, screen, view, state, names, product):
     owner = getattr(ship, "previous_owner", None)
     if owner is None:
         owner = getattr(state, "player_num", 0) or 0
-    colroom.draw(surface, inner, spec or ("room",), climate, bg,
-                 colour=colroom.owner_colour(state, owner))
+    colour = colroom.owner_colour(state, owner)
+    if bqgrid.draw(surface, screen.app.res, inner):
+        # HD EXTENSION `build_grid_room`: Data's grid, the product alone
+        # stood in it
+        colroom.draw_product(surface, inner, spec or ("room",), climate, bg,
+                             colour=colour)
+    else:
+        colroom.draw(surface, inner, spec or ("room",), climate, bg,
+                     colour=colour)
     if spec is None:
         word = (screen.e(bqproduct.WORD_IN_BOX[product])
                 if product in bqproduct.WORD_IN_BOX
@@ -224,7 +242,11 @@ def _picture(surface, screen, view, state, names, product):
 
 def _description(surface, screen, view, state, product):
     """The large box: the product's help record or setting description,
-    or a design's paragraph, wrapped to the box in the shell's text."""
+    or a design's table, wrapped to the box in the shell's text.
+
+    HD EXTENSION `build_colours` (Data's mockup): a design's table has its
+    labels in orange over white values, its section heads in orange and its
+    weapons and specials in light grey, two to a line; a help text is white."""
     from core import helpformat
     from core.hud import shell
     from core.textfit import wrap_text
@@ -232,29 +254,75 @@ def _description(surface, screen, view, state, product):
     if product in (w.NONE, w.SEPARATOR, None):
         return
     box = nd.rect(screen.layout, w.DESCRIPTION_BOX)
-    inner = box.inflate(-2 * shell.inset(screen.ref_layout),
-                        -2 * shell.inset(screen.ref_layout))
     size = font(screen.layout, "value")
-    pitch = int(size * 1.25)
-    lines = []
+    pitch = int(size * ROW_PITCH)
+    # the table's margin: 2.5 % of the box's width at the sides, half a line
+    # at the top (Data's mockup: the words do not touch the box's edge)
+    pad_x = max(shell.inset(screen.ref_layout), int(box.w * PAD_X))
+    pad_y = max(shell.inset(screen.ref_layout), size // 2)
+    inner = box.inflate(-2 * pad_x, -2 * pad_y)
     _pic, ship = _ship_parts(view, state, product)
     if ship is not None:
         from screens.refit import refwords
-        for row in refwords.design_lines(ship, screen.e, screen.parts()):
-            lines.append("  ".join(str(v) for v in row if v))
-    else:
-        got = bqproduct.text(product, getattr(screen, "helptext", None),
-                             screen.maintext())
-        if got is not None:
-            for ln in helpformat.parse(got[1] or ""):
-                lines.extend(wrap_text(screen.style, ln.plain(), size,
-                                       inner.w) or [""])
+        _design_table(surface, screen, inner, size, pitch,
+                      refwords.design_lines(ship, screen.e, screen.parts()))
+        return
+    lines = []
+    got = bqproduct.text(product, getattr(screen, "helptext", None),
+                         screen.maintext())
+    if got is not None:
+        for ln in helpformat.parse(got[1] or ""):
+            lines.extend(wrap_text(screen.style, ln.plain(), size,
+                                   inner.w) or [""])
     y = inner.y
     for ln in lines:
         if y + pitch > inner.bottom:
             break
         nd.blit_text(surface, screen.style, ln, inner.x, y, inner.w, size,
-                     hudtext.colour("value"))
+                     col.VALUE)
+        y += pitch
+
+
+#: Where a table's value and its second item column start, of the box's
+#: width (the mockup: 35 % and 50 %), and the indent of the items.
+VALUE_AT, SECOND_AT, ITEM_INDENT = 0.37, 0.50, 0.025
+#: A row's pitch in line heights, the margin at the sides in box widths, and
+#: the extra gap before a section head in rows (measured off the mockup:
+#: rows 27.5 px, head gap 10-13 px, margin 20 px of 780).
+ROW_PITCH, PAD_X, HEAD_GAP = 1.4, 0.025, 0.42
+
+
+def _design_table(surface, screen, inner, size, pitch, rows):
+    """`refwords.design_lines`' rows: (label, value) pairs first, then
+    (head,) rows (the format ends in a colon) each followed by item rows
+    of one or two words."""
+    y = inner.y
+    heads = False
+    for row in rows:
+        if y + pitch > inner.bottom:
+            break
+        if len(row) == 1 and row[0].endswith(":"):     # a section head
+            heads = True
+            if y > inner.y:
+                y += int(pitch * HEAD_GAP)
+            if y + pitch > inner.bottom:
+                break
+            nd.blit_text(surface, screen.style, row[0], inner.x, y, inner.w,
+                         size, col.LABEL)
+        elif heads or len(row) == 1:            # one or two items
+            for i, word in enumerate(row):
+                at = inner.x + int(inner.w * (ITEM_INDENT if i == 0
+                                              else SECOND_AT))
+                nd.blit_text(surface, screen.style, word, at, y,
+                             inner.right - at, size, col.ITEM)
+        else:                                   # label and value
+            label, value = row
+            if label:
+                nd.blit_text(surface, screen.style, label, inner.x, y,
+                             int(inner.w * VALUE_AT), size, col.LABEL)
+            at = inner.x + int(inner.w * VALUE_AT) if label else inner.x
+            nd.blit_text(surface, screen.style, value, at, y,
+                         inner.right - at, size, col.VALUE)
         y += pitch
 
 
@@ -290,7 +358,7 @@ def _queue(surface, screen, view, state, names):
             else ("", "ok")
         y = w.QUEUE_TEXT_Y + i * w.QUEUE_PITCH
         text(surface, screen, name, w.QUEUE_TEXT_X, y, w.QUEUE_W, "value",
-             "value", align="center")
+             "value", align="center", colour=col.QUEUE)
 
 
 def _summary(surface, screen, view, state, names, hover):
@@ -301,7 +369,13 @@ def _summary(surface, screen, view, state, names, hover):
         return
     name, _st = names.product(product, state)
     text(surface, screen, name, w.SUMMARY_X, w.SUMMARY_Y, w.SUMMARY_W,
-         "value", "title")
+         "value", "title", colour=col.TITLE)
+    # the thin rule under the name (Data's mockup)
+    rule = nd.rect(screen.layout, (w.SUMMARY_X, w.SUMMARY_Y + w.SUMMARY_PITCH
+                                   + 3, w.SUMMARY_X + w.SUMMARY_W,
+                                   w.SUMMARY_Y + w.SUMMARY_PITCH + 3))
+    pygame.draw.line(surface, col.RULE, (rule.x, rule.y),
+                     (rule.right, rule.y))
     e = view.entry(product)
     if e is None:
         return
@@ -317,7 +391,7 @@ def _summary(surface, screen, view, state, names, hover):
         if fmt:
             text(surface, screen, printf(fmt, value), w.SUMMARY_X,
                  w.SUMMARY_Y + n * w.SUMMARY_PITCH, w.SUMMARY_W, "line",
-                 "label")
+                 "label", colour=col.INFO)
 
 
 #: The buttons that set a mode, and the `field_mode` each sets.
