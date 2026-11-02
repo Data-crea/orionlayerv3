@@ -4,7 +4,7 @@ An HD interface for **Master of Orion 2**. OrionLayer replaces the game's
 640x480 screens with high-resolution ones, up to 4K, and leaves the game
 itself alone: the rules, the AI and your saves stay the game's.
 
-![The galaxy map in OrionLayer](https://github.com/Data-crea/orionlayerv3/releases/download/base-pack-0956de83bb3d/screenshot-galaxy-map.jpg)
+![The galaxy map in OrionLayer](https://github.com/Data-crea/orionlayerv3/releases/download/readme-images/screenshot-galaxy-map.jpg)
 
 It runs on [orion2re](https://github.com/orion2re/orion2re), the C++
 reimplementation of the original engine by Joes and the orion2re team.
@@ -13,7 +13,7 @@ keys back. A screen that has no HD version yet keeps its last picture
 with the notice "F12 to answer", and F12 shows the original's own screen,
 so the game stays playable.
 
-![The main menu](https://github.com/Data-crea/orionlayerv3/releases/download/base-pack-0956de83bb3d/screenshot-main-menu.jpg)
+![The main menu](https://github.com/Data-crea/orionlayerv3/releases/download/readme-images/screenshot-main-menu.jpg)
 
 ## Status
 
