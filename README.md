@@ -157,6 +157,13 @@ once; afterwards OrionLayer runs offline.
 (its place is shown in the game: GAME, SETTINGS, ORIONLAYER, SYSTEM).
 Without it the leaders show the game's own portraits.
 
+*Optional:* the ambassador's film on the audience screen comes as its own
+download too, one zip per race (about 60 to 95 MB each, thirteen races), on the
+[`ambassador-films`](https://github.com/Data-crea/orionlayerv3/releases/tag/ambassador-films-f10e3556dadd)
+release. Take the races you want and unpack each zip into the same mod
+folder; no ffmpeg is needed. Without a film the audience shows its still
+picture.
+
 **4. Play:**
 
 ```sh

@@ -583,6 +583,11 @@ which can also replace data, layouts and whole screens.
 
 ## The ambassador's film
 
+Ready-made films for all thirteen races are an optional download, one zip
+per race, on the [`ambassador-films`](https://github.com/Data-crea/orionlayerv3/releases/tag/ambassador-films-f10e3556dadd)
+release: unpack a zip into your mod folder and it is in place (`files/screens/audience/assets/video/<race>/`).
+The rest of this part is for making your own.
+
 A clip per race replaces the audience's room and ambassador. Make one with
 `python tools/audience_video_install.py <race> <folder>` (needs ffmpeg), where
 `<folder>` holds `default.mp4` (every mood) and/or `first_contact.mp4`,
