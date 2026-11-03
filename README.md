@@ -28,12 +28,34 @@ You can start it, load or begin a game and play through the HD screens,
 but expect missing pieces, screens that still fall back to the original,
 and bugs.
 
+> **The installation will get simpler soon.** orion2re's author is about to
+> build the interface OrionLayer needs into the engine itself (the "hooks").
+> Once that is done, building a patched engine yourself, most of the package
+> list below and part of the setup go away, and this page will change with
+> it. What is written here is the way that works **today**; if you read
+> this later, check that the steps still match the page on GitHub.
+
+## Which systems this works on
+
+| System | State |
+|---|---|
+| **Ubuntu 24.04 LTS** (and, by the same packages, Debian) | **Tested from an empty machine**, start to finish, with the package line below. Ubuntu 24.04 is the reference. Debian uses the same package names but has not been tried. |
+| **Arch Linux / CachyOS** | Runs (tested on CachyOS with its build tools and SDL libraries already installed), but **not tested from an empty machine**. The package line below is Debian's; install the equivalents with `pacman` (build tools, cmake, ninja, git, python, xdotool and SDL3's build dependencies). |
+| Fedora, openSUSE, other Linux | **Not tested.** It should work with the equivalent packages, but nobody has tried. |
+| Windows, macOS | **Not supported** in the beta. |
+
+You also need a desktop session (X11 or Wayland), a sound device (the engine
+stops at start without one) and your own copy of Master of Orion 2.
+
 ## What you need
 
 - **Master of Orion 2**, your own copy (GOG or Steam). OrionLayer is a
   modification, not a game: it includes none of the game's files and reads
   the texts and pictures it needs from your installation.
-- **Python 3.10 or newer**, with git.
+- **Python 3.10 or newer**, with git. Python 3.10 to 3.13 install ready-made
+  packages. With **Python 3.14 or newer** pip has no ready-made pygame and
+  compiles it, which needs the SDL2 development files (on Debian or Ubuntu
+  `libsdl2-dev`); on such a system use an older Python if you have one.
 - **The engine**: the orion2re fork
   [Data-crea/orion2re](https://github.com/Data-crea/orion2re), branch
   `orionlayer`, based on orion2re v2.0.0. That branch carries every engine
@@ -119,6 +141,17 @@ and reads the texts and pictures it needs from your game:
 At its end setup reports the engine it found and whether every change
 OrionLayer needs is in it.
 
+**About the pictures.** The repository holds no pictures. OrionLayer's own
+pictures (the "base pack", about 160 MB) are a separate download from this
+project's GitHub releases, and the game's own pictures, texts and sounds
+are read from *your* Master of Orion 2 folder. Setup does both for you:
+it downloads the base pack, checks every file, and extracts what it needs
+from your game (`--extract`). You do not unpack or copy any picture by hand.
+Both land in your user folders (`~/.local/share/orionlayer/` and
+`~/.config/orionlayer/`), not in the project folder, so deleting and
+re-cloning the project loses nothing. This needs an internet connection
+once; afterwards OrionLayer runs offline.
+
 *Optional:* painted leader portraits come as their own download,
 [`orionlayer-leader-portraits.zip`](https://github.com/Data-crea/orionlayerv3/releases/tag/leader-portraits-8218a046e53e); unpack it into OrionLayer's mod folder
 (its place is shown in the game: GAME, SETTINGS, ORIONLAYER, SYSTEM).
@@ -133,6 +166,23 @@ Without it the leaders show the game's own portraits.
 The game starts with its own window hidden, the intro is skipped (with
 xdotool), and OrionLayer opens on the HD main menu. Choose LOAD GAME or
 NEW GAME as in the original. Closing OrionLayer stops the game.
+
+### If something goes wrong
+
+- **"The base pack could not be downloaded (404)."** The base pack belongs
+  to the version you cloned. Update (`git pull` in the `beta` branch) and run
+  setup again; make sure you cloned `beta`, not another branch.
+- **"REFUSED: the screen is blanked or locked"** (GNOME). Unlock the screen
+  and start again; the engine cannot start while it is locked.
+- **The game stops at start with "SOUND ERROR: Unable to open SDL audio stream".** The engine needs a sound
+  device; connect or enable one.
+- **Setup says engine changes are missing.** You built the wrong engine:
+  it must be the `orionlayer` branch of `Data-crea/orion2re`, built with
+  `-DORION2RE_EXT=ON` (step 1).
+- **`pip` fails building pygame.** See "Python 3.14" under "What you need".
+- Anything else: open an issue on GitHub with the output of
+  `.venv/bin/python tools/version_check.py` and the end of
+  `~/.cache/orionlayer/orion2re.log`.
 
 ### On Windows
 
