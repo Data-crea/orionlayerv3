@@ -67,6 +67,15 @@ TABLE = {
         ("e", "repeat_mode", "Repeat mode")),
     "custom_race": (
         ("a", "accept", "Accept"), ("c", "default", "Default")),
+    # the ids are `racesgeom.BUTTONS`' and `ldrgeom.BUTTONS`' names, which
+    # the check holds to the key (racescrn.cpp:338-372, officer.cpp:2954-3021)
+    "races": (
+        ("a", "audience", "Audience"), ("r", "report", "Report"),
+        ("i", "ignore", "Ignore"), ("d", "war", "Declare war")),
+    "leaders": (
+        ("c", "tab_colony", "Colony leaders"), ("s", "tab_ship", "Ship leaders"),
+        ("h", "hire", "Hire"), ("p", "pool", "Pool"),
+        ("d", "dismiss", "Dismiss"), ("x", "cancel", "Cancel hire")),
 }
 
 #: screen -> the letters and digits the screen answers that are NOT in the
@@ -78,7 +87,8 @@ RESERVED = {"galaxy_map": "0", "colony": "bc", "build_queue": "qb0123456789",
 SCREEN_ORDER = tuple(TABLE)
 SCREEN_LABELS = {"galaxy_map": "Galaxy map", "combat": "Combat",
                  "colony": "Colony", "build_queue": "Build queue",
-                 "custom_race": "Custom Race"}
+                 "custom_race": "Custom Race", "races": "Races",
+                 "leaders": "Leaders"}
 
 BLOCKING_MODS = pygame.KMOD_ALT | pygame.KMOD_CTRL | pygame.KMOD_META
 

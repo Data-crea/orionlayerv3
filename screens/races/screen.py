@@ -339,6 +339,13 @@ class RacesScreen(ScreenBase):
         self._hover = self._native(screen_x, screen_y)
         return super().handle_mouse_motion(screen_x, screen_y)
 
+    def hotkeys_suspended(self):
+        """The declaration of war's box takes Y and N, and the report and
+        diplomacy dialogs are the game's own: only the screen's two modes
+        are the player's (`core.hotkeys`)."""
+        return self._view is not None and \
+            self._view.state not in (raceswire.MAIN, raceswire.WHO)
+
     def handle_key(self, key):
         if self.help_consumes_key(key):
             return

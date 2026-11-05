@@ -415,6 +415,11 @@ class LeadersScreen(ScreenBase):
         ldrinput.hover(self, screen_x, screen_y)
         return super().handle_mouse_motion(screen_x, screen_y)
 
+    def hotkeys_suspended(self):
+        """A native box or the hire popup takes keys itself
+        (`core.hotkeys`)."""
+        return self._view is not None and self._view.state != ldrwire.READY
+
     def handle_key(self, key):
         if self.help_consumes_key(key):
             return
