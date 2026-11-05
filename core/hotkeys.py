@@ -72,6 +72,15 @@ TABLE = {
     "races": (
         ("a", "audience", "Audience"), ("r", "report", "Report"),
         ("i", "ignore", "Ignore"), ("d", "war", "Declare war")),
+    "planets": (
+        ("1", "enemy", "No Enemy Presence"), ("2", "gravity", "Normal Gravity"),
+        ("3", "hostile", "Non-Hostile Environment"),
+        ("4", "minerals", "Mineral Abundance"), ("5", "range", "Planets In Range"),
+        ("c", "colony", "Send Colony Ship"), ("o", "outpost", "Send Outpost Ship")),
+    "fleets": (
+        ("s", "btn_scrap", "Scrap"), ("a", "btn_all", "All"),
+        ("l", "btn_leaders", "Leaders"), ("r", "btn_relocate", "Relocate"),
+        ("u", "btn_support", "Support"), ("c", "btn_combat", "Combat")),
     "leaders": (
         ("c", "tab_colony", "Colony leaders"), ("s", "tab_ship", "Ship leaders"),
         ("h", "hire", "Hire"), ("p", "pool", "Pool"),
@@ -88,7 +97,8 @@ SCREEN_ORDER = tuple(TABLE)
 SCREEN_LABELS = {"galaxy_map": "Galaxy map", "combat": "Combat",
                  "colony": "Colony", "build_queue": "Build queue",
                  "custom_race": "Custom Race", "races": "Races",
-                 "leaders": "Leaders"}
+                 "leaders": "Leaders", "planets": "Planets",
+                 "fleets": "Fleets"}
 
 BLOCKING_MODS = pygame.KMOD_ALT | pygame.KMOD_CTRL | pygame.KMOD_META
 

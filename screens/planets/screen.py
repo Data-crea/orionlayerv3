@@ -256,6 +256,42 @@ class PlanetsScreen(ScreenBase):
 
     # ── Input ─────────────────────────────────────────────
 
+    def _restriction(self, spec):
+        """A restriction toggle: HD's list and the game's flag together."""
+        self._filters[spec["key"]] = not self._filters[spec["key"]]
+        if self._view is not None and self._list.refresh(
+                self._view, self._filters):
+            self._clear_scanned()
+        self._clamp_after_filter()
+        self._inject(spec, f"restriction {spec['key']}")
+
+    def _send_ship(self, key):
+        if not self._sender.toggle(self.app, planetsend.block(self._state),
+                                   key):
+            log.info("Send %s ship: no field (no PLSM, or the game "
+                     "offers none)", key)
+
+    def handle_key(self, key):
+        """TRANSCRIPTION `hotkey_is_the_click`: a hotkey of the original is
+        the activation of its field (fields.cpp:2583-2587, :988), so the keys 1-5
+        and C, O do what a click on their button does, which keeps HD's
+        filters and its send mode with the game's. Until work order 366 they
+        went to the game alone and HD's list and marks stayed as they were."""
+        if self.help_consumes_key(key):
+            return
+        char = chr(key).upper() if 32 <= key < 127 else ""
+        for spec in self._data.get("restrictions", {}).get("buttons", []):
+            if char and spec.get("hotkey") == char:
+                self._restriction(spec)
+                return
+        for key_name in ("colony", "outpost"):
+            hot = (self._data.get("send", {}).get(key_name, {})
+                   .get("hotkey") or "").upper()
+            if char and hot == char:
+                self._send_ship(key_name)
+                return
+        super().handle_key(key)
+
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
@@ -274,19 +310,11 @@ class PlanetsScreen(ScreenBase):
                 return None
         for spec in self._data.get("restrictions", {}).get("buttons", []):
             if self._hit("restrict_" + spec["key"], pos):
-                self._filters[spec["key"]] = not self._filters[spec["key"]]
-                if self._view is not None and self._list.refresh(
-                        self._view, self._filters):
-                    self._clear_scanned()
-                self._clamp_after_filter()
-                self._inject(spec, f"restriction {spec['key']}")
+                self._restriction(spec)
                 return None
-        b = planetsend.block(self._state)
         for key in ("colony", "outpost"):
             if self._hit("send_" + key, pos):
-                if not self._sender.toggle(self.app, b, key):
-                    log.info("Send %s ship: no field (no PLSM, or the game "
-                             "offers none)", key)
+                self._send_ship(key)
                 return None
         mark = self._sender.mark_at(pos)
         if mark is not None:
@@ -303,7 +331,8 @@ class PlanetsScreen(ScreenBase):
         # (Scan_Summary_Box_Fields_, plntsum.cpp:1284-1289); without one
         # the original does nothing with it.
         area = planetdraw.window(self, "rows")
-        if planetsend.armed(b) and area and area.collidepoint(pos):
+        if planetsend.armed(planetsend.block(self._state)) and area and \
+                area.collidepoint(pos):
             band = listgrid.band_at(planetdraw.row_bands(self), screen_y)
             index = self._first + band if band is not None else -1
             if 0 <= index < len(self._list.rows):

@@ -643,6 +643,11 @@ class FleetsScreen(ScreenBase):
         return self._activate("scroll_up" if direction > 0
                               else "scroll_down", "wheel")
 
+    def hotkeys_suspended(self):
+        """A native box, or the grid waiting for the game, takes keys itself
+        (`core.hotkeys`)."""
+        return self._view is not None and not self._view.ok
+
     def handle_key(self, key):
         if self.help_consumes_key(key):
             return
