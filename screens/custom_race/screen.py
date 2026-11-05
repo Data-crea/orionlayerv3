@@ -24,7 +24,7 @@ from screens.custom_race.description import (
 from screens.custom_race.popup import (
     MessagePopup, FALLBACK_PANEL, fallback_text_rect,
 )
-from screens.custom_race import governments, mutation, racename
+from screens.custom_race import governments, mutation, pickcap, racename
 
 log = logging.getLogger("custom_race")
 
@@ -34,6 +34,11 @@ COL_PANEL_HEADER = _c("panel_header", (120, 170, 255))
 # "messages" so a mod or a translation can replace it.
 MSG_PICKS_NEGATIVE = ("Picks remaining must be greater than or "
                       "equal to zero.")
+# INVENTION `picks_cap_text`: the original's refusal is KENTEXT 0x4A in the
+# game's language (racesel.cpp:568-569); without the extracted word this is
+# OrionLayer's own English, because the text is not known without the
+# player's own file.
+MSG_PICKS_CAP = "Negative picks may not total more than 10."
 
 
 class CustomRaceScreen(ScreenBase):
@@ -200,6 +205,40 @@ class CustomRaceScreen(ScreenBase):
                     == spec.get("value", 1)):
                 total += spec["picks"]
         return total
+
+    def _negative_picks(self):
+        """`negative_picks` of the engine's `Calculate_Picks`
+        (raceopt.cpp:649-675): the costs below zero of what is chosen now,
+        primary options and the government (both are categories here) and
+        the specials."""
+        costs = []
+        for cat in self._categories:
+            val = self._trait_state.get(cat["trait_id"], 0)
+            for opt in cat["options"]:
+                if opt["value"] == val:
+                    costs.append(opt["picks"])
+                    break
+        for spec in self._specials:
+            if (self._trait_state.get(spec["trait_id"], 0)
+                    == spec.get("value", 1)):
+                costs.append(spec["picks"])
+        return pickcap.negative_picks(costs)
+
+    def _refuse_over_cap(self):
+        """The choice is neither set nor sent: the engine would refuse it
+        with a box of its own that this screen cannot see (see
+        `pickcap.py`)."""
+        self._popup.open(self._picks_cap())
+        log.info("Choice refused: negative picks would pass %d",
+                 pickcap.NEGATIVE_LIMIT)
+
+    def hotkeys_suspended(self):
+        """A box, the mutation list, or a name being typed (the engine's
+        flag comes a snapshot after the click, so the click counts too)."""
+        return (self._popup.visible or self._mutation is not None
+                or racename.editing(self)
+                or time.monotonic() - getattr(self, "_name_click_t", -9.0)
+                < 1.0)
 
     @property
     def picks_remaining(self):
@@ -407,6 +446,17 @@ class CustomRaceScreen(ScreenBase):
         return ken.panel_word("picks_negative") or self._message(
             "picks_negative", MSG_PICKS_NEGATIVE)
 
+    def _picks_cap(self):
+        """The refusal over the cap: KENTEXT 0x4A in the game's language
+        when it was extracted, else traits.json's message, else the
+        English literal (INVENTION `picks_cap_text`, see `MSG_PICKS_CAP`)."""
+        ken = getattr(self, "_kentext", None)
+        if ken is None:
+            from core import kentext, lang
+            ken = self._kentext = kentext.ArcWords(lang.current())
+        return ken.panel_word("picks_cap") or self._message(
+            "picks_cap", MSG_PICKS_CAP)
+
     def _render_bar(self, surface, L, fs):
         """Combined Race Picks + Score bar.
 
@@ -544,6 +594,11 @@ class CustomRaceScreen(ScreenBase):
         if hit:
             cat, opt = hit
             trait_id, value = cat["trait_id"], opt["value"]
+            if (self._trait_state.get(trait_id) != value
+                    and pickcap.refuses_choice(opt["picks"],
+                                               self._negative_picks())):
+                self._refuse_over_cap()
+                return None
             # No "Normal" row: clicking the active option clears it.
             # Government always keeps a selection (as in the original).
             if self._trait_state.get(trait_id) == value:
@@ -572,6 +627,12 @@ class CustomRaceScreen(ScreenBase):
                                  self._spec_scroll,
                                  screen_x, screen_y)
         if spec is not None:
+            if (self._trait_state.get(spec["trait_id"], 0)
+                    != spec.get("value", 1)
+                    and pickcap.refuses_special(spec["picks"],
+                                                self._negative_picks())):
+                self._refuse_over_cap()
+                return None
             self._toggle_special(spec)
             self._set_active(spec)
             fid = spec.get("field_id")

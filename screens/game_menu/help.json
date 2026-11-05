@@ -702,6 +702,11 @@
       "orionlayer_band": "mod_open"
     },
     {
+      "help_id": "orionlayer.hotkeys",
+      "node": "orionlayer",
+      "orionlayer_band": "hotkeys"
+    },
+    {
       "help_id": "orionlayer.tab_appearance",
       "node": "orionlayer",
       "ol_part": "tab_appearance"

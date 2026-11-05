@@ -300,6 +300,8 @@
       "livery_open": "Open",
       "mod_open": "Location",
       "mod_open_button": "Open mod folder",
+      "hotkeys": "Hotkeys",
+      "hotkeys_button": "Show and change",
       "mod_path": "Mod folder:"
     },
     "livery": {
@@ -334,6 +336,20 @@
       "doom_star": "Doom Star",
       "station": "Station",
       "look": "Look {n}"
+    },
+    "hotkeys_window": {
+      "_hd_extension": "HD EXTENSION `hotkey_remap` (work order 364): the hotkeys window's words; screens/game_menu/gmkeys.py, core/hotkeys.py. MOO2 has no such window; its keys are fixed.",
+      "title": "HOTKEYS",
+      "col_action": "Action",
+      "col_original": "Original",
+      "col_key": "Key",
+      "press_key": "Press a key",
+      "reset": "Reset",
+      "back": "Back",
+      "was_reset": "The original keys are back.",
+      "bad_key": "Only a letter or a digit.",
+      "taken": "That key is already used.",
+      "reserved": "That key has another job on this screen."
     },
     "orionlayer_window": {
       "_note": "Data's grouping and his subtitles (work order 251), in English; German in assets/shared/lang/de.json (his own words).",
@@ -561,6 +577,10 @@
     "orionlayer.mod_files": {
       "title": "MOD FILES",
       "body": "How many files of the mod folder OrionLayer uses \u2014 so you can see the folder was found. After switching the folder on, the progress of reading the game's pictures shows here."
+    },
+    "orionlayer.hotkeys": {
+      "title": "HOTKEYS",
+      "body": "Shows the keys a screen answers and lets you give an action another key: pick the screen, click the key of an action and press the new letter or digit. A key another action uses is refused. The F keys and the Alt keys keep their meaning. RESET gives a screen its original keys back."
     },
     "orionlayer.mod_open": {
       "title": "OPEN MOD FOLDER",

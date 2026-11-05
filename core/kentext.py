@@ -58,7 +58,10 @@ PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
                   # overspent race (`Warning_Box_` of message 0x4B,
                   # racesel.cpp:686-687), work order 315 — the extractor
                   # writes every id in this table
-                  "picks_negative": 0x4B}
+                  "picks_negative": 0x4B,
+                  # the refusal of a choice that would pass the cap of
+                  # -10 on negative picks (racesel.cpp:568-569)
+                  "picks_cap": 0x4A}
 
 #: The bits in the order the original tests them, 0x10 last.
 ARC_ORDER = (0x01, 0x02, 0x04, 0x08, 0x10)

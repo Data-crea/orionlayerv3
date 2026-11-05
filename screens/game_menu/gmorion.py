@@ -54,7 +54,8 @@ from . import gmfill, gmlang
 BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone",
          "text_size", "floor",
          "map_black", "monsters", "map_ships", "map_colours", "frame_rate", "idle_rate",
-         "painted", "livery", "mods", "mod_files", "mod_open", "language")
+         "painted", "livery", "mods", "mod_files", "mod_open", "hotkeys",
+         "language")
 
 #: the heading colour of the rows until work order 251, the livery
 #: window's labels since 220
@@ -278,6 +279,10 @@ def handle_click(screen, x, y):
     elif "mod_open_button" in geo and \
             geo["mod_open_button"].collidepoint(x, y):
         open_mod_folder()
+    elif "hotkeys_button" in geo and \
+            geo["hotkeys_button"].collidepoint(x, y):
+        from . import gmkeys
+        gmkeys.open_window(screen)
     elif "frame" not in geo:
         pass                     # the colour rows are on APPEARANCE only
     elif gmfill.handle_click(screen, geo, x, y):
@@ -366,6 +371,7 @@ def render(screen, surface):
               "mods": ("mods", "Mod folder"),
               "mod_files": ("mod_files_label", "Mod files"),
               "mod_open": ("mod_open", "Location"),
+              "hotkeys": ("hotkeys", "Hotkeys"),
               "language": ("language", "Language")}
     for name, (key, default) in labels.items():
         if name in geo:
@@ -393,6 +399,9 @@ def render(screen, surface):
     if "mod_open_button" in geo:
         _render_button(screen, surface, geo["mod_open_button"],
                        words.get("mod_open_button", "Open mod folder"), size)
+    if "hotkeys_button" in geo:
+        _render_button(screen, surface, geo["hotkeys_button"],
+                       words.get("hotkeys_button", "Show and change"), size)
     if "language" in geo:
         gmlang.render_note(screen, surface, geo, words, size)
 

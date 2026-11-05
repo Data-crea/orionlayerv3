@@ -83,6 +83,9 @@ AUTOBUILD_CENTRE = (578, 28)
 CHANGE = (TYPE_BUTTON, 519, 123)        # [4], hotkey C shadowed by [5]
 BUY = (None, 590, 123)                  # [3], type 0 buyable, 7 not
 LEADERS = (TYPE_BUTTON, 556, 427)       # [17], hotkey L
+#: [18], the autobuild line's hidden field (0x20d, 0x1a)..(0x276, 0x25),
+#: colony_main.cpp:976 — the label is its click target, as key A is.
+AUTOBUILD = (TYPE_HIDDEN, 525, 26)
 RETURN = (TYPE_BUTTON, 556, 459)        # [1]
 
 # ── The lower half ────────────────────────────────────────────────────

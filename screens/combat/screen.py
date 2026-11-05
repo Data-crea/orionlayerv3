@@ -312,6 +312,10 @@ class CombatScreen(CombatInput, ScreenBase):
                                len(live["units"]) else unit)
 
     # ── drawing ────────────────────────────────────────────────────
+    def hotkeys_suspended(self):
+        """The scan and the board popup take keys themselves."""
+        return cbpopups.engine_popup(self._state) is not None
+
     def render(self, surface):
         # OrionLayer's background under the panel's glass, as on every
         # screen (`ScreenBase._render_background`); the field covers the rest

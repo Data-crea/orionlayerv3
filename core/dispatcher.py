@@ -14,6 +14,7 @@ import logging
 
 import pygame
 
+from core import hotkeys
 from core.screen_names import SCREENS as _SCREEN_NAMES
 
 log = logging.getLogger("dispatcher")
@@ -214,7 +215,11 @@ class Dispatcher:
     def route_key_event(self, event):
         """Full KEYDOWN event (unicode included) to the top screen."""
         if self.top:
-            self.top.handle_key_event(event)
+            # the player's hotkeys (`core/hotkeys.py`): a key given to an
+            # action reaches the screen as the original's
+            event = hotkeys.translate(self.top, event)
+            if event is not None:
+                self.top.handle_key_event(event)
 
     def update_from_game(self, game_state):
         """Switch screen based on orion2re's current_screen.

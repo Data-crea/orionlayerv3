@@ -22,6 +22,7 @@ race is finally taken (:708).
                  `messages.race_name` carries the label)
 """
 import logging
+import time
 
 import pygame
 
@@ -91,6 +92,7 @@ def click(screen, x, y):
     _lab, fld = rects(screen)
     if fld is None or not fld.collidepoint(x, y):
         return False
+    screen._name_click_t = time.monotonic()
     st = getattr(screen.app.client, "state", None)
     f = live_field(st)
     if f is not None and screen.app.connected and \

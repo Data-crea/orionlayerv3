@@ -35,7 +35,7 @@ from core import hestrings
 from core.screen_base import ScreenBase
 from core.structs import settings as settings_spec
 from core.wire_protocol import EFFECT_PAIRS
-from screens.game_menu import (gmdraw, gmframe, gmlivery, gmorion,
+from screens.game_menu import (gmdraw, gmframe, gmkeys, gmlivery, gmorion,
                                gmsliders, nodes, olwin)
 from screens.game_menu.gmsave import SaveEditor
 
@@ -94,6 +94,7 @@ class GameMenuScreen(ScreenBase):
         self.slider_drag = None  # gmsliders: a press on a bar, not sent yet
         self.slider_sent = {}
         self.livery = None      # gmlivery: the livery window, while it is up
+        self.hotkeys_win = None  # gmkeys: the hotkeys window, while it is up
         self.orionlayer = None  # olwin: the OrionLayer settings, while up
 
     # ── Lifecycle ─────────────────────────────────────────
@@ -116,6 +117,7 @@ class GameMenuScreen(ScreenBase):
         self.menu_keys = set()
         self._sent = None
         self.livery = None
+        self.hotkeys_win = None
         self.orionlayer = None
         self.flags = self._initial_flags(game_state)
         self.save.reset()
@@ -125,6 +127,7 @@ class GameMenuScreen(ScreenBase):
         # the OrionLayer rows' values; the save writes nothing twice.
         olwin.close(self)
         gmlivery.close(self)
+        gmkeys.close(self)
         gmorion.save(self)
         self.save.reset()
         super().exit()
@@ -170,6 +173,7 @@ class GameMenuScreen(ScreenBase):
                 # dialog: they close with it, their choices kept
                 olwin.close(self)
                 gmlivery.close(self)
+                gmkeys.close(self)
         self.save.update(game_state)
         gmsliders.advance(self, game_state)
 
@@ -197,7 +201,9 @@ class GameMenuScreen(ScreenBase):
         # 253 the glass shows what is drawn under a box: the dialog under
         # it would show through as a second layer of words, so only the
         # topmost window is drawn over the map.
-        if gmlivery.is_open(self):
+        if gmkeys.is_open(self):
+            gmkeys.render(self, surface)
+        elif gmlivery.is_open(self):
             gmlivery.render(self, surface)
         elif olwin.is_open(self):
             olwin.render(self, surface)
@@ -287,6 +293,10 @@ class GameMenuScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y) or self.node is None:
             return None
+        if gmkeys.is_open(self):
+            # the hotkeys window (`gmkeys`): the same rule
+            gmkeys.handle_click(self, screen_x, screen_y)
+            return None
         if gmlivery.is_open(self):
             # HD's own window over the Settings dialog: nothing under it
             # takes a click, and nothing is sent (HD EXTENSION `livery`)
@@ -360,6 +370,9 @@ class GameMenuScreen(ScreenBase):
         if self.save.handle_key_event(event):
             return
         if self.help_consumes_key(event.key) or self.node is None:
+            return
+        if gmkeys.is_open(self):
+            gmkeys.handle_key_event(self, event)
             return
         if gmlivery.is_open(self):
             # ESC closes the window back to the settings; no key reaches

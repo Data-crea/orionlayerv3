@@ -515,6 +515,10 @@ class GalaxyMapScreen(ScreenBase):
     def render_backdrop(self, surface):
         hudview.render_backdrop(self, surface)
 
+    def hotkeys_suspended(self):
+        """The engine's modal takes keys itself (`core.hotkeys`)."""
+        return bool(self._modal.active)
+
     def title_rect(self):
         return hudview.title_rect(self)
 

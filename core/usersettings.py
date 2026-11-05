@@ -153,6 +153,9 @@ DEFAULTS = {
     # on every font, 0.85 .. 1.20 in steps of 0.05; None is 1.0. Applied
     # at once.
     "font_scale": None,
+    # The player's hotkeys (work order 364, `core/hotkeys`): {screen: {the
+    # original's key: the player's key}}; None is the original's keys.
+    "hotkey_map": None,
 }
 
 #: Keys a build retired, by the work order that did: read and dropped, so

@@ -50,7 +50,7 @@ TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
         ("gameplay", ("floor", "map_black", "monsters", "map_ships",
                       "map_colours")),
         ("graphics", ("frame_rate", "idle_rate", "painted", "livery")),
-        ("system", ("mods", "mod_files", "mod_open", "language")))
+        ("system", ("mods", "mod_files", "mod_open", "hotkeys", "language")))
 TAB_NAMES = tuple(name for name, _ in TABS)
 #: The window in the game window: its height's share, its width capped by
 #: the screen's width and by its own height.
@@ -97,8 +97,9 @@ def close(screen):
     the rows); nothing is sent."""
     if not is_open(screen):
         return
-    from . import gmlivery
+    from . import gmkeys, gmlivery
     gmlivery.close(screen)
+    gmkeys.close(screen)
     gmorion.save(screen)
     screen.orionlayer = None
     log.info("game menu: OrionLayer settings closed")
@@ -201,6 +202,12 @@ def _row_parts(out, names):
         r = out["mod_open"]
         fh = max(8, int(r.h * 0.78))
         out["mod_open_button"] = pygame.Rect(
+            r.x + int(r.w * ROW_RULE["value_x"]), r.y + (r.h - fh) // 2,
+            int(r.w * (ROW_RULE["field_w"] + MOD_BUTTON_EXTRA)), fh)
+    if "hotkeys" in out:
+        r = out["hotkeys"]
+        fh = max(8, int(r.h * 0.78))
+        out["hotkeys_button"] = pygame.Rect(
             r.x + int(r.w * ROW_RULE["value_x"]), r.y + (r.h - fh) // 2,
             int(r.w * (ROW_RULE["field_w"] + MOD_BUTTON_EXTRA)), fh)
     if "colours" in out:

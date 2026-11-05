@@ -471,6 +471,15 @@ class ColonyScreen(ScreenBase):
         # TRANSCRIPTION `building_demolish`), colonists in hand stay in hand
         if coldemolish.click(self, screen_x, screen_y):
             return None
+        # TRANSCRIPTION `autobuild_label_click` (colony_main.cpp:976,
+        # :1044-1058): the label of the autobuild line is the hidden field
+        # [18] — the same activation as key A, which the game answers
+        # (an off switch, or its own input box)
+        f = self._field(geom.AUTOBUILD)
+        if f is not None and nd.field_hit(self.layout, f, screen_x,
+                                          screen_y):
+            self.send(f, "AUTOBUILD")
+            return None
         for native in list(geom.PROD_ROWS.values()) + [geom.MORALE]:
             if nd.rect(self.layout, native).collidepoint(screen_x, screen_y):
                 self.send(self._field((geom.TYPE_HIDDEN,) + native[:2]),
