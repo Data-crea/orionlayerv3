@@ -85,12 +85,22 @@ TABLE = {
         ("c", "tab_colony", "Colony leaders"), ("s", "tab_ship", "Ship leaders"),
         ("h", "hire", "Hire"), ("p", "pool", "Pool"),
         ("d", "dismiss", "Dismiss"), ("x", "cancel", "Cancel hire")),
+    # the ids are `layout.json`'s sort keys, the keys its hotkeys
+    # (colsum.cpp:377-383)
+    "colony_summary": (
+        ("n", "name", "Name"), ("p", "population", "Population"),
+        ("f", "food", "Food"), ("i", "industry", "Industry"),
+        ("s", "science", "Science"), ("r", "producing", "Producing"),
+        ("b", "bc", "BC")),
 }
 
 #: screen -> the letters and digits the screen answers that are NOT in the
 #: table (`230-keys.md`, the screens' own `KEYS`): not offered to an action.
 RESERVED = {"galaxy_map": "0", "colony": "bc", "build_queue": "qb0123456789",
-            "combat": "h"}
+            "combat": "h",
+            # Q, C, T and the digits (colsum.cpp:356-371), Z a redraw key
+            # (:391; UNVERIFIED, a mod's string file gives the letter)
+            "colony_summary": "qctz0123456789"}
 
 #: The screens' names for the window's selector, in the order it steps.
 SCREEN_ORDER = tuple(TABLE)
@@ -98,7 +108,7 @@ SCREEN_LABELS = {"galaxy_map": "Galaxy map", "combat": "Combat",
                  "colony": "Colony", "build_queue": "Build queue",
                  "custom_race": "Custom Race", "races": "Races",
                  "leaders": "Leaders", "planets": "Planets",
-                 "fleets": "Fleets"}
+                 "fleets": "Fleets", "colony_summary": "Colony Summary"}
 
 BLOCKING_MODS = pygame.KMOD_ALT | pygame.KMOD_CTRL | pygame.KMOD_META
 

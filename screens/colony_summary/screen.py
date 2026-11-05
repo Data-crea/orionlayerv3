@@ -677,7 +677,48 @@ class ColonySummaryScreen(ScreenBase):
             # that has sent its first step — a BUY would land on another
             # colony's field (work order 322 B2).
             return
+        if self.help_consumes_key(key):
+            return
+        # A SORT KEY sorts HD's rows as its click does (work order 367); until
+        # then it went to the game alone and the two lists differed. Nothing
+        # sorts before the first snapshot, as the click's rows do not exist.
+        char = chr(key).lower() if 32 <= key < 127 else ""
+        for spec in self._data.get("sort", {}).get("buttons", []):
+            if char and str(spec.get("hotkey", "")).lower() == char:
+                if self._state is not None:
+                    self._sort(spec)
+                return
         ScreenBase.handle_key(self, key)
+
+    def hotkeys_suspended(self):
+        """A box of open fix 103's move takes keys itself (`core/hotkeys`)."""
+        return self._move.flow is not None
+
+    def _sort(self, spec):
+        """A sort button's click AND its key (TRANSCRIPTION
+        `hotkey_is_the_click`, fields.cpp:2583-2587, :988): HD's rows and
+        the game's list are sorted together."""
+        self._sort_key = spec["key"]
+        # Re-sort now, so the rows the next hover hit-tests
+        # are the rows about to be drawn. The SELECTION
+        # survives it — `Selection.reseat` keeps the colony
+        # and lets its row move, which is what the original
+        # does by not touching `_g_colony_n` here at all
+        # (colsum.cpp:830-837). The game sorts the list it
+        # SHOWS, stably (`colonyselect.game_order`).
+        self._rebuild_rows(resort=True)
+        # The original scrolls back to the top on any sort
+        # click — `_first = 0` at colsum.cpp:832, inside the
+        # same handler that deliberately does NOT touch
+        # `_g_colony_n` (colsum.cpp:830-837). Two rules for
+        # one event: the window goes home, the selection
+        # keeps its colony and moves with the new order.
+        self._window.reset()
+        why = colonyrows.SORT_UNAVAILABLE.get(spec["key"])
+        if why:
+            log.info("Sort %r not applied to the HD rows: %s",
+                     spec["key"], why)
+        self._inject(spec, f"sort {spec['key']}")
 
     def handle_click(self, screen_x, screen_y):
         # AN OPEN HELP POPUP TAKES THE CLICK FIRST and closes, and the
@@ -702,31 +743,7 @@ class ColonySummaryScreen(ScreenBase):
         for spec in self._data.get("sort", {}).get("buttons", []):
             if spec["key"] == colonysort.button_at(
                     self._sort_buttons(), screen_x, screen_y):
-                # No direction toggle, even on the active header:
-                # Switched_cmp_ has none (colsum.cpp:378-401), so a
-                # second click re-sorts identically. Assigning the
-                # same key again IS the transcription.
-                self._sort_key = spec["key"]
-                # Re-sort now, so the rows the next hover hit-tests
-                # are the rows about to be drawn. The SELECTION
-                # survives it — `Selection.reseat` keeps the colony
-                # and lets its row move, which is what the original
-                # does by not touching `_g_colony_n` here at all
-                # (colsum.cpp:830-837). The game sorts the list it
-                # SHOWS, stably (`colonyselect.game_order`).
-                self._rebuild_rows(resort=True)
-                # The original scrolls back to the top on any sort
-                # click — `_first = 0` at colsum.cpp:832, inside the
-                # same handler that deliberately does NOT touch
-                # `_g_colony_n` (colsum.cpp:830-837). Two rules for
-                # one event: the window goes home, the selection
-                # keeps its colony and moves with the new order.
-                self._window.reset()
-                why = colonyrows.SORT_UNAVAILABLE.get(spec["key"])
-                if why:
-                    log.info("Sort %r not applied to the HD rows: %s",
-                             spec["key"], why)
-                self._inject(spec, f"sort {spec['key']}")
+                self._sort(spec)
                 return None
         if self._hit_return(screen_x, screen_y):
             self._inject(self._data.get("return", {}), "return")
