@@ -36,6 +36,24 @@ def draw_frame(surface, screen, title):
     hud.panel(surface, screen.box_screen_rect("stage"), screen.layout.scale)
 
 
+def _painted(screen, view, sprite, at, step):
+    """HD EXTENSION `painted_lists` (Data, 4 November 2026: the Refit list
+    was parked since work order 239): the ship's painted picture in its
+    owner's colours, fitted into the drawn pixels of the sprite the cell
+    shows, as the Fleets grid does (`core.shippicture`); None where the
+    mod folder paints none and the sprite stands."""
+    from core import shippicture
+    from screens.fleets import fltrows
+    state = getattr(screen, "_state", None)
+    colour = fltrows.player_colour(state, view.owner)
+    if colour is None:
+        return None
+    return shippicture.fitted(
+        getattr(screen, "app", None), colour, int(view.picture_num),
+        shippicture.footprint(sprite, at, step), state=state,
+        size=getattr(view, "size", None))
+
+
 def draw_ships(surface, screen, cells, hover, first, total):
     """`cells`: [(index in cell order, ship view or None, picture,
     refusal word)] for the cells on show."""
@@ -50,7 +68,13 @@ def draw_ships(surface, screen, cells, hover, first, total):
             continue
         if pic is not None:
             big = nd.magnified(pic, layout)
-            surface.blit(big, big.get_rect(center=r.center))
+            at = big.get_rect(center=r.center)
+            hd = _painted(screen, view, pic, at.topleft,
+                          big.get_width() // max(1, pic.get_width()))
+            if hd is not None:
+                surface.blit(hd[0], hd[1])
+            else:
+                surface.blit(big, at)
         if refusal:
             text(surface, screen, refusal, (geom.cell(i)[0] + geom.cell(i)[2]) // 2,
                  geom.cell(i)[1] + 22, 55, "line", "negative", align="center")

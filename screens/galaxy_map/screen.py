@@ -71,6 +71,7 @@ from screens.galaxy_map import starfield as sf
 from screens.galaxy_map import floorlift
 from screens.galaxy_map import sidebar as sb
 from screens.galaxy_map import hudview
+from screens.galaxy_map import terrpanel, terrview
 
 log = logging.getLogger("galaxy_map")
 
@@ -496,6 +497,7 @@ class GalaxyMapScreen(ScreenBase):
         # the same picture would only cost a frame's worth of pixels.
         self._render_map(surface)
         self._render_sidebar(surface)
+        terrpanel.render(self, surface)
         self._render_nav(surface)
         self._render_title(surface)
         if self._distance.on:
@@ -557,8 +559,7 @@ class GalaxyMapScreen(ScreenBase):
         # for each of them.
         anchor = self._icon_anchor()
 
-        rnd.render_nebulas(surface, ctx, self._nebulas,
-                           self._cache, self._data.get("nebula_forms", []))
+        terrview.render_gas(self, surface, ctx)   # HD EXTENSION `territory_view`
         rnd.render_wormholes(surface, ctx, self._stars,
                              player_num, omniscient,
                              layer=self._wormholes)

@@ -18,6 +18,7 @@ drawn as the original's, and a file that will not load is said once in the
 log and skipped.
 """
 import logging
+import threading
 
 log = logging.getLogger("buildingart")
 
@@ -43,6 +44,10 @@ COUNT = len(NAMES)
 
 _pictures = {}
 _fitted = {}
+#: Bumped by `forget`: a load that began before it must not store its
+#: picture after it (the background warm-up, `prewarm`, is such a load).
+_gen = [0]
+_lock = threading.RLock()
 
 
 def tree_path(bid):
@@ -60,34 +65,72 @@ def slots():
 def picture(bid):
     """The building's picture (RGBA), or None — absent or unreadable."""
     bid = int(bid)
-    if bid not in _pictures:
-        surf = None
-        path = tree_path(bid)
-        if path is not None:
-            import pygame
-            from core import resources
-            found = resources.res.resolve(path)
-            if found:
-                try:
-                    raw = pygame.image.load(found)
-                    # always 32 bit with alpha: smoothscale refuses an
-                    # 8-bit picture, and there may be no display yet
-                    surf = pygame.Surface(raw.get_size(), pygame.SRCALPHA)
-                    surf.blit(raw, (0, 0))
-                except (pygame.error, OSError) as err:
-                    log.warning("building picture %s cannot be read (%s) — "
-                                "the original's drawing is used", path, err)
-        _pictures[bid] = surf
-    return _pictures[bid]
+    with _lock:
+        if bid in _pictures:
+            return _pictures[bid]
+        gen = _gen[0]
+        surf = _load(bid)
+        if gen == _gen[0]:
+            _pictures[bid] = surf
+        return surf
+
+
+def _load(bid):
+    path = tree_path(bid)
+    if path is None:
+        return None
+    import pygame
+    from core import resources
+    found = resources.res.resolve(path)
+    if not found:
+        return None
+    try:
+        raw = pygame.image.load(found)
+        # always 32 bit with alpha: smoothscale refuses an 8-bit
+        # picture, and there may be no display yet
+        surf = pygame.Surface(raw.get_size(), pygame.SRCALPHA)
+        surf.blit(raw, (0, 0))
+        return surf
+    except (pygame.error, OSError) as err:
+        log.warning("building picture %s cannot be read (%s) — "
+                    "the original's drawing is used", path, err)
+        return None
 
 
 def present():
-    """The ids that have a picture, as a tuple (a cache key), kept until
-    `forget` — asked every frame."""
+    """The ids the mod folder holds a picture for, as a tuple (a cache
+    key), kept until `forget` — asked every frame.
+
+    FROM THE FOLDER'S INDEX, NOT FROM THE PICTURES: this used to read all
+    48 files on the first frame (about a second at 4K, the colony
+    screen's first opening) to learn which exist, while the screen needs
+    only the few buildings on show. A file that will not load is still
+    listed here and answers None from `picture`, which every caller
+    already handles."""
     if "present" not in _fitted:
+        from core import usermod
+        index = usermod._state.get("index") or {}
         _fitted["present"] = tuple(
-            b for b in range(1, COUNT + 1) if picture(b) is not None)
+            b for b in range(1, COUNT + 1) if tree_path(b) in index)
     return _fitted["present"]
+
+
+def prewarm():
+    """Read the pictures in the background, so the colony screen's first
+    frame finds them in memory. Returns the thread (None when there is
+    nothing to read). Cosmetic: it answers nothing and `picture` stays
+    correct without it; a `forget` meanwhile drops what it read."""
+    ids = present()
+    if not ids:
+        return None
+
+    def work():
+        for b in ids:
+            picture(b)
+    thread = threading.Thread(target=work, name="buildingart-prewarm",
+                              daemon=True)
+    thread.start()
+    return thread
 
 
 def fit(bid, w, h):
@@ -129,5 +172,7 @@ def fit_height(bid, h):
 
 def forget():
     """Drop what was read (a check changes the mod folder under it)."""
-    _pictures.clear()
-    _fitted.clear()
+    with _lock:
+        _gen[0] += 1
+        _pictures.clear()
+        _fitted.clear()

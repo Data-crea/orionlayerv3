@@ -201,7 +201,8 @@ def _room(surface, screen, view, state):
     from screens.build_queue import bqgrid
     if bqgrid.draw(surface, screen.app.res, r):
         colroom.draw_product(surface, r, spec, view.colony.climate,
-                             _bg_type(view), "colony", colour)
+                             _bg_type(view), "colony", colour,
+                             app=screen.app)
         return
     big = nd.magnified(t, screen.layout)
     clip = surface.get_clip()
@@ -210,7 +211,7 @@ def _room(surface, screen, view, state):
     surface.blit(big, at)
     colroom.overlay(surface, spec, colour, view.colony.climate,
                     _bg_type(view), "colony", at.topleft,
-                    big.get_width() // t.get_width())
+                    big.get_width() // t.get_width(), screen.app)
     surface.set_clip(clip)
 
 

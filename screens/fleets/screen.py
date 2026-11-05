@@ -45,7 +45,7 @@ from . import fltdraw
 from . import flthud
 from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltscan
 from . import fltwire
-from . import fltminimap, fltshippic
+from . import fltlight, fltminimap, fltshippic
 
 log = logging.getLogger("fleets")
 
@@ -68,6 +68,7 @@ class FleetsScreen(ScreenBase):
         self._view = None        # fltwire.View: what may be believed
         self._cells = []         # fltrows.Cell per displayed slot
         self._panel = []         # the scanned ship's lines
+        self._light = fltlight.Light()  # HD EXTENSION fleet_star_light
         self._panel_picture = None   # its picture this frame, fltshippic
         self._parts = None       # ship part names (shields, weapons, specials)
         self._hover_cell = None  # slot under the pointer, HD's own hover
@@ -123,6 +124,7 @@ class FleetsScreen(ScreenBase):
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None
         self._scan.clear()
+        self._light.clear()
         self._scan_star, self._scan_small = -1, fltmove.CURRENT_FLEET
         # No frame image since decision 71 (work order 189 removed the loader).
         self.update(game_state)
@@ -161,6 +163,7 @@ class FleetsScreen(ScreenBase):
         self._first_row = max(0, int(block.get("first_row", 0)))
         self._cells = fltrows.cells(self._view, game_state)
         self._scan.follow(block)
+        self._light.follow(block)
         self._panel = self._panel_for(game_state, block)
         self._status = self._status_line(game_state, block)
 
@@ -365,6 +368,7 @@ class FleetsScreen(ScreenBase):
         fltdraw.draw_inset(surface, self, _stars, self._state, self._art)
         fltdraw.draw_relocation_lines(surface, self, self._state, _stars,
                                       pygame.time.get_ticks())
+        self._draw_fleet_light(surface, _stars)
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each
         # box is allowed to bleed under it (fltgeom.BLEED).
@@ -374,6 +378,27 @@ class FleetsScreen(ScreenBase):
         fltbox.draw(surface, self, self._state)
         self.render_shell(surface)
         self.render_help(surface)
+
+    def _draw_fleet_light(self, surface, stars):
+        """HD EXTENSION fleet_star_light: the grid fleet's star lights up
+        when the fleet changes (`fltlight`). Clipped to the inset."""
+        view = self._view
+        if not self._light.alive() or view is None or not view.ok \
+                or self._state is None:
+            return
+        rect = fltdraw._rect(self, "inset_map")
+        if rect is None:
+            return
+        bx, by, nw, nh = fltgeom.REGIONS["inset_map"]
+        at = fltlight.point(self._state, view.block, stars, (bx, by))
+        if at is None:
+            return
+        fx, fy = rect.width / float(nw), rect.height / float(nh)
+        previous = surface.get_clip()
+        surface.set_clip(rect)
+        self._light.draw(surface, (rect.x + at[0] * fx, rect.y + at[1] * fy),
+                         min(fx, fy))
+        surface.set_clip(previous)
 
     def enabled_buttons(self):
         """The control boxes that are live, or None before a snapshot.

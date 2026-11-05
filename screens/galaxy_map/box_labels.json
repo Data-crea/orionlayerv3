@@ -158,5 +158,9 @@
   "monster_text": {
     "title": "Monster Description",
     "about": "The monster's description."
+  },
+  "territory_panel": {
+    "title": "Territory View",
+    "about": "The panel at the left edge: switches for the empires' territories, their borders and the nebulas, the territory opacity slider, and a legend of the empires on the map."
   }
 }

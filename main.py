@@ -72,6 +72,10 @@ class App:
         # anything is loaded through the resolver: skin colours, the HUD
         # style, the frame colour and every picture below come through it.
         usermod.init(self.user_settings.get("user_mod") != "off")
+        # the colony's painted buildings, read while the menu is up
+        # (HD EXTENSION `building_pictures`: no wait at the first opening)
+        from core import buildingart
+        buildingart.prewarm()
         # The language (work order 200 C, `core/lang`): the player's switch,
         # else settings.json's — read here once, so a change needs a restart.
         self.settings["language"] = lang.configure(self.user_settings.get(

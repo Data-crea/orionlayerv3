@@ -66,11 +66,13 @@ def picture_index(game_state, icon):
     return None
 
 
-def draw_stacks(surface, game_state, picture, place, fallback):
+def draw_stacks(surface, game_state, picture, place, fallback, paint=None):
     """Every placed stack, the last icon first. `picture(n)` is the
     screen's picture n (already at window size) or None, `place(x, y)` its
     native-to-window point, `fallback(point, icon)` draws a stack without
-    its picture. Answers `[(icon index, icon, window point, picture)]`."""
+    its picture. `paint(icon, point, sprite)` (optional) answers the
+    (surface, topleft) of a replacement drawn instead of the sprite, or
+    None. Answers `[(icon index, icon, window point, picture)]`."""
     icons = list(getattr(game_state, "ship_icons", None) or [])
     drawn = []
     for i in range(len(icons) - 1, -1, -1):
@@ -81,7 +83,10 @@ def draw_stacks(surface, game_state, picture, place, fallback):
         n = picture_index(game_state, icon)
         sprite = picture(n) if n is not None else None
         at = place(x, y)
-        if sprite is not None:
+        hd = paint(icon, at, sprite) if paint is not None else None
+        if hd is not None:
+            surface.blit(hd[0], hd[1])
+        elif sprite is not None:
             surface.blit(sprite, at)
         else:
             fallback(at, icon)

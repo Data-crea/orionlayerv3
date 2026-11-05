@@ -57,6 +57,14 @@ SHIP_PICTURES = {OUTPOST_SHIP: 46, FREIGHTERS: 48, COLONY_SHIP: 45,
 WORD_IN_BOX = {REFIT: 0x7D}
 
 
+def _ship(picture, owner, ship):
+    """A design's or queued ship's spec, with the hull size the painted
+    picture's Doom Star rule needs when the view carries one."""
+    size = getattr(ship, "size", None)
+    return ("ship", picture, owner) if size is None else \
+        ("ship", picture, owner, None, int(size))
+
+
 def picture(product, race, design_picture=None, ship=None):
     """The `colroom.tile` spec for `product`, or None (no picture)."""
     if prodname.kind(product) == prodname.KIND_BUILDING:
@@ -77,9 +85,9 @@ def picture(product, race, design_picture=None, ship=None):
         return ("ship", SHIP_PICTURES[product], 0, int(product))
     if prodname.kind(product) == prodname.KIND_SHIP_DESIGN and \
             design_picture is not None:
-        return ("ship", int(design_picture), 0)
+        return _ship(int(design_picture), 0, ship)
     if prodname.kind(product) == prodname.KIND_QUEUED_SHIP and ship is not None:
-        return ("ship", int(ship.picture_num), int(ship.previous_owner))
+        return _ship(int(ship.picture_num), int(ship.previous_owner), ship)
     return None
 
 

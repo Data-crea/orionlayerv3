@@ -156,6 +156,18 @@ DEFAULTS = {
     # The player's hotkeys (work order 364, `core/hotkeys`): {screen: {the
     # original's key: the player's key}}; None is the original's keys.
     "hotkey_map": None,
+    # The galaxy map's territory view (Data's mockups of 4 November 2026,
+    # `screens/galaxy_map/terrdraw`): the territories, their borders and the
+    # nebulas on or off, and the opacity of the glass in percent; applied
+    # at once, set in the map's own left panel.
+    "territory_show": "on",
+    "territory_borders": "on",
+    "territory_nebulae": "on",
+    "territory_opacity": 40,
+    # The panel itself: shown or hidden (a key on the map), and where the
+    # player dragged it, [x, y] in reference px; None is its box's place.
+    "territory_panel_shown": "on",
+    "territory_panel_pos": None,
 }
 
 #: Keys a build retired, by the work order that did: read and dropped, so

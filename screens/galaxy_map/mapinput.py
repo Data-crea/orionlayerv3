@@ -24,12 +24,16 @@ from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
 from screens.galaxy_map import mapeta
 from screens.galaxy_map import mapmodal
+from screens.galaxy_map import terrpanel
 from screens.galaxy_map import ships as ship_icons
 
 log = logging.getLogger("galaxy_map")
 
 
 def mouse_motion(screen, screen_x, screen_y):
+    if getattr(screen, "_territory_drag", False):
+        terrpanel.drag(screen, screen_x, screen_y)
+        return
     if screen._pan_from is not None:
         view = screen._map_view()
         if view is not None:
@@ -51,10 +55,15 @@ def left_release(screen):
     """The left button's release, or its gesture cancelled: the fleet
     box's paint ends (mainscr_main.cpp:893-897)."""
     boxpaint.end(screen)
+    terrpanel.release(screen)
 
 
 def click(screen, screen_x, screen_y):
     if screen.help_consumes_click(screen_x, screen_y):
+        return True
+    # The territory panel (HD EXTENSION `territory_view`) is HD's own and
+    # sends nothing to the game; a click on it is never the map's.
+    if terrpanel.click(screen, screen_x, screen_y):
         return True
     # The HUD title plate = the original's GAME button (top centre).
     # `title_rect` is the one function the drawing and the help use too.
@@ -266,6 +275,8 @@ def key_down(screen, key):
         # Consumed here on purpose: forwarding it would hand
         # orion2re a key it has no binding for.
         screen.ping_home()
+        return True
+    if terrpanel.key(screen, key):
         return True
     if key == pygame.K_g:
         activate_spec(screen, screen._data.get("game_menu_field"),

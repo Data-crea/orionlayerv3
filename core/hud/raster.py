@@ -28,6 +28,7 @@ order, so a panel's pixels are unchanged — held by a smoke check that
 compares a memoised build with one from a cold memo, byte for byte.
 """
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import pygame
@@ -84,7 +85,12 @@ def _mask(poly, size, ss, pad):
     pts = [((x + pad) * ss, (y + pad) * ss) for x, y in poly]
     pygame.draw.polygon(big, (255, 255, 255), pts)
     small = pygame.transform.smoothscale(big, (w, h))
-    m = pygame.surfarray.array_red(small).astype(np.float32).T / 255.0
+    # a VIEW of the red channel, not `array_red`'s copy: the same bytes
+    # (the astype below is the one copy), a fraction of the time — the
+    # copy was a quarter of a 4K panel's first build
+    red = pygame.surfarray.pixels_red(small)
+    m = red.astype(np.float32).T / 255.0
+    del red                       # unlock the surface
     # FULL COVERAGE IS EXACTLY 1. smoothscale tops out a level or two
     # below 255 inside a filled shape, which made a popup's body 99.6 %
     # opaque — invisible, and enough to blend what was under it through
@@ -128,6 +134,17 @@ GEOMETRY_MAX_BYTES = 96 * 1024 * 1024
 geometry_stats = {"built": 0, "reused": 0}
 
 
+_POOL = []
+
+
+def _pool():
+    """One worker beside the caller, made on first use."""
+    if not _POOL:
+        _POOL.append(ThreadPoolExecutor(max_workers=1,
+                                        thread_name_prefix="hud-raster"))
+    return _POOL[0]
+
+
 def clear_geometry():
     _GEOMETRY.clear()
     _GEOMETRY_BYTES[0] = 0
@@ -146,19 +163,29 @@ def _geometry(poly, size, ss, pad, edge_w, inner_w, glow_w):
         _GEOMETRY.move_to_end(key)
         geometry_stats["reused"] += 1
         return hit
-    outer = _mask(poly, size, ss, pad)
+    # THE FOUR HEAVY STEPS ARE INDEPENDENT until `line`: the two masks,
+    # then the two blurs. numpy's cumsum and pygame's smoothscale let go of
+    # the interpreter lock, so two threads halve a 4K panel's first build;
+    # every array is computed by the same calls as before, so the pixels
+    # are the same ones.
+    pool = _pool()
+    outer_f = pool.submit(_mask, poly, size, ss, pad)
     inner_m = _mask(inset(poly, edge_w), size, ss, pad)
+    outer = outer_f.result()
     line = np.clip(outer - inner_m, 0.0, 1.0)
+
+    def band(radius, gain, cover):
+        b = blur(line, radius)
+        b = np.clip(b / max(float(b.max()), 1e-6) * gain, 0.0, 1.0)
+        b *= cover
+        return b
     g_in = g_out = None
+    g_out_f = pool.submit(band, glow_w, 1.4, 1.0 - outer) \
+        if glow_w is not None else None
     if inner_w is not None:
-        g_in = blur(line, inner_w / 2.0)
-        g_in = np.clip(g_in / max(float(g_in.max()), 1e-6) * 1.6, 0.0, 1.0)
-        g_in *= inner_m
-    if glow_w is not None:
-        g_out = blur(line, glow_w)
-        g_out = np.clip(g_out / max(float(g_out.max()), 1e-6) * 1.4,
-                        0.0, 1.0)
-        g_out *= (1.0 - outer)
+        g_in = band(inner_w / 2.0, 1.6, inner_m)
+    if g_out_f is not None:
+        g_out = g_out_f.result()
     geo = (outer, line, g_in, g_out)
     nbytes = 0
     for a in geo:

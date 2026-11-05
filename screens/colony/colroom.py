@@ -153,11 +153,12 @@ def _centred(canvas, art, stem, at, window):
 
 
 def ship_centre(spec, place):
-    """Where a ("ship", picture, owner[, product]) spec's picture is
-    centred in `place`, native px: a special product's raised point, else
-    the place's centre — the one answer for the drawing and the check."""
+    """Where a ("ship", picture, owner[, product[, hull size]]) spec's
+    picture is centred in `place`, native px: a special product's raised
+    point, else the place's centre — the one answer for the drawing and the
+    check."""
     pl = PLACES[place]
-    product = int(spec[3]) if len(spec) > 3 else None
+    product = int(spec[3]) if len(spec) > 3 and spec[3] is not None else None
     return pl["high_ships"].get(product, pl["centre"])
 
 
@@ -202,30 +203,47 @@ def _hd_target(bid, place):
     return bid, (pl["foot"][0] - w // 2, pl["foot"][1] - h, w, h)
 
 
+def hull_size(spec):
+    """The ship spec's hull size (the Doom Star rule of `shippicture`), or
+    None where the spec carries none."""
+    return int(spec[4]) if len(spec) > 4 and spec[4] is not None else None
+
+
 def painted(spec, colour, place="popup"):
-    """True when `spec` is a colony, outpost or transport ship (45-47) and
-    the player's mod folder paints it in the galaxy map's slot for owner
-    `colour` (`core.shippicture`, the one route of every place): the tile
-    is then taken without the sprite and `overlay` draws the painted
-    picture. HD EXTENSION `slot_ship_pictures` (work order 326 P7)."""
+    """True when `spec` is a ship the player's mod folder paints — a colony,
+    outpost or transport ship (45-47) in the galaxy map's slot, any other
+    in the battle's painted picture (`core.shippicture`, the one route of
+    every place): the tile is then taken without the sprite and `overlay`
+    draws the painted picture. HD EXTENSION `slot_ship_pictures` (work
+    order 326 P7) and `painted_lists` (the build box, Data, 4 November
+    2026: it was parked since work order 239)."""
     from core import shippicture
-    if colour is None or spec[0] != "ship" or \
-            int(spec[1]) not in shippicture.NON_COMBAT:
+    if colour is None or spec[0] != "ship":
         return False
-    win = PLACES[place]["window"]
-    return shippicture.fitted(None, colour, int(spec[1]), (
-        0, 0, win[2] - win[0], win[3] - win[1])) is not None
+    size = hull_size(spec)
+    if int(spec[1]) in shippicture.NON_COMBAT:
+        win = PLACES[place]["window"]
+        return shippicture.fitted(None, colour, int(spec[1]), (
+            0, 0, win[2] - win[0], win[3] - win[1]), size=size) is not None
+    # a battle picture is asked for by whether the folder holds one: making
+    # it here, at the window's size, would build a picture the footprint's
+    # size then builds again
+    return 0 <= int(colour) < shippicture.COLOURS and \
+        shippicture.painted(int(spec[1]), size)
 
 
-def overlay(surface, spec, colour, climate, bg, place, origin, k):
+def overlay(surface, spec, colour, climate, bg, place, origin, k, app=None):
     """Draw the painted picture of ship `spec` for owner `colour` over a
     tile stood at `origin` (window px) magnified `k` times; True if drawn.
     It is fitted into the drawn pixels of the sprite the original draws
     there (`shippicture.footprint`) and never enlarged, so it is sharp and
     stands where the sprite stood. The original draws the colony screen's
-    grey remap of SHIPS.LBX 45-47 here (`Remap_Draw_Ship_Seg_N_Centered`,
+    grey remap of SHIPS.LBX here (`Remap_Draw_Ship_Seg_N_Centered`,
     colony_main.cpp:878/:881, colbldg.cpp:916/:950/:959; a queued ship
-    `Remap_Draw_Ship_Centered`, colony.cpp:435-450, :750)."""
+    `Remap_Draw_Ship_Centered`, colony.cpp:435-450, :750). `app` brings the
+    player's livery and detail setting (`shippicture.fitted`); DEVIATION
+    `painted_build_colour`: the painted ship is in its builder's own colour,
+    where the original draws every ship grey here."""
     from core import buildingart
     target = hd_target(spec, place)
     if target is not None:
@@ -250,8 +268,11 @@ def overlay(surface, spec, colour, climate, bg, place, origin, k):
     win = PLACES[place]["window"]
     pos = (origin[0] + (at[0] - win[0] - sprite.get_width() // 2) * k,
            origin[1] + (at[1] - win[1] - sprite.get_height() // 2) * k)
-    got = shippicture.fitted(None, colour, int(spec[1]),
-                             shippicture.footprint(sprite, pos, k))
+    # these ships are the player's own (the build list, the queue): his
+    # livery's second colour goes on them
+    got = shippicture.fitted(app, colour, int(spec[1]),
+                             shippicture.footprint(sprite, pos, k),
+                             own=colour, size=hull_size(spec))
     if got is None:
         return False
     surface.blit(got[0], got[1])
@@ -330,7 +351,8 @@ def step(tile_size, box):
     return max(1, min(box[0] // tile_size[0], box[1] // tile_size[1]))
 
 
-def draw(surface, rect, spec, climate, bg, place="popup", colour=None):
+def draw(surface, rect, spec, climate, bg, place="popup", colour=None,
+         app=None):
     """The tile stepped up by a whole number and centred in `rect`; True if
     drawn. The box keeps its room even when the product has no picture."""
     t = tile(spec, climate, bg, place, colour)
@@ -343,7 +365,7 @@ def draw(surface, rect, spec, climate, bg, place="popup", colour=None):
     surface.set_clip(rect)
     at = big.get_rect(center=rect.center)
     surface.blit(big, at)
-    overlay(surface, spec, colour, climate, bg, place, at.topleft, k)
+    overlay(surface, spec, colour, climate, bg, place, at.topleft, k, app)
     surface.set_clip(clip)
     return True
 
@@ -380,26 +402,82 @@ def product_only(spec, climate, bg, place="popup", colour=None):
     return out
 
 
+#: HD EXTENSION `product_fill` (Data, 4 November 2026: the pictures in the
+#: blue grid "are too small"): the share of the grid's box a product's own
+#: pixels fill, in the limiting direction. The whole-number step used to
+#: come from the room's window (106 x 88 or 83 x 95 native), which holds the
+#: biggest product with air round it, so the typical one (43 x 36 native,
+#: measured over all 96 buildings and ships) stood at 38 % of the box. Fitted
+#: to the product's ink it stands at up to this share; the step stays a whole
+#: number (decision 28: the original's pixels are never smoothed), and never
+#: goes below what the window gave. 0.8 leaves the colony box's name line
+#: (its top sixth) and the turns bar (its bottom edge) free.
+PRODUCT_FILL = 0.8
+#: A product's step never exceeds this many times the window's (plus one):
+#: a 15 px scout is not stood as large as a colony base — the biggest and
+#: the smallest keep some of the order the original shows them in.
+PRODUCT_STEP_CAP = 2
+_fit_k = {}
+
+
+def _ink_of(t, spec, climate, bg, place, colour):
+    """The bounding box of the product as it is laid at step 1 (its
+    painted picture included), measured on a scratch three tiles wide —
+    the overlay may reach past the tile."""
+    tw, th = t.get_size()
+    scratch = pygame.Surface((tw * 3, th * 3), pygame.SRCALPHA, 32)
+    scratch.blit(t, (tw, th))
+    overlay(scratch, spec, colour, climate, bg, place, (tw, th), 1)
+    return scratch.get_bounding_rect()
+
+
+def product_step(t, spec, climate, bg, place, colour, rect_size):
+    """The whole-number step the product stands at in a box of
+    `rect_size`: the window's own step at least, else the largest at which
+    its ink (the original's pixels and a painted picture alike) fills
+    `PRODUCT_FILL` of the box — measured once per product, size and art."""
+    from core import buildingart, shippicture
+    base = step(t.get_size(), rect_size)
+    key = (tuple(spec), int(climate), int(bg), place, colour,
+           tuple(rect_size), buildingart.present(),
+           shippicture.usermod_generation())
+    got = _fit_k.get(key)
+    if got is None:
+        if len(_fit_k) > 256:
+            _fit_k.clear()
+        ink = _ink_of(t, spec, climate, bg, place, colour)
+        if ink.w == 0 or ink.h == 0:
+            got = base
+        else:
+            fit = int(min(PRODUCT_FILL * rect_size[0] / ink.w,
+                          PRODUCT_FILL * rect_size[1] / ink.h))
+            got = max(base, min(fit, PRODUCT_STEP_CAP * base + 1))
+        _fit_k[key] = got
+    return got
+
+
 def draw_product(surface, rect, spec, climate, bg, place="popup",
-                 colour=None):
+                 colour=None, app=None):
     """`draw`, the room left out (`product_only`) and the product CENTRED by
     what is drawn: a building stands on the original's floor (its foot at
     y 93 of a window 9 to 103) and a ship or satellite at the middle, so
     their ink sat low or aside in Data's grid. The product and its painted
     overlay are drawn on a scratch twice the box, the ink's bounding box is
     measured, and the scratch is laid so that box's middle is the box's
-    middle (HD EXTENSION `build_grid_room`). True if drawn."""
+    middle (HD EXTENSION `build_grid_room`). The step fits the product to
+    the box (`product_step`, HD EXTENSION `product_fill`). True if drawn."""
     t = product_only(spec, climate, bg, place, colour)
     if t is None:
         return False
     rect = pygame.Rect(rect)
-    k = step(t.get_size(), rect.size)
+    k = product_step(t, spec, climate, bg, place, colour, rect.size)
     big = pygame.transform.scale(t, (t.get_width() * k, t.get_height() * k))
-    scratch = pygame.Surface((rect.w * 2, rect.h * 2), pygame.SRCALPHA, 32)
-    mid = pygame.Rect(rect.w // 2, rect.h // 2, rect.w, rect.h)
+    side = max(rect.w, big.get_width()) * 2, max(rect.h, big.get_height()) * 2
+    scratch = pygame.Surface(side, pygame.SRCALPHA, 32)
+    mid = pygame.Rect(side[0] // 4, side[1] // 4, side[0] // 2, side[1] // 2)
     at = big.get_rect(center=mid.center)
     scratch.blit(big, at)
-    overlay(scratch, spec, colour, climate, bg, place, at.topleft, k)
+    overlay(scratch, spec, colour, climate, bg, place, at.topleft, k, app)
     ink = scratch.get_bounding_rect()
     if ink.w == 0 or ink.h == 0:
         return True

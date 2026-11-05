@@ -22,6 +22,7 @@ from core.hud import blocks as hud
 from core.hud import text as hudtext
 from screens.galaxy_map import boxdraw
 from screens.galaxy_map import sidebar as sb
+from screens.galaxy_map import terrpanel
 
 
 def plate_centre_x(screen):
@@ -171,5 +172,6 @@ def render_backdrop(screen, surface):
         screen._backdrop_size = size
     screen._render_map(surface)
     render_sidebar(screen, surface)
+    terrpanel.render(screen, surface)
     render_nav(screen, surface)
     render_title(screen, surface)

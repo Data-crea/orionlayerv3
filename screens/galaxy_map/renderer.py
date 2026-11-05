@@ -511,7 +511,7 @@ def _black_hole_frame(cache, width, animate=True, step=None):
 
 # ── Layers ───────────────────────────────────────────────
 
-def render_nebulas(surface, ctx, nebulas, cache, forms):
+def render_nebulas(surface, ctx, nebulas, cache, forms, tint=None):
     """Nebulas sit behind everything; anchored TOP-LEFT.
 
     Blitted ADDITIVELY (see NEBULA_BRIGHTNESS): the original
@@ -525,7 +525,7 @@ def render_nebulas(surface, ctx, nebulas, cache, forms):
     if not nebulas or not forms:
         return
     view = ctx.view
-    for neb in nebulas:
+    for n, neb in enumerate(nebulas):
         # savegame.cpp validates type 0..11; with all twelve forms
         # in layout.json this modulo is exact, not a wrap-around.
         name = forms[neb.type % len(forms)]
@@ -539,6 +539,10 @@ def render_nebulas(surface, ctx, nebulas, cache, forms):
                                     NEBULA_BRIGHTNESS)
         if img is None:
             continue
+        if tint is not None:
+            # HD EXTENSION `territory_view`: the gas takes the colour of
+            # the territory it lies in (`terrdraw.tint_nebula`)
+            img = tint(img, n, (neb.x, neb.y))
         sx, sy = view.to_screen(neb.x, neb.y)
         surface.blit(img, (int(sx), int(sy)),
                      special_flags=pygame.BLEND_RGB_ADD)

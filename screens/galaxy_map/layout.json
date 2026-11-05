@@ -207,6 +207,10 @@
     "brightness": 0.7,
     "clumping": 0.0
   },
+  "territory_panel": {
+    "key": "h",
+    "_note": "HD EXTENSION: the key that shows and hides the territory panel on the galaxy map (screens/galaxy_map/terrpanel.py), named like home_ping's. H because the map answers G T C P F L R I, + - 0, Home, Enter, ESC and F1-F10 and the typed cheats (EINSTEIN, MOOLA, MENLO, ISEEALL, RE, RI, ALE, ALLAI, SCOR, X; mainscr.cpp:1553-1563, :1588-1589, :1818-1829) use none of H; checked 4 November 2026."
+  },
   "home_ping": {
     "enabled": true,
     "key": "home",

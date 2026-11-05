@@ -32,6 +32,7 @@ from screens.galaxy_map import maplines
 from . import fltart
 from . import fltfonts
 from . import fltgeom
+from . import fltminiicons
 
 #: Every colour this module uses, with the same names in
 #: `assets/shared/skins/default/colors.json` under `fleets`.
@@ -660,10 +661,14 @@ def draw_inset(surface, screen, stars, game_state, art=None):
             pygame.draw.rect(surface, owner_colour(getattr(icon, "owner",
                                                            None)),
                              (at[0], at[1], dot * 2, dot * 2))
+        def paint(icon, at, sprite):
+            # HD EXTENSION `minimap_hd_icons` (`fltminiicons`)
+            return fltminiicons.picture(getattr(screen, "app", None),
+                                        game_state, icon, sprite, at)
         shipstacks.draw_stacks(
             surface, game_state, picture,
             lambda x, y: (int(rect.x + (x - bx) * fx),
-                          int(rect.y + (y - by) * fy)), fallback)
+                          int(rect.y + (y - by) * fy)), fallback, paint)
     surface.set_clip(previous)
 
 

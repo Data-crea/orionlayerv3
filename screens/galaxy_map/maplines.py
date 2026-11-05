@@ -138,6 +138,15 @@ def stroke(surface, colour, a, b):
     pygame.draw.aaline(surface, tuple(colour[:3]), a, b)
 
 
+def stroke_path(layer, colour, points, width):
+    """A thick open path on a transparent layer — the territory borders
+    (`terrdraw`, HD EXTENSION `territory_view`). Kept here so the map has
+    one home for its lines; `colour` may carry an alpha, so `layer` is a
+    per-pixel-alpha surface, and it is written, not blended."""
+    if len(points) >= 2:
+        pygame.draw.lines(layer, tuple(colour), False, points, width)
+
+
 def relocation_pairs(state, player_num):
     """`(star_index, target_index)` for every relocation `player_num` has.
 

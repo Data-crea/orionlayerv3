@@ -226,10 +226,10 @@ def _picture(surface, screen, view, state, names, product):
         # HD EXTENSION `build_grid_room`: Data's grid, the product alone
         # stood in it
         colroom.draw_product(surface, inner, spec or ("room",), climate, bg,
-                             colour=colour)
+                             colour=colour, app=screen.app)
     else:
         colroom.draw(surface, inner, spec or ("room",), climate, bg,
-                     colour=colour)
+                     colour=colour, app=screen.app)
     if spec is None:
         word = (screen.e(bqproduct.WORD_IN_BOX[product])
                 if product in bqproduct.WORD_IN_BOX
