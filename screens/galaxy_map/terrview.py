@@ -59,6 +59,21 @@ def render_gas(screen, surface, ctx):
     render_under(screen, surface, ctx)
 
 
+def area(view, scale):
+    """Where glass and borders may be drawn: the whole map box, kept off its
+    rim by a panel's glow width (the panels and the bar glow a few px past
+    their rects, and nothing the map draws may lie under a HUD block, 011a).
+
+    HD EXTENSION `territory_view`: NOT the original's map window. While HD
+    mirrors the game the stars and the gas are clipped to that window
+    (`map_window_clip`, screen.py), but a territory is a shape and not a
+    sprite: a border cut flat at the window's side, where the box goes on,
+    read as a fault until the first scroll or zoom (Data, 5 November 2026;
+    seen live, work order 369: Mutatrix at x = 226)."""
+    pad = hud.glow_pad(scale)
+    return pygame.Rect(view.box).inflate(-2 * pad, -2 * pad)
+
+
 def render_under(screen, surface, ctx):
     app = screen.app
     terr = territory(screen)
@@ -66,13 +81,8 @@ def render_under(screen, surface, ctx):
         return
     view = ctx.view
     op = terrdraw.opacity(app)
-    # Kept off the rim of the map box by a panel's glow width: the panels
-    # and the bar glow a few px past their rects, and nothing the map
-    # draws may lie under a HUD block (011a)
     clip = surface.get_clip()
-    pad = hud.glow_pad(screen.layout.scale)
-    surface.set_clip(clip.clip(pygame.Rect(view.box).inflate(-2 * pad,
-                                                             -2 * pad)))
+    surface.set_clip(area(view, screen.layout.scale))
     try:
         _draw_under(screen, surface, view, terr, op)
     finally:
