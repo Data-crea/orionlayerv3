@@ -101,8 +101,10 @@ SPECIAL_ROW, SPECIAL_ROWS = 30, 8
 #: edge: the state marker and the breakdown's info sign stand right of it.
 VALUE_PAD = 64
 SKILL_ROW = 26
-#: the portrait's widest part, reference px (HD EXTENSION `scan_portrait_full`)
-PORTRAIT_MAX = 266
+#: the portrait's widest part, reference px (HD EXTENSION `scan_portrait_full`);
+#: a figure wider than WIDE_ASPECT (Mystic_X) may reach PORTRAIT_WIDE, its arms
+#: under the text (Data, WO 370)
+PORTRAIT_MAX, PORTRAIT_WIDE, WIDE_ASPECT = 266, 320, 1.5
 #: the portrait's gap under the title strip (the left gap is the box's own)
 PORTRAIT_GAP = 16
 #: SHIP's and OFFICER's first line from the box's top: a gap under the
@@ -435,25 +437,21 @@ class View:
         if o is None:
             text("No officer", (r.x + px(16), r.y + px(48)), 24, label)
         else:
-            # HD EXTENSION `scan_portrait_full` (Data, work order 332): the
-            # figure fills the box from its title strip down to its edge, its
-            # proportion kept; a wider picture than PORTRAIT_MAX is made
-            # smaller to fit it (work order 370: never cut, never stretched),
-            # a narrower one stands at the left
-            # a gap under the title strip and at the left (Data, work order
-            # 332, from his screenshot: the head touched the strip and the
-            # figure was cut): the whole picture, a little smaller
+            # HD EXTENSION `scan_portrait_full` (Data, work orders 332, 370):
+            # each leader whole and on its own, never cut or stretched, on
+            # the box's lower edge under a gap below the strip; one wider
+            # than PORTRAIT_MAX stands smaller, but a very wide one (aspect
+            # over WIDE_ASPECT) fills the height and reaches under the text
             pad = max(1, round(2 * k))
             top = R(0, BOXES["officer"][1] + 38 + PORTRAIT_GAP, 0, 0).y
             port = pygame.Rect(r.x + px(6), top, 0,
                                r.bottom - pad - top)
-            # never cut (Data, work order 370): each leader fitted on its
-            # own into the room's height and PORTRAIT_MAX's width, standing
-            # on the box's lower edge: a tall figure fills the height, a
-            # wider one (aspect over ~1.3) stands smaller, none is cut
-            pic = pics.portrait(o, (px(PORTRAIT_MAX), port.h))
+            pic = pics.portrait(o, (px(PORTRAIT_WIDE), port.h))
+            if pic is not None and px(PORTRAIT_MAX) < pic.get_width() <= \
+                    WIDE_ASPECT * pic.get_height():
+                pic = pics.portrait(o, (px(PORTRAIT_MAX), port.h))
             if pic is not None:
-                port.w = pic.get_width()
+                port.w = min(pic.get_width(), px(PORTRAIT_MAX))
                 surface.blit(pic, (port.x, port.bottom - pic.get_height()))
             else:
                 port.w = px(150)
@@ -576,8 +574,8 @@ class View:
                 x0 = tr.right + px(18)
                 marker(x0, tr.centery, st)
         # the ring and its four arcs below the head
-        c = (r.centerx, r.y + px(198))
-        sp = getattr(pics, "shield_picture", lambda *a: None)(m, px(230))
+        c = (r.centerx, r.y + px(206))
+        sp = getattr(pics, "shield_picture", lambda *a: None)(m, px(190))
         img = sp or fit_img(pics.upright, pygame.Rect(0, 0, px(104), px(104)))
         if img is not None:
             surface.blit(img, img.get_rect(center=c))
@@ -597,10 +595,10 @@ class View:
             a0 = math.radians(centres[arc] - 38)
             a1 = math.radians(centres[arc] + 38)
             sp or pygame.draw.arc(surface, rgb, box, a0, a1, max(3, px(10)))
-            at = {0: (c[0], c[1] - rad - px(54)),
-                  2: (c[0], c[1] + rad + px(8)),
-                  3: (c[0] - rad - px(80), c[1] - px(24)),
-                  1: (c[0] + rad + px(80), c[1] - px(24))}[arc]
+            at = {0: (c[0], c[1] - rad - px(62)),
+                  2: (c[0], c[1] + rad + px(6)),
+                  3: (c[0] - rad - px(92), c[1] - px(24)),
+                  1: (c[0] + rad + px(92), c[1] - px(24))}[arc]
             lr = text(names[arc], at, 22, label, "midtop")
             text(f"{m.arcs[arc]} / {m.shield_max}",
                  (lr.centerx, lr.bottom), 24, rgb, "midtop")
