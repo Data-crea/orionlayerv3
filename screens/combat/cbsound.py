@@ -34,6 +34,7 @@ the battle's artwork (`tools/combat_art_extract.py`, decisions 38, 40, 42 —
 never committed); without them the battle is silent and says so once in
 the log.
 """
+import collections
 import io
 import logging
 
@@ -127,7 +128,8 @@ class Sounds:
         self._live = {}                    # handle -> dict
         self._loaded = {}                  # (entry, pitch) -> sound or None
         self._missing = False
-        self.played = []                   # (when, entry, handle): the record
+        # (when, entry, handle): the record; capped, a long battle plays many
+        self.played = collections.deque(maxlen=256)
 
     def set_level(self, level):
         level = max(0, min(100, int(level)))

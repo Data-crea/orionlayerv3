@@ -187,6 +187,8 @@ class BannerRenderer:
         Scaled variants are cached per pixel height."""
         key = (color, race, "h", int(height))
         if key not in self._cache:
+            if len(self._cache) > 64:   # a resize drag asks for many heights
+                self._cache.clear()
             src = self.get(color, race)
             f = height / src.get_height()
             size = (max(1, round(src.get_width() * f)),

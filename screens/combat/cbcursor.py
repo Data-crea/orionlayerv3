@@ -59,6 +59,8 @@ class Pointer:
                 cursor.clear_override()
                 return None
             import pygame
+            if len(self._scaled) > 32:
+                self._scaled.clear()
             img = self._scaled[key] = pygame.transform.scale(
                 shape, (SIDE * k, SIDE * k))
         cursor.set_override(img, (HOTSPOT * k, HOTSPOT * k))

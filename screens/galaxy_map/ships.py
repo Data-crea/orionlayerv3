@@ -431,6 +431,8 @@ class TintCache:
             return base
         out = base.copy()
         out.fill(_lift(color), special_flags=pygame.BLEND_RGB_MULT)
+        if len(self._tinted) > 256:     # the width varies with the zoom
+            self._tinted.clear()
         self._tinted[key] = out
         return out
 

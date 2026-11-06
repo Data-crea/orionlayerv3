@@ -90,6 +90,8 @@ def _ring(radius, width):
                            int(radius * SUPERSAMPLE),
                            max(1, int(width * SUPERSAMPLE)))
         ring = pygame.transform.smoothscale(big, (side, side))
+        if len(_rings) > 128:           # the radius animates; resizes add sets
+            _rings.clear()
         _rings[key] = ring
     return ring
 

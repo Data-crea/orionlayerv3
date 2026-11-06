@@ -20,6 +20,7 @@ import pygame
 
 from core import palette
 from core import zoomtables as zt
+from core.hud import lru
 from core.structs import star as star_struct
 
 # ── Asset naming ─────────────────────────────────────────
@@ -253,6 +254,7 @@ class SpriteCache:
     def __init__(self):
         self._base = {}
         self._scaled = {}
+        self._scaled_bytes = 0
         self._circular = {}
         self._rotations = {}
 
@@ -320,7 +322,7 @@ class SpriteCache:
         ratio = src.get_height() / src.get_width()
         surf = pygame.transform.smoothscale(
             src, (width, max(1, int(width * ratio))))
-        self._scaled[key] = surf
+        self._keep(key, surf)
         return surf
 
     def scaled_additive(self, name, width, brightness):
@@ -346,11 +348,27 @@ class SpriteCache:
         if brightness < 255:
             # LOOK EXCEPTION picture: a sprite's brightness, the map's art
             surf.fill((brightness,) * 3, special_flags=pygame.BLEND_RGB_MULT)
-        self._scaled[key] = surf
+        self._keep(key, surf)
         return surf
+
+    #: Wheel zoom asks for a new width at nearly every tick, so the scaled
+    #: copies would pile up until the map is left; the oldest go first.
+    #: (Memory-leak audit, 5 November 2026; the black hole's slot stays.)
+    SCALED_MAX_BYTES = 128 * 1024 * 1024
+
+    def _keep(self, key, surf):
+        self._scaled[key] = surf
+        self._scaled_bytes += lru.nbytes(surf)
+        for old in list(self._scaled):
+            if self._scaled_bytes <= self.SCALED_MAX_BYTES or old == key:
+                break
+            if old == "_bh_slot":
+                continue
+            self._scaled_bytes -= lru.nbytes(self._scaled.pop(old))
 
     def clear_scaled(self):
         self._scaled.clear()
+        self._scaled_bytes = 0
 
 
 # ── Black hole animation ─────────────────────────────────

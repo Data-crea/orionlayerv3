@@ -296,6 +296,8 @@ class HelpPopup:
             if line.paragraph_break:
                 out.append((None, PARA_GAP))
 
+        if len(self._cache) > 64:       # sizes and text factors change
+            self._cache.clear()
         self._cache[key] = out
         return out
 

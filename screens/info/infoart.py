@@ -89,6 +89,10 @@ class InfoArt:
             return None
         key = ("cover", tuple(size))
         if key not in self._cache:
+            # one full-window copy only: a drag-resize makes a size per step
+            for old in [c for c in self._cache
+                        if isinstance(c, tuple) and c[0] == "cover"]:
+                del self._cache[old]
             k = max(size[0] / back.get_width(), size[1] / back.get_height())
             self._cache[key] = pygame.transform.smoothscale(
                 back, (round(back.get_width() * k),
