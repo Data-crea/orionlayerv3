@@ -3,7 +3,8 @@ pixels. Work order 197 C.
 
 HD EXTENSION `free_camera` and `whole_grid`: the original shows 32 x 18
 of the 81 x 68 cells (consts.h:35-38) and scrolls by the pointer at the
-edges; HD shows the whole field, zoomed by the wheel about the pointer and
+edges; HD shows the whole field, zoomed OUT by the wheel about the pointer
+(IN only to the original's framing, work order 372) and
 panned by dragging, as the galaxy map is (decision 49's free zoom). It
 STARTS as the original frames a battle — 32 cells across, centred on the
 acting unit (`Snap_Center_Combat_Screen_`, combinit.cpp:2240) — so the first
@@ -46,8 +47,10 @@ class Camera:
         return min(self.area[2] / WORLD_W, self.area[3] / WORLD_H)
 
     def max_scale(self):
-        """Four times the original's framing."""
-        return 4 * self.area[2] / (VIEW_CELLS[0] * CELL)
+        """The original's framing: no closer (work order 372, Data — a
+        closer view makes the battle's planet a sphere of 400-3000 px that
+        stutters, and the first picture is this one already)."""
+        return self.framing()
 
     def framing(self):
         """The original's framing's scale: 32 cells across the area."""

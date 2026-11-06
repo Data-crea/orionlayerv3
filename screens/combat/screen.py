@@ -345,8 +345,11 @@ class CombatScreen(CombatInput, ScreenBase):
                         int(c.get("view_x", 0)) + vw // 2,
                         int(c.get("view_y", 0)) + vh // 2)
             elif old is not None:
+                # not past the new window's framing (work order 372): a
+                # window shrunk from 3840 to 1280 would keep a scale the
+                # wheel's ladder no longer has, and a step in would zoom out
                 self._cam.scale, self._cam.ox, self._cam.oy = \
-                    old.scale, old.ox, old.oy
+                    min(old.scale, self._cam.max_scale()), old.ox, old.oy
                 self._cam.clamp()
         cam, art = self._cam, self._art
         self._cache.begin(cam.scale)
