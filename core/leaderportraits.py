@@ -60,6 +60,9 @@ CATEGORY = {0: "ship_officers", 1: "colony_leaders"}
 NATIVE_SIZE = (73, 88)
 #: The dark drawing's brightness against the normal one's (measured).
 DARK = 0.546
+#: the alpha from which a pixel counts as the figure when `trim` looks for
+#: its margins (the files' own halos are above it, their noise below)
+TRIM_ALPHA = 8
 
 _cache = {}
 _fitted = {}
@@ -105,17 +108,25 @@ def _load(path):
     return img
 
 
-def picture(rec, size, dark=False):
+def picture(rec, size, dark=False, trim=False):
     """The leader's HD picture fitted inside `size` (w, h), or None — then
-    the caller draws the original's portrait in the same box."""
+    the caller draws the original's portrait in the same box. `trim`: the
+    picture's empty margins are left off first (HD EXTENSION `portrait_trim`, work
+    order 370: a file is a canvas of about 590 x 398 whose figure fills
+    55-99 % of its width, so fitting the canvas made a narrow figure small
+    in a box that is tall and narrow); the figure itself is never cut."""
     path = path_for(rec.pict_num, rec.type)
     if path is None:
         return None
     img = _load(path)
-    key = (path, _cache[path][0], tuple(size), bool(dark))
+    key = (path, _cache[path][0], tuple(size), bool(dark), bool(trim))
     hit = _fitted.get(key)
     if hit is not None:
         return hit
+    if trim:
+        seen = img.get_bounding_rect(min_alpha=TRIM_ALPHA)
+        if seen.w and seen.h:
+            img = img.subsurface(seen)
     out = fit(img, size)
     if dark:
         k = int(round(DARK * 255))

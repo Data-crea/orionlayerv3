@@ -63,7 +63,9 @@ HEIGHT, WIDTH, WIDTH_BY_HEIGHT = 0.83, 0.64, 1.25
 #: window sizes, and the window follows the map's free area, which moves
 #: with the HUD's boxes.
 MOD_BUTTON_EXTRA = 0.04
-ROW_RULE = {"value_x": 0.36, "hue_end": 0.80, "field_w": 0.36,
+#: `value_x` is `gmorion.ROW_VALUE_X` (HD EXTENSION, 6 November 2026: the
+#: value column sits a share further right than the 0.36 it had).
+ROW_RULE = {"value_x": gmorion.ROW_VALUE_X, "hue_end": 0.80, "field_w": 0.36,
             "swatch_x": 0.75, "swatch_gap": 0.2}
 #: The title plate's aspect: the cut piece's, 4780 x 240 (`hud_cut.TITLE`),
 #: and the title's room on it: between the two orange lamps (measured on
@@ -190,6 +192,10 @@ def _row_parts(out, names):
             fw = int(r.w * ROW_RULE["field_w"])
             if name == "glass":
                 fw = int(r.w * 0.16)
+            if name == "colours":
+                # ends before the player-colour swatches (`swatch_x`)
+                fw = int(r.w * (ROW_RULE["swatch_x"] - ROW_RULE["value_x"]
+                                - 0.015))
             out[name + "_field"] = pygame.Rect(fx, r.y + (r.h - fh) // 2, fw,
                                                fh)
     if "livery" in out:

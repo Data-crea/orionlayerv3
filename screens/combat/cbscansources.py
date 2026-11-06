@@ -17,14 +17,21 @@ class Pictures:
     def __init__(self, art, colours, unit, leader_art):
         from . import cbdraw
         self.ship = cbdraw.unit_picture(art, colours, unit, 0)
+        from . import cbscanshield
+        self._shield = cbscanshield.ShieldPictures(art, colours, unit)
         self.upright = cbdraw.unit_picture(
             art, colours, {**unit, "facing_dir": NOSE_UP}, 0)
         self._leader_art = leader_art
 
+    def shield_picture(self, model, size):
+        """The unit with the status box's shield rings, `size` px square
+        (DEVIATION `scan_shield_rings`); None without art or shield."""
+        return self._shield.picture(model, size, self.upright)
+
     def portrait(self, officer, size):
         from core import leaderportraits
         rec = officer["rec"]
-        hd = leaderportraits.picture(rec, size)
+        hd = leaderportraits.picture(rec, size, trim=True)
         if hd is not None:
             return hd
         la = self._leader_art

@@ -62,6 +62,12 @@ BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone",
 COL_HEADING = palette.require("game_menu", "orionlayer_heading")
 COL_OPTION = palette.require("game_menu", "option_text")
 COL_STATE = palette.require("game_menu", "hd_state")
+#: Where the value column of OrionLayer's window starts, a share of the row
+#: (HD EXTENSION, Data, 6 November 2026: 0.42, it was 0.36, so a long label
+#: such as "Black map background" keeps the size of the short ones), and the
+#: room a label has before it. `olwin.ROW_RULE["value_x"]` is this value.
+ROW_VALUE_X = 0.42
+ROW_LABEL_W = 0.40
 
 #: Floor steps in the order a click cycles them (screens/galaxy_map/floorlift).
 FLOOR_STEPS = ("off", "light", "haze")
@@ -376,7 +382,7 @@ def render(screen, surface):
     for name, (key, default) in labels.items():
         if name in geo:
             _text(screen, surface, words.get(key, default), size, COL_OPTION,
-                  lx, geo[name], geo[name].w * 0.34, fit=True)
+                  lx, geo[name], geo[name].w * ROW_LABEL_W, fit=True)
     for name in oldrop.CHOICES:
         if name + "_field" in geo:
             oldrop.render_field(screen, surface, geo, name, size, COL_OPTION)
@@ -426,7 +432,7 @@ def _render_text_size_row(screen, surface, geo, words, size, lx):
     lit while the value is the player's."""
     row, bar = geo["text_size"], geo["text_size_bar"]
     _text(screen, surface, words.get("text_size", "Text size"), size,
-          COL_OPTION, lx, row, row.w * 0.34, fit=True)
+          COL_OPTION, lx, row, row.w * ROW_LABEL_W, fit=True)
     gmfill._bar(screen, surface, bar,
                 lambda v: (tuple(int(60 + 150 * (v - fontscale.RANGE[0]) /
                                     (fontscale.RANGE[1] - fontscale.RANGE[0]))
@@ -479,7 +485,7 @@ def _render_mod_files(screen, surface, geo, words, size):
     folder was found — or the extraction's progress after switching it on
     (until work order 251 a note beside the switch)."""
     row = geo["mod_files"]
-    x = row.x + int(row.w * 0.36)
+    x = row.x + int(row.w * ROW_VALUE_X)
     job = modsetup.state()
     if job["phase"] == "running":
         note = words.get("mod_wait", "Extracting — this can take a while "

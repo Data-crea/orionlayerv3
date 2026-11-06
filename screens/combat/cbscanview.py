@@ -50,8 +50,9 @@ WINDOW = (60, 30, 1800, 1020)
 #: is the mockup's light blue.
 _NONE = contextlib.nullcontext()
 BOXES = {
-    "ship": (80, 114, 520, 200), "officer": (80, 328, 520, 250),
-    "crew": (80, 592, 520, 126),
+    # work order 370: OFFICER takes ten px from CREW (a gap under the strip)
+    "ship": (80, 114, 520, 200), "officer": (80, 328, 520, 260),
+    "crew": (80, 602, 520, 116),
     "shields": (614, 114, 600, 350), "values": (614, 478, 600, 240),
     # a designed ship has 8 special systems at most (the designer's
     # `special_devices[8]`, design.cpp:94-101): 8 rows in one column; 9-16
@@ -79,7 +80,7 @@ STRIP, SELECTED = (31, 37, 41), (47, 48, 38)
 #: the title strip's height from a box's top, and WEAPONS' strip a tab
 #: round its title only: its column heads share the title's line (the
 #: mockup's tab; "#" stands at 176), reference px
-STRIP_H, WEAPONS_TAB = 38, 160
+STRIP_H, WEAPONS_TAB = 38, 190
 #: The facing at which a unit's nose points up the screen, so the shield
 #: ring's Front stands at its nose: 0 is nose right, 4 nose up, 12 nose
 #: down (`cbart.stored_facing`; rendered, work order 296 — 12 had stood
@@ -89,9 +90,9 @@ NOSE_UP = 4
 #: reference px (work order 297): what a weapon is and how well it is —
 #: Count, HP, State side by side — then how it fires, the mods last and
 #: widest.
-WEAPON_COLUMNS = (("#", 176, 30), ("Weapon", 210, 300), ("Count", 520, 90),
-                  ("HP", 620, 90), ("State", 720, 160), ("Arc", 890, 60),
-                  ("Ammo", 960, 110), ("Mods", 1080, 664))
+WEAPON_COLUMNS = (("#", 206, 30), ("Weapon", 244, 300), ("Count", 554, 90),
+                  ("HP", 654, 90), ("State", 754, 160), ("Arc", 924, 110),
+                  ("Ammo", 1044, 110), ("Mods", 1164, 584))
 #: A table row, reference px, and the smallest text a crowded box may draw
 #: (the analysis' floor: 18 reference px, 12 device px at 1280 x 720).
 ROW, WEAPON_TEXT, FLOOR = 26, 22, 18
@@ -101,9 +102,12 @@ SPECIAL_ROW, SPECIAL_ROWS = 30, 8
 VALUE_PAD = 64
 SKILL_ROW = 26
 #: the portrait's widest part, reference px (HD EXTENSION `scan_portrait_full`)
-PORTRAIT_MAX = 206
+PORTRAIT_MAX = 266
 #: the portrait's gap under the title strip (the left gap is the box's own)
 PORTRAIT_GAP = 16
+#: SHIP's and OFFICER's first line from the box's top: a gap under the
+#: title strip (Data, work order 370; it stood at 42)
+SCAN_GAP = 52
 #: a table's column head under a box's title: its top from the box's top,
 #: its text size and the gap to the first row — SPECIAL SYSTEMS' and, since
 #: work order 301, HULL AND SYSTEMS' "HP" alike
@@ -396,13 +400,13 @@ class View:
         scale = pen.scale
         # ── A the ship ─────────────────────────────────────────
         r = R(*BOXES["ship"])
-        pic_box = R(BOXES["ship"][0] + 16, BOXES["ship"][1] + 40, 140, 140)
+        pic_box = R(BOXES["ship"][0] + 16, BOXES["ship"][1] + 52, 140, 140)
         img = fit_img(pics.ship, pic_box)
         if img is not None:
             surface.blit(img, img.get_rect(center=pic_box.center))
         tx = r.x + px(172)
         room = r.right - px(16) - tx
-        y = r.y + px(42)
+        y = r.y + px(SCAN_GAP)
         # the name's place: outside a battle the whole name line is the
         # field a click opens (`core/shipview.py`, open fix 106), marked by
         # the HUD's separator under it (the hint is labelled there)
@@ -433,8 +437,9 @@ class View:
         else:
             # HD EXTENSION `scan_portrait_full` (Data, work order 332): the
             # figure fills the box from its title strip down to its edge, its
-            # proportion kept; a wider picture than PORTRAIT_MAX is cut at
-            # both sides (never stretched), a narrower one stands at the left
+            # proportion kept; a wider picture than PORTRAIT_MAX is made
+            # smaller to fit it (work order 370: never cut, never stretched),
+            # a narrower one stands at the left
             # a gap under the title strip and at the left (Data, work order
             # 332, from his screenshot: the head touched the strip and the
             # figure was cut): the whole picture, a little smaller
@@ -442,26 +447,27 @@ class View:
             top = R(0, BOXES["officer"][1] + 38 + PORTRAIT_GAP, 0, 0).y
             port = pygame.Rect(r.x + px(6), top, 0,
                                r.bottom - pad - top)
-            pic = pics.portrait(o, (port.h * 40, port.h))
+            # never cut (Data, work order 370): each leader fitted on its
+            # own into the room's height and PORTRAIT_MAX's width, standing
+            # on the box's lower edge: a tall figure fills the height, a
+            # wider one (aspect over ~1.3) stands smaller, none is cut
+            pic = pics.portrait(o, (px(PORTRAIT_MAX), port.h))
             if pic is not None:
-                keep = min(pic.get_width(), px(PORTRAIT_MAX))
-                pic = pic.subsurface(((pic.get_width() - keep) // 2, 0,
-                                      keep, pic.get_height()))
-                port.w = keep
-                surface.blit(pic, port.topleft)
+                port.w = pic.get_width()
+                surface.blit(pic, (port.x, port.bottom - pic.get_height()))
             else:
                 port.w = px(150)
                 hud.field(surface, port, scale)
             tx = port.right + px(16)
             room = r.right - px(16) - tx
-            text(o["name"], (tx, r.y + px(42)), 30, value, room=room)
+            text(o["name"], (tx, r.y + px(SCAN_GAP)), 30, value, room=room)
             # the level on the title's line (work order 297)
             lw = o["level_word"] or f"Level {o['level']}"
             # the level first: a long title is what the cell rule cuts
             what = " · ".join(p for p in (f"{lw} {m.officer_mark}",
                                           o["title"]) if p)
-            text(what, (tx, r.y + px(78)), 20, label, room=room)
-            y = r.y + px(110)
+            text(what, (tx, r.y + px(SCAN_GAP + 36)), 20, label, room=room)
+            y = r.y + px(SCAN_GAP + 68)
             fit = (r.bottom - px(6) - y) // px(SKILL_ROW)
             skills = o["skills"]
             shown = skills if len(skills) <= fit else skills[:fit - 1]
@@ -571,7 +577,8 @@ class View:
                 marker(x0, tr.centery, st)
         # the ring and its four arcs below the head
         c = (r.centerx, r.y + px(198))
-        img = fit_img(pics.upright, pygame.Rect(0, 0, px(104), px(104)))
+        sp = getattr(pics, "shield_picture", lambda *a: None)(m, px(230))
+        img = sp or fit_img(pics.upright, pygame.Rect(0, 0, px(104), px(104)))
         if img is not None:
             surface.blit(img, img.get_rect(center=c))
         most = max(1, m.shield_max)
@@ -589,7 +596,7 @@ class View:
                 STATE_RGB[cbscan.DAMAGED] if frac > 0 else (70, 76, 90)
             a0 = math.radians(centres[arc] - 38)
             a1 = math.radians(centres[arc] + 38)
-            pygame.draw.arc(surface, rgb, box, a0, a1, max(3, px(10)))
+            sp or pygame.draw.arc(surface, rgb, box, a0, a1, max(3, px(10)))
             at = {0: (c[0], c[1] - rad - px(54)),
                   2: (c[0], c[1] + rad + px(8)),
                   3: (c[0] - rad - px(80), c[1] - px(24)),
@@ -683,6 +690,10 @@ class View:
                       m.computer))
         # the computer's longest name (299 px at 22) keeps its room
         bar_x = r.right - px(HULL_PAD + 242)
+        # the bar ends before the widest hits (work order 370), 24-100 px
+        hits = max(pen.width(f"{c} / {mo}" if mo is not None else str(c), 22)
+                   for _key, _lab, (c, mo) in lines)
+        bar_w = max(px(24), min(px(100), nx - hits - px(14) - bar_x))
         self.rects["hull"] = {}
         for key, lab, pair in lines:
             cur, most = pair
@@ -699,7 +710,7 @@ class View:
                 STATE_RGB[cbscan.DESTROYED]
             text(lab, (r.x + px(16), y), 22, label,
                  room=bar_x - px(10) - (r.x + px(16)))
-            bar(pygame.Rect(bar_x, y + px(4), px(100), px(16)), frac, rgb)
+            bar(pygame.Rect(bar_x, y + px(4), bar_w, px(16)), frac, rgb)
             # a part at 0 HP says so in its number, the empty bar stays
             # (Data, work order 303, P5 of 302)
             nr = text(f"{cur} / {most}" if most is not None else str(cur),

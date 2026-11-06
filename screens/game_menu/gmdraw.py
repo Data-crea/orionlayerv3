@@ -13,6 +13,8 @@ with `draw_plate`. Every string goes through `Style.render_text`
 (decision 30); the words come from layout.json (decision 15) and the
 game's own strings from HESTRNGS.
 """
+import re
+
 import pygame
 
 from core import fontscale, lang, mouse as mouse_input
@@ -242,6 +244,42 @@ def _menu(screen, surface):
     gmsliders.render(screen, surface)
 
 
+def _row_labels(screen, rule, rows, size):
+    """{row: (text, size, x)} of the engine rows' words. HD EXTENSION
+    `label_size` (Data, 6 November 2026): a word that does not fit its
+    row is squeezed (as before), but every squeezed word takes the ONE
+    smallest size any of them needs, so long labels read alike; the words
+    that fit keep the box's size. HD EXTENSION `label_drop_words`: a word
+    left out of a row's text (id 177: "Serious"); in a language whose text
+    does not hold it the text stands as the game wrote it."""
+    ids, alts = rule.get("label_ids", []), rule.get("alt", [])
+    drop = rule.get("label_drop_words", {})
+    out, fitted = {}, {}
+    for i, band in enumerate(rows):
+        if i >= len(ids):
+            continue
+        text = game_string(screen, ids[i])
+        for word in drop.get(str(ids[i]), []):
+            text = re.sub(r"\s*\b" + re.escape(word) + r"\b", "", text,
+                          flags=re.IGNORECASE).strip()
+        lx = band.x + int(band.w * rule.get("label_x", 0.11))
+        limit = (int(band.w * rule.get("alt_x", 0.77))
+                 if i < len(alts) and alts[i] else band.w)
+        room = band.x + limit - lx
+        fit = size
+        while fit > 8 and screen.style.render_text(
+                text, fit, (255, 255, 255)).get_width() > room:
+            fit -= 1
+        out[i] = [text, size, lx]
+        if fit < size:
+            fitted[i] = fit
+    if fitted:
+        shared = min(fitted.values())
+        for i in fitted:
+            out[i][1] = shared
+    return {i: tuple(v) for i, v in out.items()}
+
+
 def _settings(screen, surface):
     panel(screen, surface, "body")
     title = box(screen, "settings_title")
@@ -254,7 +292,9 @@ def _settings(screen, surface):
     if area_box is not None and area_box.screen_rect:
         size = _size(screen, area_box)
         ids, alts = rule.get("label_ids", []), rule.get("alt", [])
-        for i, band in enumerate(bands(area_box.screen_rect, nodes.OPTIONS)):
+        rows = list(bands(area_box.screen_rect, nodes.OPTIONS))
+        labels = _row_labels(screen, rule, rows, size)
+        for i, band in enumerate(rows):
             side = int(band.h * rule.get("checkbox", 0.7))
             square = pygame.Rect(band.x, band.y + (band.h - side) // 2,
                                  side, side)
@@ -262,13 +302,11 @@ def _settings(screen, surface):
             # checkbox, the tick following the frame colour.
             hud.checkbox(surface, square, screen.layout.scale,
                          bool(screen.flags is not None and screen.flags[i]))
+            if i in labels:
+                text, lsize, lx = labels[i]
+                ty = band.y + (band.h - lsize) // 2
+                _blit(screen, surface, text, lsize, COL_OPTION, lx, ty)
             ty = band.y + (band.h - size) // 2
-            if i < len(ids):
-                lx = band.x + int(band.w * rule.get("label_x", 0.11))
-                limit = (int(band.w * rule.get("alt_x", 0.77))
-                         if i < len(alts) and alts[i] else band.w)
-                _blit_fit(screen, surface, game_string(screen, ids[i]),
-                          size, COL_OPTION, lx, ty, band.x + limit - lx)
             if i < len(alts) and alts[i]:
                 _blit(screen, surface, alts[i], size, COL_OPTION,
                       band.x + int(band.w * rule.get("alt_x", 0.77)), ty)

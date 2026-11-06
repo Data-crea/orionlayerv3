@@ -388,6 +388,12 @@
       391
     ],
     "_label_note": "HAROLD::H_Message_ 0xA6-0xB1 and 0x187, in row order (_Draw_Options_Game_Popup_, loadsave.cpp:1503-1523).",
+    "label_drop_words": {
+      "177": [
+        "serious"
+      ]
+    },
+    "_label_drop_note": "HD EXTENSION label_drop_words (Data, 6 November 2026): the word is left out of the row's text so the long label has room (id 177 reads 'Show Only Turn Summary Reports'; the word is a match pattern, not a word the player reads, so it is lower case and matched without regard to case); a language whose text does not hold the word draws the game's text unchanged. HD EXTENSION label_size (same day): the labels that do not fit their row share the one smallest size any of them needs (gmdraw._row_labels).",
     "alt": [
       "(ALT-F1)",
       "(ALT-F2)",
