@@ -24,6 +24,15 @@ screen pixel at the centre and at most `MIN_STEP` seconds after the last
 one, and only for a planet that is asked for: a hidden planet costs
 nothing (`planetspin.touch` tells `core.drawgate` a frame holds one).
 
+**A NEW SIZE WHILE ZOOMING** (`keep=True`, the battle's planet; HD EXTENSION
+`sphere_keep`, work order 371): every zoom step is a new `side`, and a whole
+sphere made at once costs 30 ms at 300 px, 150 at 1000 and 650 at 2500. With
+`keep` a size with no picture yet shows the planet's last one scaled to it,
+and the sphere of the new size is made only once the size has stood for
+`SETTLE` seconds, in slices (the job's geometry and constants are slices too,
+`Job.run`), so no frame of a zoom is long. The first picture of a planet is
+still made whole: there is nothing to keep.
+
 **A TYPE WITHOUT A SPHERE** (no map, or a mod's old-style full picture,
 see `mode`) returns None here and the caller draws what it had.
 """
@@ -52,6 +61,9 @@ SLICE = 40000
 OVERSAMPLE = 1.25
 BUCKET = 64
 CACHE = 32
+#: Seconds a size must stand before its sphere is begun (`keep`): the steps of
+#: a wheel turn follow each other faster than that.
+SETTLE = 0.15
 
 _dims = {}       # path -> (stamp, native width)
 _maps = {}       # (path, stamp, width) -> (rgb+emissive uint8 (h, w, 4))
@@ -59,6 +71,9 @@ _geo = {}        # side -> geometry shared by every type
 _types = {}      # (name, side, stamps) -> per-type constants
 _jobs = {}       # key -> the frame being made
 _last = {}       # (name, side, seed) -> (step, surface)
+_recent = {}     # (name, seed, climate) -> (side, surface): the last one made
+_hold = {}       # (name, side, seed, climate) -> that picture at the side
+_settle = {}     # (name, seed, climate) -> (side, since): the size asked for
 
 
 def surface_path(res, name):
@@ -263,29 +278,61 @@ class Job:
         self.ok = self.map is not None
         if not self.ok:
             return
-        self.side = side
-        self.geo = _geometry(side, width)
-        ckey = (name, side, width, _stamp(path), repr(vals), repr(cfg))
-        consts = _types.get(ckey)
-        if consts is None:
-            if len(_types) > CACHE:
-                _types.clear()
-            consts = _types[ckey] = _constants(name, self.geo, vals, cfg)
-        self.consts = consts
+        self.side, self.width, self.name = side, width, name
+        self.cfg, self.vals, self.path = cfg, vals, path
         ang = planetspin.angle(cfg, name, climate, seed, t)
         self.shift = -ang / (2 * math.pi) * width     # prograde: to the right
         self.cloud = _cloud_map(res, name, width)
         self.cloud_shift = self.shift * float(cfg["cloud_speed"])
-        # the frame's own buffer, the type's alpha already in it: slices
-        # land in it as they are made, so finishing is one conversion
-        if "base" not in consts:
-            consts["base"] = np.zeros((side * side, 4), np.uint8)
-            consts["base"][self.geo["keep"], 3] = consts["alpha"]
-        self.buf = consts["base"].copy()
+        # what depends on the size alone is made by `run`, a stage a call
+        # (a new size's geometry is 15-140 ms of numpy, work order 371)
+        self.geo = self.consts = self.buf = None
         self.pos = 0
+        self.keep = False
+
+    def _cached(self):
+        """The size's geometry and constants are made already: the stages
+        are then one call, as when the constructor made them (a frame of a
+        size in use must not wait for stages that cost nothing)."""
+        ckey = (self.name, self.side, self.width, _stamp(self.path),
+                repr(self.vals), repr(self.cfg))
+        return (self.side, self.width) in _geo and ckey in _types
+
+    def _prepare(self, eager):
+        """The next stage of what the size needs: the geometry, the type's
+        constants, the frame's buffer (the type's alpha already in it, so
+        finishing is one conversion). A stage a call unless `eager`;
+        True when all are made."""
+        if self.geo is None:
+            self.geo = _geometry(self.side, self.width)
+            if not eager:
+                return False
+        if self.consts is None:
+            ckey = (self.name, self.side, self.width, _stamp(self.path),
+                    repr(self.vals), repr(self.cfg))
+            consts = _types.get(ckey)
+            if consts is None:
+                if len(_types) > CACHE:
+                    _types.clear()
+                consts = _types[ckey] = _constants(
+                    self.name, self.geo, self.vals, self.cfg)
+            self.consts = consts
+            if not eager:
+                return False
+        if self.buf is None:
+            if "base" not in self.consts:
+                self.consts["base"] = np.zeros((self.side * self.side, 4),
+                                               np.uint8)
+                self.consts["base"][self.geo["keep"], 3] = \
+                    self.consts["alpha"]
+            self.buf = self.consts["base"].copy()
+        return True
 
     def run(self, limit=SLICE):
         """Make the next slice; True when the frame is whole."""
+        if self.buf is None and not self._prepare(limit > SLICE or
+                                                  self._cached()):
+            return False
         g, c = self.geo, self.consts
         a, b = self.pos, min(self.pos + limit, len(g["u"]))
         sl = slice(a, b)
@@ -327,11 +374,60 @@ def _cloud_map(res, name, width):
     return _mip(path, width, alpha=True) if path else None
 
 
-def frame(res, name, side, seed=None, climate=0, t=None):
+def _finish(key, who, job):
+    """A job's frame is whole: it is the planet's picture at that size.
+    Only a `keep` caller's pictures are the stand-ins of later sizes: a small
+    one of the map bubble would be a blurred stand-in for the field's."""
+    pic = job.surface()
+    if len(_last) > 256:
+        _last.clear()
+    if len(_recent) > 64:
+        _recent.clear()
+    _last[key] = (job.step, pic, job.at)
+    if job.keep:
+        _recent[who] = (key[1], pic)
+    del _jobs[key]
+    _hold.pop(who, None)
+    _settle.pop(who, None)
+    return pic
+
+
+def _stand_in(key, who, near, now, res, seed, climate, step):
+    """`keep`: the planet's last picture scaled to a size that has none yet,
+    and, once the size has stood for `SETTLE`, its sphere begun in slices."""
+    name, side = key[0], key[1]
+    mark = _settle.get(who)
+    if mark is None or mark[0] != side:
+        mark = _settle[who] = (side, now)
+    held = _hold.get(who)                 # one stand-in a planet, its size's
+    if held is None or held[0] != side:
+        if len(_hold) > 8:
+            _hold.clear()
+        held = _hold[who] = (side, pygame.transform.smoothscale(
+            near[1], (side, side)))
+    pic = held[1]
+    job = _jobs.get(key)
+    if job is None and abs(now - mark[1]) >= SETTLE:
+        for k in [k for k in _jobs if (k[0], k[2], k[3]) == who
+                  and k != key]:
+            del _jobs[k]                  # a size the zoom has left
+        job = Job(res, name, side, seed, climate, now)
+        if not job.ok:
+            _last[key] = (step, None, now)
+            return None
+        job.step, job.at, job.keep = step, now, True
+        _jobs[key] = job
+    if job is not None and job.run(SLICE):
+        return _finish(key, who, job)
+    return pic
+
+
+def frame(res, name, side, seed=None, climate=0, t=None, keep=False):
     """The picture of planet `(climate, seed)` of map `name` NOW, a `side`
     px square, or None (no map). The surface is kept until the angle has
     moved half a pixel at the centre and `MIN_STEP` has passed; a new one is
-    made in slices (`Job`) while the old one stays on screen."""
+    made in slices (`Job`) while the old one stays on screen. `keep`: a size
+    with no picture yet shows the planet's last one scaled (see the header)."""
     side = int(side)
     if side < 4 or not surface_path(res, name):
         return None
@@ -339,8 +435,13 @@ def frame(res, name, side, seed=None, climate=0, t=None):
     planetspin.touch(side, cfg)
     now = planetspin.now() if t is None else t
     key = (name, side, seed, climate)
+    who = (name, seed, climate)
     step = int(planetspin.angle(cfg, name, climate, seed, now) * side)
     last = _last.get(key)
+    near = _recent.get(who)
+    if keep and last is None and near is not None and near[0] != side:
+        return _stand_in(key, who, near, now, res, seed, climate, step)
+    _settle.pop(who, None)         # a size in use is not a size settling
     job = _jobs.get(key)
     if job is None and (last is None or (
             last[0] != step and abs(now - last[2]) >= MIN_STEP)):
@@ -348,18 +449,16 @@ def frame(res, name, side, seed=None, climate=0, t=None):
         if not job.ok:
             _last[key] = (step, None, now)
             return None
-        job.step, job.at = step, now
+        job.step, job.at, job.keep = step, now, keep
         _jobs[key] = job
     if job is not None and (job.run(1 << 30 if last is None else SLICE)):
-        if len(_last) > 256:
-            _last.clear()
-        _last[key] = (job.step, job.surface(), job.at)
-        del _jobs[key]
+        _finish(key, who, job)
     last = _last.get(key)
     return last[1] if last else None
 
 
 def reset():
-    for d in (_dims, _maps, _geo, _types, _last, _jobs):
+    for d in (_dims, _maps, _geo, _types, _last, _jobs, _recent, _hold,
+              _settle):
         d.clear()
     planetspin.reload()

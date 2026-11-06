@@ -189,10 +189,13 @@ def uses_sphere(resources, name, painted_found):
     return not old or planetsphere.mod_map(resources, name)
 
 
-def turning(resources, climate, side, seed=None, planet_size=None):
+def turning(resources, climate, side, seed=None, planet_size=None,
+            keep=False):
     """The turning sphere of `climate` on a `side` px square NOW, or None
     where the type is a static picture or has no map — for the places with
-    no screen to ask a set from (the popups, the battle)."""
+    no screen to ask a set from (the popups, the battle). `keep`: the battle's
+    zoom — a size with no picture yet shows the last one scaled
+    (`planetsphere.frame`)."""
     name = name_for(climate)
     if name is None or side < 4:
         return None
@@ -200,7 +203,8 @@ def turning(resources, climate, side, seed=None, planet_size=None):
         resources, int(climate), planet_size, side) is not None
     if not uses_sphere(resources, name, found):
         return None
-    return planetsphere.frame(resources, name, int(side), seed, int(climate))
+    return planetsphere.frame(resources, name, int(side), seed, int(climate),
+                              keep=keep)
 
 
 class PlanetSet:

@@ -345,7 +345,7 @@ def turning_planet(planet_pic, scale):
     ring = 1.0 - float(planetspin.config(resources.res)["glow_width"])
     return colonyplanets.turning(resources.res, planet_pic[2],
                                  round(side / ring), planet_pic[3],
-                                 planet_pic[1])
+                                 planet_pic[1], keep=True)
 
 
 def draw_units(surface, cam, art, combat, colours, glow_clock, cache,
