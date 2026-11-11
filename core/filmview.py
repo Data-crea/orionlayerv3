@@ -44,7 +44,7 @@ import logging
 
 import pygame
 
-from core import fallbacknote, filmblock, handover
+from core import fallbacknote, filmblock, filmhd, handover
 
 log = logging.getLogger("orionlayer")
 
@@ -70,14 +70,22 @@ class View:
         #: (name, total) of the film a skip was sent for: one per film,
         #: kept until the film has gone (`Overlays.update` resets it).
         self.sent = None
+        #: The film's restored frames, when the player has them
+        #: (HD EXTENSION `film_restored`, `core/filmhd.py`).
+        self.restored = filmhd.Player()
 
     def reset(self):
         self.sent = None
+        self.restored.reset()
 
     def render(self, surface, app, film, labels=None):
         """Draw the film's frame and the hint. Returns the picture's
         placement `(x, y, w, h, scale)`."""
-        picture = app.original_view.render(surface, app.layout)
+        # the engine plays the film (sound, pace, end, skip); a restored
+        # frame of the number FILM reports replaces only its picture
+        picture = self.restored.picture(surface, film)
+        if picture is None:
+            picture = app.original_view.render(surface, app.layout)
         # the engine's picture, not an HD frame: no hold may keep it (with
         # its hint) once the film has gone (`handover.render_hold`)
         handover.surface_shows_engine(app)

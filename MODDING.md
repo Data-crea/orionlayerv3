@@ -632,6 +632,28 @@ A clip per race replaces the audience's room and ambassador. Make one with
 `--lights` to hold the last frame and keep only the green light and the helix
 moving. The format is described in `screens/audience/auvideo.py`.
 
+## The game's films, restored
+
+The game's own films (the defeat, the victories, the Antarans' attack, a
+planet destroyed, the Amoeba, Orion taken, the dimensional portal) play in
+the engine, with its sound, and OrionLayer shows their picture. You may put
+your own restored version of a film's picture where OrionLayer looks, and it
+is shown in its place: the engine still plays the sound and sets the pace, the
+restored frame shown is the one with the number the engine reports, and a
+click or a key still skips it. Without the folder nothing changes.
+
+    python tools/film_install.py <film> <video or folder of frames> [--crop WxH]
+
+`<film>` is one of `genwinfn` (the victory), `wininfin` (the diplomatic
+victory), `anwinfin` (Antares taken), `loserfin` (the defeat), `orionfin`,
+`dimtvfin`, `plntdfin`, `amebafin`, `anatkfin`. The frames go to
+`files/assets/shared/films/<film>/` as JPEG, in name order, with a `clip.json`;
+the film's picture is fitted into the window with its own aspect, never
+stretched. Any number of frames works: a restored film with the original's
+frame count follows the engine frame for frame, another count in proportion.
+The format is described in `core/filmhd.py`. `INTRO` is not a film in this
+sense: the game's intro is skipped.
+
 ## Mods inside the tree
 
 **Which of the two?** Your mod folder (above) is for pictures and texts:

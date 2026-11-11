@@ -201,6 +201,7 @@ TEMPLATES = "templates"
 #: thousands of "replaces nothing" lines at every start (work order 360: 2675
 #: of them hid every other message); a misnamed file elsewhere still does.
 READ_BY_THE_SCREEN = ("files/screens/audience/assets/video/",
+                      "files/assets/shared/films/",
                       "files/screens/audience/assets/icons/",
                       "files/screens/research_select/assets/science_room/")
 
