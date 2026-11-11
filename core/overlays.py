@@ -66,7 +66,10 @@ class Overlays:
             self.box_sent = None
         if self.popup is None:
             self.popup_view.sent = None
+            self.popup_view.armed = None
         self.seek_step()
+        self.retry_landing()
+        self.retry_box()
         if self.ship is None and self.ship_view is not None:
             self.ship_view.reset()      # a new view: its own close, base
         return over is not None
@@ -390,11 +393,62 @@ class Overlays:
         app.client.inject_click((field.x + field.x_end) // 2,
                                 (field.y + field.y_end) // 2)
 
-    def answer_popup(self, action):
+    def retry_box(self):
+        """HD EXTENSION `box_stuck_click` (work order 389, Data: the box
+        "<planet> just colonized" after the landing could not be closed).
+        A text box of the game waits for the mouse button's RELEASE before it
+        reads any input (`Text_Box_Get_Input`, textbox.cpp:137-142); after a
+        click HD injected for the planet choice the engine can be left
+        holding the button down (the release event lost), and then no
+        activation is ever read (found live, work order 389: forty answers,
+        none taken; an injected click, down and up, closed it at once). A
+        text box that is still up `RESEND_AFTER` snapshots after its answer
+        is therefore answered with an injected click on its field, which
+        also gives the release the engine is waiting for."""
+        box, app = self.box, self.app
+        sent = self.box_sent
+        if box is None or box.get("kind") != "text" or sent is None or \
+                not app.connected:
+            return
+        snap = getattr(app.client, "stats", {}).get("state", 0)
+        if snap - sent[1] < turnpopup.RESEND_AFTER:
+            return
+        field = next((f for f in (app.client.state.fields or [])
+                      if getattr(f, "index", None) == box["field_a"]), None)
+        if field is None:
+            return
+        self.box_sent = (sent[0], snap)
+        log.info("message box: %s not taken - an injected click on field %d "
+                 "(the engine may hold the mouse button down)", box["kind"],
+                 field.index)
+        app.client.inject_click((field.x + field.x_end) // 2,
+                                (field.y + field.y_end) // 2)
+
+    #: Snapshots between the landing's answers while it is not taken.
+    LANDING_RESEND = 6
+
+    def retry_landing(self):
+        """HD EXTENSION `landing_skip_retry` (work order 389, Data: he could
+        not close the landing when he skipped it): the engine drops an
+        activation that arrives while its field table of the landing loop is
+        not yet built (`ProcessInput`'s `param1 < fields_count`,
+        ext_api.cpp:3480) — a click in the first moments of the landing was
+        lost, and the popup asked for a second click only after
+        `RESEND_AFTER` snapshots. A click on the landing is therefore asked
+        again, every `LANDING_RESEND` snapshots, until the popup is gone;
+        the activation names the field's rectangle (open fix 62), so a late
+        one that meets another screen's field is dropped."""
+        view = self.popup_view
+        if self.popup is None or self.popup["kind"] != "landing" or \
+                view.armed is None:
+            return
+        self.answer_popup(view.armed, self.LANDING_RESEND)
+
+    def answer_popup(self, action, resend_after=None):
         """A popup's answer through its own field: activated, or an injected
         click at the field's centre where the original reads the pointer —
         once per state of the popup (`turnpopup.state_key`), again after
-        `turnpopup.RESEND_AFTER` unchanged snapshots."""
+        `turnpopup.RESEND_AFTER` unchanged snapshots (`resend_after`)."""
         app = self.app
         if self.popup is None or action is None or not app.connected:
             return
@@ -402,9 +456,11 @@ class Overlays:
         snap = app.client.stats.get("state", 0)
         sent = self.popup_view.sent
         if sent is not None and sent[0] == key and \
-                snap - sent[1] < turnpopup.RESEND_AFTER:
+                snap - sent[1] < (resend_after or turnpopup.RESEND_AFTER):
             return
         self.popup_view.sent = (key, snap)
+        if self.popup["kind"] == "landing":
+            self.popup_view.armed = action
         how, field = action
         if how == "seek":
             # a colony message on another page of the Turn Summary: turn
