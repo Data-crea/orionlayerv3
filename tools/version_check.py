@@ -199,6 +199,7 @@ FIX_NUMBERS = {
     "doc/ext_colsum_block.patch": (110,),
     "doc/ext_building_demolish.patch": (111,),
     "doc/ext_films.patch": (112,),
+    "doc/ext_turn_summary_types.patch": (115,),
 }
 
 

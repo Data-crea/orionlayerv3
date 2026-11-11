@@ -596,6 +596,12 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 112.",
         "the engine does not send the films (open fix 112): HD holds its "
         "last frame while a film plays, and nothing can skip it"),
+    # Work order 384: on the fork's branch `orionlayer` only, 5a09e0ba.
+    "doc/ext_turn_summary_types.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "Open fix 115: the Turn Summary's block (kind 2)",
+        "the engine does not send the Turn Summary's messages with their "
+        "type (open fix 115): HD ranks them by their words"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

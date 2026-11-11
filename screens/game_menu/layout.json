@@ -362,6 +362,8 @@
       "sub_graphics": "Graphics quality and performance",
       "tab_system": "System",
       "sub_system": "Files, language and technical information",
+      "tab_messages": "Messages",
+      "sub_messages": "Which messages the Turn Summary shows",
       "apply": "Apply & Close",
       "sample_title": "Panel",
       "sample_field": "Field",
@@ -563,6 +565,10 @@
     "orionlayer.tab_graphics": {
       "title": "GRAPHICS",
       "body": "Graphics quality and performance: the frame rate, the detail of painted pictures and the livery of painted ships."
+    },
+    "orionlayer.tab_messages": {
+      "title": "TURN MESSAGES",
+      "body": "Which messages the Turn Summary shows at turn change. The three switches at the top show or hide every red, yellow or green message at once; below, each kind of message has its own box. SHOW ALL switches everything back on. Applied at once."
     },
     "orionlayer.tab_system": {
       "title": "SYSTEM",

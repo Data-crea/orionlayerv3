@@ -84,8 +84,33 @@ class View:
         #: None: the Space Dragon's star choice on the map (work order 319)
         self.point = None
         self._choosing = False     # the last frame drew that star choice
+        self.scroll = 0            # the ranked Turn Summary's offset in px
+        self.scroll_info = None    # its track and extent, set by the draw
+
+    def scroll_by(self, delta):
+        """Move the ranked list by `delta` px (positive: down); True when
+        there is a list that scrolls."""
+        info = self.scroll_info
+        if not info:
+            return False
+        self.scroll = min(max(0, self.scroll + int(delta)), info["max"])
+        return True
+
+    def scroll_click(self, x, y):
+        """A click on the scroll track puts the thumb there; True when it
+        was on the track."""
+        info = self.scroll_info
+        if not info or not info["track"].collidepoint(x, y):
+            return False
+        track = info["track"]
+        frac = (y - track.y) / max(1, track.h)
+        self.scroll = min(max(0, int(frac * info["total"] -
+                                     info["page"] / 2)), info["max"])
+        return True
 
     def reset(self):
+        self.scroll = 0
+        self.scroll_info = None
         self._base = None
         self.rects = []
         self.buttons = []
@@ -101,6 +126,7 @@ class View:
         over the held frame (`msgbox.dimmed_base`, work order 196 A)."""
         # first: no popup but the dragon's star choice keeps its star click
         self.point = None
+        self.scroll_info = None     # only the ranked Turn Summary sets it
         choosing = self._choosing
         self._choosing = False
         if popup["kind"] == "combat_target":
@@ -151,7 +177,13 @@ class View:
         words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
                                        if k in DEFAULT_WORDS and v})
         c = content(popup, state, words, app)
+        c["scroll"] = self.scroll
         self.rects, self.buttons = draw(surface, style, c)
+        # HD EXTENSION `summary_scroll` (work order 384): the ranked Turn
+        # Summary's list scrolls; its state lives here, between frames
+        self.scroll_info = c.get("scroll_info")
+        self.scroll = min(self.scroll, self.scroll_info["max"]) \
+            if self.scroll_info else 0
         self.right = list(zip([r for r, _a in self.rects], c["right"])) + \
             [(r, ("field", f)) for r, f in zip(c.get("table_rects", []),
                                                c.get("line_right", []))]
@@ -326,6 +358,13 @@ def _art(relpath, w, h):
 def draw(surface, style, c):
     """The panel. Returns `([(rect, action)] for options and buttons,
     [action] of the buttons)`."""
+    if c.get("summary") is not None:
+        # the Turn Summary ranked by importance (work order 384)
+        from core import turnsummaryview
+        return turnsummaryview.draw(
+            surface, style, c, c["words"],
+            lambda surf, panel, s, pad: _buttons(surf, style, c, panel, s,
+                                                 pad))
     win_w, win_h = surface.get_size()
     s = win_h / 1080
     pad = int(REF_PAD * s)
@@ -357,6 +396,10 @@ def draw(surface, style, c):
     title = (style.render_text(c["title"], max(12, int(REF_TITLE_FONT * s)),
                                tuple(hudtext.colour("title")[:3]))
              if c.get("title") else None)
+    art = _art(c.get("art"), inner, int(REF_ART_H * s))
+    mon = c.get("title_on_art") if art is not None and title else None
+    if mon is not None:          # the title stands on the picture's monitor
+        title_img, title = title, None
     opt_h = int(REF_OPTION_H * s)
     opts = []
     for label, action in c["options"]:
@@ -367,7 +410,6 @@ def draw(surface, style, c):
     text_h = sum(step if r is not None else step // 2 for r in rows)
     if pic is not None:
         text_h = max(text_h, pic.get_height())
-    art = _art(c.get("art"), inner, int(REF_ART_H * s))
     h = pad + (title.get_height() + pad // 2 if title else 0) + text_h + \
         (pad // 2 + opts_h if opts else 0) + pad + bh + pad + \
         (art.get_height() + pad // 2 if art is not None else 0)
@@ -380,7 +422,22 @@ def draw(surface, style, c):
         surface.blit(title, title.get_rect(midtop=(panel.centerx, y)))
         y += title.get_height() + pad // 2
     if art is not None:              # above the message, as the original
-        surface.blit(art, art.get_rect(midtop=(panel.centerx, y)))
+        art_rect = art.get_rect(midtop=(panel.centerx, y))
+        surface.blit(art, art_rect)
+        if mon is not None:
+            glass = pygame.Rect(
+                art_rect.x + int(mon[0] * art_rect.w),
+                art_rect.y + int(mon[1] * art_rect.h),
+                int((mon[2] - mon[0]) * art_rect.w),
+                int((mon[3] - mon[1]) * art_rect.h))
+            # the glass is dark (the picture's own): the title, lit, in
+            # the middle of it, shrunk to the glass if a language is long
+            img = title_img
+            if img.get_width() > glass.w:
+                img = pygame.transform.smoothscale(
+                    img, (glass.w, max(1, img.get_height() * glass.w //
+                                       img.get_width())))
+            surface.blit(img, img.get_rect(center=glass.center))
         y += art.get_height() + pad // 2
     left = panel.x + pad
     if pic is not None:
@@ -417,6 +474,15 @@ def draw(surface, style, c):
             ty += step
         out.append((r, action))
         y += oh
+    out += _buttons(surface, style, c, panel, s, pad)[0]
+    return out, [a for _l, a in c["buttons"]]
+
+
+def _buttons(surface, style, c, panel, s, pad):
+    """The bottom row: one button per `c["buttons"]`, centred. Returns
+    `([(rect, action)], [action])`."""
+    bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
+    out = []
     total = len(c["buttons"]) * bw + (len(c["buttons"]) - 1) * pad
     x = panel.centerx - total // 2
     for label, action in c["buttons"]:

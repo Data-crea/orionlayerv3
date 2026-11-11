@@ -350,6 +350,14 @@ class GameMenuScreen(ScreenBase):
                 self.send(rows[i])
         return None
 
+    def handle_mousewheel(self, direction, mx, my):
+        """The Turn messages list of the OrionLayer window scrolls (HD
+        EXTENSION `turn_message_settings`, work order 384)."""
+        if olwin.is_open(self) and self.orionlayer.tab == "messages":
+            from . import olmsg
+            return olmsg.handle_wheel(self, direction, mx, my)
+        return None
+
     def handle_mouse_motion(self, screen_x, screen_y):
         super().handle_mouse_motion(screen_x, screen_y)
         gmlivery.motion(self, screen_x, screen_y)

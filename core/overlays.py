@@ -12,7 +12,7 @@ galaxy map behind a popup.
 import logging
 
 from core import filmview, handover, msgbox, namebox, rightinfo, shipview
-from core import turnpopup
+from core import turnpopup, turnpopupcontent
 
 log = logging.getLogger("orionlayer")
 
@@ -66,6 +66,7 @@ class Overlays:
             self.box_sent = None
         if self.popup is None:
             self.popup_view.sent = None
+        self.seek_step()
         if self.ship is None and self.ship_view is not None:
             self.ship_view.reset()      # a new view: its own close, base
         return over is not None
@@ -245,7 +246,19 @@ class Overlays:
         if self.box is not None:
             self.answer_box(self.box_view.answer_at(self.box, fields, x, y))
         elif self.popup is not None:
+            if self.popup_view.scroll_click(x, y):
+                return                # the ranked Turn Summary's scroll track
             self.answer_popup(self.popup_view.action_at(x, y))
+
+    def wheel(self, dy):
+        """The wheel over a popup: the ranked Turn Summary's list scrolls
+        (HD EXTENSION `summary_scroll`, work order 384); True when taken."""
+        if self.popup is None or self.box is not None:
+            return False
+        info = self.popup_view.scroll_info
+        if self.popup.get("kind") != "turn_summary":
+            return False
+        return bool(info) and self.popup_view.scroll_by(-dy * info["row"] * 2)
 
     def key(self, event):
         if self.film is not None:   # any key ends a film (film_skip)
@@ -321,6 +334,62 @@ class Overlays:
                 getattr(disp, "overlay_name", "") == "game_menu" and
                 getattr(disp.overlay, "pending", None) == "quit")
 
+    #: Page turns one Turn Summary seek may take before it gives up: the
+    #: engine's list is a handful of pages (a lost click must not turn them
+    #: for ever).
+    SEEK_LIMIT = 12
+
+    def seek_step(self):
+        """HD EXTENSION `summary_seek` (work order 384): the ranked Turn
+        Summary lists every message, but the engine holds fields only for
+        the page it shows. A click on a colony message of another page
+        stores the wish (`answer_popup`); each snapshot turns one page the
+        right way (the popup's own PREV / NEXT, `args[2]` / `args[3]`), and
+        on the right page clicks the message's field as the plain list's
+        row does. It ends when the popup does, on another kind, or after
+        `SEEK_LIMIT` turns."""
+        seek = getattr(self, "_seek", None)
+        if seek is None:
+            return
+        popup, app = self.popup, self.app
+        if popup is None or popup.get("kind") != "turn_summary" or \
+                not app.connected or seek["steps"] >= self.SEEK_LIMIT:
+            self._seek = None
+            return
+        msgs = popup.get("messages") or []
+        if not 0 <= seek["index"] < len(msgs):
+            self._seek = None
+            return
+        snap = app.client.stats.get("state", 0)
+        msg, cur, a = msgs[seek["index"]], popup["args"][0], popup["args"]
+        # a click is answered a tick later: the next one waits for the page
+        # to change, or a few snapshots (a click the game ignored)
+        if seek["last"] is not None and seek.get("page") == cur and \
+                snap - seek["last"] < 5:
+            return
+        seek["last"], seek["page"] = snap, cur
+        state = app.client.state
+        if msg["page"] == cur:
+            if msg["first_field"] <= 0:
+                self._seek = None        # the engine gave this line no field
+                return
+            field = turnpopupcontent._field(state, msg["first_field"])
+            if field is None:
+                return            # the page's fields come a tick after it
+            app.client.inject_click((field.x + field.x_end) // 2,
+                                    (field.y + field.y_end) // 2)
+            self._seek = None
+            return
+        field = turnpopupcontent._field(
+            state, a[3] if msg["page"] > cur else a[2])
+        if field is None:
+            self._seek = None
+            return
+        seek["steps"] += 1
+        log.info("turn popup: seek page %d from %d", msg["page"], cur)
+        app.client.inject_click((field.x + field.x_end) // 2,
+                                (field.y + field.y_end) // 2)
+
     def answer_popup(self, action):
         """A popup's answer through its own field: activated, or an injected
         click at the field's centre where the original reads the pointer —
@@ -337,6 +406,13 @@ class Overlays:
             return
         self.popup_view.sent = (key, snap)
         how, field = action
+        if how == "seek":
+            # a colony message on another page of the Turn Summary: turn
+            # the engine's pages to it, then click it (`seek_step`)
+            self._seek = {"index": field, "last": None, "steps": 0}
+            self.popup_view.sent = None
+            self.seek_step()
+            return
         log.info("turn popup: %s -> %s field %d", self.popup["kind"], how,
                  field.index)
         if how == "click":

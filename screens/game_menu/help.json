@@ -722,6 +722,11 @@
       "ol_part": "tab_graphics"
     },
     {
+      "help_id": "orionlayer.tab_messages",
+      "node": "orionlayer",
+      "ol_part": "tab_messages"
+    },
+    {
       "help_id": "orionlayer.tab_system",
       "node": "orionlayer",
       "ol_part": "tab_system"

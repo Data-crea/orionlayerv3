@@ -130,8 +130,8 @@ def click(screen, screen_x, screen_y):
     # (:259), the slider popup (0xED, :274), the confirmation 0xEE (:282)
     # and the result 0xEF (:288). Neither screen has an HD view of its own:
     # 35's slider is HD's turn popup since open fix 104 (TPOP kind 20, id 80,
-    # work order 316), its boxes HD's message box; 43 the F12 notice names
-    # (`core/screen_names.py`, decision 22). The food window has
+    # work order 316), its boxes HD's message box; 43's Command Summary is
+    # HD's message box too (live work orders 310 and 378). The food window has
     # no handler in the original, so a click there is swallowed below.
     for _sw_boxes, _sw_key, _sw_what in (
             (("sb_command_text", "sb_command_icon"),

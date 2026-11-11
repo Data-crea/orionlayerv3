@@ -168,6 +168,10 @@ DEFAULTS = {
     # player dragged it, [x, y] in reference px; None is its box's place.
     "territory_panel_shown": "on",
     "territory_panel_pos": None,
+    # The Turn Summary kinds switched OFF (work order 384, `screens/
+    # game_menu/olmsg`, read by `core.turnsummary.hidden`): a list of kind
+    # keys; None shows everything. Applied at once.
+    "turn_summary_hidden": None,
 }
 
 #: Keys a build retired, by the work order that did: read and dropped, so

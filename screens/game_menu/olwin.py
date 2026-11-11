@@ -50,7 +50,10 @@ TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
         ("gameplay", ("floor", "map_black", "monsters", "map_ships",
                       "map_colours")),
         ("graphics", ("frame_rate", "idle_rate", "painted", "livery")),
-        ("system", ("mods", "mod_files", "mod_open", "hotkeys", "language")))
+        ("system", ("mods", "mod_files", "mod_open", "hotkeys", "language")),
+        # HD EXTENSION `turn_message_settings` (work order 384): no rows of
+        # gmorion, its own list (`olmsg`)
+        ("messages", ()))
 TAB_NAMES = tuple(name for name, _ in TABS)
 #: The window in the game window: its height's share, its width capped by
 #: the screen's width and by its own height.
@@ -81,6 +84,7 @@ class Window:
     def __init__(self):
         self.tab = TAB_NAMES[0]
         self.drop = None
+        self.msg_first = 0      # olmsg: the first entry the list shows
 
 
 def is_open(screen):
@@ -178,6 +182,9 @@ def geometry(screen):
     for i, name in enumerate(names):
         out[name] = pygame.Rect(content.x, y + i * rh, content.w, rh - 1)
     _row_parts(out, names)
+    if tab == "messages":
+        from . import olmsg
+        olmsg.geometry(screen, out, y, row, gap)
     return out
 
 
@@ -242,6 +249,10 @@ def handle_click(screen, x, y):
         if geo["tab_" + name].collidepoint(x, y):
             w.tab = name
             return
+    if w.tab == "messages":
+        from . import olmsg
+        olmsg.handle_click(screen, geo, x, y)
+        return
     gmorion.handle_click(screen, x, y)
 
 
@@ -294,6 +305,9 @@ def render(screen, surface):
         from . import olpreview
         olpreview.render(screen, surface, geo["preview"])
     gmorion.render(screen, surface)
+    if "msg_list" in geo:
+        from . import olmsg
+        olmsg.render(screen, surface, geo)
     _render_footer(screen, surface, geo, scale)
     oldrop.render_list(screen, surface, geo)
 
@@ -315,16 +329,27 @@ def _render_close(screen, surface, rect, scale):
 
 
 def _render_tabs(screen, surface, geo, scale):
+    from . import olmsg
     for name in TAB_NAMES:
         r = geo["tab_" + name]
         on = screen.orionlayer.tab == name
         hud.small_button(surface, r, scale, "active" if on else _state(r))
         col = hudtext.colour("button")
-        ic = art.mask(name, int(r.h * 0.5), col)
+        # the Turn messages tab's icon is Data's own picture from the mod
+        # folder (`olmsg.tab_icon`); without it the word keeps the others'
+        # column
+        if name in art.MASKS:
+            ic = art.mask(name, int(r.h * 0.5), col)
+        elif name == "messages":
+            ic = olmsg.tab_icon(int(r.h * 0.5), col)
+        else:
+            ic = None
         x = r.x + int(r.h * 0.3)
         if ic is not None:
             surface.blit(ic, (x, r.y + (r.h - ic.get_height()) // 2))
             x += ic.get_width() + int(r.h * 0.25)
+        else:
+            x += int(r.h * 0.5) + int(r.h * 0.25)
         word = hudtext.render(screen.style,
                               say(screen, "tab_" + name, name).upper(),
                               "button", r.h, col)

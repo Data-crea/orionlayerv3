@@ -332,6 +332,11 @@ def names_txt(hud_sizes):
     lines += ["", "  other pictures only a mod fills (nothing ships):",
               f"  {shown('assets/shared/turnpopup/dragon_bribe.png')}"
               "  the Space Dragon's bribe popup, any size",
+              f"  {shown('assets/shared/turnpopup/gnn_studio.png')}"
+              "  the GNN popup's studio, any size (title on its monitor)",
+              f"  {shown('assets/shared/turnpopup/summary_warning_red.png')}"
+              "  the Turn Summary's pictures: summary_warning_red / _yellow / "
+              "_green, summary_colony_events, summary_divider_left / _right",
               f"  {shown('screens/fleets/assets/pictures/minimap_background.png')}"
               "  the Fleets map's panel, 1992 x 1158",
               "", "  the galaxy map's ship pictures (work order 311), by the "

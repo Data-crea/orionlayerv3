@@ -69,11 +69,23 @@ SCREENS = {
     28: ("DISTANCE_BETWEEN_STARS", "galaxy_map"),
     29: ("OFFICERS",        "leaders"),
     30: ("COLONIZATION_IN_MAIN", None),
+    #: 31, 33, 34 (work order 378): the outer screens of the outpost popup (set
+    #: by the fleet box's Outpost button, mainscr.cpp:3653-3669), the colony
+    #: landing (colland.cpp:155) and the troop unload (the Transport button,
+    #: mainscr2.cpp:602). The popups themselves are HD's turn popups (id 60,
+    #: TPOP kind 4; kind 9), seen live in work order 229 C; without names the
+    #: status bar and the F12 notice read "#31".
+    31: ("BUILDING_OUTPOSTS_IN_MAIN", None),
+    33: ("COLONY_LANDING", None),
+    34: ("UNLOADING_TRANSPORTS_IN_MAIN", None),
     32: ("PLANET_SUMMARY",  "planets"),
     #: 35 and 43, the galaxy map's Freighters and Command windows
-    #: (mainscr_main.cpp:714-732, work order 310): no HD view, so the F12
-    #: notice names them (decision 22); before 310 they had no entry and the
-    #: notice said "#35" / "#43".
+    #: (mainscr_main.cpp:714-732, work order 310): no HD SCREEN of their own.
+    #: 43's Command Summary arrives as a text box, HD's message box (seen live
+    #: in work orders 310 and 378); 35 is the slider popup and message boxes,
+    #: the F12 notice names it only on an engine without open fix 104
+    #: (decision 22). Before 310 they had no entry and the notice said "#35" /
+    #: "#43".
     35: ("SCRAP_FREIGHTERS", None),
     #: 36 is the engine's own SCREEN_TECH_CHANGE, and the slug named
     #: a folder that never existed: HD had select mode only, so

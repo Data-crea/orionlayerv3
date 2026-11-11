@@ -124,6 +124,18 @@ SLOTS = ("screens/*/assets/frame.png",
 #: so a misspelt one is said, not silently unused.
 PLANET_PICTURE_DIR = "screens/colony_summary/assets/planet_pictures/"
 SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",
+          # HD EXTENSION `gnn_studio` (work order 383): the GNN popup's studio
+          "assets/shared/turnpopup/gnn_studio.png",
+          # HD EXTENSION `turn_message_icon`: the settings tab's picture
+          "assets/shared/turnpopup/turn_messages_icon.png",
+          # HD EXTENSION `summary_importance` (work order 384): the Turn
+          # Summary's warning triangles, category picture and golden rules
+          "assets/shared/turnpopup/summary_warning_red.png",
+          "assets/shared/turnpopup/summary_warning_yellow.png",
+          "assets/shared/turnpopup/summary_warning_green.png",
+          "assets/shared/turnpopup/summary_colony_events.png",
+          "assets/shared/turnpopup/summary_divider_left.png",
+          "assets/shared/turnpopup/summary_divider_right.png",
           # HD EXTENSION `build_grid_room`: the build list's picture box
           "assets/shared/turnpopup/build_grid.png") + tuple(
     f"{PLANET_PICTURE_DIR}{n}.png" for n in (

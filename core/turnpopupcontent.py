@@ -27,7 +27,16 @@ DEFAULT_WORDS = {"close": "CLOSE",
                  "slider_cancel": "CANCEL", "slider_ok": "ACCEPT",
                  # the Space Dragon's bribe (work order 319: MAINPUPS.LBX
                  # 0x46 refuse / close, 0x47 yes, art)
-                 "dragon_no": "NO", "dragon_yes": "YES"}
+                 "dragon_no": "NO", "dragon_yes": "YES",
+                 # the Turn Summary ranked by importance (work order 384)
+                 "sum_colony": "COLONY EVENTS", "sum_empire": "EMPIRE",
+                 "sum_ships": "SHIPS", "sum_spies": "SPIES",
+                 "sum_other": "OTHER NEWS", "sum_messages": "MESSAGES",
+                 "sum_colonies": "{n} colonies affected",
+                 "sum_colony_one": "1 colony affected",
+                 "sum_events": "{n} events", "sum_event_one": "1 event",
+                 "sum_empty": "No messages this turn.",
+                 "sum_hidden": "{n} messages hidden in the game settings."}
 
 
 def _star_name(state, index):
@@ -258,25 +267,121 @@ def _science(popup, state, words, app, anywhere):
                          if anywhere else None)]}
 
 
+def _colony_name(state, colony):
+    """A colony's planet name, or None (the message names no colony)."""
+    from core.structs import colony as colony_struct
+    raw = getattr(state, "colonies_raw", None) or []
+    if not 0 <= colony < len(raw):
+        return None
+    name = _planet_name(state, colony_struct.parse(raw[colony]).planet)
+    return None if name == "?" else name
+
+
+_building_names = {}
+
+
+def _product_name(product):
+    """A finished product's or a scrapped building's name (the game's own
+    building strings), or None for a ship design or an unknown id."""
+    from core import buildnames, lang
+    if product is None or not buildnames.is_building(product):
+        return None
+    language = lang.current()
+    names = _building_names.get(language)
+    if names is None:        # one file read per language, not one per frame
+        names = _building_names[language] = buildnames.BuildingNames(language)
+    try:
+        return names.building(product) or None
+    except (OSError, ValueError, KeyError, IndexError):
+        return None
+
+
+def _summary_row(m, i, state, target):
+    """One Turn Summary message as the ranked panel's row: severity and
+    category, then three columns — the PLACE (a colony message's planet,
+    from the wire's planet number), the SUMMARY (a colony message's short
+    kind label; any other message keeps the game's own sentence, which
+    says who and where) and the DETAIL on the right (starvation's food,
+    a scrapped building and its refund, a finished product)."""
+    from core import turnsummary
+    sev, cat = turnsummary.classify(m)
+    place = detail = label_used = None
+    text = m["text"]
+    sub = m.get("subtype")
+    if m.get("type") == 0:
+        planet = m.get("planet")
+        place = _planet_name(state, planet) if planet is not None else None
+        if place == "?":
+            place = None
+        if place is None and m["colony"] >= 0:
+            place = _colony_name(state, m["colony"])
+        # the game names a homeworld "Prime" where the planet's own numeral
+        # would say "I": the line's own spelling of the same star wins
+        if place:
+            place = turnsummary.line_spelling(m["text"], place)
+        label = turnsummary.COLONY_LABELS.get(sub)
+        if label and place:
+            text = label_used = label
+        elif place:
+            # no label for the kind: the game's sentence, its leading name
+            # taken out
+            text = turnsummary.split_name(text, place)[1]
+        food = turnsummary.starvation_effect(m)
+        if food:
+            detail = ("\u2212%d food" % food, sev, False)
+        elif sub == 0:
+            name = _product_name(m.get("a"))
+            refund = "+%d BC" % m["b"] if m.get("b") else ""
+            detail = (" ".join(x for x in (name, refund) if x), sev, True) \
+                if name or refund else None
+        elif sub == 1:
+            name = _product_name(m.get("a"))
+            detail = (name, sev, True) if name else None
+    # the kind's short label is OrionLayer's word and is translated; the
+    # game's own sentence and names are not (`lang.verbatim`)
+    return {"severity": sev, "category": cat, "order": i, "name": place,
+            "text": text, "detail": detail, "action": target,
+            "verbatim": text != label_used,
+            "key": turnsummary.kind_key(m)}
+
+
 def _turn_summary(popup, state, words, app, anywhere):
     a = popup["args"]
     options, buttons = [], []
     page = a[0]
-    for m in popup.get("messages", []):
-        if m["page"] != page:
-            continue
+    from core import turnsummary
+    rows = []
+    typed = any(m.get("type") is not None for m in popup.get("messages", []))
+    off = turnsummary.hidden(getattr(app, "user_settings", None)) \
+        if typed else set()
+    for i, m in enumerate(popup.get("messages", [])):
         target = None
-        if m["jumps"] and m["first_field"] > 0:
-            target = _act(state, m["first_field"], "click")
-        options.append((m["text"], target))
-    if a[1] > 1:
+        if not typed and m["page"] != page:
+            continue                # an engine without open fix 115: as before
+        if m["page"] == page:
+            if m["jumps"] and m["first_field"] > 0:
+                target = _act(state, m["first_field"], "click")
+            options.append((m["text"], target))
+        elif m["jumps"] and a[2] > 0 and a[3] > 0:
+            # HD EXTENSION `summary_seek` (work order 384): a colony message
+            # on another page of the engine's list has no field now; the
+            # overlay turns the engine's pages until it has
+            # (`core.overlays.Overlays.seek_step`)
+            target = ("seek", i)
+        # HD EXTENSION `summary_importance` (work order 384, open fix 115)
+        if turnsummary.kind_key(m) in off:
+            continue                # switched off in the game's settings
+        rows.append(_summary_row(m, i, state, target))
+    if a[1] > 1 and not typed:      # ranked: the engine's pages are HD's own
         buttons.append((words["prev"], _act(state, a[2], "click")
                         if page > 1 else None))
         buttons.append((words["next"], _act(state, a[3], "click")
                         if page < a[1] else None))
     buttons.append((words["close"], _act(state, a[4], "click")))
-    return {"options": options, "buttons": buttons,
-            "title": words["turn_summary"]}
+    return {"options": options, "buttons": buttons, "summary": rows,
+            "title": words["turn_summary"],
+            "summary_hidden": len(popup.get("messages", [])) - len(rows)
+            if typed else 0}
 
 
 def _leader_hire(popup, state, words, app, anywhere):
@@ -371,7 +476,11 @@ def _leader_level(popup, state, words, app, anywhere):
 
 
 def _gnn(popup, state, words, app, anywhere):
-    out = {"title": popup.get("title") or "GNN"}
+    # HD EXTENSION `gnn_studio` (work order 383): Data's studio above the
+    # message, from the mod folder only (`ART`); the title stands on the
+    # picture's ceiling monitor (`TITLE_ON_ART`), as the original's "GNN"
+    # does; the message stays below, where it always fits
+    out = {"title": popup.get("title") or "GNN", "art": ART["gnn"]}
     if popup.get("text"):
         out["lines"] = [popup["text"]]
     out["buttons"] = [(words["continue"], ("activate", anywhere)
@@ -513,13 +622,20 @@ def content(popup, state, words, app=None):
             "right_help": RIGHT_HELP.get(kind),
             "picture": out["picture"] if kind in LEADER_CARDS else None,
             "leader": out["leader_rec"] if kind in LEADER_CARDS else None,
-            "art": out["art"]}
+            "summary": out.get("summary"), "words": words,
+            "summary_hidden": out.get("summary_hidden", 0),
+            "art": out["art"], "title_on_art": TITLE_ON_ART.get(kind)}
 
 
 #: A popup's HD picture by kind: a tree path no file of OrionLayer's fills
 #: — a slot of `core.usermod.SLOTS`, so only the player's mod folder does;
 #: without it the popup is drawn as before (work order 326 F).
-ART = {"dragon_bribe": "assets/shared/turnpopup/dragon_bribe.png"}
+ART = {"dragon_bribe": "assets/shared/turnpopup/dragon_bribe.png",
+       "gnn": "assets/shared/turnpopup/gnn_studio.png"}
+#: Where a popup's title stands on its picture, as fractions of the picture
+#: (x0, y0, x1, y1): the GNN studio's ceiling monitor (measured on the 1672 x
+#: 941 picture: the screen's glass is x 815-1208, y 12-222).
+TITLE_ON_ART = {"gnn": (0.487, 0.013, 0.722, 0.236)}
 
 
 #: The kinds that draw a leader's card with its portrait.

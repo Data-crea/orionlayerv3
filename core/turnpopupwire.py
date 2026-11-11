@@ -58,7 +58,10 @@ def parse(gs, data, pos):
     take, text = r.take, r.text16
     try:
         version, kind, n = take("BBh")
-        if version != 1 or kind not in KINDS or not 0 <= n <= 16:
+        # version 2: the Turn Summary's messages carry their engine type
+        # (open fix 115); every other kind is version 1
+        if version not in (1, 2) or kind not in KINDS or not 0 <= n <= 16 \
+                or (version == 2 and KINDS[kind] != "turn_summary"):
             return pos
         args = list(take(f"{n}h")) if n else []
         popup = {"kind": KINDS[kind], "args": args + [-1] * (16 - n),
@@ -69,9 +72,22 @@ def parse(gs, data, pos):
             for _ in range(max(0, count)):
                 line = text()
                 jumps, colony, page, first, nfields = take("BhBhB")
-                msgs.append({"text": line, "jumps": bool(jumps),
-                             "colony": colony, "page": page,
-                             "first_field": first, "fields": nfields})
+                msg = {"text": line, "jumps": bool(jumps),
+                       "colony": colony, "page": page,
+                       "first_field": first, "fields": nfields,
+                       "type": None, "subtype": None, "planet": None,
+                       "a": 0, "b": 0}
+                if version == 2:
+                    kind_id, sub = take("BB")
+                    msg["type"] = kind_id
+                    msg["subtype"] = sub if kind_id == 0 else None
+                    # a colony message's planet and its two numbers (a
+                    # scrapped building's id and refund, a finished
+                    # product's id): open fix 115
+                    planet, arg_a, arg_b = take("hhh")
+                    msg.update(planet=planet if planet >= 0 else None,
+                               a=arg_a, b=arg_b)
+                msgs.append(msg)
             popup["messages"] = msgs
         if KINDS[kind] in ("planet_choice", "discovery", "combat_target"):
             star, grid = take("hh")
@@ -118,7 +134,9 @@ def build(kind, args=(), title=None, text=None, messages=None, system=None,
           mutation=None, dragon=None, picker=None):
     """The block as the engine writes it — for the checks' stand-ins."""
     code = {v: k for k, v in KINDS.items()}[kind]
-    out = b"TPOP" + _st.pack("<BBh", 1, code, len(args))
+    typed = kind == "turn_summary" and any(
+        m.get("type") is not None for m in messages or [])
+    out = b"TPOP" + _st.pack("<BBh", 2 if typed else 1, code, len(args))
     out += _st.pack(f"<{len(args)}h", *args) if args else b""
     for s in (title or "", text or ""):
         raw = s.encode("latin-1")
@@ -132,6 +150,13 @@ def build(kind, args=(), title=None, text=None, messages=None, system=None,
             out += _st.pack("<BhBhB", int(m.get("jumps", 0)),
                             m.get("colony", -1), m.get("page", 1),
                             m.get("first_field", -1), m.get("fields", 0))
+            if typed:
+                out += _st.pack("<BBhhh", m.get("type") or 0,
+                                255 if m.get("subtype") is None
+                                else m["subtype"],
+                                -1 if m.get("planet") is None
+                                else m["planet"], m.get("a", 0),
+                                m.get("b", 0))
     if kind in ("planet_choice", "discovery", "combat_target"):
         system = system or {}
         out += _st.pack("<hh", system.get("star", -1),

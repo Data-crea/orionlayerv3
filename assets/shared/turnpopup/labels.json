@@ -20,5 +20,17 @@
   "slider_cancel": "CANCEL",
   "slider_ok": "ACCEPT",
   "dragon_no": "NO",
-  "dragon_yes": "YES"
+  "dragon_yes": "YES",
+  "sum_colony": "COLONY EVENTS",
+  "sum_empire": "EMPIRE",
+  "sum_ships": "SHIPS",
+  "sum_spies": "SPIES",
+  "sum_other": "OTHER NEWS",
+  "sum_messages": "MESSAGES",
+  "sum_colonies": "{n} colonies affected",
+  "sum_colony_one": "1 colony affected",
+  "sum_events": "{n} events",
+  "sum_event_one": "1 event",
+  "sum_empty": "No messages this turn.",
+  "sum_hidden": "{n} messages hidden in the game settings."
 }

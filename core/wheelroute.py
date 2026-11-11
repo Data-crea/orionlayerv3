@@ -12,6 +12,13 @@ from core import pointergate, textsize
 
 
 def route(app, event):
+    # a turn popup stands over a HELD frame, so the gate below is closed
+    # while it is up; its own list scrolls unless F12 shows the original
+    # (HD EXTENSION `summary_scroll`, work order 384)
+    overlays = getattr(app, "_overlays", None)
+    if overlays is not None and not app._showing_original() and \
+            overlays.wheel(event.y):
+        return
     if not pointergate.PointerGate.passes(app._pointer_open()):
         return                       # a held frame / F12 (D13)
     if textsize.wheel(app, event) or app.editor.handle_event(event):
