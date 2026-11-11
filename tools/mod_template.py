@@ -337,6 +337,9 @@ def names_txt(hud_sizes):
               f"  {shown('assets/shared/turnpopup/summary_warning_red.png')}"
               "  the Turn Summary's pictures: summary_warning_red / _yellow / "
               "_green, summary_colony_events, summary_divider_left / _right",
+              f"  {shown('assets/shared/turnpopup/landing_ship_body.png')}"
+              "  the colony landing's craft: landing_ship_body / _flame / "
+              "_landed, on transparency, all three needed",
               f"  {shown('screens/fleets/assets/pictures/minimap_background.png')}"
               "  the Fleets map's panel, 1992 x 1158",
               "", "  the galaxy map's ship pictures (work order 311), by the "

@@ -161,6 +161,11 @@ class View:
             self._window_misses = getattr(self, "_window_misses", 0) + 1
             if self._window_misses < DISCOVERY_PATIENCE:
                 return drawn
+        if popup["kind"] == "landing":
+            drawn = self._render_landing(surface, style, labels, popup,
+                                         state, app)
+            if drawn is not None:
+                return drawn
         if popup["kind"] == "colony_combat":
             return self._render_invasion(surface, popup, state, backdrop,
                                          app, labels)
@@ -207,6 +212,34 @@ class View:
         drawn = combattarget.render(host, surface, popup, state, app)
         self.rects, self.right = drawn.rects, drawn.right
         self.buttons, self.right_help = drawn.buttons, drawn.right_help
+        return self.rects
+
+    def _render_landing(self, surface, style, labels, popup, state, app):
+        """HD EXTENSION `landing_scene` (work order 388, `core/landinghd`):
+        the landing as a scene over the whole window; None when its
+        pictures are missing and the panel is drawn. Any click or the
+        popup's keys answer with the popup's one field, as the original's
+        landing ends on any input."""
+        words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
+                                       if k in DEFAULT_WORDS and v})
+        c = content(popup, state, words, app)
+        from core import landinghd
+        if not c["buttons"] or c["buttons"][0][1] is None:
+            # nothing would answer a click: the panel, as before, rather
+            # than a scene no click or key can end
+            landinghd.reset()
+            return None
+        with lang.verbatim():           # the title is the game's (200 C)
+            if not landinghd.render(surface, style, popup, state,
+                                    c.get("title")):
+                landinghd.reset()
+                return None
+        whole = surface.get_rect()
+        self._base = None
+        self.rects = [(whole, a) for _l, a in c["buttons"][:1]]
+        self.buttons = [a for _l, a in c["buttons"]]
+        self.right = list(zip([whole] * len(c["right"]), c["right"]))
+        self.right_help = c["right_help"]
         return self.rects
 
     def _render_invasion(self, surface, popup, state, backdrop, app,

@@ -7,6 +7,8 @@ sends them), the players' names from their records. HD adds only the
 labels of its panels and the hint under the message while the game waits
 for a click (HD EXTENSION `council_labels`).
 """
+import re
+
 import pygame
 
 from core import palette, textfit
@@ -90,7 +92,7 @@ def draw(surface, screen, council, state):
     if r is not None:
         screen.menu_rects = _message(surface, style, scale,
                                      r.inflate(-2 * pad, -2 * pad), council,
-                                     text_rgb, dim_rgb)
+                                     text_rgb, dim_rgb, who)
 
 
 def _nominee(surface, style, scale, r, council, k, who, text_rgb, dim_rgb):
@@ -151,12 +153,46 @@ def _members(surface, style, scale, r, council, who, text_rgb, dim_rgb):
         y += row_h
 
 
-def _message(surface, style, scale, r, council, text_rgb, dim_rgb):
+def _coloured(style, line, size, text_rgb, names):
+    """One message line, each leader's name in that player's map colour
+    (HD EXTENSION `council_name_colours`, Data, 11 Nov 2026); `names` is
+    {name: rgb}. A line without a name is the plain render."""
+    spans = []
+    if names:
+        pat = "|".join(re.escape(n) for n in
+                       sorted(names, key=len, reverse=True))
+        spans = [(m.start(), m.end(), names[m.group(0)])
+                 for m in re.finditer(r"(?<!\w)(?:%s)(?!\w)" % pat, line)]
+    if not spans:
+        return style.render_text(line, size, text_rgb)
+    parts, at = [], 0
+    for a, b, rgb in spans:
+        if a > at:
+            parts.append(style.render_text(line[at:a], size, text_rgb))
+        parts.append(style.render_text(line[a:b], size, rgb))
+        at = b
+    if at < len(line):
+        parts.append(style.render_text(line[at:], size, text_rgb))
+    out = pygame.Surface((sum(i.get_width() for i in parts),
+                          max(i.get_height() for i in parts)),
+                         pygame.SRCALPHA)
+    x = 0
+    for img in parts:
+        out.blit(img, (x, 0))
+        x += img.get_width()
+    return out
+
+
+def _message(surface, style, scale, r, council, text_rgb, dim_rgb,
+             who=None):
     """The message, then the list; returns [(rect, item index)]."""
     size = _size(scale, 1.1)
     y = r.y
-    for img in textfit.wrap_rendered(style, council["message"] or "", size,
-                                     r.w, text_rgb):
+    names = {n: owner_rgb(c) for n, _race, c in (who or {}).values()
+             if len(n) > 1}
+    for line in textfit.wrap_text(style, council["message"] or "", size,
+                                  r.w):
+        img = _coloured(style, line, size, text_rgb, names)
         if y + img.get_height() > r.bottom:
             break
         surface.blit(img, (r.centerx - img.get_width() // 2, y))

@@ -561,6 +561,24 @@ Any size, on transparency (the triangles about 330 x 283, the rules about
 800 x 133); each is scaled to its row, proportion kept. A missing one is
 left out: the list is ranked and grouped without it.
 
+The colony landing (the popup after a colony ship has landed) is a scene over
+the whole window: the ground the colony screen shows for that planet
+(`landscapes/colony/<climate>_<0-2>.png`), and one landing craft that comes
+down, throttles back, touches down and opens its landing pods. The craft is
+three pictures, all on transparency, all needed:
+
+```
+popups/landing_ship_body.png     the craft coming down, pods closed, without the flame
+popups/landing_ship_flame.png    the thrust, ending softly at its tip
+popups/landing_ship_landed.png   the craft on the ground, pods open
+```
+
+The body and the landed craft are centred on the same dome (about 700 px
+wide across the body, 1400 px across the open pods) and are drawn at one
+scale, so their domes must be the same width; the flame hangs from the
+body's lowest edge, its width the body's. Any size is scaled. Without any
+of the three, or without the planet's ground, the popup is the plain panel.
+
 The build list's picture box shows your grid picture behind the product:
 
 ```

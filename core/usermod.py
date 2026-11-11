@@ -137,7 +137,12 @@ SLOTS += ("assets/shared/turnpopup/dragon_bribe.png",
           "assets/shared/turnpopup/summary_divider_left.png",
           "assets/shared/turnpopup/summary_divider_right.png",
           # HD EXTENSION `build_grid_room`: the build list's picture box
-          "assets/shared/turnpopup/build_grid.png") + tuple(
+          "assets/shared/turnpopup/build_grid.png",
+          # HD EXTENSION `landing_scene` (work order 388): the landing
+          # craft's three pictures (`core/landinghd.SLOTS`)
+          "assets/shared/turnpopup/landing_ship_body.png",
+          "assets/shared/turnpopup/landing_ship_flame.png",
+          "assets/shared/turnpopup/landing_ship_landed.png") + tuple(
     f"{PLANET_PICTURE_DIR}{n}.png" for n in (
         "toxic", "radiated", "barren", "desert", "tundra",
         "ocean", "swamp", "arid", "terran", "gaia"))
