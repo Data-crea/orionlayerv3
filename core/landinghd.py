@@ -183,11 +183,23 @@ def _scaled(img, k):
 
 
 def _faded(img, alpha):
+    """A new picture of `img` with its own per-pixel alpha scaled by `alpha`,
+    built from the pixels: never `Surface.set_alpha` and never a `copy`.
+    On Data's real window (his video of 11 Nov 2026) a craft faded that way
+    showed as a black rectangle — its transparent pixels, which hold a dark
+    glow in their colour, were drawn — while the same picture at full alpha
+    was drawn right; no run here could reproduce it (dummy and wayland, any
+    destination), so the faded picture is made to be drawn exactly as the
+    unfaded one is: a plain per-pixel-alpha surface."""
     if alpha >= 1:
         return img
-    out = img.copy()
-    out.set_alpha(int(255 * max(0.0, alpha)))
-    return out
+    w, h = img.get_size()
+    rgba = np.empty((h, w, 4), np.uint8)
+    rgba[..., :3] = pygame.surfarray.array3d(img).transpose(1, 0, 2)
+    rgba[..., 3] = (pygame.surfarray.array_alpha(img).T * max(0.0, alpha)
+                    ).astype(np.uint8)
+    out = pygame.image.frombuffer(rgba.tobytes(), (w, h), "RGBA")
+    return out.convert_alpha() if pygame.display.get_surface() else out
 
 
 def draw_craft(surface, body, flame, landed, t, win):
