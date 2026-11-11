@@ -410,6 +410,9 @@ class Overlays:
         if box is None or box.get("kind") != "text" or sent is None or \
                 not app.connected:
             return
+        if sent[0] != (box["kind"], box["title"], box["text"],
+                       box["field_a"]):
+            return              # another box now: the click was for the first
         snap = getattr(app.client, "stats", {}).get("state", 0)
         if snap - sent[1] < turnpopup.RESEND_AFTER:
             return
@@ -442,7 +445,13 @@ class Overlays:
         if self.popup is None or self.popup["kind"] != "landing" or \
                 view.armed is None:
             return
-        self.answer_popup(view.armed, self.LANDING_RESEND)
+        action, key = view.armed
+        if key != turnpopup.state_key(self.popup):
+            # another landing (two colony ships in one turn): the click was
+            # for the first one (review of work order 389)
+            view.armed = None
+            return
+        self.answer_popup(action, self.LANDING_RESEND)
 
     def answer_popup(self, action, resend_after=None):
         """A popup's answer through its own field: activated, or an injected
@@ -460,7 +469,7 @@ class Overlays:
             return
         self.popup_view.sent = (key, snap)
         if self.popup["kind"] == "landing":
-            self.popup_view.armed = action
+            self.popup_view.armed = (action, key)
         how, field = action
         if how == "seek":
             # a colony message on another page of the Turn Summary: turn

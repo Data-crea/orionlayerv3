@@ -80,7 +80,7 @@ class View:
         self.rects = []            # [(rect, action)] of what can be clicked
         self.buttons = []          # the bottom row's actions, in order
         self.sent = None
-        self.armed = None          # the landing's answer, asked again (WO 389)
+        self.armed = None          # (action, state key) of the landing's answer, asked again (WO 389)
         #: `point(x, y)` -> an action for a click outside every rect, or
         #: None: the Space Dragon's star choice on the map (work order 319)
         self.point = None
