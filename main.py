@@ -239,15 +239,19 @@ class App:
         """Main loop."""
         self._guard = frameguard.FrameGuard.for_app()
         self._input_at = time.monotonic()
-        while self.running:
-            self._guard.frame(self)
-            self.clock.tick(self.frame_cap())
+        try:
+            while self.running:
+                self._guard.frame(self)
+                self.clock.tick(self.frame_cap())
+        finally:
+            usersettings.save_at_exit(self.user_settings)
 
         if self._debug_input is not None:
             self._debug_input.close()
         self.client.disconnect()
         pygame.quit()
         sys.exit()
+
     def frame_cap(self):
         """The loop's cap: the player's frame rate (decision 79,
         `core/framerate`), the monitor's rate asked again every two

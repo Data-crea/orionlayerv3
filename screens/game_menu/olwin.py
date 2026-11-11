@@ -235,12 +235,33 @@ def help_rect(screen, spec):
 
 
 # ── input ────────────────────────────────────────────────────────────
+def _write(screen):
+    """Write the settings after a click. A refused write (a read-only or
+    full config folder) is said in the log and the window stays up: it must
+    not reach the frame guard, which would suspend the whole screen. The
+    value stays in memory, and the next click, the window's close or the
+    program's end tries again."""
+    try:
+        gmorion.save(screen)
+    except (OSError, ValueError, TypeError) as err:
+        log.warning("game menu: settings not written (%s)", err)
+
+
 def handle_click(screen, x, y):
-    """Every click while the window is up lands here; nothing is sent."""
+    """Every click while the window is up lands here; nothing is sent.
+
+    EVERY CLICK WRITES THE FILE (work order 387, Data: "gehen nicht verloren
+    nach einem Neustart"): a setting used to be written only when the window
+    closed, so a window left open when the client was killed, crashed or
+    lost power took the changes with it. `gmorion.save` is idempotent (the
+    file is rewritten only if its text changes), so a click that changes
+    nothing costs one small read.
+    """
     geo = geometry(screen)
     w = screen.orionlayer
     if w.drop is not None:
         oldrop.handle_click(screen, geo, x, y)
+        _write(screen)
         return
     if geo["close"].collidepoint(x, y) or geo["apply"].collidepoint(x, y):
         close(screen)
@@ -252,8 +273,9 @@ def handle_click(screen, x, y):
     if w.tab == "messages":
         from . import olmsg
         olmsg.handle_click(screen, geo, x, y)
-        return
-    gmorion.handle_click(screen, x, y)
+    else:
+        gmorion.handle_click(screen, x, y)
+    _write(screen)
 
 
 def handle_key(screen, key):

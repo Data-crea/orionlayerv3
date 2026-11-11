@@ -252,3 +252,19 @@ def save(settings):
         handle.write(text)
     os.replace(tmp, settings.path)
     return True
+
+
+def save_at_exit(settings):
+    """Write the player's settings at the end of the run, normal or not
+    (work order 387). Most rows save at a click or when their window
+    closes; this is the net under them: the X on the program's own window
+    and a crash in the loop. Idempotent; a refused write is said, never
+    raised, because the program is already ending. An unreadable file that
+    nothing was set over is left where it is: `save` would move it aside,
+    and that is for the first real change."""
+    if settings.state == "corrupt" and not settings.data:
+        return
+    try:
+        save(settings)
+    except (OSError, ValueError, TypeError) as err:
+        log.warning("user settings: not saved at exit (%s)", err)
