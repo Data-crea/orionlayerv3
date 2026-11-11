@@ -57,10 +57,19 @@ SLOT = (0, 5, 1, 4, 2, 3)
 NOMINEE_X = (0.33, 0.67)
 FEET, TALL = 0.78, 0.30
 #: Where the head and shoulders, and the figure, are in an audience clip's
-#: frame, as fractions (x, y, w, h) — measured on the Alkari clip, the
-#: ambassadors stand on one pedestal in one room.
-HEAD = (0.365, 0.055, 0.313, 0.556)
-FIGURE = (0.33, 0.0, 0.34, 0.93)
+#: frame, as fractions (x, y, w, h). The ambassadors stand on one pedestal
+#: in one room, centred; the HEAD cut starts under the green light (it ends
+#: at 0.17 of the frame) and is as wide as it is tall, so the face fills a
+#: round screen. Seen on the twelve clips Data has (a contact sheet of the
+#: cuts, work order 385): every head inside it, none touching the edge.
+HEAD = (0.37, 0.15, 0.26, 0.46)
+FIGURE = (0.33, 0.155, 0.34, 0.775)
+#: The green light sits over the head (frame rows 0 to 0.17): its pixels
+#: are blacked at the top of a cut (`_clean`), nowhere else, so a figure's
+#: own green (an eye, a jewel) stays.
+#: How much the edge of a screen's cut is darkened (a round vignette): the
+#: room's ribs and arcs fall away into the screen's black.
+VIGNETTE = 0.45
 #: the figure's width over its height: the clip is 16:9.
 ASPECT = FIGURE[2] * 16 / 9 / FIGURE[3]
 DIM = (96, 96, 96)
@@ -83,6 +92,8 @@ def active():
 def race_of(state, player):
     """The player's race index (0..12) or None."""
     raws = getattr(state, "player_raw", None) or []
+    if not isinstance(player, int) or player < 0:
+        return None            # -1 is no player, not the last record
     try:
         race = int(player_struct.SPEC.parse(raws[player]).race)
     except (ValueError, IndexError, TypeError):
@@ -95,14 +106,24 @@ def _frame(race):
         img = None
         from screens.audience import auvideo
         folder = auvideo.clip_dir(race, "default")
-        try:
-            names = sorted(n for n in os.listdir(folder)
-                           if n.lower().endswith((".jpg", ".jpeg", ".png")))
-            img = pygame.image.load(os.path.join(folder, names[0]))
-        except (TypeError, OSError, IndexError, pygame.error):
-            img = None
+        if folder is not None:
+            try:
+                names = sorted(n for n in os.listdir(folder)
+                               if n.lower().endswith((".jpg", ".jpeg",
+                                                      ".png")))
+                # smoothscale refuses a palettised picture
+                img = pygame.image.load(
+                    os.path.join(folder, names[0])).convert_alpha()
+            except (OSError, IndexError, pygame.error):
+                img = None
         _frames[race] = img
     return _frames[race]
+
+
+def forget():
+    """Drop the cached frames and cuts (a changed mod, a new clip)."""
+    _frames.clear()
+    _made.clear()
 
 
 def _soft_ellipse(w, h):
@@ -118,11 +139,32 @@ def _hard_ellipse(w, h):
     return mask
 
 
+def _clean(pic, kind):
+    """Black the green light in the top of the cut and, for a screen,
+    darken the edge (`LIGHT`, `VIGNETTE`)."""
+    import numpy as np
+    px = pygame.surfarray.pixels3d(pic)
+    w, h = px.shape[0], px.shape[1]
+    # the light fills frame rows 0-0.17: the first 0.04 of a head cut (the figure cut starts under it)
+    top = px[:, :max(1, int(h * 0.08))]
+    r, g, b = (top[..., i].astype(int) for i in range(3))
+    top[(g > r * 1.6) & (g > b * 1.15) & (g > 140)] = 0
+    if kind == "head":
+        xs = (np.arange(w)[:, None] - w / 2) / (w / 2)
+        ys = (np.arange(h)[None, :] - h / 2) / (h / 2)
+        d = np.clip(np.hypot(xs, ys), 0, 1)
+        k = np.clip(1.15 - VIGNETTE * d * d, 0, 1)
+        px[...] = (px * k[..., None]).clip(0, 255).astype(px.dtype)
+    del px                    # unlocks the surface
+
+
 def leader(race, w, h, kind, dim=False):
     """The race's leader cut to a w x h ellipse (`kind` "head": a wall
     screen, hard edge; "figure": a nominee, soft edge), or None."""
     key = (race, w, h, kind, dim)
     if key not in _made:
+        if len(_made) > 64:       # a window dragged through many sizes
+            _made.clear()
         src = _frame(race)
         pic = None
         if src is not None and w > 0 and h > 0:
@@ -131,6 +173,7 @@ def leader(race, w, h, kind, dim=False):
             crop = src.subsurface((int(fx * sw), int(fy * sh),
                                    int(fw * sw), int(fh * sh)))
             pic = pygame.transform.smoothscale(crop, (w, h)).convert_alpha()
+            _clean(pic, kind)
             mask = _hard_ellipse(w, h) if kind == "head" \
                 else _soft_ellipse(w, h)
             pic.blit(mask, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)

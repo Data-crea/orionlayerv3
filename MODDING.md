@@ -45,6 +45,16 @@ with the older `files/` names keeps working; where both names fill one picture t
 new name wins (one line in the log says so). You never need to know
 OrionLayer's own folder tree: `NAMES.txt` gives every name.
 
+**The galactic council as a hall.** Put a picture of a council hall at
+`backgrounds/council.png` and the council is that hall instead of panels:
+the six round wall screens show the members' leaders (the first frame of
+each race's ambassador clip, see The ambassador's film), the member voting now
+lit and the others dimmed, the two nominees standing in front. The screens
+are expected where OrionLayer's own hall plan puts them (fractions of the
+picture, `screens/council/clhall.py`); a 16:9 picture with six round
+screens on that plan works at any size. Without the picture, or for a race
+with no film, the council keeps its panels.
+
 OrionLayer's own pictures are not in this repository either: they come
 as the **base pack** (`basepack.json` names every file), which
 `tools/setup.py` downloads and installs into its own folder
@@ -523,6 +533,33 @@ popups/dragon_bribe.png
 
 Any size; it is fitted whole, never stretched, into the panel's width and
 at most about half the window's height. Without it the popup is text only.
+
+The GNN popup (the news at turn change) shows your studio picture above its
+message, with its title "GNN" on the picture's ceiling monitor:
+
+```
+popups/gnn_studio.png
+```
+
+Fitted whole, never stretched, like the dragon's; the monitor's glass is
+where fractions 0.487-0.722 across and 0.013-0.236 down the picture lie, so
+leave that part dark and empty. Without it the popup is text only.
+
+The Turn Summary ranks its messages by importance (by what each one is) and
+shows your pictures beside them, by these names:
+
+```
+popups/summary_warning_red.png     a message that wants an answer
+popups/summary_warning_yellow.png  worth a look
+popups/summary_warning_green.png   good news
+popups/summary_colony_events.png   the colony group's header
+popups/summary_divider_left.png    a golden rule left of the buttons
+popups/summary_divider_right.png   the same, right
+```
+
+Any size, on transparency (the triangles about 330 x 283, the rules about
+800 x 133); each is scaled to its row, proportion kept. A missing one is
+left out: the list is ranked and grouped without it.
 
 The build list's picture box shows your grid picture behind the product:
 

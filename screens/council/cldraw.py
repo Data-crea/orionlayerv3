@@ -15,6 +15,7 @@ from core.hud import text as hudtext
 from core.structs import player as player_struct
 
 from . import clgeom as geom
+from . import clhall
 
 NEUTRAL = (200, 200, 200)
 #: The council's normal and highlight text: palette 150-155 (council.cpp:
@@ -71,16 +72,19 @@ def draw(surface, screen, council, state):
         for line, align in zip(council["lines"], ("left", "center", "right")):
             _line(surface, style, line, _size(scale), text_rgb, inner, align)
 
-    for k, name in enumerate((geom.NOMINEE_A, geom.NOMINEE_B)):
-        r = screen.box_screen_rect(name)
+    if clhall.active():
+        _hall(surface, style, scale, council, state, who, text_rgb, dim_rgb)
+    else:
+        for k, name in enumerate((geom.NOMINEE_A, geom.NOMINEE_B)):
+            r = screen.box_screen_rect(name)
+            if r is not None:
+                _nominee(surface, style, scale,
+                         r.inflate(-2 * pad, -2 * pad), council, k, who,
+                         text_rgb, dim_rgb)
+        r = screen.box_screen_rect(geom.MEMBERS)
         if r is not None:
-            _nominee(surface, style, scale, r.inflate(-2 * pad, -2 * pad),
-                     council, k, who, text_rgb, dim_rgb)
-
-    r = screen.box_screen_rect(geom.MEMBERS)
-    if r is not None:
-        _members(surface, style, scale, r.inflate(-2 * pad, -2 * pad),
-                 council, who, text_rgb, dim_rgb)
+            _members(surface, style, scale, r.inflate(-2 * pad, -2 * pad),
+                     council, who, text_rgb, dim_rgb)
 
     r = screen.box_screen_rect(geom.MESSAGE)
     if r is not None:
@@ -183,3 +187,75 @@ def _message(surface, style, scale, r, council, text_rgb, dim_rgb):
               dim_rgb, pygame.Rect(r.x, r.bottom - size * 2, r.w, size * 2),
               "center")
     return rects
+
+
+def _plate(surface, style, scale, rect, lines):
+    """A dark plate with centred lines [(text, size, rgb)] — the hall's
+    label, over a picture and so on its own ground."""
+    imgs = [style.render_text(t, s, c) for t, s, c in lines if t]
+    if not imgs:
+        return
+    pad = max(4, int(6 * scale))
+    w = min(rect.w, max(i.get_width() for i in imgs) + 2 * pad)
+    h = int(sum(i.get_height() * 1.1 for i in imgs)) + 2 * pad
+    box = pygame.Rect(0, 0, w, h)
+    box.midtop = rect.midtop
+    ground = pygame.Surface(box.size, pygame.SRCALPHA)
+    ground.fill((0, 0, 0, 170))
+    surface.blit(ground, box)
+    y = box.y + pad
+    for img in imgs:
+        if img.get_width() > w - 2 * pad:
+            img = pygame.transform.smoothscale(
+                img, (w - 2 * pad, img.get_height()))
+        surface.blit(img, (box.centerx - img.get_width() // 2, y))
+        y += int(img.get_height() * 1.1)
+
+
+def _hall(surface, style, scale, council, state, who, text_rgb, dim_rgb):
+    """HD EXTENSION `council_hall` (`clhall`): the leaders in the wall
+    screens, the nominees in front. The voting member's screen is lit and
+    outlined in its player's colour, the rest are dimmed (council.cpp:
+    182-190)."""
+    w, h = surface.get_size()
+    screens = clhall.member_rects(w, h)
+    stands = clhall.nominee_rects(w, h)
+    if screens is None or stands is None:
+        return
+    voting = council["state"] in ("vote", "abstain")
+    for i, m in enumerate(council["members"][:len(clhall.SLOT)]):
+        rect = screens[clhall.SLOT[i]]
+        name, race, colour = who.get(m["player"], (f"#{m['player']}", "",
+                                                   None))
+        lit = voting and council["voter"] == m["player"]
+        pic = clhall.leader(clhall.race_of(state, m["player"]), rect.w,
+                            rect.h, "head", dim=not lit)
+        if pic is not None:
+            surface.blit(pic, rect)
+        if lit:
+            pygame.draw.ellipse(surface, owner_rgb(colour), rect,
+                                max(2, int(4 * scale)))
+        _plate(surface, style, scale,
+               pygame.Rect(rect.x, rect.bottom + int(4 * scale), rect.w, 0),
+               [(name, _size(scale, 0.75), owner_rgb(colour)),
+                (f"{m['votes']}", _size(scale, 0.75), text_rgb)])
+    for k, rect in enumerate(stands):
+        player = council["nominees"][k]
+        name, race, colour = who.get(player, (f"#{player}", "", None))
+        pic = clhall.leader(clhall.race_of(state, player), rect.w, rect.h,
+                            "figure")
+        if pic is not None:
+            surface.blit(pic, rect)
+        if council["voter"] == player:
+            pygame.draw.ellipse(surface, owner_rgb(colour), rect,
+                                max(2, int(3 * scale)))
+        lines = [(name, _size(scale, 1.1), owner_rgb(colour)),
+                 (race, _size(scale, 0.8), owner_rgb(colour)),
+                 (f"{council['received'][k]} VOTES RECEIVED  ·  "
+                  f"{council['own_votes'][k]} OWN", _size(scale, 0.75),
+                  dim_rgb)]
+        if council["state"] == "elected" and council["vote_for"] == k:
+            lines.append(("ELECTED", _size(scale, 1.1), owner_rgb(colour)))
+        _plate(surface, style, scale,
+               pygame.Rect(rect.x, rect.bottom - int(110 * scale),
+                           rect.w, 0), lines)

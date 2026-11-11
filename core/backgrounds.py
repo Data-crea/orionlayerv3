@@ -157,6 +157,11 @@ def draw(surface, screen_name, first=None):
 
 def reset():
     """Forget everything (the smoke test, after changing roots)."""
+    try:
+        from screens.council import clhall
+        clhall.forget()          # its leaders come from the same roots
+    except ImportError:
+        pass
     _paths.clear()
     _sources.clear()
     _scaled.clear()

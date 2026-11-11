@@ -23,9 +23,11 @@ list (`Deactivate_Help_List_`, :102): HD shows none.
 """
 import logging
 
+import pygame
+
 from core.screen_base import ScreenBase
 
-from . import cldraw
+from . import cldraw, clhall
 
 log = logging.getLogger("council")
 
@@ -75,6 +77,34 @@ class CouncilScreen(ScreenBase):
         if box.name == "cl_message":
             return not (self._council or {}).get("message")
         return super().editor_dormant(box)
+
+    def render(self, surface):
+        """As the base, except that with the hall picture the nominees'
+        and the members' panels are not drawn: the hall is them
+        (`clhall`, HD EXTENSION `council_hall`)."""
+        if not self.draws_this_frame():
+            return
+        self._render_background(surface)
+        hall = clhall.active()
+        slim = None
+        try:
+            for box in self.boxes:
+                if hall and box.name in (cldraw.geom.NOMINEE_A,
+                                         cldraw.geom.NOMINEE_B,
+                                         cldraw.geom.MEMBERS):
+                    continue
+                if hall and box.name == cldraw.geom.MESSAGE and \
+                        box.screen_rect is not None:
+                    slim = (box, box.screen_rect)
+                    box.screen_rect = clhall.message_rect(
+                        pygame.Rect(box.screen_rect))
+                box.render(surface, self.ref_layout, self.style)
+            self.render_content(surface)
+        finally:
+            if slim is not None:
+                slim[0].screen_rect = slim[1]
+        self.render_shell(surface)
+        self.render_help(surface)
 
     def render_content(self, surface):
         if self._council is not None and self._state is not None:
