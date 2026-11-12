@@ -21,13 +21,56 @@ COL_HIGHLIGHT = _c("highlight",    (100, 210, 140))
 COL_KEYWORD  = _c("keyword",       (140, 185, 240))
 
 HEAD_FONT = 26
-BODY_FONT = 17
-LINE_GAP = 7
+BODY_FONT = 18
+LINE_GAP = 14
 PANEL_INSET = 22
-HEAD_GAP = 16
+HEAD_GAP = 28
+#: Space between the panel's own header and the trait's name.
+TOP_GAP = 22
 BULLET_INDENT = 18
 
 _TOKEN = re.compile(r"(\*[^*]+\*|~[^~]+~)")
+_SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-Z*~])")
+
+#: A paragraph is closed once it is this long (characters, markup counted).
+PARA_MIN = 110
+
+
+def _blocks(text):
+    """The description as paragraphs, "" standing for a gap.
+
+    INVENTION `description_paragraphs`: the game's trait texts are one
+    unbroken paragraph each, which reads as a wall of words at the larger
+    sizes. A text with no line break of its own is cut at sentence ends
+    into paragraphs of at least PARA_MIN characters; a text the mod
+    already broke up (a newline) is left as it is.
+    """
+    chunks = text.split("\n")
+    if len(chunks) > 1:
+        return chunks
+    out = []
+    for chunk in chunks:
+        stripped = chunk.strip()
+        if not stripped or stripped.startswith("- "):
+            out.append(chunk)
+            continue
+        group = ""
+        parts = []
+        for sentence in _SENTENCE_END.split(stripped):
+            group = f"{group} {sentence}".strip()
+            if len(group) >= PARA_MIN:
+                parts.append(group)
+                group = ""
+        if group:
+            if parts and len(group) < PARA_MIN // 2:
+                parts[-1] = f"{parts[-1]} {group}"
+            else:
+                parts.append(group)
+        for n, part in enumerate(parts):
+            if n:
+                out.append("")
+            out.append(part)
+    return out
 
 
 def _words(text):
@@ -71,10 +114,10 @@ def render_description_panel(surface, L, style, entry, rect,
     rx, ry, rw, rh = rect
     ix = rx + PANEL_INSET
     iw = rw - 2 * PANEL_INSET
-    body_font = style.get_prop_font(L.font_size(int(BODY_FONT * fs)))
+    body_font = style.get_font(L.font_size(int(BODY_FONT * fs)))
 
     if not entry:
-        hx, hy = L.pos(ix, ry)
+        hx, hy = L.pos(ix, ry + TOP_GAP)
         hint = body_font.render("Select a trait to see its details.",
                                 True, COL_HINT)
         surface.blit(hint, (hx, hy))
@@ -85,7 +128,7 @@ def render_description_panel(surface, L, style, entry, rect,
     prev_clip = surface.get_clip()
     surface.set_clip(pygame.Rect(clip_x, clip_y, clip_w, clip_h))
 
-    y = ry - scroll
+    y = ry + TOP_GAP - scroll
     head_font = style.get_font(L.font_size(int(HEAD_FONT * fs)))
     hx, hy = L.pos(ix, y)
     head = head_font.render(entry.get("name", "").upper(), True,
@@ -97,7 +140,7 @@ def render_description_panel(surface, L, style, entry, rect,
     space_w = body_font.size(" ")[0]
     line_h = (BODY_FONT + LINE_GAP) * fs
 
-    for para in entry.get("description", "").split("\n"):
+    for para in _blocks(entry.get("description", "")):
         if not para.strip():
             y += line_h * 0.6
             continue
@@ -133,12 +176,12 @@ def description_height(entry, L, style, rect, fs=1.0):
         return 0
     rx, ry, rw, rh = rect
     iw = rw - 2 * PANEL_INSET
-    body_font = style.get_prop_font(L.font_size(int(BODY_FONT * fs)))
+    body_font = style.get_font(L.font_size(int(BODY_FONT * fs)))
     max_w = int(iw * L.scale)
     space_w = body_font.size(" ")[0]
     line_h = (BODY_FONT + LINE_GAP) * fs
-    h = HEAD_FONT * fs + HEAD_GAP
-    for para in entry.get("description", "").split("\n"):
+    h = TOP_GAP + HEAD_FONT * fs + HEAD_GAP
+    for para in _blocks(entry.get("description", "")):
         if not para.strip():
             h += line_h * 0.6
             continue

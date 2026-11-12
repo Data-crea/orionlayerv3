@@ -17,6 +17,7 @@ from core.screen_base import ScreenBase
 from screens.custom_race.renderer import (
     render_race_picks_panel, render_specials_panel,
     picks_hit_test, specials_hit_test, specials_content_height, _c,
+    fill_factor,
 )
 from screens.custom_race.description import (
     render_description_panel, description_height,
@@ -343,6 +344,13 @@ class CustomRaceScreen(ScreenBase):
                                    if self.box_rect(box_name) else fs)
             self._panel_outer = getattr(self, "_panel_outer", {})
             self._panel_outer[key] = rect
+        # the two lists grow into their panels' spare height, together
+        fill = fill_factor(
+            self._categories, self._specials, self._panels["picks"][3],
+            self._panels["specials"][3], self._panel_fs["picks"],
+            self._panel_fs["specials"])
+        for key in ("picks", "specials"):
+            self._panel_fs[key] *= fill
 
         # Panel skins are drawn by the box itself: inner_panel is the
         # NineSlice art, thin_border the rounded outline. Both live in

@@ -22,19 +22,9 @@ TARGET_FPS = 60
 # --- orion2re engine version ---
 # Shown on the main menu, bottom right, exactly like the original.
 #
-# Maintained BY HAND, because the Extension API does not report it:
-# HELLO_REPLY carries only PROTO_VERSION (the wire protocol), and the
-# state snapshot has no version field. Sending it would mean patching
-# orion2re, which we deliberately do not do — see
-# dev:doc/ext_api_dokumentation_v3.md, "What the snapshot deliberately
-# omits".
-#
-# Source of truth, in orion2re:
-#   src/version.h:10        ENGINE_VERSION[] = "1.60.0"
-#   src/game/consts.h:43    GAME_VERSION_LABEL[] = "Version 1.60.0"
-#
-# A hand-copied number in a foreign tree drifts silently, so it has a
-# check instead of a reminder:  python tools/version_check.py
+# The engine's own number, kept by hand because the Extension API does not
+# report it; `python tools/version_check.py` compares it with orion2re's
+# `src/version.h` and `src/game/consts.h`.
 ORION2RE_VERSION = "2.0.0"
 
 

@@ -37,20 +37,22 @@ COL_BLOCKED    = _c("blocked",         (70, 75, 90))
 
 
 # Reference-space metrics
-CAT_FONT      = 14
-OPT_FONT      = 15
-CAT_HEADER_H  = 21
-OPT_ROW_H     = 24
+CAT_FONT      = 16
+OPT_FONT      = 19
+CAT_HEADER_H  = 23
+OPT_ROW_H     = 28
 BOX_PAD_Y     = 7
 BOX_PAD_X     = 9
 CAT_GAP       = 11
 SUB_GAP       = 16
 PANEL_INSET   = 22
-ICON_SIZE     = 16
+ICON_SIZE     = 18
 LABEL_GAP     = 9
-SPEC_ROW_H    = 27
+SPEC_ROW_H    = 32
 SPEC_GAP_Y    = 2
 SCROLLBAR_W   = 7
+#: The most the two lists grow to fill their panels (see `fill_factor`).
+FILL_CAP      = 1.3
 
 
 def icon(icons, cache, name, size):
@@ -104,6 +106,35 @@ def picks_layout(categories, rect, fs=1.0):
             out.append(entry)
             cy += hdr_h + box_h + gap
     return out
+
+
+def picks_content_height(categories, fs=1.0):
+    """Height of the taller Race Picks column, reference coords."""
+    mid = (len(categories) + 1) // 2
+    tall = 0.0
+    for col in (categories[:mid], categories[mid:]):
+        h = sum(CAT_HEADER_H * fs + 2 * BOX_PAD_Y * fs
+                + len(c.get("options", [])) * OPT_ROW_H * fs
+                for c in col) + max(0, len(col) - 1) * CAT_GAP * fs
+        tall = max(tall, h)
+    return tall
+
+
+def fill_factor(categories, specials, picks_h, specials_h,
+                picks_fs=1.0, specials_fs=1.0):
+    """One factor, 1.0 to FILL_CAP, that grows both lists' rows, icons and
+    fonts together until the fuller one fills its panel. The row pitch is
+    fixed, so a text-size setting only enlarged the glyphs inside the same
+    rows and left a third of each panel empty (work order 391); one shared
+    factor keeps the two lists' type the same size. Never below 1.0: a
+    panel too short for the lists stays as it was (the specials scroll)."""
+    fits = []
+    for need, have in ((picks_content_height(categories, picks_fs), picks_h),
+                       (specials_content_height(specials, specials_fs),
+                        specials_h)):
+        if need > 0 and have > 0:
+            fits.append(have / need)
+    return max(1.0, min([FILL_CAP] + fits))
 
 
 def render_race_picks_panel(surface, L, style, categories, trait_state,
