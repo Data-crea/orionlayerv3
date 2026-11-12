@@ -440,9 +440,12 @@ class GalaxyMapScreen(ScreenBase):
         """Re-anchoring info for ship icons, only when decoupled."""
         if not self._viewctl.active or self._state is None:
             return None
-        return ship_icons.IconAnchor(self._state, self._stars,
-                                     self._ships, self._game_zoom(),
-                                     self._players)
+        anchor = ship_icons.IconAnchor(self._state, self._stars,
+                                       self._ships, self._game_zoom(),
+                                       self._players)
+        # the icons' size setting, for `spacestack`'s boxes (WO 391)
+        anchor.cfg = self._data.get("ship_icons") or {}
+        return anchor
 
     @property
     def _omniscient(self):

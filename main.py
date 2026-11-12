@@ -8,7 +8,7 @@ from core.config import (load_settings, TARGET_FPS, SCREENS_DIR,  # noqa: F401
                          build_line, display_line, environment_line)
 from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import framerate, textsize, wheelroute
-from core import lastword
+from core import lastword, fsurface
 from core import hdkeys
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
@@ -798,7 +798,7 @@ class App:
             w, h, label = self._resolutions[self._res_index]
             self.win_w = w
             self.win_h = h
-            self.surface = pygame.Surface((w, h))
+            self.surface = fsurface.content_surface(w, h)   # no alpha (390)
             # Offset for centering content on native screen
             self._fs_offset = ((native_w - w) // 2, (native_h - h) // 2)
             mouse_input.set_offset(self._fs_offset)

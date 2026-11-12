@@ -115,13 +115,15 @@ def anchor_point(icon, ship, colour, ctx, anchor):
     """HD (right, top) of the label: the icon corner plus the owner's
     header, both from the HD viewport."""
     from core import mapcoords as mc
+    from screens.galaxy_map import ships as ship_icons
     view = ctx.view
     if anchor is None:
         left = view.off_x + (icon.x - mc.MAP_LEFT) * view.scale
         top = view.off_y + (icon.y - mc.MAP_TOP) * view.scale
     else:
         cw, ch = zt.ship_icon_header_dimension(ctx.zoom)
-        hx, hy = view.to_screen(ship.x, ship.y)
+        hx, hy = ship_icons.space_point(ship, ctx, anchor.stars)
+        hy += ship_icons._stack_dy(icon, ship, ctx, anchor)
         left, top = hx - (cw >> 1) * ctx.px, hy - (ch >> 1) * ctx.px
     w, h = zt.ship_icon_header_dimension_for_colour(colour, 3 - ctx.zoom)
     return left + w * ctx.px, top + h * ctx.px

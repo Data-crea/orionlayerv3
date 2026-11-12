@@ -339,7 +339,13 @@ def _draw_fleet(screen, surface, r, model, hits):
         # Since work order 223 the shared field, 'on' where chosen
         # (proposal C): the original's blue cell, in the one look.
         chosen = model["selected"][i]
-        hud.field(surface, cell, screen.layout.scale, on=chosen)
+        # DEVIATION `foreign_cell_fill` (Data, 12 November 2026): a stack of
+        # another empire cannot be selected, so the original's black "not
+        # selected" cell told nothing and looked like a different kind of
+        # cell beside an own fleet's; it takes the selected fill
+        me_owner = model["owners"][0] == me
+        hud.field(surface, cell, screen.layout.scale,
+                  on=chosen or not me_owner)
         cells.append(cell)
         if model["owners"][0] == me:
             # an own stack's cell, offered or not (`boxpaint.own_cell_at`),

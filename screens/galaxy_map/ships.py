@@ -71,6 +71,7 @@ import pygame
 from core import palette
 from core import zoomtables as zt
 from core.structs import ship as ship_struct
+from screens.galaxy_map.spacepoint import space_point
 
 log = logging.getLogger("galaxy_map.ships")
 
@@ -569,10 +570,14 @@ def icon_screen_pos(icon, ctx, anchor, box_w, box_h, owner=None,
         # whatever sprite is drawn there; the drawn pixels start at the
         # monster's own inset (`layout.json` `_markings`).
         hw, hh = zt.ship_icon_header_dimension(ctx.zoom)
-        cx, cy = view.to_screen(ship.x, ship.y)
+        cx, cy = space_point(ship, ctx, anchor.stars)
         return (cx - (hw >> 1) * ctx.px + dx, cy - (hh >> 1) * ctx.px + dy)
     if _in_space(icon, ship):
-        return _centred(view.to_screen(ship.x, ship.y), box_w, box_h)
+        left, top = _centred(space_point(ship, ctx, anchor.stars),
+                             box_w, box_h)
+        from screens.galaxy_map import spacestack
+        return left, top + spacestack.shift(icon, ctx, anchor, top, left,
+                                            box_w, box_h)
 
     pos = _orbit_slot_pos(icon, ctx, anchor, owner)
     if pos is None:
@@ -587,6 +592,19 @@ def _in_space(icon, ship):
         return False
     return (getattr(ship, "status", None) == ship_struct.STATUS_IN_TRANSIT
             or getattr(icon, "stack_slot", -1) == 5)
+
+
+def _stack_dy(icon, ship, ctx, anchor):
+    """The downward shift `spacestack` gives the icon (DEVIATION
+    `space_stack`), for the points that follow it: the line, the label."""
+    from screens.galaxy_map import spacestack
+    owner = int(ship.owner)
+    if owner >= 8:
+        return 0.0
+    w, h = spacestack.size(owner, ctx, getattr(anchor, "cfg", None))
+    cx, cy = space_point(ship, ctx, anchor.stars)
+    return spacestack.shift(icon, ctx, anchor, cy - h / 2.0,
+                            cx - w / 2.0, w, h)
 
 
 def sprite_header_width(owner, zoom, players=None):
@@ -714,7 +732,8 @@ def anchored_point(icon, nx, ny, ctx, anchor):
     _, _, ship, game_zoom = anchor.resolve(icon)
     if _in_space(icon, ship):
         cw, ch = zt.ship_icon_header_dimension(game_zoom)
-        hx, hy = view.to_screen(ship.x, ship.y)
+        hx, hy = space_point(ship, ctx, anchor.stars)
+        hy += _stack_dy(icon, ship, ctx, anchor)
         return (hx + (nx - icon.x - (cw >> 1)) * ctx.px,
                 hy + (ny - icon.y - (ch >> 1)) * ctx.px)
     pos = _orbit_slot_pos(icon, ctx, anchor)
