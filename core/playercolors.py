@@ -22,8 +22,17 @@ import logging
 log = logging.getLogger("playercolors")
 
 ORIGINAL = "original"
+#: The presets made for colour-blind players: choosing one also switches the
+#: colour-blind mode on (the galaxy map's owner marks, `ownermark`; Data,
+#: 13 Nov 2026 — tied to the palette, no switch of its own).
+COLOUR_BLIND = ("okabe_ito",)
 ORDER = ("red", "yellow", "green", "silver", "blue", "brown", "purple",
          "orange")
+
+
+def colour_blind(preset):
+    """True when `preset` is one made for colour-blind players."""
+    return preset in COLOUR_BLIND
 
 
 def _section(colors):

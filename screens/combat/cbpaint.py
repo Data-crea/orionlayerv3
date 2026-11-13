@@ -209,20 +209,15 @@ def lay(rgb, colour):
 
 def full(rgb, owner, liv, keep=None):
     """Full (decision 82 as 219 left it): the grey's `amount` towards the
-    owner's colour by the color blend. The core variant moves the lightness
-    by its own over the owner's; Strong at full strength is 219's colour
-    byte for byte."""
-    lum = _lum(rgb)
-    core = livery.core_rgb(owner, liv.core)
-    if liv.core != "strong":
-        lum = remap(lum, REF * _lum1(core) / max(_lum1(owner), 1e-3))
+    owner's colour by the color blend; at full strength 219's colour byte
+    for byte."""
     w = _kept(amount(rgb) * liv.strength if liv.strength != 1 else
               amount(rgb), keep)[..., None]
-    return rgb * (1 - w) + at_lum(lum, core) * w
+    return rgb * (1 - w) + at_lum(_lum(rgb), owner) * w
 
 
-def zoned(rgb, core, second, zone1, zone2, strength, keep=None):
-    """The livery's zones: the grey under zone 1 takes `core`, under zone 2
+def zoned(rgb, owner, second, zone1, zone2, strength, keep=None):
+    """The livery's zones: the grey under zone 1 takes `owner`, under zone 2
     `second` (if any), at `strength`; the rest stays as painted, every
     coloured pixel too (`weights`), the engine zone `keep`, and bright
     glints fade (`ZONE_GLINT`)."""
@@ -231,7 +226,7 @@ def zoned(rgb, core, second, zone1, zone2, strength, keep=None):
                                        (ZONE_GLINT[1] - ZONE_GLINT[0]), 0, 1)
                 * strength, keep)
     w = (zone1 * sel)[..., None]
-    out = rgb * (1 - w) + lay(rgb, core) * w
+    out = rgb * (1 - w) + lay(rgb, owner) * w
     if second is not None and zone2 is not None:
         w = (zone2 * sel)[..., None]
         out = out * (1 - w) + lay(rgb, second) * w
@@ -269,16 +264,15 @@ def livery_recoloured(art, surf, picture, frame, colour, liv):
     from . import cbpulse
     keep = cbpulse.mask(art, "cmbtshp", name(picture, frame)[:-4],
                         int(picture), surf.get_size())
-    if liv.pattern == "full" and liv.core == "strong" and \
-            liv.strength == 1:
+    if liv.pattern == "full" and liv.strength == 1:
         return recoloured(surf, owner, keep)
     rgb = pygame.surfarray.array3d(surf).astype(float) / 255
     z1, z2 = masks(art, picture, frame, liv.pattern, surf.get_size())
     if z1 is None:
         out = full(rgb, owner, liv, keep)
     else:
-        out = zoned(rgb, livery.core_rgb(owner, liv.core),
-                    liv.second_for(colour), z1, z2, liv.strength, keep)
+        out = zoned(rgb, owner, liv.second_for(colour), z1, z2,
+                    liv.strength, keep)
     res = surf.copy()
     pygame.surfarray.pixels3d(res)[:] = np.clip(out * 255 + 0.5, 0,
                                                 255).astype("uint8")

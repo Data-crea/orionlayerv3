@@ -580,12 +580,21 @@ def glow_frame(u, i, glow_clock):
     return (glow_clock // 2) % 4
 
 
+def unit_colour(colours, u):
+    """What `CombatArt.ship` takes as `colour`: the builder's colour, or for
+    a monster's or an Antaran's picture its own player index, whose
+    MONSTER.LBX entry + 5 is the ramp (`CombatArt.monster_ramp`)."""
+    if from_monster_file(u):
+        return int(u["owner"])
+    owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
+    return colours.get(owner, 0)
+
+
 def unit_picture(art, colours, u, glow=0):
     """A unit's picture: its builder's colour (`previous_owner`), a
     monster's or an Antaran's own (`monster_file`), at glow frame `glow`."""
-    owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
-    return art.ship(colours.get(owner, 0), u["picture_num"], u["facing_dir"],
-                    glow, monster=from_monster_file(u))
+    return art.ship(unit_colour(colours, u), u["picture_num"],
+                    u["facing_dir"], glow, monster=from_monster_file(u))
 
 
 def draw_cursor(surface, cam, art, unit, glow_clock, cache):

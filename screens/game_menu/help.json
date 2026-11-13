@@ -582,11 +582,6 @@
       "orionlayer_band": "map_ships"
     },
     {
-      "help_id": "orionlayer.map_colours",
-      "node": "orionlayer",
-      "orionlayer_band": "map_colours"
-    },
-    {
       "help_id": "orionlayer.map_black",
       "node": "orionlayer",
       "orionlayer_band": "map_black"
@@ -665,16 +660,6 @@
       "help_id": "livery.pattern",
       "node": "livery",
       "livery_part": "pattern_label"
-    },
-    {
-      "help_id": "livery.core",
-      "node": "livery",
-      "livery_part": "core"
-    },
-    {
-      "help_id": "livery.core",
-      "node": "livery",
-      "livery_part": "core_label"
     },
     {
       "help_id": "livery.second",

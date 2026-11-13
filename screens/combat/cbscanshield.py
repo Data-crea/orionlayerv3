@@ -62,9 +62,7 @@ class ShieldPictures:
 
     def _build(self, u, size, painted, upright):
         art, status = self.art, self.status
-        owner = u["previous_owner"] if u["previous_owner"] <= 7 \
-            else u["owner"]
-        colour = self.colours.get(owner, 0)
+        colour = cbdraw.unit_colour(self.colours, u)
         monster = cbdraw.from_monster_file(u)
         masks = status._masks(art)
         if masks is None:

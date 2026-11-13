@@ -68,9 +68,10 @@ import math
 
 import pygame
 
-from core import palette
+from core import palette, playercolors
 from core import zoomtables as zt
 from core.structs import ship as ship_struct
+from screens.galaxy_map import ownermark
 from screens.galaxy_map.spacepoint import space_point
 
 log = logging.getLogger("galaxy_map.ships")
@@ -810,6 +811,8 @@ def render(surface, ctx, icons, players, cache, tints,
     if not icons:
         return
     owners = resolve_owners(icons, ships or [], nodes)
+    # HD EXTENSION `owner_marks`
+    marks = playercolors.colour_blind(palette.active_preset())
 
     # Back to front, exactly as MAINSCR::Draw_Ship_Icons_ does
     # (`for i = _ship_icon_count - 1; i >= 0; --i`). The order is not
@@ -835,6 +838,9 @@ def render(surface, ctx, icons, players, cache, tints,
                                  me, settings, box_w, box_h)
             if pic is not None:
                 _blit_haloed(surface, pic, cx, cy)
+                if marks:
+                    ownermark.draw(surface, left, top, box_w, box_h,
+                                   _player_color(players, owner))
                 continue
 
         key = _resolve_sprite(
@@ -859,6 +865,8 @@ def render(surface, ctx, icons, players, cache, tints,
                 sprite = tints.get(sprite, key, color_idx)
 
         _blit_haloed(surface, sprite, cx, cy)
+        if marks and kind == PLAYER_KIND:
+            ownermark.draw(surface, left, top, box_w, box_h, color_idx)
 
 
 #: Haloed copies made so far, keyed by the sprite they came from (held, so

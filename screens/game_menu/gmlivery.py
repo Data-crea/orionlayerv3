@@ -12,7 +12,7 @@ IN IT: the preview — a painted ship in the player's own colour, large, the
 hull type and look stepped through; under it the same livery on all eight
 owners' colours, small, the second colour on the player's own only
 (decision 8) — and the choices: the pattern, stepped through one by one
-(decision 3); the core variant (decision 4); the second colour, any colour
+(decision 3); the second colour, any colour
 or none (decision 5), not available under Full; the strength (decision 9);
 RESET to the defaults.
 
@@ -70,7 +70,7 @@ PREVIEW_DETAIL, ROW_DETAIL = 8, 8
 #: height (wide screens), and of its height.
 WIDTH, WIDTH_BY_HEIGHT, HEIGHT = 0.70, 1.30, 0.80
 #: The right column's rows, top to bottom (`geometry`).
-ROWS = ("pattern_label", "pattern", "core_label", "core", "second_label",
+ROWS = ("pattern_label", "pattern", "second_label",
         "hue", "sat", "val", "strength", "note")
 BARS = ("hue", "sat", "val", "strength")
 
@@ -141,8 +141,8 @@ def close(screen):
 
 def _choose(screen, **change):
     w = screen.livery
-    now = {"pattern": w.liv.pattern, "core": w.liv.core,
-           "second": w.liv.second, "strength": w.liv.strength}
+    now = {"pattern": w.liv.pattern, "second": w.liv.second,
+           "strength": w.liv.strength}
     now.update(change)
     w.liv = livery.Livery(own=w.own, **now)
     settings = gmorion._settings(screen)
@@ -153,7 +153,7 @@ def _choose(screen, **change):
 def reset(screen):
     w = screen.livery
     w.hsv = (0.0, 1.0, 1.0)
-    _choose(screen, pattern=livery.DEFAULT_PATTERN, core=livery.DEFAULT_CORE,
+    _choose(screen, pattern=livery.DEFAULT_PATTERN,
             second=livery.DEFAULT_SECOND, strength=livery.DEFAULT_STRENGTH)
     if w.liv.pattern not in w.patterns:
         _choose(screen, pattern="full")
@@ -183,7 +183,7 @@ def geometry(screen):
     out["back"] = pygame.Rect(bottom.right - bw, bottom.y, bw, row)
     out["reset"] = pygame.Rect(out["back"].x - gap * 2 - bw, bottom.y, bw,
                                row)
-    owners_h = int(inner.h * 0.14)
+    owners_h = int(inner.h * 0.17)
     out["owners"] = pygame.Rect(inner.x, bottom.y - gap * 2 - owners_h,
                                 inner.w, owners_h)
     top = out["title"].bottom + gap
@@ -207,12 +207,6 @@ def geometry(screen):
         r = out[name]
         out[name + "_prev"] = pygame.Rect(r.x, r.y, r.h, r.h)
         out[name + "_next"] = pygame.Rect(r.right - r.h, r.y, r.h, r.h)
-    core = out["core"]
-    n = len(livery.CORES)
-    cw = (core.w - (n - 1) * gap) // n
-    for i, name in enumerate(livery.CORES):
-        out["core_" + name] = pygame.Rect(core.x + i * (cw + gap), core.y,
-                                          cw, core.h)
     lab = out["second_label"]
     out["second_none"] = pygame.Rect(lab.right - bw, lab.y, bw, lab.h)
     out["second_swatch"] = pygame.Rect(out["second_none"].x - gap * 2 -
@@ -358,6 +352,7 @@ def render(screen, surface):
     # the eight owners, small; the second colour on the player's own only
     hud.panel(surface, geo["owners"], scale, dense=True)
     cells = _owner_cells(geo["owners"])
+    names = owner_names(screen)
     for colour, cell in enumerate(cells):
         shown = _shown(w, ("row", liv.key(), w.picture, colour, cell.size),
                        lambda c=colour, r=cell: _scaled(
@@ -368,17 +363,18 @@ def render(screen, surface):
             pygame.draw.line(surface, tuple(COL_LABEL[:3]),
                              (cell.x, cell.bottom), (cell.right, cell.bottom),
                              max(1, int(2 * scale)))
+        # who carries the colour: the game's player (his race), else nothing
+        who = names.get(colour)
+        if who:
+            _text(screen, surface, who,
+                  pygame.Rect(cell.x, cell.bottom + 2, cell.w,
+                              max(10, int(small * 1.4))), small,
+                  COL_LABEL if colour == w.own else COL_STATE, "centre")
     # the choices
     _text(screen, surface, _say(screen, "pattern", "Pattern"),
           geo["pattern_label"], size, COL_LABEL)
     _stepper(screen, surface, geo, "pattern",
              _say(screen, "pattern_" + liv.pattern), size)
-    _text(screen, surface, _say(screen, "core", "Core colour"),
-          geo["core_label"], size, COL_LABEL)
-    for name in livery.CORES:
-        _button(screen, surface, geo["core_" + name],
-                _say(screen, "core_" + name), small,
-                "active" if liv.core == name else None)
     _render_second(screen, surface, geo, size, small)
     _text(screen, surface, _say(screen, "strength", "Strength"),
           geo["strength_label"], size, COL_LABEL)
@@ -393,8 +389,32 @@ def render(screen, surface):
 def _owner_cells(area):
     inner = area.inflate(-area.h // 8, -area.h // 8)
     cw = inner.w / 8
+    pic_h = int(inner.h * NAME_STRIP)       # the rest is the names' strip
     return [pygame.Rect(int(inner.x + i * cw), inner.y, int(cw) - 2,
-                        inner.h) for i in range(8)]
+                        pic_h) for i in range(8)]
+
+
+#: The share of an owner cell's height the ship takes; under it the name.
+NAME_STRIP = 0.76
+
+
+def owner_names(screen):
+    """{colour: the race name of the game's player who has it}, from the
+    player records on the wire; {} without a game (the window opened from
+    the main menu), so nothing is made up. Eliminated players stay: their
+    colour is still theirs."""
+    state = getattr(screen, "state", None)
+    out = {}
+    try:
+        from core.structs import player as player_struct
+        raws = getattr(state, "player_raw", None) or []
+        count = int(getattr(state, "num_players", 0) or 0) or len(raws)
+        for raw in raws[:count]:
+            p = player_struct.parse(raw)
+            out.setdefault(int(p.color), str(p.race_name).strip())
+    except Exception:          # no records on the wire: no names
+        return {}
+    return out
 
 
 def _scaled(art, liv, colour, picture, rect, ref=None):
@@ -460,7 +480,7 @@ def _render_strength(screen, surface, geo):
     w = screen.livery
     bar = geo["strength_bar"]
     lo, hi = livery.STRENGTH_RANGE
-    core = livery.core_rgb(_owner_rgb(w.own), w.liv.core)
+    core = _owner_rgb(w.own)
     for i in range(bar.w):
         f = lo + (hi - lo) * i / max(1, bar.w - 1)
         c = tuple(int(118 + (k - 118) * f) for k in core)
@@ -546,9 +566,6 @@ def handle_click(screen, x, y):
         _choose(screen, pattern=_step(
             w.patterns, w.liv.pattern,
             -1 if geo["pattern_prev"].collidepoint(x, y) else 1))
-    elif any(geo["core_" + n].collidepoint(x, y) for n in livery.CORES):
-        _choose(screen, core=next(n for n in livery.CORES
-                                  if geo["core_" + n].collidepoint(x, y)))
     elif geo["second_none"].collidepoint(x, y):
         if w.liv.pattern != "full":
             _choose(screen, second=None)

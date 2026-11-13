@@ -49,8 +49,8 @@ owner's (as the Fleets screen draws a captured ship, flt1.cpp:561):
    livery window's preview): the Avenger as the battle draws it for every
    owner (MONSTER.LBX 25); the builder's own painted file as painted; the
    colour-free painted picture in the owner's colour — on the map in the
-   owner's colour at FULL strength, the Full pattern, the livery's core
-   kept (`map_livery`, HD EXTENSION `strongest_ship_icon`: the livery's
+   owner's colour at FULL strength, the Full pattern, the colour as it is
+   (`map_livery`, HD EXTENSION `strongest_ship_icon`: the livery's
    strength and zones are a battle's look, at 20 px they leave every owner
    the metal's grey — owner 4 measured (96, 101, 103) beside the player's
    (104, 94, 89) under strength 0.33); the stored drawing of the builder's
@@ -82,12 +82,6 @@ log = logging.getLogger("galaxy_map.shippics")
 
 #: The user setting and its values (`core.usersettings.DEFAULTS`).
 SETTING = "map_ship_pictures"
-#: HD EXTENSION `map_ship_colours` (work order 358, Data: the map's ships
-#: coloured as the Fleets screen draws them): "vivid" (the default) draws a
-#: picture in the player's livery as `core.shippicture` does, "muted" in
-#: `map_livery`'s full strength over the plating, darker; see
-#: `ShipPictures.icon`.
-COLOUR_SETTING = "map_ship_colours"
 STEPS = ("on", "off")
 #: The map's own picture slot, a tree path the mod folder's `files/` and the
 #: base pack fill (`core.usermod.SLOTS`).
@@ -143,15 +137,18 @@ KEEP_PICTURES = 64
 KEEP_FITTED = 256
 
 
-def map_livery(liv, own=None):
-    """The livery a map picture is coloured in: the owner's colour at full
-    strength over the whole plating (Full), the livery's core kept — the
+def map_livery():
+    """The livery every map picture is coloured in: the owner's colour at
+    full strength over the whole plating (Full), the colour as it is — the
     battle's strength and zones make every owner the metal's grey at map
-    size (HD EXTENSION `strongest_ship_icon`)."""
+    size (HD EXTENSION `strongest_ship_icon`). Always, for every owner and
+    whatever the player's own livery: since 13 Nov 2026 (Data) the map no
+    longer follows it, so a dim strength or a muted tone cannot blur the
+    owners (WO 358's "vivid"/"muted" switch is gone). The nearest two
+    owners are still close under Okabe-Ito (colours 4 and 6, 8 apart of 255
+    on a battleship), which is the palette's, not the livery's."""
     from core import livery
-    liv = liv or livery.DEFAULT
-    return livery.Livery("full", liv.core, None, 1.0,
-                         own if liv.own is None else liv.own)
+    return livery.Livery("full", None, 1.0)
 
 
 class ShipPictures:
@@ -206,12 +203,7 @@ class ShipPictures:
             return None
         if settings is not None and settings.get(SETTING) == "off":
             return None
-        liv = self._livery(settings, own)
-        if settings is not None and settings.get(COLOUR_SETTING) == "muted":
-            liv = map_livery(liv, own)
-        elif liv is None:
-            from core import livery
-            liv = livery.DEFAULT
+        liv = map_livery()
         key = (int(colour), int(shape), int(ship.picture_num),
                int(ship.ship_type), palette.active_preset(), liv.key())
         pic, painted = self._unscaled(ship, key, liv, 1)
@@ -240,13 +232,6 @@ class ShipPictures:
             self._pictures[k] = (None if pic is None else pic.copy(),
                                  painted)
         return self._pictures[k]
-
-    @staticmethod
-    def _livery(settings, own):
-        if settings is None:
-            return None
-        from core import livery
-        return livery.from_settings(settings, own)
 
     def _picture(self, ship, colour, shape, liv, cap):
         p = int(ship.picture_num)

@@ -342,6 +342,28 @@ class CombatArt:
             self._cache[key] = out
         return self._cache[key]
 
+    def monster_ramp(self, player):
+        """TRANSCRIPTION `monster_ramp`: a monster's own 32 colours at
+        0x20 — MONSTER.LBX entry `player + 5` holds them (combinit.cpp:
+        1673-1674, the same entry `cbmap.ramps` reads for the overview).
+        Its pictures use indices 0x20-0x3F, which under the screen
+        palette alone are near-black: the Dragon's gold was a black
+        shape with two red eyes (live, work order 392)."""
+        key = ("monster_ramp", int(player))
+        if key not in self._cache:
+            out = {}
+            b = self.blob("monster", int(player) + 5)
+            try:
+                h = lbx.parse_header(b)
+                if h.has_palette:
+                    out = {i: rgb for i, rgb in
+                           lbx.read_palette(b, h.frame_count).items()
+                           if 0x20 <= i < 0x40}
+            except (lbx.LbxError, TypeError):
+                pass
+            self._cache[key] = out
+        return self._cache[key]
+
     def glass(self, name):
         """The glass table `name` (combinit.cpp:854-990): sixteen (r, g, b,
         alpha), entry 0 black at 50 % (remap.cpp:154-157)."""
@@ -535,7 +557,9 @@ class CombatArt:
                        flip) is not None:
             return None
         if lbx_name == "monster":
-            return self.indexed("monster", entry, frame, None, mirror, flip)
+            return self.indexed("monster", entry, frame,
+                                self.monster_ramp(colour) if monster
+                                else None, mirror, flip)
         return self.indexed("cmbtshp", entry, frame, self.ramp(colour),
                             mirror, flip)
 
@@ -547,7 +571,9 @@ class CombatArt:
         return "cmbtshp", int(colour) * 45 + int(picture)
 
     def ship(self, colour, picture, facing, glow=0, monster=False):
-        """A battle unit's picture for its facing and glow frame 0..3: the
+        """A battle unit's picture for its facing and glow frame 0..3
+        (`colour` is a monster's own player index when `monster`, else the
+        owner's colour: `cbdraw.unit_colour`): the
         colour's own painted file, else the colour-free painted picture in
         the owner's colour (`cbpaint`, HD EXTENSION `plating_colour`), else
         the stored drawing."""
@@ -566,7 +592,9 @@ class CombatArt:
         if made is not None:
             return made
         if lbx_name == "monster":
-            return self.surface("monster", entry, frame, None, mirror, flip)
+            return self.surface("monster", entry, frame,
+                                self.monster_ramp(colour) if monster
+                                else None, mirror, flip)
         return self.surface("cmbtshp", entry, frame, self.ramp(colour),
                             mirror, flip)
 

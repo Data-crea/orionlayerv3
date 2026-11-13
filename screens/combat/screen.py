@@ -514,10 +514,8 @@ class CombatScreen(CombatInput, ScreenBase):
         the planet (unit 0, OMISSION `status_planet`)."""
         if not c["cur_ship"] or unit is None:
             return None
-        owner = unit["previous_owner"] if unit["previous_owner"] <= 7 \
-            else unit["owner"]
-        return (self._art, self._play.colours.get(owner, 0), unit,
-                cbdraw.from_monster_file(unit))
+        return (self._art, cbdraw.unit_colour(self._play.colours, unit),
+                unit, cbdraw.from_monster_file(unit))
 
     # ── input ──────────────────────────────────────────────────────
     def _send(self, op, a=0, b=0, c=0):

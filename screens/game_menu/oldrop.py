@@ -32,7 +32,6 @@ CHOICES = {
     "map_black": ("map_black_floor", "map_black_steps"),
     "monsters": ("monster_values", "monster_steps"),
     "map_ships": ("map_ship_pictures", "map_ships_steps"),
-    "map_colours": ("map_ship_colours", "map_colours_steps"),
     "frame_rate": ("frame_rate", "frame_rate_steps"),
     "idle_rate": ("idle_frame_rate", "idle_rate_steps"),
     "painted": ("painted_detail", "painted_steps"),
@@ -53,7 +52,6 @@ def values(screen, name):
         "map_black": lambda: ("off", "on"),
         "monsters": lambda: gmorion.MONSTER_STEPS,
         "map_ships": lambda: gmorion.MAP_SHIP_STEPS,
-        "map_colours": lambda: gmorion.MAP_COLOUR_STEPS,
         "frame_rate": lambda: tuple(framerate.STEPS),
         "idle_rate": lambda: tuple(framerate.IDLE_STEPS),
         "painted": lambda: tuple(paintdetail.STEPS),
@@ -108,6 +106,13 @@ def pick(screen, name, value):
         # preset applies at once, every screen's player colours with it
         from core import palette
         palette.apply_preset(value, settings.get("player_color_base"))
+        # the colour-blind palette also takes the pattern that separates
+        # the owners best (Data, 13 Nov 2026: tied to the palette): Light
+        # plates instead of Full, once, when it is picked
+        from core import livery, playercolors
+        if playercolors.colour_blind(value) and \
+                settings.get(livery.KEYS["pattern"]) == "full":
+            settings.set(livery.KEYS["pattern"], livery.DEFAULT_PATTERN)
     elif name == "mods" and value == "on":
         # Data, 30 September 2026: switching it on says it can take a while
         # and starts the extraction (the Mod files row shows the progress)

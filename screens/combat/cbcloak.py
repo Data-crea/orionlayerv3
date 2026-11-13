@@ -245,8 +245,7 @@ def vanish(pixels, intensity, start=0):
 def vanished(art, colours, u, intensity, start=0):
     """The unit's glow-0 picture through `vanish`, or None (a painted
     picture is drawn at the alpha left)."""
-    owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
-    colour = colours.get(owner, 0)
+    colour = cbdraw.unit_colour(colours, u)
     key = ("vanish", colour, u["picture_num"], u["facing_dir"],
            int(intensity), int(start))
     cache = _cache(art)
@@ -289,8 +288,7 @@ def _cache(art):
 def picture(art, colours, u, glow, how, progress=0, mode=3):
     """The unit's picture drawn `how` ("cloak": darkened at `progress` in
     `mode`, "outline": its phasing ring), or None to draw nothing."""
-    owner = u["previous_owner"] if u["previous_owner"] <= 7 else u["owner"]
-    colour = colours.get(owner, 0)
+    colour = cbdraw.unit_colour(colours, u)
     key = (how, colour, u["picture_num"], u["facing_dir"], int(glow),
            int(progress) % 16 if how == "cloak" else 0,
            darkness(mode, progress) if how == "cloak" else 0)

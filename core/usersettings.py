@@ -89,11 +89,6 @@ DEFAULTS = {
     # The galaxy map's stacks as their strongest ship's picture (work order
     # 311, `screens/galaxy_map/shippics`), on or off; applied at once.
     "map_ship_pictures": "on",
-    # The colours of those pictures (work order 358, Data): "vivid" draws
-    # them as the Fleets screen does (the player's livery), "muted" in the
-    # owner's colour at full strength over the plating, as before; applied
-    # at once (`screens/galaxy_map/shippics`).
-    "map_ship_colours": "vivid",
     # The galaxy map's background picture replaced by black (work order
     # 326, Data's decision; `screens/galaxy_map/floorlift`), on or off;
     # applied at once. Off: the picture, as decision 71 has it.
@@ -142,11 +137,10 @@ DEFAULTS = {
     # battle on.
     "painted_detail": "auto",
     # The livery of painted ships (work order 220, `core/livery`): the
-    # pattern, the core variant of the owner's colour, the player's second
-    # colour ([r, g, b] or None) and the strength; from the next battle on,
+    # pattern, the player's second colour ([r, g, b] or None) and the
+    # strength; from the next battle on,
     # in the livery window's preview at once.
     "livery_pattern": "light",
-    "livery_core": "strong",
     "livery_second": None,
     "livery_strength": 1.0,
     # The player's text size (work order 356, `core/fontscale`): a factor
@@ -185,6 +179,16 @@ RETIRED = {
     # the scan's transparency slider (work order 292), removed by Data in
     # work order 315; its default 0 was the window opaque, as it is now
     "scan_transparency": 315,
+    # (0 = no work order: Data asked for both in chat, 13 Nov 2026)
+    # the livery's core variants Strong / Light / Muted (work order 220,
+    # decision 4), retired by Data on 13 Nov 2026: the owner's colour is
+    # always laid as it is (`core/livery`); the stored value was one of the
+    # three, "strong" the default
+    "livery_core": 0,
+    # the galaxy map's "vivid" / "muted" ship colours (work order 358),
+    # retired with it: the map's pictures are always in the owner's colour
+    # at full strength over the plating (`screens/galaxy_map/shippics`)
+    "map_ship_colours": 0,
 }
 
 
