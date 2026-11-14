@@ -92,18 +92,15 @@ beside OrionLayer's (`orion2re` next to `orionlayerv3`) and checks there
 that it carries every change OrionLayer needs. Windows: see
 [On Windows](#on-windows).
 
-**Clone the `beta` branch**, as the commands below do. `main` is the
-maintainer's working branch: its pictures can be ahead of the base pack that
-setup downloads, so a fresh install of `main` may stop at the download.
-`beta` only moves to a version whose base pack is published and installs
-from empty.
+**Clone `main`.** The base pack that setup downloads is published before
+every push to `main`, so a fresh install from it works from empty.
 
 **The short way.** Clone OrionLayer and let one script do steps 1 to 3
 (it clones the engine beside it, builds it into your game folder, makes
 the Python environment and runs setup):
 
 ```sh
-git clone --branch beta https://github.com/Data-crea/orionlayerv3.git
+git clone https://github.com/Data-crea/orionlayerv3.git
 cd orionlayerv3
 tools/install.sh "$HOME/Master of Orion 2"
 ```
@@ -124,7 +121,7 @@ cd ..
 **2. Get OrionLayer and what it needs:**
 
 ```sh
-git clone --branch beta https://github.com/Data-crea/orionlayerv3.git
+git clone https://github.com/Data-crea/orionlayerv3.git
 cd orionlayerv3
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -177,8 +174,8 @@ NEW GAME as in the original. Closing OrionLayer stops the game.
 ### If something goes wrong
 
 - **"The base pack could not be downloaded (404)."** The base pack belongs
-  to the version you cloned. Update (`git pull` in the `beta` branch) and run
-  setup again; make sure you cloned `beta`, not another branch.
+  to the version you cloned. Update (`git pull`) and run
+  setup again; if it still fails, open an issue with the build line.
 - **"REFUSED: the screen is blanked or locked"** (GNOME). Unlock the screen
   and start again; the engine cannot start while it is locked.
 - **The game stops at start with "SOUND ERROR: Unable to open SDL audio stream".** The engine needs a sound
@@ -207,7 +204,7 @@ cd orion2re
 cmake --preset win64-release -DORION2RE_EXT=ON -DORION2RE_GAME_DIR="C:\GOG Games\Master of Orion 2"
 cmake --build --preset win64-release
 cd ..
-git clone --branch beta https://github.com/Data-crea/orionlayerv3.git
+git clone https://github.com/Data-crea/orionlayerv3.git
 cd orionlayerv3
 py -m venv .venv
 .venv\Scripts\pip install -r requirements.txt

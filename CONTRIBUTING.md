@@ -53,8 +53,8 @@ post. Never attach a save game or a file from your Master of Orion 2.
 
 ## Pull requests
 
-Issues and pull requests are welcome; open them against `main` (players
-clone the `beta` branch, which the maintainer moves forward). Start
+Issues and pull requests are welcome; open them against `main`, which is
+also the branch players clone. Start
 OrionLayer and look at what you changed (`python main.py` runs without the
 game); a change to a screen is best shown with a screenshot beside the
 original's (F12 shows it, F8 saves a picture).
