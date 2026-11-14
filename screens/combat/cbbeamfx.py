@@ -116,6 +116,11 @@ def colours(f):
 
 
 def get_angle(dx, dy):
+    # the original works in whole pixels. HD hands it a unit's centre too
+    # while the unit is mid-move or where it died (`cbplay` divides a pixel
+    # by CELL), and the table index below shifts, which a float refuses:
+    # the 14 Nov 2026 crash of an AUTO battle's shield flare
+    dx, dy = int(round(dx)), int(round(dy))
     if dx == 0:
         return 270 if dy < 0 else 90 if dy > 0 else 0
     if dy == 0:

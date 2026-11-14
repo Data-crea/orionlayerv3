@@ -63,6 +63,10 @@ NODE = "livery"
 #: picture 43 is the Doom Star (one look).
 HULLS = ("frigate", "destroyer", "cruiser", "battleship", "titan")
 DOOM_STAR = 43
+#: Picture 44 is Loknar's Avenger (MONSTER.LBX entry 25 in the original):
+#: with its own grey picture it takes the owner's colour like a hull, so the
+#: window offers it and names it (HD EXTENSION `plating_colour`, decision 82).
+AVENGER = 44
 #: The factor the preview holds painted pictures at: the finest a mod gives
 #: (8 x) for both, so neither is ever enlarged from a coarser step.
 PREVIEW_DETAIL, ROW_DETAIL = 8, 8
@@ -308,6 +312,8 @@ def _shown(w, key, make):
 def hull_label(screen, picture):
     if picture == DOOM_STAR:
         return _say(screen, "doom_star", "Doom Star")
+    if picture == AVENGER:
+        return _say(screen, "avenger", "Avenger")
     if 0 <= picture < 8 * len(HULLS):
         return _say(screen, HULLS[picture // 8])
     return _say(screen, "station", "Station")

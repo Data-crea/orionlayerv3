@@ -54,6 +54,10 @@ from . import (cbbeam, cbcloak, cbdraw, cbflare, cbflight, cblightning,
 
 CELL = cbdraw.CELL
 MOVE_S = cbpace.MOVE_S
+#: States waiting for their events (`Player._after`) are capped: 100-v-100
+#: AUTO kept one per poll, ~1 MB each, and filled 12 GB (14 Nov 2026).
+MAX_PENDING_STATES = 120
+
 UNTIMED_S = cbpace.UNTIMED_S
 FRAME_S = cbpace.FRAME_S
 NUMBER_S = cbpace.NUMBER_S
@@ -146,8 +150,24 @@ class Player:
             self.shown, self.ordnance = copy.deepcopy(combat), ordnance
             self._after = []
         elif fresh:
-            self._after.append((self._last_queued, copy.deepcopy(combat),
-                                ordnance))
+            # snapshots that bring no event wait for the same one, and
+            # `_adopt` shows only the newest of those it passes together:
+            # the newest replaces its predecessor. A 100-v-100 AUTO battle
+            # ends its events in seconds but is polled for minutes while HD
+            # plays them out; every poll kept a copy (~1 MB, 16 a second:
+            # 12 GB and a frame of seconds after 20 minutes, 14 Nov 2026)
+            state = (self._last_queued, copy.deepcopy(combat), ordnance)
+            if self._after and self._after[-1][0] == self._last_queued:
+                self._after[-1] = state
+            else:
+                self._after.append(state)
+                if len(self._after) > MAX_PENDING_STATES:
+                    # the engine runs an AUTO battle far ahead of HD's
+                    # playback and every state is ~1 MB: thin the middle,
+                    # the soonest and the newest stay; a state that is
+                    # missing when its event has played is the one before
+                    # it, the next adoption puts it right
+                    del self._after[len(self._after) // 2]
 
     def _with_flight(self, events, ordnance):
         """TRANSCRIPTION `flight` and `launch_flight` (`cbflight.place`,

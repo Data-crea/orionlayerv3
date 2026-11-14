@@ -158,6 +158,23 @@ def glassed(lbx_name, entry, header):
         (lbx_name, int(entry)) in GLASSED_AS_DRAWN
 
 
+#: Picture 44, Loknar's Avenger, is no CMBTSHP drawing: `Draw_Ship_` takes it
+#: from MONSTER.LBX entry 25 whatever its owner (cmbtdrw1.cpp:2625-2636), and
+#: CMBTSHP entry 44 is only the colour's palette holder. HD EXTENSION
+#: `plating_colour` (decision 82) serves it like every other ship: a
+#: colour-free `cmbtshp/all_44_<frame>.png` is sized against entry 25.
+AVENGER_PICTURE, AVENGER_ENTRY = 44, 25
+
+
+def stored_ref(lbx_name, entry):
+    """The stored drawing a painted file is sized against: the file's own
+    entry, but picture 44's colour-free picture (`cmbtshp`, entry 44) is
+    the Avenger, MONSTER.LBX entry 25."""
+    if lbx_name == "cmbtshp" and int(entry) == AVENGER_PICTURE:
+        return "monster", AVENGER_ENTRY
+    return lbx_name, entry
+
+
 def stored_facing(facing):
     """(stored direction 0..4, mirror left-right, flip upside down) for a
     facing 0..15 — `Draw_Ship_`'s quadrant switch."""
@@ -364,6 +381,19 @@ class CombatArt:
             self._cache[key] = out
         return self._cache[key]
 
+    def _monster_palette(self, colour, monster, picture):
+        """The colours of a MONSTER.LBX drawing: a monster's own ramp, or
+        for the Avenger (`previous_owner` below 8, picture 44) its owner's
+        ship ramp — TRANSCRIPTION `monster_file`: `Draw_Ship_` remaps the
+        drawing's 0x20-0x3F band to the side's colour band for any unit
+        whose picture is 44 (cmbtdrw1.cpp:2625-2650), as a CMBTSHP drawing
+        wears its colour's ramp; nothing for a drawing that is neither."""
+        if monster:
+            return self.monster_ramp(colour)
+        if int(picture) == AVENGER_PICTURE:
+            return self.ramp(colour)
+        return None
+
     def glass(self, name):
         """The glass table `name` (combinit.cpp:854-990): sixteen (r, g, b,
         alpha), entry 0 black at 50 % (remap.cpp:154-157)."""
@@ -482,7 +512,7 @@ class CombatArt:
             img = display_format(pygame.image.load(path))
         except (pygame.error, OSError):
             return None
-        b = self.blob(lbx_name, entry)
+        b = self.blob(*stored_ref(lbx_name, entry))
         try:
             h = lbx.parse_header(b) if b else None
         except lbx.LbxError:
@@ -547,7 +577,7 @@ class CombatArt:
         picture, the colour-free one too (`cbpaint`)."""
         stored, mirror, flip = stored_facing(facing)
         frame = 4 * stored + max(0, min(3, int(glow)))
-        if not (monster or picture == 44):
+        if not monster:
             from . import cbpaint
             if cbpaint.ship(self, colour, picture, facing, glow) is not None:
                 return None
@@ -558,8 +588,8 @@ class CombatArt:
             return None
         if lbx_name == "monster":
             return self.indexed("monster", entry, frame,
-                                self.monster_ramp(colour) if monster
-                                else None, mirror, flip)
+                                self._monster_palette(colour, monster,
+                                                      picture), mirror, flip)
         return self.indexed("cmbtshp", entry, frame, self.ramp(colour),
                             mirror, flip)
 
@@ -580,7 +610,7 @@ class CombatArt:
         stored, mirror, flip = stored_facing(facing)
         frame = 4 * stored + max(0, min(3, int(glow)))
         lbx_name, entry = self._unit_entry(colour, picture, monster)
-        if lbx_name == "cmbtshp":
+        if lbx_name == "cmbtshp" or not monster:
             from . import cbpaint
             free = cbpaint.ship(self, colour, picture, facing, glow)
             if free is not None:
@@ -593,8 +623,8 @@ class CombatArt:
             return made
         if lbx_name == "monster":
             return self.surface("monster", entry, frame,
-                                self.monster_ramp(colour) if monster
-                                else None, mirror, flip)
+                                self._monster_palette(colour, monster,
+                                                      picture), mirror, flip)
         return self.surface("cmbtshp", entry, frame, self.ramp(colour),
                             mirror, flip)
 

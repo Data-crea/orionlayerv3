@@ -10,6 +10,7 @@ module holds what they share: which one is up, the once-only answer, the
 galaxy map behind a popup.
 """
 import logging
+import time
 
 from core import filmview, handover, msgbox, namebox, rightinfo, shipview
 from core import turnpopup, turnpopupcontent
@@ -44,6 +45,8 @@ class Overlays:
         #: The last box answered: a second click before it has gone would
         #: land in whatever comes after it (decision 65's reasoning).
         self.box_sent = None
+        #: (key, when it first stood up) of a combat box the timeout watches.
+        self.box_up = None
         self.box_labels = app.res.load_json(
             "assets/shared/msgbox/labels.json", {}) or {}
         self.popup_labels = app.res.load_json(
@@ -70,6 +73,7 @@ class Overlays:
         self.seek_step()
         self.retry_landing()
         self.retry_box()
+        self.close_combat_box()
         if self.ship is None and self.ship_view is not None:
             self.ship_view.reset()      # a new view: its own close, base
         return over is not None
@@ -426,6 +430,37 @@ class Overlays:
                  field.index)
         app.client.inject_click((field.x + field.x_end) // 2,
                                 (field.y + field.y_end) // 2)
+
+    #: HD EXTENSION `combat_box_timeout` (Data, 14 Nov 2026: a 100-v-100
+    #: AUTO battle opens a boarding result after every capture and waits for
+    #: each click): a plain text box that stands over the battle for this
+    #: many seconds is answered as a click on its CLOSE would. The original
+    #: waits for the player's click without end.
+    COMBAT_BOX_SECONDS = 5.0
+    #: The game screens the battle claims (combat 65, its scan view 66, the
+    #: board popup 67, `screens/combat/screen.py`).
+    COMBAT_SCREENS = (65, 66, 67)
+
+    def close_combat_box(self, now=None):
+        """Answer a text box that has stood over the battle for
+        `COMBAT_BOX_SECONDS` — never a confirmation (it asks), never a timed
+        box (the engine closes it itself). `answer_box` takes it once per
+        box and sends it again if the engine did not take it."""
+        box, app = self.box, self.app
+        if box is None or box.get("kind") not in ("text", "message",
+                                                  "warning") or \
+                not app.connected or getattr(app.client.state, "current_screen",
+                                             None) not in self.COMBAT_SCREENS:
+            self.box_up = None
+            return
+        key = (box["kind"], box["title"], box["text"], box["field_a"])
+        now = time.monotonic() if now is None else now
+        if self.box_up is None or self.box_up[0] != key:
+            self.box_up = (key, now)
+            return
+        if now - self.box_up[1] >= self.COMBAT_BOX_SECONDS:
+            self.answer_box(dict(msgbox.answers(
+                box, app.client.state.fields)).get("close"))
 
     #: Snapshots between the landing's answers while it is not taken.
     LANDING_RESEND = 6
