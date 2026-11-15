@@ -41,6 +41,13 @@ NAMES = (
     "warp_interdictor", "weather_controller", "fighter_garrison",
     "artificial_planet")
 COUNT = len(NAMES)
+#: HD EXTENSION `product_pictures` (Data, 15 November 2026): two products that
+#: are no building take a painted picture in the same folder, by the
+#: numbers after the buildings' — Housing (the original draws building 14's
+#: ground drawing) and Trade Goods (COLONY2.LBX 7). Only the build list and
+#: the build popup stand them (`screens/colony/colroom`).
+HOUSING, TRADE_GOODS = COUNT + 1, COUNT + 2
+PRODUCTS = {HOUSING: "housing", TRADE_GOODS: "trade_goods"}
 
 _pictures = {}
 _fitted = {}
@@ -52,14 +59,17 @@ _lock = threading.RLock()
 
 def tree_path(bid):
     """The tree path of building `bid`'s picture, or None for a bad id."""
-    if not 1 <= int(bid) <= COUNT:
+    bid = int(bid)
+    if bid in PRODUCTS:
+        return f"{FOLDER}/{bid:02d}_{PRODUCTS[bid]}.png"
+    if not 1 <= bid <= COUNT:
         return None
-    return f"{FOLDER}/{int(bid):02d}_{NAMES[int(bid) - 1]}.png"
+    return f"{FOLDER}/{bid:02d}_{NAMES[bid - 1]}.png"
 
 
 def slots():
     """Every name a mod may fill (`core.usermod.SLOTS`)."""
-    return tuple(tree_path(b) for b in range(1, COUNT + 1))
+    return tuple(tree_path(b) for b in range(1, TRADE_GOODS + 1))
 
 
 def picture(bid):
@@ -111,7 +121,7 @@ def present():
         from core import usermod
         index = usermod._state.get("index") or {}
         _fitted["present"] = tuple(
-            b for b in range(1, COUNT + 1) if tree_path(b) in index)
+            b for b in range(1, TRADE_GOODS + 1) if tree_path(b) in index)
     return _fitted["present"]
 
 

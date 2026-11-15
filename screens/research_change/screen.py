@@ -174,3 +174,7 @@ class ResearchChangeScreen(ResearchPanelScreen):
     #: No dimming: a palette-indexed engine cannot darken what is under
     #: a panel, and the original draws over the map as it is.
     OVERLAY_DIM = 0
+    #: GLASS: the map behind the panel blurred and darkened so only the
+    #: panel is in focus (Data, 15 November 2026; `Dispatcher.render`).
+    OVERLAY_BLUR = 6
+    OVERLAY_BLUR_DIM = 110

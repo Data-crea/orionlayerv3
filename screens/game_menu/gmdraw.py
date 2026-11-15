@@ -119,14 +119,14 @@ def fit_size(screen, b, word):
     if lang.current() == lang.DEFAULT and not scaled:
         return size
     r = b.screen_rect
+    # ONE RULE AT EVERY TEXT SIZE (Data, 15 November 2026: the buttons'
+    # words read large at 100 % and small at 120 %). Work order 356 made
+    # the room smaller by the glyph's share as soon as the factor was not
+    # 1.0, so the word jumped from 24 px to 18 px between 1.00 and 1.05
+    # while the rest of the screen grew. The word now gets the same 90 %
+    # of the button at 0.85 to 1.20; the glyph is drawn beside it when it
+    # still fits (`hud.icon_beside`) and left out when it does not.
     room = r.w * 0.9
-    if scaled:
-        # HD EXTENSION `font_scale` (work order 356): the text-size factor
-        # grows the word, not the button, so English is fitted too, and
-        # the word leaves room for the button's glyph (RETURN lost its
-        # arrow at 1.20). At 1.0 nothing changes.
-        room = r.w - 2 * int(r.h * 0.2) - int(r.h * 0.6) - int(r.h * 0.12) \
-            if glyphs.for_button("game_menu", b.name) else room
     while size > 8 and screen.style.render_text(
             word, size, (255, 255, 255)).get_width() > room:
         size -= 1

@@ -45,6 +45,8 @@ class Dispatcher:
         self._locked_game_ids = set()  # game screen_id when lock was set
         self.overlay = None        # overlay screen shown above active
         self.overlay_name = ""
+        self._glass = None         # the blurred picture under a glass overlay
+        self._glass_key = None
 
     def register(self, name, screen):
         """Register a screen. GAME_SCREEN_ID wires auto-switching."""
@@ -161,6 +163,7 @@ class Dispatcher:
         if screen:
             self.overlay = screen
             self.overlay_name = name
+            self._glass_key = None      # a fresh picture under it
             screen.enter(game_state)
 
     def close_overlay(self):
@@ -179,8 +182,31 @@ class Dispatcher:
 
     def render(self, surface):
         """Render active screen, dim layer, then overlay."""
-        if self.active:
-            self.active.render(surface)
+        blur = getattr(self.overlay, "OVERLAY_BLUR", 0) if self.overlay else 0
+        # only while the overlay draws: a panel that waits for its list
+        # leaves the map as it is (`draws_this_frame`)
+        if blur > 0 and not getattr(self.overlay, "draws_this_frame",
+                                    lambda: True)():
+            blur = 0
+        if blur > 0:
+            # GLASS: what is behind the panel is blurred hard and darkened
+            # so only the panel stays in focus (Data, 15 November 2026).
+            # Made ONCE when the panel opens (and again on a resize): the
+            # picture under it no longer moves, and the blur is not paid
+            # for every frame.
+            dim = getattr(self.overlay, "OVERLAY_BLUR_DIM", 90)
+            key = (id(self.overlay), surface.get_size(), blur, dim)
+            if self._glass_key != key:
+                if self.active:
+                    self.active.render(surface)
+                self._glass = self.glassed(surface, blur, dim)
+                self._glass_key = key
+            surface.blit(self._glass, (0, 0))
+        else:
+            self._glass_key = None
+            self._glass = None
+            if self.active:
+                self.active.render(surface)
         if self.overlay:
             dim = getattr(self.overlay, "OVERLAY_DIM", 120)
             if dim > 0:
@@ -189,6 +215,18 @@ class Dispatcher:
                 shade.fill((0, 0, 0, dim))
                 surface.blit(shade, (0, 0))
             self.overlay.render(surface)
+
+    @classmethod
+    def glassed(cls, surface, blur, dim):
+        """The glass: a blurred copy of `surface`, darkened by `dim`
+        (`core.glassfx`)."""
+        from core import glassfx
+        return glassfx.glassed(surface, blur, dim)
+
+    @staticmethod
+    def _blurred(surface, blur):
+        from core import glassfx
+        return glassfx.blurred(surface, blur)
 
     def update_screens(self, game_state=None):
         """Per-frame update for parent AND overlay."""

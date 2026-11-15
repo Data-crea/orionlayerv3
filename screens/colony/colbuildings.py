@@ -64,6 +64,7 @@ import logging
 
 import pygame
 
+from core import fontscale
 from core import nativedraw as nd
 from core import nativeview as nat
 
@@ -489,6 +490,12 @@ def list_geometry(screen, n, placement):
     more, so nothing is drawn or hit outside it."""
     layout = screen.layout
     box = screen.box_screen_rect(LIST_BOX) if placement is not None else None
+    if box is not None and fontscale.factor() > 1.0:
+        # the words grow with the text size, so the box does (Data, 15
+        # November 2026: the names were drawn small even at the largest
+        # size, shrunk to a box that stayed as it was)
+        box = pygame.Rect(box.x, box.y, int(box.w * fontscale.factor()),
+                          box.h)
     if box is not None and n > 0:
         pad = max(2, nd.rect(layout, (0, 0, 2, 0)).w)
         nat = nd.rect(layout, geom.building_row(0)).h
@@ -539,11 +546,15 @@ def draw_list(surface, screen, names, rows, colour):
     next one). `names` are the words, in the rows' order."""
     dx = max(2, nd.rect(screen.layout, (0, 0, geom.BUILDING_TEXT_DX, 0)).w)
     prev = surface.get_clip()
-    for words, row in zip(names, rows):
-        if row.w <= dx:
-            continue
-        surf = label(screen.style, words, row_size(screen.layout, row),
-                     row.w - dx, colour)
+    # ONE SIZE FOR THE WHOLE LIST (Data, 15 November 2026: a long name was
+    # shrunk alone and the rows read in three sizes): the smallest size any
+    # row's name needs.
+    drawn = [(w, r) for w, r in zip(names, rows) if r.w > dx]
+    size = min((nd.fit(screen.style, w, max(1, r.w - dx),
+                       row_size(screen.layout, r)) for w, r in drawn),
+               default=None)
+    for words, row in drawn:
+        surf = label(screen.style, words, size, row.w - dx, colour)
         surface.set_clip(row.clip(prev))
         surface.blit(surf, (row.x + dx, row.y))
     surface.set_clip(prev)

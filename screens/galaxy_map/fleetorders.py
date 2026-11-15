@@ -89,7 +89,12 @@ def place(rects, names, orders, area):
     step = close.h + max(1, int(close.h * GAP))
     out = dict(rects)
     for i, (name, _field, _help) in enumerate(orders):
-        out[f"order_{name}"] = close.move(0, (i + 1) * step)
+        # As wide as the ALL + CLOSE row above (Data, 14 Nov 2026: "Engage
+        # Enemy Forces" did not fit CLOSE's width; one wider button keeps
+        # the word at the size of every other label in the box).
+        left = all_rect(rects, names).x
+        out[f"order_{name}"] = pygame.Rect(left, close.y + (i + 1) * step,
+                                           close.right - left, close.h)
     if orders:
         last = out[f"order_{orders[-1][0]}"]
         panel = rects[names[0]]

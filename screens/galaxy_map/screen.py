@@ -45,6 +45,7 @@ import logging
 
 import pygame
 
+from core import glassfx
 from core import backgrounds
 from core import mapcoords as mc
 from core import palette
@@ -509,10 +510,8 @@ class GalaxyMapScreen(ScreenBase):
                 self._distance.render(surface, ctx)
         if self._modal.active:
             # The engine's modal over the map (work order 177): the map
-            # dimmed under it, as every HD popup stands.
-            dim = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-            dim.fill((0, 0, 0, 120))
-            surface.blit(dim, (0, 0))
+            # as glass under it, as every HD popup stands (`core.glassfx`).
+            glassfx.over(surface, "map_modal")
             self._modal.render(surface)
         # Above the HUD: the popup is a dialog, not content.
         self.render_help(surface)

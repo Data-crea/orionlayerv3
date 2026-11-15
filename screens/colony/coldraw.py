@@ -728,27 +728,31 @@ def _units(surface, screen, view, words, state=None):
     race = _race(state, owner) if state is not None else 0
     apps = _tech_apps(state, int(getattr(state, "player_num", 0) or 0)) \
         if state is not None else ()
+    draws, texts = [], []
     for kind, slot, count in figures:
         plain, better, app = MILITARY_FIGURES[kind]
         fig = better if len(apps) > app and apps[app] == RESEARCHED else plain
         pic = art.sprite(f"military_{race}_{fig}", view.colony.climate,
                          _bg_type(view)) if art.available else None
-        x_native = slot * 30
-        # ON THE BOTTOM EDGE, as the original stands them (`479 - h`): the
-        # figure keeps the band's sprite step while the surface panel
-        # spreads its positions flatter, so the native top mapped down ran
-        # the figure over the panel's edge (Data's picture, work order
-        # 232). The foot is the anchor: the panel's inner bottom, native
-        # 480 mapped (the window `PanelMap` carries the surface into).
-        x, foot = nd.point(screen.layout, x_native, 480)
+        # HD EXTENSION `unit_figures_boost` (Data, 15 November 2026: the
+        # units drowned in grass and flowers): UNIT_BOOST times larger,
+        # spaced by the same factor, UNIT_LIFT native px off the frame,
+        # on a plate with a shadow each (`_unit_plate`).
+        x_native = UNIT_PAD + slot * 30 * UNIT_BOOST
+        x, foot = nd.point(screen.layout, x_native, 480 - UNIT_LIFT)
         big = nd.magnified(pic, screen.layout) if pic is not None else None
-        top = foot - (big.get_height() if big is not None else
-                      int(round(12 * nd.native_scale(screen.layout))))
         if big is not None:
-            surface.blit(big, (x, top))
+            big = pygame.transform.smoothscale(
+                big, (int(big.get_width() * UNIT_BOOST),
+                      int(big.get_height() * UNIT_BOOST)))
+        top = foot - (big.get_height() if big is not None else
+                      int(round(12 * UNIT_BOOST
+                                * nd.native_scale(screen.layout))))
+        if big is not None:
+            draws.append((big, x, top))
         # a lone figure with its count spans the original's three slots
         # (colony_main.cpp:1208, :1217-1224), a figure of a row one
-        span = nd.point(screen.layout, x_native + step * (
+        span = nd.point(screen.layout, x_native + step * UNIT_BOOST * (
             3 if count is not None else 1), 480)[0] - x
         hit = pygame.Rect(x, top, max(span, big.get_width() if big is not None
                                       else 0), foot - top)
@@ -759,12 +763,49 @@ def _units(surface, screen, view, words, state=None):
             known[1].union_ip(hit)
         if count is not None:
             fmt = words.e(0x7C) or "x %d"
-            cx, _y = nd.point(screen.layout, (slot + 1) * step, 480)
+            cx, _y = nd.point(screen.layout,
+                              (slot + 1) * step * UNIT_BOOST, 480)
             w = nd.rect(screen.layout, ((slot + 1) * step, 470,
                                         (slot + 1) * step + 59, 470)).w
-            nd.blit_text(surface, screen.style, printf(fmt, count), cx, top,
-                         w, font(screen.layout, "value"),
-                         hudtext.colour("value"))
+            texts.append((printf(fmt, count), cx, top, w))
+    if draws:
+        _unit_plate(surface, screen, draws, hudtext)
+    for big, x, top in draws:
+        surface.blit(big, (x, top))
+    for text, cx, top, w in texts:
+        nd.blit_text(surface, screen.style, text, cx, top,
+                     w, font(screen.layout, "value"),
+                     hudtext.colour("value"))
+
+
+#: the stationed units' size factor, their lift off the frame (native px)
+UNIT_BOOST = 1.275
+UNIT_LIFT = 14
+UNIT_PAD = 16
+
+
+def _unit_plate(surface, screen, draws, hudtext):
+    """A dark, soft plate under the units and one shadow each, so they read
+    against grass, flowers and rock alike."""
+    scale = nd.native_scale(screen.layout)
+    box = draws[0][0].get_rect(topleft=draws[0][1:])
+    for big, x, top in draws[1:]:
+        box.union_ip(big.get_rect(topleft=(x, top)))
+    pad = int(10 * scale)
+    plate = box.inflate(2 * pad, 2 * pad)
+    plate.bottom = box.bottom + int(7 * scale)      # inside the frame
+    layer = pygame.Surface(plate.size, pygame.SRCALPHA)
+    pygame.draw.rect(layer, (6, 10, 16, 150), layer.get_rect(),
+                     border_radius=int(12 * scale))
+    pygame.draw.rect(layer, (255, 168, 60, 70), layer.get_rect(), width=1,
+                     border_radius=int(12 * scale))
+    surface.blit(layer, plate.topleft)
+    for big, x, top in draws:
+        w = big.get_width()
+        h = max(4, int(big.get_height() * 0.16))
+        sh = pygame.Surface((w, h), pygame.SRCALPHA)
+        pygame.draw.ellipse(sh, (0, 0, 0, 170), sh.get_rect())
+        surface.blit(sh, (x, top + big.get_height() - h // 2))
 
 
 def _tech_apps(state, player):
@@ -796,12 +837,17 @@ def _buttons(surface, screen, state):
     LEADERS and RETURN are the screen's own actions, the shell's buttons
     since work order 231 E (decisions 87, 90; `screen.shell`)."""
     fields = getattr(state, "fields", None)
+    live = []
     for key, ident in (("change", geom.CHANGE), ("buy", geom.BUY)):
         f = colwire.live_field(fields, ident)
-        if f is None:
-            continue
-        r = nd.rect(screen.layout, (f.x, f.y, f.x_end, f.y_end))
+        if f is not None:
+            live.append((key, f, nd.rect(screen.layout,
+                                         (f.x, f.y, f.x_end, f.y_end))))
+    # one word size for both (Data, 15 Nov 2026): the taller field's
+    text_h = max((r.h for _k, _f, r in live), default=None)
+    for key, f, r in live:
         dim = key == "buy" and f.field_type != geom.TYPE_BUTTON
         hud.slant_button(surface, r, screen.layout.scale,
                          "disabled" if dim else hud_hover.pointer_state(r),
-                         screen.word(key), style_renderer=screen.style)
+                         screen.word(key), style_renderer=screen.style,
+                         text_h=text_h)

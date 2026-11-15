@@ -170,11 +170,16 @@ def dimmed_base(surface, base, alpha, backdrop=None):
     live = backdrop is not None and backdrop(surface)
     if not live and base is not None and base.get_size() == size:
         return base
-    out = surface.copy()
-    shade = pygame.Surface(size, pygame.SRCALPHA)
-    shade.fill((0, 0, 0, alpha))
-    out.blit(shade, (0, 0))
-    return out
+    # HD EXTENSION `glass_backdrop` (Data, 15 November 2026): what a popup
+    # that dims stands on is blurred and darkened (`core.glassfx`); a live
+    # screen is blurred again four times a second at most. A popup that asks
+    # for no dim (`alpha` 0: the star choice, the windows the original draws
+    # over the map as it stands) keeps the picture sharp and clickable.
+    from core import glassfx
+    if alpha > 0:
+        return glassfx.live(base, surface) if live else \
+            glassfx.glassed(surface)
+    return surface.copy()
 
 
 #: A line of nothing but these, at least five of them, is a rule the game

@@ -377,7 +377,8 @@ def slant_hit(rect, x, y):
     return r.x + d <= cx <= r.right - (s - d)
 
 
-def _label(surface, style_renderer, rect, label, role, state, icon, scale):
+def _label(surface, style_renderer, rect, label, role, state, icon, scale,
+           text_h=None):
     if icon is None and not label:
         return
     r = pygame.Rect(rect)
@@ -392,7 +393,8 @@ def _label(surface, style_renderer, rect, label, role, state, icon, scale):
         from core import pressfeedback
         col = tuple(pressfeedback.pressed_colour()[:3])
     ic = art.icon(icon, int(r.h * 0.6)) if icon else None
-    s = (hudtext.render(style_renderer, label.upper(), role, r.h, col)
+    s = (hudtext.render(style_renderer, label.upper(), role,
+                        text_h or r.h, col)
          if label else None)
     left = r.x
     if ic is not None:
@@ -410,9 +412,12 @@ def _label(surface, style_renderer, rect, label, role, state, icon, scale):
 
 
 def slant_button(surface, rect, scale, state="normal", label="",
-                 icon=None, style_renderer=None, underline=True):
+                 icon=None, style_renderer=None, underline=True,
+                 text_h=None):
     """A nav button: parallelogram, dim edge, glowing underline, and its
-    label (and icon, when the HUD has one) drawn in code."""
+    label (and icon, when the HUD has one) drawn in code. `text_h` sizes
+    the word as if the button were that tall (two buttons of one group
+    share one word size)."""
     rect = pygame.Rect(rect)
     if rect.w < 6 or rect.h < 6:
         return
@@ -438,7 +443,7 @@ def slant_button(surface, rect, scale, state="normal", label="",
         inner = pygame.Rect(rect.x + int(slant_offset(rect)), rect.y,
                             rect.w - 2 * int(slant_offset(rect)), rect.h)
         _label(surface, style_renderer, inner, label, "button", state,
-               icon, scale)
+               icon, scale, text_h)
 
 
 def _underline(surf, pad, w, h, scale, bright=False):

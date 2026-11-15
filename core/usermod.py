@@ -114,7 +114,7 @@ SLOTS = ("screens/*/assets/frame.png",
          "screens/fleets/assets/pictures/minimap_background.png",
          ) + tuple(f"{SHIP_PICTURE_DIR}{c}_{n}.png"
                    for c in ("all", "[0-7]")
-                   for n in ("[0-9]", "[1-3][0-9]", "4[0-7]"))
+                   for n in ("[0-9]", "[1-3][0-9]", "4[0-8]"))
 #: Work order 326 F (HD EXTENSION, Data's pictures; neither tree nor base
 #: pack holds one): the Space Dragon's picture in the bribe popup
 #: (`core.turnpopupcontent.ART`), and the planet pictures, one per climate,

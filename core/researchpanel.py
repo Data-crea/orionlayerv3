@@ -61,6 +61,12 @@ def col(key, default):
     return palette.col("research_select", key, default)
 
 
+def _ink(_r, _g, _b, r, g, b):
+    """The soft ink: Data found the pure-white text too hard on the
+    pictures (15 November 2026). The first three are the old values."""
+    return (r, g, b)
+
+
 #: THE INNER BOXES ARE DRAWN, NOT WORN — work order 166 part C, Data's
 #: verdict on the live panel: the `inner_panel` ARTWORK does not fit
 #: them. They are drawn the way `screens/planets/` draws its boxes, out
@@ -306,8 +312,12 @@ def draw_exit(surface, layout, style, native_rect, label, pressed=False):
     """
     box = pygame.Rect(*geom_mod.window_rect(native_rect, layout))
     # The HUD's small button (decision 71), lit while pressed.
+    # lit under the pointer, as the GAME menu's buttons are (Data, 15
+    # November 2026): the original has no hover, HD gives the click's target
+    from core.hud import hover as hud_hover
     hud.small_button(surface, box, layout.scale,
-                     "active" if pressed else "normal")
+                     hud_hover.pointer_state(
+                         box, "active" if pressed else "normal"))
     if not label:
         return box
     size = _fit(style, label, int(box.width * 0.8),
@@ -342,7 +352,7 @@ def row_label(layout, style, entry, row, text):
 
 def _inks():
     """Every ink the words over a box can take (`_draw_entry`)."""
-    return (col("field", (228, 234, 242)), col("row", (228, 234, 242)),
+    return (col("field", _ink(228, 234, 242, 206, 212, 224)), col("row", _ink(228, 234, 242, 184, 192, 206)),
             col("field_current", (250, 226, 150)),
             col("row_current", (250, 226, 150)))
 
@@ -434,7 +444,7 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                        layout),
                    geom_mod.window_width(entry.x, entry.y + CAT_DY, 150,
                                          layout),
-                   layout.font_size(14), col("category", (176, 196, 232)),
+                   layout.font_size(14), col("category", _ink(176, 196, 232, 140, 158, 192)),
                    layout.scale)
 
     # The cost, right-aligned where Print_Right_ puts it (tech.cpp:703).
@@ -449,7 +459,7 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
         surf = shadowed(
             style, cost, size,
             col("field_current", (250, 226, 150)) if is_current
-            else col("cost", (214, 226, 250)), layout.scale)
+            else col("cost", _ink(214, 226, 250, 170, 184, 212)), layout.scale)
         cx, cy = geom_mod.window_point(
             (entry.x + researchlist.ROW_X_SPAN + BOX_MARGIN - NAME_PAD,
              entry.y + CAT_DY), layout)
@@ -463,7 +473,7 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                geom_mod.window_width(name_x, name_y, name_w, layout),
                layout.font_size(19),
                col("field_current", (250, 226, 150)) if is_current
-               else col("field", (228, 234, 242)), layout.scale)
+               else col("field", _ink(228, 234, 242, 206, 212, 224)), layout.scale)
 
     for row, app in enumerate(entry.apps):
         label_x, label_y, label_w = label_anchor(entry, row)
@@ -492,5 +502,5 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                    col("row_current", (250, 226, 150))
                    if is_current and (every_row
                                       or marks_row(names, app, current[1]))
-                   else col("row", (228, 234, 242)), layout.scale,
+                   else col("row", _ink(228, 234, 242, 184, 192, 206)), layout.scale,
                    ROW_BOLD)

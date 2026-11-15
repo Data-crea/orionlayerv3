@@ -37,9 +37,10 @@ DOOM_STAR = 43
 #: The glow frame of a ship at rest (frame 0 has its engines off since work
 #: order 222; the livery window shows frame 1).
 AT_REST = 1
-#: The colony, outpost and transport ship pictures: no battle picture
+#: The colony, outpost and transport ship pictures and the freighters' (48,
+#: HD EXTENSION `product_pictures`, the build list's): no battle picture
 #: (CMBTSHP holds 45 per colour, 0-44; `initship.cpp`'s templates).
-NON_COMBAT = (45, 46, 47)
+NON_COMBAT = (45, 46, 47, 48)
 #: Player colours 0..7; anything else is the monster set (`fltrows`).
 COLOURS = 8
 #: How many fitted pictures are kept (a full Fleets grid at one size is 25).

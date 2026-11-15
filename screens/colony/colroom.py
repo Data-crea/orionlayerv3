@@ -83,6 +83,10 @@ PLACES = {
 
 _cache = {}
 _targets = {}
+#: HD EXTENSION `product_pictures`: the boxes (native px) the painted Housing
+#: and Trade Goods stand in, where the original's drawings are tiny
+PRODUCT_BOX = 32
+HOUSING_BOX = (96, 60)
 
 
 def available(place="popup"):
@@ -167,20 +171,52 @@ def hd_target(spec, place="popup"):
     `spec` is a building the player painted (`core.buildingart`) — the ink
     of the original's drawing in the window's native coordinates, which the
     painted one is fitted into — else None. Housing's ground drawing
-    ("ground") is the original's own, whatever building 14's picture is."""
+    ("ground", 14) is the original's own, whatever building 14's picture is;
+    HD EXTENSION `product_pictures`: Housing and Trade Goods have pictures
+    of their own (`buildingart.HOUSING`, `TRADE_GOODS`), fitted into the
+    ink of what the original draws."""
     from core import buildingart
-    if spec[0] != "building" or buildingart.picture(spec[1]) is None:
+    if spec[0] == "building":
+        bid = int(spec[1])
+    elif spec[0] == "ground" and int(spec[1]) == 14:
+        bid = buildingart.HOUSING
+    elif spec[0] == "trade_goods":
+        bid = buildingart.TRADE_GOODS
+    else:
         return None
-    key = (int(spec[1]), place, buildingart.present())
+    if buildingart.picture(bid) is None:
+        return None
+    key = (bid, place, buildingart.present())
     if key not in _targets:
-        _targets[key] = _hd_target(int(spec[1]), place)
+        _targets[key] = _hd_target(bid, place)
     return _targets[key]
 
 
 def _hd_target(bid, place):
+    from core import buildingart
     art = colart.load()
     pl = PLACES[place]
-    if bid in SATELLITES:
+    if bid == buildingart.TRADE_GOODS:
+        got = art._indices("trade_goods")
+        if got is None or pl["trade_goods"] is None:
+            return None
+        ys, xs = np.nonzero(got[2])
+        if not len(xs):
+            return None
+        x, y = pl["trade_goods"]
+        # the original's coins are 16 x 19 px: the painted stacks stand in
+        # a box of PRODUCT_BOX native px round the same middle
+        cx = x + int(xs.min() + xs.max()) // 2
+        cy = y + int(ys.min() + ys.max()) // 2
+        return bid, (cx - PRODUCT_BOX // 2, cy - PRODUCT_BOX // 2,
+                     PRODUCT_BOX, PRODUCT_BOX)
+    shown = bid
+    if bid == buildingart.HOUSING:
+        # the ground drawing is a few flat houses; the painted estate stands
+        # on the same foot in a box of HOUSING_BOX native px
+        return bid, (pl["foot"][0] - HOUSING_BOX[0] // 2,
+                     pl["foot"][1] - HOUSING_BOX[1], *HOUSING_BOX)
+    if bid in SATELLITES and shown != buildingart.HOUSING:
         # HD EXTENSION: the original's satellite drawing is a few pixels
         # across (77 x 44 at most); a painted one fills 80 % of the window's
         # width instead, centred where the original's stands
@@ -313,10 +349,10 @@ def tile(spec, climate, bg, place="popup", colour=None):
         x0, y0, x1, y1 = win
         canvas = room[2][y0:y1 + 1, x0:x1 + 1].copy()
         kind = spec[0]
-        if kind == "ground":
-            _building(canvas, art, spec[1], pl["foot"], win)
-        elif kind == "building" and hd:
+        if hd:
             pass                    # `overlay` stands the painted one here
+        elif kind == "ground":
+            _building(canvas, art, spec[1], pl["foot"], win)
         elif kind == "building":
             if int(spec[1]) in SATELLITES:
                 _centred(canvas, art, f"satellite_{SATELLITES[int(spec[1])]}",

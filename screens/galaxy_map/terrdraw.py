@@ -142,6 +142,59 @@ def _dashes(pts, pattern):
     return out
 
 
+def _clip_path(pts, w, h, pad):
+    """The parts of the polyline `pts` (an N x 2 array) inside the box
+    -pad..w+pad, -pad..h+pad, as a list of arrays (Liang-Barsky, per
+    segment; neighbouring segments stay one piece). A border that leaves
+    the view is cut at the edge, so `pygame.draw.lines` never gets a
+    coordinate far outside its layer (Data's SIGSEGV of 13 Nov 2026,
+    `render_borders`; cause not proven, this removes the one input the
+    drawing call should never see). A point that is not a finite number
+    ends a piece."""
+    x0, y0, x1, y1 = -pad, -pad, w + pad, h + pad
+    out, cur = [], []
+    for a, b in zip(pts[:-1], pts[1:]):
+        ax, ay, bx, by = float(a[0]), float(a[1]), float(b[0]), float(b[1])
+        if not all(map(math.isfinite, (ax, ay, bx, by))):
+            if len(cur) >= 2:
+                out.append(np.array(cur))
+            cur = []
+            continue
+        t0, t1 = 0.0, 1.0
+        dx, dy = bx - ax, by - ay
+        for p, q in ((-dx, ax - x0), (dx, x1 - ax),
+                     (-dy, ay - y0), (dy, y1 - ay)):
+            if p == 0:
+                if q < 0:
+                    t0, t1 = 1.0, 0.0
+                    break
+                continue
+            r = q / p
+            if p < 0:
+                t0 = max(t0, r)
+            else:
+                t1 = min(t1, r)
+        if t0 > t1:
+            if len(cur) >= 2:
+                out.append(np.array(cur))
+            cur = []
+            continue
+        s = (ax + t0 * dx, ay + t0 * dy)
+        e = (ax + t1 * dx, ay + t1 * dy)
+        if cur and t0 == 0.0:
+            cur.append(e)
+        else:
+            if len(cur) >= 2:
+                out.append(np.array(cur))
+            cur = [s, e]
+        if t1 < 1.0:
+            out.append(np.array(cur))
+            cur = []
+    if len(cur) >= 2:
+        out.append(np.array(cur))
+    return out
+
+
 class BorderLayer:
     """The borders' transparent layer, kept between frames of one size."""
 
@@ -175,7 +228,10 @@ def render_borders(surface, view, terr, colours, scale, opacity_, cache):
             pts = np.vstack([pts, pts[:1]])
             pieces = (_dashes(pts, [p * scale for p in pattern])
                       if pattern else [pts])
-            for piece in pieces:
+            clipped = [c for piece in pieces
+                       for c in _clip_path(piece, box.w, box.h,
+                                           core_w * 5 + 2)]
+            for piece in clipped:
                 path = [(float(x), float(y)) for x, y in piece]
                 # glow, body, core: written over each other, widest first
                 maplines.stroke_path(layer, rgb + (int(46 * strength),),
