@@ -504,7 +504,9 @@ class CombatScreen(CombatInput, ScreenBase):
         return self._names.name("weapons", wid) if self._names else None
 
     def _planet_picture(self, c):
-        key = ("planet", c.get("colony", -1))
+        # Antares has no colony: its key says so, else a colony-less battle
+        # seen first would keep its None for the Antaran one
+        key = ("planet", c.get("colony", -1), cbart.is_antares(c))
         if key not in self._cache:
             self._cache[key] = cbart.planet_picture(self._art, self._state, c)
         return self._cache[key]

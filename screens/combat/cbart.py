@@ -629,32 +629,74 @@ class CombatArt:
                             mirror, flip)
 
 
+#: TRANSCRIPTION `antares_planet`: the Antaran home planet is CMBTPLNT 60, its
+#: palette 62 (and 61 the status picture, OMISSION `status_planet`), loaded by
+#: `Load_Antaran_Planet` (combinit.cpp:1645-1652) when the battle is at
+#: Antares (`star_idx == NUM_STARS`, :1003-1007). The tuple's size is -1:
+#: no `PLANET_SIZE_*`, so every reader's `.get(size, default)` takes the
+#: offset (7, 7) the original gives a planet with no colony
+#: (`Get_Draw_Ship_Offsets_`, cmbtdrw1.cpp:2008-2013).
+ANTARES_PLANET, ANTARES_PALETTE, ANTARES_SIZE = 60, 62, -1
+MAX_PLAYERS, SHIP_SIZE_DOOM_STAR = 8, 5
+
+
+def is_antares(c):
+    """Whether this battle is the one at Antares: no colony, and unit 0 the
+    live Antaran planet `Load_Antaran_Planet` builds (owner and previous
+    owner MAX_PLAYERS, no ship, size class Doom Star, status 0, combinit.cpp:
+    1613-1624). The wire has no star index (`CMBT`), so the unit says it; a
+    battle at a star without a colony leaves unit 0 destroyed
+    (`Load_Colony_Defense_`, combinit.cpp:1782-1786, status 5)."""
+    units = c.get("units") or ()
+    if int(c.get("colony", -1)) != -1 or not units:
+        return False
+    u = units[0]
+    return int(u["unit_status"]) == 0 and int(u["ship_idx"]) == -1 and \
+        int(u["owner"]) == MAX_PLAYERS and \
+        int(u["size_class"]) == SHIP_SIZE_DOOM_STAR
+
+
+def _palette_of(art, entry):
+    """The extra colours CMBTPLNT `entry` carries, or None."""
+    pal_blob = art.blob("cmbtplnt", entry)
+    if not pal_blob:
+        return None
+    from core import lbx
+    try:
+        h = lbx.parse_header(pal_blob)
+        return lbx.read_palette(pal_blob, h.frame_count) \
+            if h.has_palette else None
+    except lbx.LbxError:
+        return None
+
+
+def antares_planet(art, c):
+    """(picture, ANTARES_SIZE) of the Antaran home planet, or None."""
+    if not is_antares(c):
+        return None
+    pic = art.surface("cmbtplnt", ANTARES_PLANET, 0,
+                      _palette_of(art, ANTARES_PALETTE))
+    return (pic, ANTARES_SIZE) if pic is not None else None
+
+
 def planet_picture(art, state, c):
     """(picture, size) of the battle's planet: CMBTPLNT[climate * 6 + size],
-    its palette at +5 (combinit.cpp:1539-1559), or None. Moved here from the
-    screen by work order 199 (the screen's line guideline)."""
+    its palette at +5 (combinit.cpp:1539-1559), or None; at Antares the
+    Antaran home planet (`antares_planet`). Moved here from the screen by
+    work order 199 (the screen's line guideline)."""
     col = c.get("colony", -1)
+    if col is None or col < 0:
+        return antares_planet(art, c)
     try:
         from core.structs import colony as colony_struct
         from core.structs import planet as planet_struct
-        if col < 0:
-            return None
         colony = colony_struct.SPEC.parse(state.colonies_raw[col])
         p = planet_struct.parse(state.planets_raw[colony.planet])
     except (IndexError, TypeError, AttributeError, ValueError):
         return None
     climate, size = int(p.climate), int(p.size)
-    pal_blob = art.blob("cmbtplnt", climate * 6 + 5)
-    extra = None
-    if pal_blob:
-        from core import lbx
-        try:
-            h = lbx.parse_header(pal_blob)
-            extra = lbx.read_palette(pal_blob, h.frame_count) \
-                if h.has_palette else None
-        except lbx.LbxError:
-            extra = None
-    pic = art.surface("cmbtplnt", climate * 6 + size, 0, extra)
+    pic = art.surface("cmbtplnt", climate * 6 + size, 0,
+                      _palette_of(art, climate * 6 + 5))
     # climate and planet index ride along for the turning sphere (WO 331);
     # every reader takes [0] and [1] only
     return (pic, size, climate, int(colony.planet)) if pic is not None \

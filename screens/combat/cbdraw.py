@@ -58,6 +58,23 @@ MISSILE_TYPE = {14: 0, 15: 1, 16: 2, 17: 3, 18: 4, 19: 5, 20: 6, 40: 6}
 TORPEDOES = {19, 20, 40}
 PROTON = 19                 # WEAPON_PROTON_TORPEDO
 FIGHTER_TYPE = {31: 0, 29: 1, 30: 2, 28: 3}
+#: TRANSCRIPTION `antaran_fighters`: the Antarans' fighters are CMBTFGTR
+#: 64-79, sixteen facings of ONE picture; the players' are `type * 16 +
+#: facing` of entries 0-63 (`Load_Individual_Ship_Pictures_` loads
+#: `fighter_seg[MAX_PLAYERS][i]` from entry i + 0x40, i below 16,
+#: combinit.cpp:2836-2840; `Draw_Fighter_` reads `fighter_seg[owner][type *
+#: 16 + facing]`, cmbtmis.cpp:1527). DEVIATION `antaran_fighter_type`: only
+#: type 0's slots are loaded for the Antarans, the others are null in the
+#: original; HD draws the one picture for every type.
+ANTARAN_FIGHTER = 0x40
+
+
+def fighter_entry(kind, facing, owner):
+    """The CMBTFGTR entry of a fighter group of weapon `kind` at `facing`
+    owned by `owner` (the group's own `owner`, `Missile_Owner_`)."""
+    if int(owner) >= MAX_PLAYERS:
+        return ANTARAN_FIGHTER + int(facing)
+    return FIGHTER_TYPE[kind] * 16 + int(facing)
 STAR_LAYERS = ((46, 0.125), (47, 0.5), (48, 1.0))
 
 
@@ -644,8 +661,8 @@ def draw_ordnance(surface, cam, art, ordnance, font_px, style, cache,
         facing = int(m["facing_dir"]) & 15
         frame = ordnance_frame(missiles, m, ship_frame, cur_ship)
         if kind in FIGHTER_TYPE:
-            pic = art.surface("cmbtfgtr", FIGHTER_TYPE[kind] * 16 + facing,
-                              frame)
+            pic = art.surface("cmbtfgtr", fighter_entry(
+                kind, facing, m.get("owner", 0)), frame)
             off = 12
             count = max(1, min(9, int(m["quantity"]) // 4))
         elif kind in MISSILE_TYPE:

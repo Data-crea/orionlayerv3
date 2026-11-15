@@ -34,6 +34,18 @@ PLANET_SIDE = {0: 3, 1: 4, 2: 6, 3: 7, 4: 8}
 NO_COLONY_SIDE = 6
 #: the battle's buttons by the key that presses them (combat1.cpp:126-131,
 #: :178): HD's own path for each, the click's (`CombatInput._button`)
+#: `Boarded` is bit 1 of `combat_status_flags` (`Set_Boarded_Flag_`,
+#: v2 cmbtfir2.cpp:387-393), cleared with the rest at the unit's turn start
+#: (`Init_Ship_For_Start_Of_Turn`, v2 combat1.cpp:1435).
+BOARDED_BIT = 0x02
+#: OrionLayer's English for the notice when the player's KENTEXT file was
+#: extracted before work order 393 (the extractor writes the ids now); the
+#: texts are the player's KENTEXT.LBX 60, 0x40, 0x41 read off the file.
+NOTICE_ENGLISH = {
+    "boarded": "Only one boarding action allowed per turn.",
+    "own_ship": "Marine transfers not allowed during combat.",
+    "own_captured":
+        "Transfers to captured ships not allowed during combat."}
 KEY_BUTTON = {ord(chr(hk).lower()): k for k, _w, hk in cbpanel.BUTTONS}
 #: the missile warning's hidden field, in the reduced map's place while the
 #: warning is up (combat1.cpp:116-118)
@@ -375,6 +387,8 @@ class CombatInput:
             # acting unit itself, which the engine still refuses
             if target is not None and target != cur:
                 self._send("board", target)
+            elif target is not None:
+                self._own_ship_notice(c["units"][cur])
         elif target is not None and target != cur and \
                 c["units"][target]["owner"] != me:
             if cbdraw.unit_ref(c["units"][target],
@@ -411,7 +425,10 @@ class CombatInput:
             if not self._own_turn():
                 return None
             if key == "board" and not self._board:
-                self._board, self._pops.scan_mode = True, False
+                self._pops.scan_mode = False
+                if self._boarded_notice():
+                    return None
+                self._board = True
             elif key == "board":
                 self._board_off()
             else:
@@ -441,6 +458,48 @@ class CombatInput:
                 live.get("board_flag"),
                 tuple((f.index, f.field_type, f.x, f.y, f.hotkey) for f in
                       getattr(self._state, "fields", None) or []))
+
+    def _say(self, what):
+        """The original's message box in HD's notice: the player's own
+        KENTEXT line where the file holds it, else OrionLayer's English."""
+        word = self._ken.panel_word(what) if self._ken is not None else None
+        self._pops.notice = word or NOTICE_ENGLISH[what]
+
+    def _boarded_notice(self):
+        """TRANSCRIPTION `board_already_boarded` (work order 393): the
+        BOARD button on a unit that has boarded this turn says KENTEXT 60
+        in a message box, turns SCAN off first and leaves BOARD off
+        (`skan_flag = 0`, the box, `board_flag = 0`;
+        combat1.cpp:797-815 at HEAD, v2.0.0 :798-807;
+        `Already_Boarded_` v2 cmbtfir2.cpp:391-393). HD reads the same bit off
+        the wire (`combat_status_flags`) and sends nothing, where it sent
+        BOARD and the engine refused it with 7. True when the box opened."""
+        u = self._acting()
+        if u is None or not int(u.get("combat_status_flags") or 0) & \
+                BOARDED_BIT:
+            return False
+        self._say("boarded")
+        return True
+
+    def _own_ship_notice(self, unit):
+        """TRANSCRIPTION `board_acting_ship` (work order 393): BOARD, then
+        the acting ship itself: the original boards whatever unit is
+        clicked (v2 combat1.cpp:954-955) and `Initiate_Boarding_Action`
+        refuses a ship of the actor's own owner with KENTEXT 0x40, or 0x41
+        for a captured one (v2 combat1.cpp:2540-2541); BOARD stays lit
+        (`board_mode_kept`). The engine refuses that BOARD (4), so HD shows
+        the box and sends nothing.
+        UNVERIFIED: `Filter_Boarding` (v2 boarding.cpp:31-73) is asked first
+        and answers for a unit in stasis, in a black hole or phased out
+        (its own message or none), and for a transporter ship against its
+        own damper field; HD opens its box for none of them but the
+        last, which it cannot tell from the wire. Not seen live."""
+        if cbdraw.unit_ref(unit, "stasis_source_idx") is not None or \
+                cbdraw.unit_ref(unit, "black_hole_source_idx") is not None \
+                or int(unit.get("special_status_flag") or 0) == 4:
+            return
+        self._say("own_captured" if int(unit.get("is_captured") or 0)
+                  else "own_ship")
 
     def _board_off(self):
         """BOARD out. The engine's own flag is set by a BOARD command and
@@ -587,7 +646,8 @@ class CombatInput:
     def handle_mousewheel(self, dy, screen_x, screen_y):
         if self.help_consumes_wheel(dy) or self._logwin.wheel(dy):
             return                  # an open help entry scrolls first
-        if self._pops.showing(self._state) in ("local", "scan", "board"):
+        if self._pops.showing(self._state) in ("local", "scan", "board",
+                                                      "notice"):
             # TRANSCRIPTION `scan_wheel` (work order 299, Data's P7 of 298):
             # the original's scan is its own input loop with no zoom
             # (`Detailed_View_Ship_` cmbtdrw1.cpp:156-247); the wheel is the

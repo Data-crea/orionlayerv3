@@ -34,6 +34,12 @@ ARC_MESSAGES = {
 #: KENTEXT.LBX): the officer's mark (cmbtdrw1.cpp:1222-1245, "(L)" in the
 #: English game) and "Immobile" (cmbtdrw1.cpp:2355).
 PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
+                  # the boarding refusals HD answers itself (work order
+                  # 393): one boarding a turn (combat1.cpp:670-680, v2
+                  # :798-807), no boarding of one's own ship or a captured
+                  # one
+                  # (`Initiate_Boarding_Action`, v2 combat1.cpp:2541)
+                  "boarded": 60, "own_ship": 0x40, "own_captured": 0x41,
                   # the systems box (`Draw_Internals_Display_`,
                   # cmbtdrw1.cpp:360-425), work order 258
                   "systems": 36, "drive": 14, "no_drive": 37, "shields": 39,

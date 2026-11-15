@@ -49,8 +49,8 @@ import random
 import time
 
 from . import (cbbeam, cbcloak, cbdraw, cbflare, cbflight, cblightning,
-               cbnumbers, cbpace, cbqueue, cbreflect, cbretreat, cbsfx,
-               cbshot, cbsound, cbstart)
+               cbmonsterdeath, cbnumbers, cbpace, cbqueue, cbreflect,
+               cbretreat, cbsfx, cbshot, cbsound, cbstart)
 
 CELL = cbdraw.CELL
 MOVE_S = cbpace.MOVE_S
@@ -374,7 +374,8 @@ class Player:
                 if u is not None:
                     self._number(u, ev.get("past_shields"),
                                  ev.get("absorbed"),
-                                 now + len(b["ticks"]) * FRAME_S / 2)
+                                 now + b.get("number_tick",
+                                             len(b["ticks"]) / 2) * FRAME_S)
                 return len(b["ticks"]) * FRAME_S
         if k in ("capture", "raid", "blast_hit", "web_damage", "bomb",
                  "special"):
@@ -568,6 +569,12 @@ class Player:
         if m is not None:
             self._numbers.append(m)
 
+    def _number_point(self, u, value, t0, biological=False):
+        """A bomb's number (`cbnumbers.mark_point`, work order 393)."""
+        m = cbnumbers.mark_point(cbdraw.centre(u), value, t0, biological)
+        if m is not None:
+            self._numbers.append(m)
+
     def _draw_event(self, surface, cam, art, ev, t, cache):
         k = ev["kind"]
         if k == "move" and not ev.get("teleport"):
@@ -631,6 +638,11 @@ class Player:
                 cx, cy = cbdraw.centre(u)
                 surface.blit(cbdraw.scaled(pic, cam.scale, cache),
                              cam.to_window(cx - 36, cy - 36))
+        elif k == "destroy" and "_mdeath" in ev:
+            # TRANSCRIPTION `monster_death` (work order 393)
+            cbmonsterdeath.draw(surface, cam, art, self.colours,
+                                self._unit(ev["unit"]), ev["_mdeath"],
+                                sfx_frame(ev["_mdeath"], t), cache)
         elif k == "destroy" and "_death" in ev:
             # TRANSCRIPTION `death_picture` (`cbblast`): frames 0..n-1 at
             # the centre plus the size's offset, the unit gone from n / 2

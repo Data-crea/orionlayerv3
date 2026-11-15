@@ -7,8 +7,8 @@ the `Player` as its first argument and reads and writes the state the
 original methods did, in the same order; `Player._start` stays the one place
 that picks the kind and returns the animation's length in seconds.
 """
-from . import (cbart, cbbeamfx, cbblast, cbdraw, cbnumbers, cbpace, cbqueue,
-               cbsfx, cbshot)
+from . import (cbart, cbbeamfx, cbblast, cbdraw, cbmonsterdeath, cbnumbers,
+               cbpace, cbqueue, cbsfx, cbshot)
 
 
 def effect(player, ev, now, k):
@@ -38,16 +38,28 @@ def effect(player, ev, now, k):
         u = player._unit(ev.get("unit", ev.get("target", -1)))
         hit = ev.get("past_shields") or ev.get("hits")
         length = cbpace.sfx_times(p, p.get("step", ev["_step"]))
-        if u is not None and not ev.get("at_missile"):
+        if u is not None and not ev.get("at_missile") and k == "bomb":
+            # TRANSCRIPTION `point_numbers`: `Draw_Bombs_` shows the
+            # hits only, by `Add_Damage_Indicator_For_Missile` or, for
+            # the Death Spore and the Bio-Terminator, `_For_Biological`
+            # (cmbtdrw1.cpp:3157-3161; beams.cpp:673-697)
+            player._number_point(u, ev.get("hits"), now + p["_number_at"],
+                                 int(ev.get("weapon", 0)) in cbsfx.BIO)
+        elif u is not None and not ev.get("at_missile"):
             player._number(u, hit, ev.get("absorbed"),
                          now + p["_number_at"])
         if ev.get("_destroyed"):
             # the missiles destroyed, over the missile as the blast
             # starts (`Add_Damage_Indicator_For_Missile_`,
             # cmbtspec.cpp:772)
-            player._marks.append((str(ev["_destroyed"]), *ev["_at"],
-                                now + p["fly"] * cbpace.FRAME_S,
-                                (0xff, 0xcc, 0x40)))
+            # TRANSCRIPTION `point_numbers`: the same rising, drifting
+            # orange number as a missile's hit, 8 right and 8 up of the
+            # missile (`Add_Damage_Indicator_For_Missile`, beams.cpp:
+            # 673-686; cmbtspec.cpp:806), no longer a static word mark
+            m = cbnumbers.mark_point(ev["_at"], ev["_destroyed"],
+                                     now + p["fly"] * cbpace.FRAME_S)
+            if m is not None:
+                player._numbers.append(m)
         return length
 
 
@@ -118,6 +130,12 @@ def destroy(player, ev):
             return cbpace.sfx_times(p, ev["_step"])
     if u is None:
         return 18 * cbpace.FRAME_S / ev["_step"]
+    # TRANSCRIPTION `monster_death` (work order 393, `cbmonsterdeath`): a
+    # monster has its own death pictures, whatever the death state
+    mp = cbmonsterdeath.plan(u, player._art)
+    if mp is not None:
+        ev["_mdeath"] = mp
+        return cbpace.sfx_times(mp, ev["_step"])
     ev["_death"] = cbblast.death_plan(u, player._art)
     ev["_dp"] = {"frames": ev["_death"][1], "delay": delay}
     return cbpace.sfx_times(ev["_dp"], ev["_step"])

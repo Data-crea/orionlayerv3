@@ -52,8 +52,23 @@ def plan(player, ev):
     b["skip"] = cbflare.REFLECTION_DIAMETERS[size] // 3
     seq = cbshot.bolt_frames(b["frames"], player.fast)
     states = cbflare.reflection_run(max(1, player.reflection_frames))
-    n = max(len(seq) + 1, len(states))
-    b["ticks"] = (seq + [b["frames"]] + [None] * n)[:n]
+    # TRANSCRIPTION `reflected_autofire` (work order 393): the reflected
+    # beam is its own `Beam_SFX_` call with the shot's specials, and a
+    # first entry with 0x80 sets `special_timer[0] = 3` (beams.cpp:1268-
+    # 1269, 1405-1426, 1431-1432), so an Autofire beam comes back three
+    # times, as `cbshot.schedule` plays an entry. The damage number is
+    # queued at the first strike (`accum_hit_x = -1` after, :1587-1590).
+    # UNVERIFIED reflected_autofire_live: not seen in a running battle,
+    # nor how long the reflection field's flare stays on over three passes
+    once = seq + [b["frames"]]
+    reps = cbshot.REPEATS if specials & cbshot.REPEAT_SPECIAL else 1
+    run = once * reps
+    n = max(len(run), len(states))
+    b["ticks"] = (run + [None] * n)[:n]
+    if reps > 1:
+        h = cbshot.hit_frame(b)
+        b["number_tick"] = next((i for i, t in enumerate(run)
+                                 if t is not None and t >= h), 0)
     b["flare"] = (states + [(0, 0)] * n)[:n]
     b.update(reflection=True, flare_size=size, flare_special=False,
              flare_heavy=[False] * n, flare_at=cbdraw.centre(ref),

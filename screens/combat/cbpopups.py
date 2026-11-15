@@ -115,6 +115,7 @@ class Popups:
     def __init__(self):
         self.scan_mode = False       # SCAN lit: the next unit clicked is scanned
         self.local_unit = None       # HD's own scan view of this unit
+        self.notice = None           # the original's message box, HD's own
         self.rects = {}
         self._pending = None         # (marines before, time) after an arrow
         self._drag = None            # (low, high, value) while the bar is held
@@ -122,16 +123,19 @@ class Popups:
 
     def reset(self):
         self.scan_mode, self.local_unit, self._pending = False, None, None
+        self.notice = None
         self._drag = None
         # a closed popup's last card must not answer the next click
         self.view.card = None
         self.view.rects = {}
 
     def showing(self, state):
-        """'board', 'scan' (the engine's), 'local' or None."""
+        """'board', 'scan' (the engine's), 'notice', 'local' or None."""
         cp = engine_popup(state)
         if cp is not None:
             return "board" if cp["screen"] == combatpopup.BOARD else "scan"
+        if self.notice is not None:
+            return "notice"
         return "local" if self.local_unit is not None else None
 
     # ── drawing ────────────────────────────────────────────────────
@@ -152,7 +156,9 @@ class Popups:
             return
         surface.blit(msgbox.dimmed_base(surface, None, msgbox.DIM_ALPHA),
                      (0, 0))
-        if kind == "board":
+        if kind == "notice":
+            self._draw_notice(surface, style, scale)
+        elif kind == "board":
             self._draw_board(surface, style, scale, engine_popup(state))
         else:
             cp = engine_popup(state)
@@ -181,6 +187,25 @@ class Popups:
         rect.center = (w // 2, int(h * 0.42))
         hud.popup(surface, rect, scale)
         return rect.inflate(-int(48 * k), -int(40 * k)), k
+
+    def _draw_notice(self, surface, style, scale):
+        """HD EXTENSION `local_notice` (work order 393): a message the
+        original opens as `GENDRAW::Message_Box_` over the battle, here when
+        HD refuses a gesture itself and sends nothing; its text only, closed
+        by any click or key as the original's one full-screen field
+        (gendraw.cpp:201-207)."""
+        k = self._k(surface)
+        size = max(10, int(28 * k))
+        lines = textfit.wrap_rendered(style, self.notice, size,
+                                      int((720 - 48) * k),
+                                      hudtext.colour("value"))
+        inner, k = self._box(surface, scale, 720, sum(
+            ln.get_height() + 4 for ln in lines) + int(10 * k))
+        y = inner.y
+        for line in lines:
+            hudtext.blit(surface, line, pygame.Rect(inner.x, y, inner.w,
+                                                    line.get_height()))
+            y += line.get_height() + 4
 
     def _draw_board(self, surface, style, scale, cp):
         k = self._k(surface)
@@ -235,6 +260,9 @@ class Popups:
         kind = self.showing(state)
         if kind is None:
             return False
+        if kind == "notice":
+            self.notice = None              # a click anywhere closes it
+            return True
         if kind in ("local", "scan") and self.view.card_at(x, y):
             # DEVIATION `scan_card_click` (Data, work order 297): a click
             # on a row with a card keeps the scan open
@@ -305,6 +333,9 @@ class Popups:
     def key(self, key, state, client):
         """ESC: the board popup's own hotkey; closes HD's scan view."""
         kind = self.showing(state)
+        if kind == "notice":
+            self.notice = None              # any key closes the box
+            return True
         if kind is None or key != pygame.K_ESCAPE:
             return kind is not None
         if kind == "local":

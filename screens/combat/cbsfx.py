@@ -280,6 +280,10 @@ def _plan_special(ev, unit, art):
     return None
 
 
+#: The ball's scale in each of its ten frames (cmbtspec.cpp:536-549).
+STASIS_GROWTH = tuple(i / 10 for i in range(10))
+
+
 def _plan_stasis(art, dst, a, b):
     n = _frames(art, 1)
     ball, mirror, flip = stasis_ball(art, dst)
@@ -289,11 +293,17 @@ def _plan_stasis(art, dst, a, b):
             texture_line(surface, cam, cache,
                          art.surface("cmbtsfx", 1, frame // 2), a, b)
         else:
-            pct = min(90, (frame - 2 * n + 1) * 10) / 100
-            _blit_centred(surface, cam, cache, art.surface(
-                "cmbtsfx", ball, 0, None, mirror, flip,
-                glass="shield"), *b, pct)
-    return {"frames": 2 * n + 10, "draw": draw}
+            # TRANSCRIPTION `stasis_growth`: the ball is drawn at 0, 10 ..
+            # 90 % (`ball_frame += step * 10` from 0, ten counts,
+            # cmbtspec.cpp:536-549); 0 % has no pixels (`Scale_Bitmap_`
+            # to nothing), and the 100 % ball is the held unit's own
+            # overlay once the state shows it (`cbdraw`)
+            pct = STASIS_GROWTH[min(frame - 2 * n, len(STASIS_GROWTH) - 1)]
+            if pct:
+                _blit_centred(surface, cam, cache, art.surface(
+                    "cmbtsfx", ball, 0, None, mirror, flip,
+                    glass="shield"), *b, pct)
+    return {"frames": 2 * n + len(STASIS_GROWTH), "draw": draw}
 
 
 def _plan_tractor(art, a, b):

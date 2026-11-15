@@ -6,10 +6,16 @@ numbers, the damage through the shields (`total_dmg`) and the damage the
 shields took (`hull_dmg` in the source's names; `Apply_Ship_Damage`'s
 `sys_dmg` is the shield arc's hits spent, cmbtfire.cpp:975-990 — work order
 267 corrected the "structure" of 265), each drawn only when above 0; the
-damage at the point, the shields' 20 native px to its left (a third place, 10 px left, is the shield's, and
-no caller fills it). The point is the unit's centre (`Ship_Center_Offsets`)
+damage at the point, the shields' 20 native px to its left; a third place, 10 px
+left, is the green ramp 0x50-0x57's (`shield_dmg`), which `Add_Damage_Indicator_For_Biological`
+fills for the Death Spore and the Bio-Terminator (beams.cpp:688-697; work order 393 corrected 265's
+remark about that place). The point is the unit's centre (`Ship_Center_Offsets`)
 moved by its size class x 8 up and to the side; for 9 frames of a tick
 each the numbers rise 1 px and drift 1 px to that side, then they are gone.
+A missile, a bomb or a biological bomb is a different call
+(`Add_Damage_Indicator_For_Missile` / `_For_Biological`, beams.cpp:673-697, TRANSCRIPTION `point_numbers`):
+the point is the centre moved 8 right (side 1) and 8 up whatever the size class, the value in the damage
+place (a bomb, a missile) or in the green place (biological), and nothing else (`mark_point`).
 Each frame takes its colours from its own three entries of a ramp: the
 damage from 0xB0-0xBA (orange, fading to dark red), the shields' from
 0xC0-0xCC (blue-violet); the first entry is the shadow, one pixel down
@@ -52,9 +58,18 @@ HULL_STEPS = (0xc0, 0xcc, 0xc5, 0xc0, 0xcc, 0xc5, 0xc0, 0xcc, 0xc5, 0xc0,
 #: Without the player's palette (a fresh clone): the ramps' first frame,
 #: read off the game's combat palette — (shadow, glyph).
 FALLBACK = {"total": ((80, 4, 0), (252, 164, 28)),
+            "shield": ((4, 48, 4), (128, 252, 88)),
             "hull": ((4, 0, 56), (60, 56, 184))}
+#: The green ramp of the biological bomb's number (beams.cpp:333-334,
+#: blob offset 0x1c; the first frame's entries 0x50 and 0x57 read off the
+#: game's combat palette: (4, 48, 4) and (128, 252, 88)).
+SHIELD_STEPS = (0x50, 0x57, 0x57, 0x50, 0x56, 0x57, 0x50, 0x55, 0x56, 0x50,
+                0x54, 0x55, 0x50, 0x53, 0x54, 0x50, 0x52, 0x53, 0x50, 0x51,
+                0x52, 0x50, 0x50, 0x51, 0x50, 0x50, 0x50)
 FRAMES = 9
 HULL_DX = -20
+SHIELD_DX = -10
+POINT_OFFSET = 8
 DIGIT_PX = 6
 FRAMING_CELLS = 32
 CELL = 20
@@ -76,7 +91,21 @@ def mark(unit_centre, size_class, total, hull, t0, side=1):
     off = max(0, min(5, int(size_class))) * 8
     x, y = unit_centre
     return {"x": x + (off if side else -off), "y": y - off, "t0": t0,
-            "side": side, "total": total, "hull": hull}
+            "side": side, "total": total, "hull": hull, "shield": 0}
+
+
+def mark_point(unit_centre, value, t0, biological=False, side=1):
+    """TRANSCRIPTION `point_numbers` (beams.cpp:673-697): the number of a
+    missile or a bomb, 8 right and 8 up of the centre whatever the unit's
+    size; a biological bomb's in the green place, 10 px left of that."""
+    value = int(value or 0)
+    if value <= 0:
+        return None
+    x, y = unit_centre
+    return {"x": x + (POINT_OFFSET if side else -POINT_OFFSET),
+            "y": y - POINT_OFFSET, "t0": t0, "side": side,
+            "total": 0 if biological else value, "hull": 0,
+            "shield": value if biological else 0}
 
 
 def digit_px(cam):
@@ -123,9 +152,10 @@ def draw(surface, cam, style, marks, now, frame_s, palette, cache):
         keep.append(m)
         dx = frame if m["side"] else -frame
         total_x = None
-        for kind, value, steps, ox in (("total", m["total"], TOTAL_STEPS, 0),
-                                       ("hull", m["hull"], HULL_STEPS,
-                                        HULL_DX)):
+        for kind, value, steps, ox in (
+                ("total", m["total"], TOTAL_STEPS, 0),
+                ("shield", m.get("shield", 0), SHIELD_STEPS, SHIELD_DX),
+                ("hull", m["hull"], HULL_STEPS, HULL_DX)):
             if value <= 0:
                 continue
             shadow, glyph = _colours(steps, frame, palette, kind)

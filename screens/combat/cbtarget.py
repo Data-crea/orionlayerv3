@@ -140,8 +140,8 @@ def draw_missile(surface, title, room, m, combat, missiles, art, names, ken,
         cbstatus.tile(surface, box, stars)
     kind = int(m["type"])
     facing = int(m["facing_dir"]) & 15
-    pic = art.surface("cmbtfgtr", cbdraw.FIGHTER_TYPE[kind] * 16 + facing,
-                      0) if kind in cbdraw.FIGHTER_TYPE else \
+    pic = art.surface("cmbtfgtr", cbdraw.fighter_entry(
+        kind, facing, m["owner"]), 0) if kind in cbdraw.FIGHTER_TYPE else \
         art.surface("cmbtmisl", cbdraw.MISSILE_TYPE[kind] * 16 + facing, 0) \
         if kind in cbdraw.MISSILE_TYPE else None
     if pic is not None:

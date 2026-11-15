@@ -13,8 +13,9 @@ under FAST ANIMATIONS:
               glow-0 picture turned one facing a frame and scaled from 100 %
               (type 3, less 10 a frame) or 132 % (type 4, less 8; 99 at
               most) until below 2 % (`Draw_Ship_Collapsing_`, :1558-1586)
-Every live unit within the picture's half-width of the centre (not the
-source, not held in stasis, not phased) shakes while the blast passes it:
+Every live unit `Spherical_Effect_In_Range` reaches (TRANSCRIPTION
+`octagonal_reach`, work order 393: cmbtspec.cpp:1704-1735, cmbtfire.cpp:
+141-186; not the source, not held in stasis, not phased) shakes while the blast passes it:
 by its distance in cells d = max(|dx|, |dy|) / 20 — d 1 frames 0-4, 2
 frames 1-6, 3 frames 5-12, 4 from frame 9 — and, for types 2-4, while
 the blast's ring (`anim_frames`, :1590-1601) reaches it.
@@ -31,7 +32,7 @@ the unit hidden from the frame `n / 2` on (cmbtspec.cpp:1192-1276).
 """
 import random
 
-from . import cbart, cbdraw
+from . import cbdraw
 
 #: Blast type -> its glass table (cmbtspec.cpp:1621-1659; the compressor's
 #: picture is drawn without one, `sfx_type != 2`).
@@ -72,8 +73,41 @@ def shaken(kind, frame, ratio, dist_sq, size_class):
     return False
 
 
-def in_reach(units, source, centre, radius_sq):
-    """[(unit, ratio, dist_sq)] the blast reaches (:1677-1706)."""
+#: `spherical_range_to_ship`, in cells, by blast type (cmbtfire_config.cpp:
+#: 42-47; `Spherical_Effect_From_Type`, cmbtspec.cpp:16-28: 0 Plasma Flux,
+#: 1 Pulsar, 2 Spatial Compressor, 3 and 4 the drive explosion). Second
+#: source: the missile table beside it (122, 96, 122, 135) is exactly the
+#: half-width of the pictures (CMBTSFX 0x34 245 px, CMBTSFX 6 192 px,
+#: SPHERSFX 0 / 1 270 px), so the table is the original's picture-sized one.
+SHIP_RADIUS = {0: 6, 1: 6, 2: 4, 3: 6, 4: 6}
+
+
+def octagonal(dx, dy):
+    """`Octagonal_Distance` (cmbtfire.cpp:34-42): the longer leg plus half
+    the shorter."""
+    dx, dy = abs(int(dx)), abs(int(dy))
+    return dx + dy // 2 if dx > dy else dy + dx // 2
+
+
+def in_range(source_centre, target, kind):
+    """TRANSCRIPTION `octagonal_reach` (`Spherical_Effect_In_Range`,
+    cmbtfire.cpp:141-186): the octagonal distance between the centres,
+    each leg less the target's own centre offset (floored at 0), is below
+    the effect's radius x 20. Until work order 393 HD took a Euclidean
+    distance within the picture's half-width (2 px more on an axis, about
+    7 % less on a diagonal, and no allowance for the target's size)."""
+    cx, cy = cbdraw.centre(target)
+    off = cbdraw.CENTRE[max(0, min(5, int(target["size_class"])))]
+    dx, dy = abs(source_centre[0] - cx), abs(source_centre[1] - cy)
+    dx, dy = max(0, dx - off), max(0, dy - off)
+    return octagonal(dx, dy) < SHIP_RADIUS[kind] * 20
+
+
+def in_reach(units, source, centre, kind):
+    """[(unit, ratio, dist_sq)] the blast reaches (cmbtspec.cpp:1704-1735:
+    live, not in stasis, not the source, not phased, and
+    `Spherical_Effect_In_Range`; the ratio and distance are the
+    centres')."""
     out = []
     for i, u in enumerate(units):
         if i == 0 or i == source or u["unit_status"] != 0 or \
@@ -82,9 +116,8 @@ def in_reach(units, source, centre, radius_sq):
             continue
         cx, cy = cbdraw.centre(u)
         dx, dy = cx - centre[0], cy - centre[1]
-        d2 = dx * dx + dy * dy
-        if d2 <= radius_sq:
-            out.append((i, int(max(abs(dx), abs(dy)) // 20), d2))
+        if in_range(centre, u, kind):
+            out.append((i, int(max(abs(dx), abs(dy)) // 20), dx * dx + dy * dy))
     return out
 
 
@@ -98,10 +131,8 @@ def plan(player, source, kind, art, rng=random):
     src = units[source]
     lbx_name, entry = PICTURE[kind]
     n = max(1, art.frame_count(lbx_name, entry))
-    pic0 = art.surface(lbx_name, entry, 0)
-    half = (cbart.native_size(pic0)[0] // 2) if pic0 is not None else 0
     centre = cbdraw.centre(src)
-    reach = in_reach(units, source, centre, half * half)
+    reach = in_reach(units, source, centre, kind)
     colours = player.colours
 
     def draw(surface, cam, cache, frame):
