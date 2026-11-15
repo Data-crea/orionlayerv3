@@ -4,7 +4,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for testing OrionLayer. The beta runs on **Linux only**, and you need your own copy of Master of Orion 2.
+        Thank you for testing OrionLayer. OrionLayer runs on **Linux only**, and you need your own copy of Master of Orion 2.
         One problem per report, please. **Do not attach save games or any file taken from your Master of Orion 2 installation.**
   - type: dropdown
     id: kind

@@ -21,7 +21,7 @@ so the game stays playable.
 > not ready to play or to rely on yet, and only some of its screens have
 > been accepted so far.
 >
-> **The beta runs on Linux only.** Windows (and macOS) are not part of it:
+> **OrionLayer runs on Linux only.** Windows (and macOS) are not supported:
 > OrionLayer does not start on Windows yet.
 
 You can start it, load or begin a game and play through the HD screens,
@@ -42,7 +42,7 @@ and bugs.
 | **Ubuntu 24.04 LTS** (and, by the same packages, Debian) | **Tested from an empty machine**, start to finish, with the package line below. Ubuntu 24.04 is the reference. Debian uses the same package names but has not been tried. |
 | **Arch Linux / CachyOS** | Runs (tested on CachyOS with its build tools and SDL libraries already installed), but **not tested from an empty machine**. The package line below is Debian's; install the equivalents with `pacman` (build tools, cmake, ninja, git, python, xdotool and SDL3's build dependencies). |
 | Fedora, openSUSE, other Linux | **Not tested.** It should work with the equivalent packages, but nobody has tried. |
-| Windows, macOS | **Not supported** in the beta. |
+| Windows, macOS | **Not supported.** |
 
 You also need a desktop session (X11 or Wayland), a sound device (the engine
 stops at start without one) and your own copy of Master of Orion 2.
@@ -81,7 +81,7 @@ sudo apt install build-essential cmake ninja-build pkg-config git \
     libwayland-dev libdecor-0-dev liburing-dev
 ```
 
-Windows is not part of the beta (see [On Windows](#on-windows)).
+Windows is not supported (see [On Windows](#on-windows)).
 
 ## Getting started
 
@@ -190,7 +190,7 @@ NEW GAME as in the original. Closing OrionLayer stops the game.
 
 ### On Windows
 
-**Windows is not part of the beta, and OrionLayer does not start there
+**Windows is not supported, and OrionLayer does not start there
 today** (the client calls a Linux-only function while starting, and `play.py`
 uses Linux-only process calls to run the engine). The steps below are the
 Linux steps with Windows' commands, kept for later and not supported. You
