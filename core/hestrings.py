@@ -96,7 +96,8 @@ class HStrings:
 
 
 def printf(template, *values):
-    """The original's `%d` / `%s` / `%%` substitution, and nothing more.
+    """The original's `%d` / `%s` / `%%` substitution (with an optional
+    width, `%2d`), and nothing more.
 
     A replace walk, not `str %` or `str.format` (decision 37): a
     template from a player's file that carries a code this does not
@@ -111,9 +112,27 @@ def printf(template, *values):
                 out.append("%")
                 i += 2
                 continue
-            if nxt in "ds" and vals:
-                out.append(str(vals.pop(0)))
-                i += 2
+            # TRANSCRIPTION `printf_width`: an optional C width (`%2d`,
+            # `%-3s`): the colony-ship lines of HESTRNGS ("%2d Colony
+            # ship(s)", messages 0x164/0x165, read with `H_Message` and
+            # `snprintf` at sys.cpp:~1298 in the 1255-1316 block; its hull
+            # lines are `"%2d %s"`, sys.cpp:1284), padded with spaces. A zero
+            # flag (`%05d`) is NOT read — C pads that with zeros — and a
+            # width over 255 is not either, so such a code stays as written,
+            # like any code this walk does not know (decision 37).
+            j = i + 1
+            left = j < len(template) and template[j] == "-"
+            j += left
+            k = j
+            while k < len(template) and template[k].isdigit():
+                k += 1
+            if k < len(template) and template[k] in "ds" and vals and \
+                    template[j:j + 1] != "0" and k - j <= 3 and \
+                    int(template[j:k] or 0) <= 255:
+                text = str(vals.pop(0))
+                width = int(template[j:k] or 0)
+                out.append(text.ljust(width) if left else text.rjust(width))
+                i = k + 1
                 continue
         out.append(ch)
         i += 1

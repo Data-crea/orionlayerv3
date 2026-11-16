@@ -290,14 +290,14 @@ CREW_ENGLISH = ("Green Crew", "Regular Crew", "Veteran Crew", "Elite Crew",
 
 
 def crew_word(words, quality):
-    """`Copy_Crew_Quality_Without_Parenthetical` (cmbtdrw1.cpp:3182-3188):
+    """`Copy_Crew_Quality_Without_Parenthetical` (cmbtdrw1.cpp:3196-3200):
     KENTEXT 31-35 cut at the "(".  Ultra Elite only from 4.
 
     DEVIATION `scan_crew_level_5` (work order 299, Data's P5 of 298): a
     level above the table's last row (`Calc_Ship_Level_` caps at 5 after
     the Warlord's +1, ericnet.cpp:217-236; `_crew_data` has rows 0-4,
     mox.cpp:780-786) has no word in the original — `Crew_Quality_String_`'s
-    switch falls to its default and prints nothing (cmbtdrw1.cpp:3850-3851)
+    switch falls to its default and prints nothing (cmbtdrw1.cpp:4016-4017)
     — HD names the highest known level instead of an empty word. Open fix
     100 registers the level (an observation)."""
     q = int(quality)
@@ -306,7 +306,16 @@ def crew_word(words, quality):
     if q < 0:
         return ""
     w = words.ken_word(CREW_KEYS[q], CREW_ENGLISH[q])
-    return w.split("(")[0].rstrip()
+    w = w.split("(")[0].rstrip()
+    # DEVIATION `scan_crew_word_compound` (work order 400, Data, 16 Nov 2026): original =
+    # the word as the player's file gives it (`Crew_Quality_String_`,
+    # `Crew_Quality_String`, cmbtdrw1.cpp:3985-4021); HD = a one-word compound that ends in "crew"
+    # ("Rekrutencrew", "Berufssoldatencrew") loses that ending, the card has
+    # no room and the stars already say it; "Green Crew" and any word of
+    # four letters or fewer stay.
+    if len(w) > 4 and w.endswith("crew") and " " not in w:
+        w = w[:-4]
+    return w
 
 
 def special_slots(unit, start_damage):
