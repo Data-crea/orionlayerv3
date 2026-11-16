@@ -290,20 +290,20 @@ class CombatScreen(CombatInput, ScreenBase):
         now = time.monotonic()
         if self._sent and now - self._sent[1] > ANSWER_WAIT:
             self._sent = None
-        if self._held and (now - self._held[1] > ANSWER_WAIT or
+        if self._held and (now - self._held[1] > self._held[2] or
                            self._held[0] != self._moment()):
             self._held = None
         return self._own_turn() and self._sent is None and self._held is None
 
-    def _hold_input(self):
+    def _hold_input(self, wait=ANSWER_WAIT):
         """TRANSCRIPTION `done_delay` (work order 305): after DONE the
         original drops the input of its next three calls and clears the
         pointer's buffer (`Set_Input_Delay_(3)`, combat1.cpp:859,
         fields.cpp:143-147, :167-170), so a double click ends one ship, not
         two. HD holds every battle field it activates, a key's too, until
         the engine's state has moved on (`_moment`) or `ANSWER_WAIT` has
-        passed; what comes in meanwhile is dropped, not queued."""
-        self._held = (self._moment(), time.monotonic())
+        passed (`wait`); what comes in meanwhile is dropped, not queued."""
+        self._held = (self._moment(), time.monotonic(), wait)
 
     def _mask(self, unit_idx, unit):
         """The rows at 1 as the battle holds them (`cbpanel.on_mask`)."""

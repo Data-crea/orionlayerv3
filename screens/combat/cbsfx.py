@@ -19,7 +19,7 @@ cmbtspec.cpp): what an event that is not a beam looks like —
   (38)                 at the target less 60 (:950-1046)
   a bomb               CMBTMISL 144 + facing (160 biological) flying 6 px a
                        frame, then CMBTSFX 7 at the target less 12
-                       (cmbtdrw1.cpp:3012-3096)
+                       (cmbtdrw1.cpp:3102-3186)
   a blast hit          its number only: the blast is drawn on the event that
                        fires it (`cbblast`, work order 210)
   web damage           the web on the unit: CMBTSFX 21-35 by size and facing
@@ -425,7 +425,7 @@ def _plan_bomb(ev, unit, art):
         return None
     a, b = cbdraw.centre(src), cbdraw.centre(dst)
     # TRANSCRIPTION `transporter_beam` (`Draw_Bombs_`, cmbtdrw1.cpp:
-    # 3024-3040; `Draw_Transporter_Bomb_Beam_`, cmbtspec.cpp:800-854):
+    # 3114-3130; `Draw_Transporter_Bomb_Beam_`, cmbtspec.cpp:800-854):
     # with working Transporters the bomb starts near the planet — 20 px
     # at a time toward it until within its picture's half-diagonal and
     # 60 px — after 8 ticks of CMBTSFX 15 (frames 0-2) along the line
@@ -441,11 +441,14 @@ def _plan_bomb(ev, unit, art):
         start, beam = (sx, sy), TRANSPORTER_TICKS
     dist = max(abs(b[0] - start[0]), abs(b[1] - start[1]))
     # TRANSCRIPTION `bomb_fast` (work order 398): the bomb flies 6 px a pass,
-    # 12 under FAST ANIMATIONS (`speed`, `Draw_Bombs_` cmbtdrw1.cpp:3059);
+    # 12 under FAST ANIMATIONS (`speed`, `Draw_Bombs_` cmbtdrw1.cpp:3105,
+    # `speed = (speedx2_flag != 0 || net_flag != 0) ? 12 : 6`);
     # only the flight takes that step — the transporter beam's eight ticks
-    # (cmbtspec.cpp:850-880) and the explosion's frames (cmbtdrw1.cpp:3170)
+    # (cmbtspec.cpp:850-880) and the explosion's frames (cmbtdrw1.cpp:3168-3182)
     # have none, so the plan is not stepped as a whole (`step` 1) as the
     # anti-missile rocket's is not
+    # OMISSION `net_flag`: the C++ also gives 12 for `net_flag != 0`; there is
+    # no net game here (single player)
     fast = int(ev.get("_step", 1) or 1) > 1
     fly = max(1, -(-int(dist) // (12 if fast else 6)))
     facing = int(round(get_angle(b[0] - start[0],
@@ -466,7 +469,7 @@ def _plan_bomb(ev, unit, art):
         else:
             _blit_at(surface, cam, cache, art.surface(
                 "cmbtsfx", 7, frame - beam - fly), b[0] - 12, b[1] - 12)
-    # `Draw_Bombs_` (cmbtdrw1.cpp:3049-3095): a tick a step, the numbers
+    # `Draw_Bombs_` (cmbtdrw1.cpp:3102-3185): a tick a step, the numbers
     # from the impact on, rising through the explosion's frames, then
     # held until done (at least one pass, a do-while)
     return {"frames": beam + fly + m, "draw": draw, "step": 1,

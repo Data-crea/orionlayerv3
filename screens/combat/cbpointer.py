@@ -14,6 +14,17 @@ while AUTO plays or another player's unit acts (:168-196 — the
 unit's picture is that field; the key C is the same field and takes the
 same guard (`centre_on_acting`).
 
+DEVIATION `centre_click_area`: HD's click area is the field's part of the
+unit's status box, `cbstatus.field_rect` of `cbstatus.CENTRE_FIELD` (15, 379)
+-(100, 460) in the box drawn at (13, 375) — measured from the box's own
+rectangle, not the whole status window — so it covers the picture and bars
+as the original's does and not HD's name line or margins.
+
+OMISSION `centre_click_net`: the original's list is also cleared by
+`game_type != 1 && owner != PLAYER_NUM && take_control_flag == 0`
+(combat1.cpp:165-166); HD is single-player, the `[` take-control key has no
+handler, so only the owner test (`scr._human_acting`) is kept.
+
 TRANSCRIPTION `options_fields` (G5): with the OPTIONS panel up
 (`order_info_flag` 0) the list is the panel's own fields (the five lights,
 SELF DESTRUCT, the title/ESC button) plus — added after the if/else, for
@@ -48,7 +59,14 @@ def centre_on_acting(scr):
     if unit is None or scr._cam is None or not scr._human_acting() or \
             scr._computer(c):
         return False
-    scr._cam.centre_on(*cbdraw.centre(unit))
+    # DEVIATION `centre_snap`: the original puts the unit's cell at the
+    # middle of its 32 x 18 view (`Snap_Center_Combat_Screen(x, y)`: the
+    # view's corner is x - 16, y - 9, combinit.cpp:2490-2491), the cell's
+    # corner at the middle, as the reduced map's click does; HD does the
+    # same instead of the footprint's centre (`cbdraw.centre`), which would
+    # differ by up to 30 px for a large ship. The original's clamp to the
+    # grid is `Camera.clamp`'s.
+    scr._cam.centre_on(unit["x"] * cbdraw.CELL, unit["y"] * cbdraw.CELL)
     return True
 
 
@@ -74,7 +92,8 @@ def served_in_options(scr, x, y):
         if scr.app.connected:
             scr._panel.switch(row, scr._state, scr.app.client)
         return True
-    if scr._panel.left is not None and scr._panel.left.collidepoint(x, y):
+    if scr._panel.picture is not None and \
+            scr._panel.picture.collidepoint(x, y):
         return centre_on_acting(scr)
     return False
 
@@ -82,7 +101,9 @@ def served_in_options(scr, x, y):
 def pointer_pick(scr, unit, tick):
     """`Assign_Mouse_Images`' picture for the battle as HD shows it:
     (icon, frame) from `cbcursor.pick`, or None for HD's own pointer
-    (`cbcursor`'s docstring: the order of the tests, the deviations)."""
+    (`cbcursor`'s docstring: the order of the tests, the deviations).
+    OMISSION `centre_click_net`: the clock tests the owner alone, the
+    original's `game_type != 1` (combat1.cpp:2214) has no HD counterpart."""
     c = scr._shown()
     if unit is None or c is None or scr._art is None or scr._tail or \
             scr._logwin.open or scr.help.visible or \

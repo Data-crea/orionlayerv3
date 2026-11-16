@@ -608,6 +608,24 @@ def fit(rect):
     return max(0.5, min(rect.w / BOX.w, rect.h / BOX.h))
 
 
+#: The centre field's rectangle in the original's pixels, (15, 379)-(100, 460)
+#: (`Add_Hidden_Field(15, 379, 100, 460, "c", 41)`, combat1.cpp:288): inside
+#: `BOX`, the part the unit's picture and its bars cover.
+CENTRE_FIELD = pygame.Rect(15, 379, 100 - 15, 460 - 379)
+
+
+def field_rect(rect, native=CENTRE_FIELD):
+    """Where the original's rectangle `native` lies in the window when the
+    box is drawn in `rect` (`draw`: centred, `fit` times as large), so a
+    field of the original's is the same part of the picture in HD."""
+    k = fit(rect)
+    out = pygame.Rect(0, 0, round(BOX.w * k), round(BOX.h * k))
+    out.center = rect.center
+    return pygame.Rect(out.x + round((native.x - BOX.x) * k),
+                       out.y + round((native.y - BOX.y) * k),
+                       round(native.w * k), round(native.h * k))
+
+
 def draw(surface, rect, status, art, colour, unit, monster, picture, style,
          scale, ken=None):
     """The box centred in `rect`, as large as fits. False when it could

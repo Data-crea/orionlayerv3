@@ -216,8 +216,15 @@ def explosion_shown(b, ev, frame):
     after the burst and from `max_frames` on, :2204-2207), its head has
     reached the target (`ship_hit_now_flag`, :2229-2233: `hit_frame`) and the
     entry hit or used a special (`special_flag != 0 || hit_result_flags !=
-    0`, :2352). The entry's flags are those of all its shots
-    (`plan_firing` stores them as `b["result"]`)."""
+    0`, :2356). The entry's flags are those of all its shots
+    (`plan_firing` stores them as `b["result"]`).
+    TRANSCRIPTION `result_bits` (cmbtfire.cpp:1478-1480): the wire's
+    `result` is `fire_res`, whose bit 0 becomes the entry's `result_flags`
+    and bit 1 its `special_flag` (the discharge event, :1983-1984, swaps
+    the two); the gate "either is non-zero" is therefore `result & 3`, and
+    a higher bit is no flag. UNVERIFIED `explosion_planet`: the gate's
+    `attacker_size_class != -1` (:2344) is not tested here; HD has no
+    unit-less attacker in a bolt plan."""
     result = b.get("result", ev.get("result", 0))
     return bool(int(result or 0) & 3) and 0 < frame < b["frames"] and \
         frame >= hit_frame(b)

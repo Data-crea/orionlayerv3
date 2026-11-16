@@ -228,6 +228,7 @@ class Panel:
     def __init__(self):
         self.all_buttons, self.help_rows = {}, []
         self.left = self.mid = self.facts = None
+        self.picture = None       # the unit's picture field (`cbstatus`)
         self.map = None           # the reduced map's rect (`cbmap`)
         self.rects = {}           # button key -> window rect
         self.rows = []            # (window rect, slot) of the weapon rows
@@ -342,7 +343,7 @@ class Panel:
         small = max(9, int(18 * scale))
         self.rects, self.rows, self.tabs = {}, [], {}
         self.all_buttons, self.help_rows = {}, []     # `cbhelp`'s
-        self.left = self.mid = self.facts = self.map = None
+        self.left = self.mid = self.facts = self.map = self.picture = None
         wins = self.windows(surface.get_size(), scale)
         self._draw_windows(surface, scale, wins, ins, status)
         if unit is None:
@@ -360,6 +361,7 @@ class Panel:
         # the original's status picture (work order 256, `cbstatus`); the
         # planet, or a unit whose pictures are missing, keeps HD's rings
         box = self.status_room(surface.get_size(), scale)
+        self.picture = cbstatus.field_rect(box)    # `centre_click`'s field
         if status is None or not cbstatus.draw(
                 surface, box, self.status, *status, picture, style, scale,
                 ken=ken):

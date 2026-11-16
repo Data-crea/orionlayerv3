@@ -223,15 +223,21 @@ def missile_target(ordnance, pas, beam=None):
     that strikes another flyer (`missile->target_is_missile`, the wire's
     `is_anti_missile_rocket`) puts its number — the target flyer's own place
     (`Fighter_Combat_SFX_`, cmbtmis.cpp:1273-1281, 1326-1328) — or None when
-    the group's target is a unit. `pas` is the pass event, whose `target` is
-    then a flyer's index, not a unit's; `beam` the pass's beam event, whose
+    the group's target is a unit (a group missing from the shown state is
+    NOT that: it gets the beam's point, or `()`, never a unit). `pas` is
+    the pass event, whose `target` is then a flyer's index, not a unit's;
+    `beam` the pass's beam event, whose
     target point stands in when the flyer is no longer in the state HD shows
     (HD STATE `missile_target_state`: the group is read from that state,
     since no event says what a pass aims at)."""
     flyers = {int(m["index"]): m for m in (ordnance or {}).get("missiles", [])}
     group = flyers.get(int(pas.get("missile", -1)))
-    if group is None or not group.get("is_anti_missile_rocket"):
-        return None
+    if group is not None and not group.get("is_anti_missile_rocket"):
+        return None        # the group aims at a unit: the ship's pair
+    # HD STATE `missile_target_state`: a group the shown state has lost
+    # cannot say what it aimed at, so it is treated as aiming at a flyer
+    # (the beam's point or no number), never at the unit that happens to
+    # have the flyer's index
     hit = flyers.get(int(pas.get("target", -1)))
     if hit is not None:
         return (hit["x"], hit["y"])

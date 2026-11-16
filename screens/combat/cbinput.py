@@ -15,6 +15,11 @@ from . import cbdraw, cbhelp, cbmap, cbpanel, cbpointer, cbtarget
 
 log = logging.getLogger("combat")
 
+#: s: how long key H holds the input when the engine's state does not move.
+#: UNVERIFIED live: `Select_After_Combat_Side_Wait` can pick the same unit
+#: again (both sides waiting, the attacker's flag cleared, combat1.cpp:
+#: 2018-2022, :2031-2033, :2046-2054), so cur_ship and cur_ptr need not change
+SIDE_WAIT_HOLD = 0.5
 FOOT = cbdraw.FOOT
 #: TRANSCRIPTION `move_target` (work order 304, Data's P1 of 303): how far
 #: the original takes the pointer's point back before it picks the cell a
@@ -343,10 +348,11 @@ class CombatInput:
             if self._cam is not None:        # there, nothing sent (`cbmap`)
                 self._cam.centre_on(at[0] * cbmap.CELL, at[1] * cbmap.CELL)
             return None
-        if self._panel.left is not None and \
-                self._panel.left.collidepoint(screen_x, screen_y):
+        if self._panel.picture is not None and \
+                self._panel.picture.collidepoint(screen_x, screen_y):
             # TRANSCRIPTION `centre_click` (work order 398, combat1.cpp:288,
-            # :827-829): a click on the unit's picture centres the view
+            # :827-829): a click on the unit's picture (the field's part of
+            # the status box, `cbstatus.field_rect`) centres the view
             cbpointer.centre_on_acting(self)
             return None
         tab = self._panel.tab_at(screen_x, screen_y)
@@ -720,4 +726,9 @@ class CombatInput:
             if key in (pygame.K_t, pygame.K_z, pygame.K_h) and field_by_hotkey(
                     getattr(self._state, "fields", None),
                     ord(chr(key).upper()), types=range(256)):
-                self._hold_input()
+                # `side_wait_hold`: H holds only shortly, T and Z until the
+                # engine has moved on or ANSWER_WAIT has passed
+                if key == pygame.K_h:
+                    self._hold_input(SIDE_WAIT_HOLD)
+                else:
+                    self._hold_input()

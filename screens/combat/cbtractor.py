@@ -25,7 +25,8 @@ from . import cbdraw
 
 #: CMBTSFX 2's frames: the lasting line and the gliding line's first
 LASTING, MOVING = 6, 4
-#: px a pass moves (cmbtmov1.cpp:299-310)
+#: px a pass moves (cmbtmov1.cpp:299-310); OMISSION `net_flag`: the original
+#: moves 6 px for a net game (:305-306), which OrionLayer (single player) lacks
 PASS_PX, PASS_PX_FAST = 2, 12
 
 

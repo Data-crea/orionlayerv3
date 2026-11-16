@@ -88,27 +88,34 @@ def column_runs(line, measure=None):
 
     `measure(text)` is the width of a run's text in the original's px (the
     renderer has the font). With it a RELATIVE column (`\\aX+25.`) sits that
-    many px right of where the run before it ends, as `FN_Set_X_Pos` places
-    it (fmtpara.cpp:1552-1568) — and a result outside the paragraph is
-    ignored, as the original ignores it. Without it such a run follows the
-    run before it, as before work order 398."""
+    many px right of the pen — where the text before it ended — as
+    `FN_Set_X_Pos` places it (fmtpara.cpp:1552-1568: `flag` true adds to
+    `line_p->x`); a result outside the paragraph is ignored, as the original
+    ignores it. TRANSCRIPTION `pen` (work order 398): the pen is the line's
+    start for the first run, the left run's start plus its text's width
+    WITH its trailing spaces (they advance `line_p->x`, :579-589), and for a
+    right or centred run its column's end. UNVERIFIED `pen_centre`: that a
+    centred run leaves the pen at its column's end is not read in the source.
+    Without `measure` such a run follows the run before it, as before work
+    order 398; a text with no relative column lays out as it always did."""
     runs = [r for r in line.runs if r.text.strip()]
     if not any(r.x is not None or r.end_x is not None for r in runs):
         return None
-    out, at, prev = [], 0, None
+    out, at, pen = [], 0, 0
     for k, r in enumerate(runs):
         x0 = r.x if r.x is not None else at
         if r.x is None and r.dx is not None and measure is not None \
-                and prev is not None:
-            pen = prev[0] + measure(prev[1]) + r.dx
-            if 0 <= pen <= TEXT_W:
-                x0 = pen
+                and 0 <= pen + r.dx <= TEXT_W:
+            x0 = pen + r.dx
         x1 = r.end_x if r.end_x is not None else (
             runs[k + 1].x if k + 1 < len(runs) and runs[k + 1].x is not None
             else TEXT_W)
-        out.append((r.text.strip(), r.align or "left", x0, x1))
+        align = r.align or "left"
+        out.append((r.text.strip(), align, x0, x1))
         at = x1
-        prev = (x0, r.text.strip())
+        if measure is not None:
+            pen = x1 if align in ("right", "center") \
+                else x0 + measure(r.text)
     return out
 
 

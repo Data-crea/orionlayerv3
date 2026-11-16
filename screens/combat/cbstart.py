@@ -24,7 +24,7 @@ def effect(player, ev, now, k):
         p = anti_missile(player, ev)
     if k == "bomb" and player.planet is not None:
         # the planet picture's size, for the Transporters' start
-        # point (cmbtdrw1.cpp:3026-3027)
+        # point (cmbtdrw1.cpp:3115-3117)
         w, h = cbart.native_size(player.planet[0])
         ev["_planet_half"] = (w // 2, h // 2)
     if k == "special" and w == cbsfx.GYRO:
@@ -42,7 +42,7 @@ def effect(player, ev, now, k):
             # TRANSCRIPTION `point_numbers`: `Draw_Bombs_` shows the
             # hits only, by `Add_Damage_Indicator_For_Missile` or, for
             # the Death Spore and the Bio-Terminator, `_For_Biological`
-            # (cmbtdrw1.cpp:3157-3161; beams.cpp:673-697)
+            # (cmbtdrw1.cpp:3158-3162; beams.cpp:673-697)
             player._number_point(u, ev.get("hits"), now + p["_number_at"],
                                  int(ev.get("weapon", 0)) in cbsfx.BIO)
         elif u is not None and not ev.get("at_missile"):
