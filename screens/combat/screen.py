@@ -403,7 +403,11 @@ class CombatScreen(CombatInput, ScreenBase):
         # TRANSCRIPTION `no_cursor` (work order 324): none with no acting
         # unit (cmbtdrw1.cpp:713 draws the cursor's box only for
         # `cur_ship >= 0`)
-        if unit is not None and not self._computer(c) and \
+        # TRANSCRIPTION `planet_no_cursor` (work order 398): none while the
+        # battle's planet (unit 0) acts, as `cur_ship != 0` of the same test
+        # (cmbtdrw1.cpp:898); UNVERIFIED live: that the engine's `cur_ship`
+        # is 0 on the wire while the human's planet acts
+        if unit is not None and cur != 0 and not self._computer(c) and \
                 self._play.dont_draw() != cur and \
                 self._fades.step(cur, now, self._play.fast) is None:
             cbdraw.draw_cursor(surface, cam, art, unit, clock, self._cache)
@@ -429,7 +433,7 @@ class CombatScreen(CombatInput, ScreenBase):
                          self.layout.scale, pic, self._specials,
                          self._computer(self._state.combat or c),
                          self._hover(c), self._status_of(c, unit),
-                         self._target(c))
+                         self._target(c), planet=cur == 0)
         if self._panel.map is not None:              # work order 209 B1
             cbmap.draw(surface, self._panel.map, c, self._play.ordnance,
                        self._cam, self._art, self._play.colours,
@@ -444,7 +448,7 @@ class CombatScreen(CombatInput, ScreenBase):
         # TRANSCRIPTION `move_pointer` (work order 303): the arrow over a
         # reachable cell, the HD pointer elsewhere — each frame, as the
         # cells change with every move
-        self._move_ptr.update(self._art, unit, self._move_cell(), win_h)
+        self._update_pointer(unit, win_h, clock)
 
     def exit(self):
         self._move_ptr.clear()          # the HD pointer back off the battle

@@ -119,6 +119,7 @@ def plan_firing(shots, target, fast=False, total=10, cut=False):
             res[k] |= int(ev.get("result", 0) or 0)
     hits, numbers = [], []
     for k, (_e, b, evs) in enumerate(entries):
+        b["result"] = res[k]      # the entry's flags, for its explosion
         h = hit_frame(b)
         last = b.get("multi", 1) - 1
         hits.append(min(t for t, row in enumerate(rows)
@@ -191,6 +192,35 @@ def hit_frame(b):
         if b["fx"].get("style") == 2 or step * f >= rng or f >= n - 2:
             return f
     return max(1, n - 1)
+
+
+def explosion_frame(b, frame):
+    """TRANSCRIPTION `beam_explosion` (beams.cpp:2344-2362): the picture of
+    BEAMS 0x41 the pass `frame` draws at the target — before the last pass
+    `|(frame - 1 + (-10 - range) / step) % 5|` (C's truncating division and
+    remainder, so the absolute value of the remainder is the remainder of
+    the absolute value), on the last `frame - n + 7` (6). The caller takes
+    it modulo the picture's frame count less one (`Draw_Ship_Explosion`,
+    :144-154)."""
+    n = b["frames"]
+    if frame >= n - 1:
+        return frame - n + 7
+    rng = cbbeam.ship_range(*b["src"], *b["dst"])
+    step = cbbeam.max_frames(b["src"], b["dst"], b["fx"])[1]
+    return abs(frame - 1 - (10 + rng) // step) % 5
+
+
+def explosion_shown(b, ev, frame):
+    """Whether pass `frame` of a bolt draws the impact explosion: the bolt
+    itself is drawn (frames 1 .. n - 1; `Fire_Weapon` returns on frame 0
+    after the burst and from `max_frames` on, :2204-2207), its head has
+    reached the target (`ship_hit_now_flag`, :2229-2233: `hit_frame`) and the
+    entry hit or used a special (`special_flag != 0 || hit_result_flags !=
+    0`, :2352). The entry's flags are those of all its shots
+    (`plan_firing` stores them as `b["result"]`)."""
+    result = b.get("result", ev.get("result", 0))
+    return bool(int(result or 0) & 3) and 0 < frame < b["frames"] and \
+        frame >= hit_frame(b)
 
 
 def draw_firing(surface, cam, art, firing, t, cache, palettes, look=None):
@@ -296,10 +326,13 @@ def _bolt(surface, cam, art, ev, b, frame, cache, palettes):
             x, y = cam.to_window(seg[2], seg[3])
             surface.blit(img, (x - img.get_width() // 2,
                                y - img.get_height() // 2))
-    if ev.get("result", 0) & 3 and frame >= n - 2:   # :2459-2477
+    # TRANSCRIPTION `beam_explosion` (work order 398): drawn on every pass
+    # from the one the head reaches the target (or n - 2) to the last, the
+    # frames the bolt itself is drawn on (beams.cpp:2229-2233, 2344-2362)
+    if explosion_shown(b, ev, frame):
         cnt = max(2, art.frame_count("beams", 0x41 + stream))
         pic = art.surface("beams", 0x41 + stream,
-                          (frame - n + 7) % (cnt - 1), pal)
+                          explosion_frame(b, frame) % (cnt - 1), pal)
         if pic is not None:
             img = cbdraw.scaled(pic, cam.scale, cache)
             surface.blit(img, cam.to_window(b["dst"][0] - 8,

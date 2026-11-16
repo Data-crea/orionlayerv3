@@ -100,7 +100,20 @@ def beam_shot(player, ev, now):
     src = player._unit(ev.get("source", -1))
     side = 1 if src is None or u is None else cbnumbers.side_of(
         cbdraw.centre(u), cbdraw.centre(src), cbbeamfx.get_angle)
+    # TRANSCRIPTION `missile_numbers` (work order 398): a beam that strikes
+    # a missile or a fighter group queues `Add_Damage_Indicator_For_Missile`
+    # at the group's place (no centre offset, `target_center_x =
+    # target_x`), the damage alone, in the pass the bolt strikes
+    # (beams.cpp:1244-1262, 1594-1602); the sound 0x1c and the group's
+    # quantity are the engine's (the sound event, the next state)
+    at = player._target_point(ev) if ev.get("at_missile") else None
     for (_e, _b, evs), hit in zip(f["entries"], f["hits"]):
+        if at is not None:
+            m = cbnumbers.mark_point(
+                at, sum(int(e.get("past_shields", 0) or 0) for e in evs),
+                now + hit * cbpace.FRAME_S)
+            if m is not None:
+                player._numbers.append(m)
         if u is not None:
             # the numbers appear in the pass the bolt strikes
             # (beams.cpp:1660-1672), the pair the entry summed

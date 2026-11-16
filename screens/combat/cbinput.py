@@ -11,7 +11,7 @@ import logging
 import pygame
 
 from core import combatblocks as cb
-from . import cbdraw, cbhelp, cbmap, cbpanel, cbtarget
+from . import cbdraw, cbhelp, cbmap, cbpanel, cbpointer, cbtarget
 
 log = logging.getLogger("combat")
 
@@ -245,6 +245,16 @@ class CombatInput:
             return None
         return cell
 
+    def _update_pointer(self, unit, win_h, clock):
+        """The pointer's picture each frame (TRANSCRIPTION
+        `pointer_pictures`, `cbcursor`, `cbpointer.pointer_pick`); `clock`
+        is the battle's `_ship_frame`, two a tick, the clock's step."""
+        pick = cbpointer.pointer_pick(self, unit, clock // 2)
+        if pick is None:
+            self._move_ptr.clear()
+        else:
+            self._move_ptr.show(self._art, *pick, win_h)
+
     def _move_cell(self, point=None):
         """The cell a click moves the acting ship's corner to while the
         move pointer shows (TRANSCRIPTION `move_pointer`, `cbcursor`;
@@ -316,9 +326,13 @@ class CombatInput:
             return None
         if self._state is None or getattr(self._state, "combat", None) is None \
                 or self._pops.click(screen_x, screen_y, self._state,
-                                    self.app.client, self._scan) or \
-                self._opts.click(screen_x, screen_y, self._state,
-                                 self.app.client):
+                                    self.app.client, self._scan):
+            return None
+        if self._opts.click(screen_x, screen_y, self._state, self.app.client):
+            # TRANSCRIPTION `options_fields` (work order 398): the panel
+            # takes its own window; the reduced map, the weapon rows and
+            # the unit's picture stay the original's fields (`cbpointer`)
+            cbpointer.served_in_options(self, screen_x, screen_y)
             return None
         key = self._panel.button_at(screen_x, screen_y)
         if key is not None:
@@ -328,6 +342,12 @@ class CombatInput:
         if at is not None:                   # the map's grid field: the view
             if self._cam is not None:        # there, nothing sent (`cbmap`)
                 self._cam.centre_on(at[0] * cbmap.CELL, at[1] * cbmap.CELL)
+            return None
+        if self._panel.left is not None and \
+                self._panel.left.collidepoint(screen_x, screen_y):
+            # TRANSCRIPTION `centre_click` (work order 398, combat1.cpp:288,
+            # :827-829): a click on the unit's picture centres the view
+            cbpointer.centre_on_acting(self)
             return None
         tab = self._panel.tab_at(screen_x, screen_y)
         if tab is not None:                  # a view only, as the original's
@@ -674,10 +694,10 @@ class CombatInput:
         ev = getattr(self, "_key_event", None)     # Alt+letter: the game's
         alt = ev is not None and getattr(ev, "key", None) == key and \
             getattr(ev, "mod", 0) & pygame.KMOD_ALT
-        if key == pygame.K_c and self._cam is not None and self._shown():
-            u = self._acting()
-            if u is not None:
-                self._cam.centre_on(*cbdraw.centre(u))    # the original's C
+        if key == pygame.K_c:
+            # the centre field's hotkey (combat1.cpp:288), the same guard
+            # as its click (`cbpointer.centre_on_acting`)
+            cbpointer.centre_on_acting(self)
         elif key == pygame.K_ESCAPE:
             self._board_off()
             self._pops.scan_mode = False
@@ -693,8 +713,11 @@ class CombatInput:
             super().handle_key(key)
             # held only where `_moment` sees the effect: T ends the turn
             # (`_end_of_turn_button`, combat1.cpp:132), Z the super-fast
-            # flag (:145); '[' (:113) has no handler and changes nothing
-            if key in (pygame.K_t, pygame.K_z) and field_by_hotkey(
+            # flag (:145), H the side wait — the acting unit and the order
+            # change (TRANSCRIPTION `side_wait_hold`, work order 398,
+            # `Select_After_Combat_Side_Wait`, combat1.cpp:590-598,
+            # :1685-1692); '[' (:113) has no handler and changes nothing
+            if key in (pygame.K_t, pygame.K_z, pygame.K_h) and field_by_hotkey(
                     getattr(self._state, "fields", None),
                     ord(chr(key).upper()), types=range(256)):
                 self._hold_input()

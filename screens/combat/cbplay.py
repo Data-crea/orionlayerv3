@@ -50,7 +50,8 @@ import time
 
 from . import (cbbeam, cbcloak, cbdraw, cbflare, cbflight, cblightning,
                cbmonsterdeath, cbnumbers, cbpace, cbqueue, cbreflect,
-               cbretreat, cbsfx, cbshot, cbsound, cbstart)
+               cbretreat, cbsfx, cbshot, cbsound, cbstart,
+               cbtractor)
 
 CELL = cbdraw.CELL
 MOVE_S = cbpace.MOVE_S
@@ -324,8 +325,17 @@ class Player:
         if k == "fighter_beam":
             p = ev["_beams"] = cbflight.beams_plan(ev)
             pas = ev.get("_pass") or {}
+            # TRANSCRIPTION `missile_numbers` (work order 398): a pass at
+            # another flyer shows its damage over that flyer
+            # (`Add_Damage_Indicator_For_Missile`, cmbtmis.cpp:1326-1330)
+            tm = cbflight.missile_target(self.ordnance, pas, ev)
             u = self._unit(pas.get("target", -1)) \
-                if not pas.get("at_missile") else None
+                if not pas.get("at_missile") and tm is None else None
+            if tm:
+                m = cbnumbers.mark_point(tm, pas.get("past_shields"),
+                                         now + p["frames"] * FRAME_S)
+                if m is not None:
+                    self._numbers.append(m)
             if u is not None:
                 self._number(u, pas.get("past_shields"), pas.get("absorbed"),
                              now + p["frames"] * FRAME_S)
@@ -336,7 +346,9 @@ class Player:
                 p["numbers"] = 0
             return (p["frames"] + p["numbers"]) * FRAME_S
         if k in ("missile_hit", "fighter_pass"):
-            u = self._unit(ev.get("target", -1))
+            u = None if k == "fighter_pass" and cbflight.missile_target(
+                self.ordnance, ev) is not None else \
+                self._unit(ev.get("target", -1))
             if u is not None:
                 self._number(u, ev.get("past_shields"), ev.get("absorbed"),
                              now)
@@ -407,6 +419,7 @@ class Player:
                 u["x"], u["y"] = (end[0] / CELL, end[1] / CELL) if end else \
                     (ev["to_x"], ev["to_y"])
                 u.pop("_off", None)
+                u.pop("_pass", None)
                 u.pop("_hidden", None)
         elif k == "rotate":
             u = self._unit(ev["unit"])
@@ -584,6 +597,9 @@ class Player:
                 end = _move_end(ev)
                 u["_off"] = ((end[0] - ev["from_x"] * CELL) * t,
                              (end[1] - ev["from_y"] * CELL) * t)
+                u["_pass"] = cbtractor.move_pass(
+                    end[0] - ev["from_x"] * CELL,
+                    end[1] - ev["from_y"] * CELL, t, self.fast)
         elif k == "move":
             # TRANSCRIPTION `teleport` (`cbcloak`): out where it was, in
             # where it goes, in the same frames

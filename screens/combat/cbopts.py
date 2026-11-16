@@ -90,6 +90,7 @@ def _field(fields, at=None, rect=None):
 
 class Options:
     def __init__(self):
+        self.panel = None                # the panel's window while it is up
         self.rects = {}
         self._pending = None             # (key, flags before, time)
 
@@ -108,11 +109,11 @@ class Options:
         return r
 
     def draw(self, surface, style, scale, state, band, buttons):
-        self.rects = {}
+        self.rects, self.panel = {}, None
         if not self.up(state) or buttons is None:
             return
         o = options(state)
-        box = self.box(band, buttons)
+        box = self.panel = self.box(band, buttons)
         hud.panel(surface, box, scale)
         k = box.h / PANEL[1]
         pad = int(10 * k)

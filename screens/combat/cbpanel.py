@@ -324,14 +324,17 @@ class Panel:
 
     def draw(self, surface, style, unit, names, ken, actives, board_mode, live,
              scale, picture=None, specials=False, computer=False, hover=None,
-             status=None, target=None):
+             status=None, target=None, planet=False):
         """`hover` is the CTGT mask of the unit or missile under the pointer
         (bit k: slot k can hit it), None when the pointer is over neither;
         `computer` whether the acting unit is the computer's; `status`
         (art, colour, unit, monster) for the status picture, None for the
         planet; `target` what the systems window shows instead of the
         systems (`cbtarget`, work order 259): ("unit", unit, status,
-        picture) or ("missile", missile, battle, missiles, cache)."""
+        picture) or ("missile", missile, battle, missiles, cache); `planet`
+        whether the acting unit is the battle's planet (unit 0), whose
+        systems window prints nothing (TRANSCRIPTION `planet_systems`,
+        `_draw_systems`)."""
         band = self.area(*surface.get_size())
         gap, ins = self._spacing(scale)
         pad = ins
@@ -353,7 +356,7 @@ class Panel:
                                                 hudtext.colour("value")[:3]),
                      head, align="center")
         self._draw_systems(surface, style, scale, unit, names, ken, wins, ins,
-                           size, small, specials, target)
+                           size, small, specials, target, planet)
         # the original's status picture (work order 256, `cbstatus`); the
         # planet, or a unit whose pictures are missing, keeps HD's rings
         box = self.status_room(surface.get_size(), scale)
@@ -373,7 +376,7 @@ class Panel:
         row_h = max(small + 2, body.h // 8)
         if specials:
             self._draw_specials(surface, style, names, unit, body, row_h, small,
-                                pad)
+                                pad, ken)
         else:
             self._draw_weapons(surface, style, scale, unit, names, ken, actives,
                                computer, hover, body, row_h, small, pad)
@@ -408,9 +411,17 @@ class Panel:
         self.map = cbmap.rect_for(wins["map"].inflate(-2 * ins, -2 * ins))
 
     def _draw_systems(self, surface, style, scale, unit, names, ken, wins, ins,
-                      size, small, specials, target):
+                      size, small, specials, target, planet=False):
         """The systems window: the unit's facts, or the target's box in
-        their place (`cbtarget`)."""
+        their place (`cbtarget`). TRANSCRIPTION `planet_systems` (work
+        order 398): nothing of the facts, not even the title, while the
+        battle's planet acts — `Draw_Internals_Display_` prints inside
+        `if (cur_ship != 0)` (cmbtdrw1.cpp:455); the target's box under the
+        pointer is another function's (:690-724) and stays. UNVERIFIED
+        live: that the engine's `cur_ship` is 0 on the wire while the
+        human's planet acts (it writes `MOX::cur_ship` as is,
+        ext_api.cpp:2024, and the planet is in the turn order whenever it
+        has defences, combat1.cpp:455-466)."""
         # TRANSCRIPTION `systems_box` (work order 258): the systems in their
         # own window as `Draw_Internals_Display_` prints them (cmbtdrw1.cpp
         # :360-425) — the title (KENTEXT 36), then Drive (14) or "No Drive"
@@ -457,6 +468,8 @@ class Panel:
                     else 0, target[4])
             facts = ()
         else:
+            if planet:
+                return
             hudtext.blit(surface, style.render_text(
                 word("systems", "Systems"), size,
                 hudtext.colour("value")[:3]), title, align="center")
@@ -502,8 +515,12 @@ class Panel:
         return body
 
     def _draw_specials(self, surface, style, names, unit, body, row_h, small,
-                       pad):
-        """The SPECIALS tab's list."""
+                       pad, ken=None):
+        """The SPECIALS tab's list. TRANSCRIPTION `no_specials_word` (work
+        order 398): the empty list says KENTEXT 7 in the player's language
+        (`Draw_Special_Status_Display_`, cmbtdrw1.cpp:675-679; the scan
+        view's `cbscanview` takes the same id); OrionLayer's English
+        without the file."""
         have = listed_specials(unit.get("special_device_flags")
                                or [0] * 5)
         damaged = set(special_bits(unit.get("special_device_damage_flags")
@@ -525,7 +542,10 @@ class Panel:
                 r.inflate(-pad, 0), align="left")
         if not have:
             hudtext.blit(surface, style.render_text(
-                "No special systems", small, hudtext.colour("label")[:3]),
+                (ken.panel_word("no_specials") if ken is not None and
+                 hasattr(ken, "panel_word") else None) or
+                "No special systems", small,
+                hudtext.colour("label")[:3]),
                 body, align="center")
 
     def _draw_weapons(self, surface, style, scale, unit, names, ken, actives,

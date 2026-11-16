@@ -218,6 +218,28 @@ def beams_plan(ev, odd_stardate=False):
     return {"bolts": bolts, "frames": frames, "numbers": NUMBERS}
 
 
+def missile_target(ordnance, pas, beam=None):
+    """TRANSCRIPTION `missile_numbers` (work order 398): where a fighter pass
+    that strikes another flyer (`missile->target_is_missile`, the wire's
+    `is_anti_missile_rocket`) puts its number — the target flyer's own place
+    (`Fighter_Combat_SFX_`, cmbtmis.cpp:1273-1281, 1326-1328) — or None when
+    the group's target is a unit. `pas` is the pass event, whose `target` is
+    then a flyer's index, not a unit's; `beam` the pass's beam event, whose
+    target point stands in when the flyer is no longer in the state HD shows
+    (HD STATE `missile_target_state`: the group is read from that state,
+    since no event says what a pass aims at)."""
+    flyers = {int(m["index"]): m for m in (ordnance or {}).get("missiles", [])}
+    group = flyers.get(int(pas.get("missile", -1)))
+    if group is None or not group.get("is_anti_missile_rocket"):
+        return None
+    hit = flyers.get(int(pas.get("target", -1)))
+    if hit is not None:
+        return (hit["x"], hit["y"])
+    if beam is not None and "target_x" in beam:
+        return (beam["target_x"], beam["target_y"])
+    return ()
+
+
 def draw_beams(surface, cam, art, ev, p, frame, cache, palettes):
     from . import cbshot
     for i, b in enumerate(p["bolts"]):

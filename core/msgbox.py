@@ -81,21 +81,34 @@ def lines_of(text):
 TEXT_W = 339
 
 
-def column_runs(line):
+def column_runs(line, measure=None):
     """`[(text, align, x0, x1)]` in the original's px for a line with a
     column (an X function), else None: where each run sits — a left run from
-    its column, a right or centred one within its column and the next."""
+    its column, a right or centred one within its column and the next.
+
+    `measure(text)` is the width of a run's text in the original's px (the
+    renderer has the font). With it a RELATIVE column (`\\aX+25.`) sits that
+    many px right of where the run before it ends, as `FN_Set_X_Pos` places
+    it (fmtpara.cpp:1552-1568) — and a result outside the paragraph is
+    ignored, as the original ignores it. Without it such a run follows the
+    run before it, as before work order 398."""
     runs = [r for r in line.runs if r.text.strip()]
     if not any(r.x is not None or r.end_x is not None for r in runs):
         return None
-    out, at = [], 0
+    out, at, prev = [], 0, None
     for k, r in enumerate(runs):
         x0 = r.x if r.x is not None else at
+        if r.x is None and r.dx is not None and measure is not None \
+                and prev is not None:
+            pen = prev[0] + measure(prev[1]) + r.dx
+            if 0 <= pen <= TEXT_W:
+                x0 = pen
         x1 = r.end_x if r.end_x is not None else (
             runs[k + 1].x if k + 1 < len(runs) and runs[k + 1].x is not None
             else TEXT_W)
         out.append((r.text.strip(), r.align or "left", x0, x1))
         at = x1
+        prev = (x0, r.text.strip())
     return out
 
 
@@ -215,7 +228,8 @@ def build_rows(style, box, size, inner, colour, emphasis):
         if not plain.strip():
             rows.append(None)
             continue
-        cols = column_runs(ln)
+        cols = column_runs(ln, lambda t: style.render_text(
+            t, size, colour[:3]).get_width() * TEXT_W / max(1, inner))
         pair = split_right(ln)
         hit = NUMBER_LINE.match(plain) if table else None
         nxt = parsed[i + 1].plain() if i + 1 < len(parsed) else ""

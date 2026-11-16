@@ -27,7 +27,7 @@ noted); what HD does otherwise is marked.
 """
 import pygame
 
-from . import cbart, cbview
+from . import cbart, cbshimmer, cbview
 
 CELL = cbview.CELL
 #: DEVIATION `legal_cells_readable` (Data, work order 303): the cells a
@@ -483,17 +483,18 @@ def draw_tractors(surface, cam, art, combat, cache):
     frame 6 along the line between their centres, under the units
     (`Draw_Continuing_Tractor_`, cmbtspec.cpp:140-173, drawn by
     `Full_Draw_Combat_Screen_` before the ships, cmbtdrw1.cpp:506-515)."""
-    from . import cbsfx
+    from . import cbsfx, cbtractor
     units = combat["units"]
     for i, u in enumerate(units):
         t = unit_ref(u, "special_cooldown")
         if u["unit_status"] != 0 or t is None or t == i or t >= len(units) \
                 or units[t]["unit_status"] != 0:
             continue
-        a = tuple(int(v) for v in centre(u))
-        b = tuple(int(v) for v in centre(units[t]))
+        # TRANSCRIPTION `moving_tractor` (work order 398, `cbtractor`): the
+        # end of the unit that glides follows it, the frame cycles 4-6
+        a, b, frame = cbtractor.line(u, units[t])
         cbsfx.texture_line(surface, cam, cache, art.surface(
-            "cmbtsfx", 2, 6, glass="tractor"), a, b)
+            "cmbtsfx", 2, frame, glass="tractor"), a, b)
 
 
 def player_colours(state):
@@ -674,7 +675,13 @@ def draw_ordnance(surface, cam, art, ordnance, font_px, style, cache,
             continue
         x, y = cam.to_window(m["x"] - off, m["y"] - off)
         if pic is not None:
-            surface.blit(scaled(pic, cam.scale, cache), (x, y))
+            sx, sy = (0, 0)
+            if kind in FIGHTER_TYPE:
+                # TRANSCRIPTION `fighter_shimmer` (work order 398,
+                # `cbshimmer`): every third pass the picture is -1 .. +1 px off
+                sx, sy = cbshimmer.offsets(ship_frame, m["index"])
+            surface.blit(scaled(pic, cam.scale, cache),
+                         (x + round(sx * cam.scale), y + round(sy * cam.scale)))
         if count > 1 and style is not None:
             from core import nativedraw as nd
             nd.blit_text(surface, style, f"{count}", int(x), int(y),

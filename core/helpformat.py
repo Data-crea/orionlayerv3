@@ -75,11 +75,19 @@ class Run:
     it there with an X function or a tab.
     """
 
-    __slots__ = ("text", "x", "align", "end_x")
+    __slots__ = ("text", "x", "align", "end_x", "dx")
 
     def __init__(self, text, x=None, align=None):
         self.text = text
         self.x = x
+        #: A RELATIVE column (`\aX+25.`): pixels right of where the pen
+        #: stands when the run starts, which only the renderer knows (it
+        #: has the font). TRANSCRIPTION `relative_column`: `FN_Set_X_Pos`
+        #: adds the value to `line_p->x` when the argument carries a sign,
+        #: to the paragraph's left edge when it does not (fmtpara.cpp:
+        #: 1552-1568); the strategic result table's header uses it twice
+        #: (combat.cpp:1177-1189).
+        self.dx = None
         # a right- or centre-justified run ends at the column the X function
         # after it names (the boarding result's numbers end at 80 and 255,
         # their words start at 82 and 257, cmbtfir2.cpp:1660-1666)
@@ -127,6 +135,7 @@ def parse(body, items=None):
     lines = []
     runs = []
     pending_x = None
+    pending_dx = None
     align = None
     tabs = []
     text = []
@@ -134,15 +143,18 @@ def parse(body, items=None):
     n = len(body)
 
     def flush_text():
-        nonlocal pending_x, text
+        nonlocal pending_x, pending_dx, text
         if text:
             runs.append(Run("".join(text), pending_x, align))
+            runs[-1].dx = pending_dx
             text = []
             pending_x = None
+            pending_dx = None
 
     def end_line(paragraph=False):
-        nonlocal runs, pending_x
+        nonlocal runs, pending_x, pending_dx
         flush_text()
+        pending_dx = None
         lines.append(Line(runs, paragraph))
         runs = []
         # a new line starts at the left margin: a column named at the end
@@ -156,12 +168,14 @@ def parse(body, items=None):
         if ch == "\a":
             before = len(runs)
             flush_text()
-            i, x, new_tabs = _read_functions(body, i + 1)
+            i, x, new_tabs, dx = _read_functions(body, i + 1)
             if x is not None and len(runs) > before and \
                     runs[-1].align in ("right", "center"):
                 runs[-1].end_x = x
             if x is not None:
                 pending_x = x
+            if dx is not None:
+                pending_dx = dx
             tabs.extend(new_tabs)
             continue
 
@@ -247,7 +261,7 @@ def dropped_functions(body):
     i = 0
     while i < len(body):
         if body[i] == "\a":
-            i, _, _ = _read_functions(body, i + 1, seen=used)
+            i, _, _, _ = _read_functions(body, i + 1, seen=used)
         else:
             i += 1
     return "".join(sorted(used - set(HANDLED)))
@@ -256,7 +270,8 @@ def dropped_functions(body):
 # ── Internals ────────────────────────────────────────────
 
 def _read_functions(body, i, seen=None):
-    """Consume one \\a sequence. Returns (next_index, x, tab_stops).
+    """Consume one \\a sequence. Returns (next_index, x, tab_stops, dx),
+    `dx` the value of a RELATIVE X (a sign on the argument), else None.
 
     Mirrors `Process_Function_` (fmtpara.cpp:384): letters with
     comma-separated arguments, then everything up to the "." or the
@@ -264,6 +279,7 @@ def _read_functions(body, i, seen=None):
     """
     n = len(body)
     x = None
+    dx = None
     tabs = []
 
     while i < n and body[i].upper() in LEGAL_FUNCTIONS:
@@ -277,6 +293,8 @@ def _read_functions(body, i, seen=None):
             i, val, relative = _read_argument(body, i)
             if cmd == "X" and val is not None and not relative:
                 x = val
+            elif cmd == "X" and val is not None:
+                dx = val
             elif cmd == "T" and val is not None and not relative:
                 tabs.append(val)
             if i < n and body[i] == ",":
@@ -288,7 +306,7 @@ def _read_functions(body, i, seen=None):
         i += 1
     if i < n and body[i] == ".":
         i += 1
-    return i, x, tabs
+    return i, x, tabs, dx
 
 
 def _read_argument(body, i):

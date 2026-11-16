@@ -440,7 +440,14 @@ def _plan_bomb(ev, unit, art):
             sx, sy = _step(sx, sy, int(b[0]), int(b[1]), 20)
         start, beam = (sx, sy), TRANSPORTER_TICKS
     dist = max(abs(b[0] - start[0]), abs(b[1] - start[1]))
-    fly = max(1, -(-int(dist) // 6))
+    # TRANSCRIPTION `bomb_fast` (work order 398): the bomb flies 6 px a pass,
+    # 12 under FAST ANIMATIONS (`speed`, `Draw_Bombs_` cmbtdrw1.cpp:3059);
+    # only the flight takes that step — the transporter beam's eight ticks
+    # (cmbtspec.cpp:850-880) and the explosion's frames (cmbtdrw1.cpp:3170)
+    # have none, so the plan is not stepped as a whole (`step` 1) as the
+    # anti-missile rocket's is not
+    fast = int(ev.get("_step", 1) or 1) > 1
+    fly = max(1, -(-int(dist) // (12 if fast else 6)))
     facing = int(round(get_angle(b[0] - start[0],
                                  start[1] - b[1]) / 22.5)) & 15
     pic_entry = (160 if int(ev.get("weapon", 0)) in BIO else 144) + facing
@@ -462,5 +469,5 @@ def _plan_bomb(ev, unit, art):
     # `Draw_Bombs_` (cmbtdrw1.cpp:3049-3095): a tick a step, the numbers
     # from the impact on, rising through the explosion's frames, then
     # held until done (at least one pass, a do-while)
-    return {"frames": beam + fly + m, "draw": draw,
+    return {"frames": beam + fly + m, "draw": draw, "step": 1,
             "number_frame": beam + fly, "hold": max(1, NUMBERS - m)}
