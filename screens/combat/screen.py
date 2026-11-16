@@ -37,7 +37,7 @@ from core import combatblocks as cb
 from core.screen_base import ScreenBase
 from core.kentext import ArcWords
 from core.shipparts import ShipPartNames
-from . import (cbart, cbcloak, cbcursor, cbdraw, cbfeed, cblog, cbmap,
+from . import (cbart, cbclock, cbcloak, cbcursor, cbdraw, cbfeed, cblog, cbmap,
                cbopts, cbpanel, cbplay, cbpopups, cbscansources, cbview)
 # the gestures, moved out by work order 202 (decision 6's guideline); FOOT and
 # field_by_hotkey are read here and by tools under this module's name
@@ -121,7 +121,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._board = False
         # (op, time) awaiting event 18; (pos, button, dragged) of a press
         self._sent = self._press = None
-        self._clock0 = time.monotonic()
+        self._clock0 = cbclock.now()
         self._cache = cbdraw.SpriteCache()     # bounded by bytes (202 B)
         self._turn_seen, self._home = None, False
         self._tail = False                   # the battle's end playing (202 D)
@@ -355,7 +355,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._cache.begin(cam.scale)
         if c is not None:
             self._follow(c)
-        clock = ship_frame(time.monotonic() - self._clock0)
+        clock = ship_frame(cbclock.now() - self._clock0)
         # None while no unit acts (`cb.acting_index`): no cursor, no
         # acting-unit panel, no orders, as the original's guards
         # (cmbtdrw1.cpp:608, :713)
@@ -388,7 +388,7 @@ class CombatScreen(CombatInput, ScreenBase):
                 unit), self.style, self._language)
         self._play.colours = cbdraw.player_colours(self._state)
         self._play.planet = self._planet_picture(c)
-        now = time.monotonic()
+        now = cbclock.now()
         self._fades.update(c["units"], now)
         cbdraw.draw_units(surface, cam, art, c, self._play.colours, clock,
                           self._cache, self._play.planet,
@@ -445,6 +445,7 @@ class CombatScreen(CombatInput, ScreenBase):
         self._logwin.draw(surface, self.style, self.layout.scale, area,
                           self._log, self._play.colours)
         self.render_help(surface)               # `cbhelp`, work order 200
+        cbclock.draw_readout(surface, self.style, self._art)   # 399
         # TRANSCRIPTION `move_pointer` (work order 303): the arrow over a
         # reachable cell, the HD pointer elsewhere — each frame, as the
         # cells change with every move

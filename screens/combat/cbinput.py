@@ -11,7 +11,7 @@ import logging
 import pygame
 
 from core import combatblocks as cb
-from . import cbdraw, cbhelp, cbmap, cbpanel, cbpointer, cbtarget
+from . import cbclock, cbdraw, cbhelp, cbmap, cbpanel, cbpointer, cbtarget
 
 log = logging.getLogger("combat")
 
@@ -691,6 +691,13 @@ class CombatInput:
         # never reach the battle under it
         if self.help_consumes_key(key) or self._logwin.key(key) or \
                 self._logwin.open:
+            return
+        # TRANSCRIPTION `speed_keys` (399): the original's speed key runs for
+        # any key push (key.cpp:70), so PageUp/PageDown count in every state
+        # - a box, a scan card, the battle's tail - and are never sent to
+        # the engine (its own hidden level would drift); the help and the
+        # log above drop them instead (a modal window owns its keys)
+        if cbclock.handle_key(key):
             return
         if self._tail:
             return

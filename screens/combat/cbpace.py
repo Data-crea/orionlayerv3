@@ -3,12 +3,13 @@
 Moved out of `cbplay` by work order 338 with the values and the code
 unchanged (`cbplay` still names every constant, so callers read them
 there). The pace is the original's, TRANSCRIPTION `pace`; the one chosen
-value is DEVIATION `untimed_pace`. OMISSION `animation_speed_keys` (work
-order 398): the original's PageUp/PageDown speed-up and its "Animation
-speed" readout (timer.cpp:25-48, cmbtdrw1.cpp:45-58) are not built: the
-engine waits for no animation while HD draws the battle (open fix 71), so the
-tempo is HD's own (decision 78) and a readout would show a value that scales
-nothing; see [combat.playback].
+value is DEVIATION `untimed_pace`.
+HD EXTENSION `speed_factor` (work order 399): the original's PageUp/PageDown
+speed-up (timer.cpp:27-51, cmbtdrw1.cpp:45-58) takes ticks off waits HD does
+not make, so `cbclock` scales the one playback clock by 1.6 ** level instead
+and shows the readout (TRANSCRIPTION `speed_keys`, HD EXTENSION
+`speed_readout`); the paces below are the level-0 tempo; see
+[combat.playback].
 """
 MOVE_S = 0.15
 #: DEVIATION `untimed_pace` (decision 80, Data, work order 214): a loop of

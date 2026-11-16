@@ -46,10 +46,8 @@ WHAT EACH EVENT DOES here:
 """
 import copy
 import random
-import time
-
-from . import (cbbeam, cbcloak, cbdraw, cbflare, cbflight, cblightning,
-               cbmonsterdeath, cbnumbers, cbpace, cbqueue, cbreflect,
+from . import (cbbeam, cbclock, cbcloak, cbdraw, cbflare, cbflight,
+               cblightning, cbmonsterdeath, cbnumbers, cbpace, cbqueue, cbreflect,
                cbretreat, cbsfx, cbshot, cbsound, cbstart,
                cbtractor)
 
@@ -193,7 +191,7 @@ class Player:
         screen's `update` as well as from `draw`, so the battle's own clock
         runs while the player looks at the original (F12) and nothing waits
         for a frame to be drawn (decision 78: one clock)."""
-        now = time.monotonic() if now is None else now
+        now = cbclock.now() if now is None else now
         self._advance(now)
         self.sounds.tick(now)
         if self._anim is not None and self._anim[0]["kind"] == "flight":
@@ -250,7 +248,7 @@ class Player:
         event: started at their ticks into HD's animation of `ev`
         (`cbsound.offset`), whether they came with it or with a snapshot
         sent during its animation (the shield flare polls, beams.cpp:705)."""
-        if ev.get("_charges") and (time.monotonic() if now is None else
+        if ev.get("_charges") and (cbclock.now() if now is None else
                                    now) - t0 >= ev["_sfx"]["_number_at"]:
             for c in ev.pop("_charges"):    # the converter's, its frames done
                 self._charge(c)
@@ -549,7 +547,7 @@ class Player:
 
     # ── drawing ────────────────────────────────────────────────────
     def draw(self, surface, cam, art, style, scale, cache):
-        now = time.monotonic()
+        now = cbclock.now()
         self._art = art
         self.tick(now)
         if self._anim is not None:
@@ -682,7 +680,7 @@ class Player:
                 u["_hidden"] = True       # `Draw_Retreating_Ship` draws it
                 cbretreat.draw(surface, cam, art, self.colours, u,
                                ev["_retreat"], t, cache, cbdraw.glow_frame(
-                                   u, ev["unit"], int(time.monotonic() /
+                                   u, ev["unit"], int(cbclock.now() /
                                                       FRAME_S)))
         elif k == "destroy":
             u = self._unit(ev["unit"])
