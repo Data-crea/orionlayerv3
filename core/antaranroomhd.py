@@ -8,8 +8,8 @@ edge 0x37 = 55, width 0x226 = 550, its bottom 0x1D6 - height = 470, centred
 (alignment 2, bill.cpp:79-81), in the room's palette colour 255 with a
 colour-250 outline), and ends on a click anywhere or any key (:56-70). HD
 draws the picture as large as the window holds, its 4:3 kept (decision 28:
-an integer magnification when one fits, else the smoothest the window
-allows), on black, and the message in the same place in picture units.
+an integer magnification when one fits, nearest-neighbour; else the
+fraction the window allows), on black, and the message in the same place in picture units.
 The music (`Play_Streaming_Music(0x78)`, :23, :39) is the engine's.
 
 Without the player's files (`tools/popup_art_extract.py`) `render` answers
@@ -26,13 +26,24 @@ from core import popupart
 
 #: Native layout of the message (antaroom.cpp:21-22).
 TEXT_X, TEXT_W, TEXT_BOTTOM = 0x37, 0x226, 0x1D6
-#: A native text line (the paragraph font of the room, in picture pixels).
+#: INVENTION / UNVERIFIED `antaran_room_font`: a native text line and the
+#: font height in picture pixels. The original's paragraph font and its line
+#: step are not read from a source; HD's values are an estimate. The text
+#: colour 255 and the outline 250 are sourced (antaroom.cpp:9, :25), but the
+#: original's font style carries a colour RAMP (several palette indices); HD
+#: draws the one flat colour with a four-direction shadow.
 LINE_H, FONT_H = 20, 18
 
 
 def fit(win, size):
-    """The picture's rectangle in a window of `win`: centred, 4:3 kept."""
+    """The picture's rectangle in a window of `win`: centred, letterboxed,
+    the picture's own proportions kept. The factor is the greatest INTEGER
+    that fits (decision 28: pixel art is never smoothed; 640 x 480 gives 2
+    at 1080p, 3 at 1440p, 4 at 2160p); only a window below 1x takes the
+    fractional factor."""
     k = min(win[0] / size[0], win[1] / size[1])
+    if k >= 1:
+        k = int(k)
     w, h = max(1, round(size[0] * k)), max(1, round(size[1] * k))
     return pygame.Rect((win[0] - w) // 2, (win[1] - h) // 2, w, h)
 
@@ -61,11 +72,18 @@ def render(surface, style, popup, now=None):
         return False
     now = time.monotonic() if now is None else now
     pic = scene.frame(now)
+    if pic is None:      # a frame will not decode: the panel for the rest
+        return False
     win = surface.get_size()
     rect = fit(win, scene.size)
     surface.fill((0, 0, 0))
-    surface.blit(pygame.transform.smoothscale(pic, rect.size)
-                 if rect.size != pic.get_size() else pic, rect)
+    if rect.size != pic.get_size():
+        # integer factors are nearest-neighbour (decision 28); only a
+        # window below 1x is smoothed
+        pic = (pygame.transform.scale if rect.w % pic.get_width() == 0
+               and rect.h % pic.get_height() == 0
+               else pygame.transform.smoothscale)(pic, rect.size)
+    surface.blit(pic, rect)
     text = popup.get("text")
     if text:
         k = rect.w / scene.size[0]

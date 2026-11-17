@@ -72,7 +72,10 @@ _FILE = re.compile(r"_([a-z]{2})\.json$")
 FALLBACKS = {}
 
 _state = {"language": DEFAULT, "table": {}, "upper": {}, "templates": [],
-          "memo": {}, "verbatim": False, "engine": 0}
+          "memo": {}, "verbatim": False, "engine": 0,
+          #: True once a snapshot named the engine's language (0 included):
+          #: `number()` cannot tell "English" from "no engine" otherwise
+          "engine_seen": False}
 #: Placeholders that stand for a number, matched as one: a template "{job}:
 #: {count} of {pops}" took "Cost[0]: In this form of government" for a
 #: count while its placeholders matched anything (the German walk).
@@ -284,6 +287,7 @@ def set_engine_language(number):
     byte 210 of every snapshot's settings (open fix 70 lets it be other than
     0). Read before any block of the snapshot is parsed (`game_state`)."""
     _state["engine"] = number
+    _state["engine_seen"] = True
 
 
 def engine_settings(raw):
@@ -313,11 +317,17 @@ def engine_language():
 def number():
     """The original's `_settings.language` for the text HD prints itself
     where the original formats a number or a unit by it (work order 402).
-    The engine's own number wins when it names a language (2.. are the
-    ones HD does not offer, but the original's rules still know them);
-    otherwise the session's language, so a standalone German session —
-    no engine, so 0 on the wire — still prints German numbers."""
-    return _state["engine"] or NUMBERS.get(_state["language"], 0)
+    TRANSCRIPTION: once a snapshot has named the engine's language (0,
+    English, included) that number is the answer, 2.. being the ones HD does
+    not offer, whose rules the original still knows.
+    DEVIATION `number_without_engine`: before any snapshot (a standalone
+    session, no engine, so nothing on the wire) the session's language
+    stands in, so a German session without the game still prints German
+    numbers; the engine is started in the session's language (`engine_env`),
+    so the two agree whenever both exist."""
+    if _state["engine_seen"]:
+        return _state["engine"]
+    return NUMBERS.get(_state["language"], 0)
 
 
 def thousands_separator():

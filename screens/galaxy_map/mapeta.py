@@ -14,7 +14,10 @@ TRANSCRIBED from SHIPS::Print_Eta_On_Ship_Icon_ (ships.cpp:482-506), which
   * in the owner's font colours (`Set_Player_Font_Style_`, :494); HD uses
     the owner's colour the map's star names use; an Antaran or monster
     stack (owner >= 8) the neutral base the original gives it
-    (harold.cpp:1131-1135), HD's neutral map text colour (work order 402);
+    (harold.cpp:1131-1135: base colour index 4, limit 11); DEVIATION
+    `eta_neutral_colour`: HD has no palette ramp there and uses the map's
+    neutral text colour `NEUTRAL_COLOR` (work order 402). UNVERIFIED: that
+    index 4 of the original looks like it;
   * font style 1 at zoom 0 and 1, style 0 beyond (:496-497);
   * printed RIGHT-aligned (`fonts::Print_Right_`) with its right edge at
     the icon's left edge plus the width, and its top at the icon's top

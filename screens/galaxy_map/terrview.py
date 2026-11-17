@@ -32,7 +32,7 @@ def territory(screen):
     facts = starnames.facts_of(screen)
     emps = terrfield.empires(
         screen._stars, players, player_num, omni,
-        lambda s: rnd.star_label(s, player_num, players, omni, facts))
+        lambda s: starnames.owner_known(s, player_num, players, omni, facts))
     cols = colours()
     key = terrfield.state_key(emps, cols)
     cur = getattr(screen, "_territory", None)

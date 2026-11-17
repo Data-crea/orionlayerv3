@@ -125,9 +125,11 @@ def max_population(colony, planet, traits, city_planning=False):
     DEVIATION `city_planning_config`: v2's config may name another bonus
     (see `CITY_PLANNING_BONUS`).
 
-    ONE DEVIATION remains: the original returns the best limit over the
-    RACES PRESENT in the colony; this returns the limit for the owner's
-    race. The two agree for a single-race colony. The walk needs the pop
+    ONE DEVIATION remains FOR THE OTHER CALLERS of this function (the
+    galaxy map's system window no longer has it: `sysinfo.planet_maximum`
+    walks the races present, colcalc.cpp:975-1060): the original returns
+    the best limit over the RACES PRESENT in the colony; this returns the
+    limit for the owner's race. The two agree for a single-race colony. The walk needs the pop
     nibble, which is now confirmed for 0..7 — what it does not have is
     the 8 and 9 sentinels, and a walk that mis-resolves androids and
     natives would pick the wrong race for exactly the colonies the walk

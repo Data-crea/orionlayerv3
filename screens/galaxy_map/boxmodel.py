@@ -505,8 +505,9 @@ def fleet_title(state, first, text):
     if first.owner < 9:
         if first.owner < 8:
             raws = getattr(state, "player_raw", None) or []
+            # a negative owner is no player (it would index from the end)
             local = player_struct.parse(raws[first.owner]) \
-                if first.owner < len(raws) else None
+                if 0 <= first.owner < len(raws) else None
             race = getattr(local, "race_name", "")
         else:
             race = estrings.antaran_race_name(

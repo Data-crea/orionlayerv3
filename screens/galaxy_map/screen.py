@@ -627,7 +627,7 @@ class GalaxyMapScreen(ScreenBase):
         rnd.render_star_names(
             surface, ctx, self._stars, heights, render_label, player_num,
             self._players, omniscient, facts=starnames.facts_of(self),
-            pulses=starnames.pulses_of(self, pygame.time.get_ticks() / 1000.0),
+            pulses=starnames.pulses_of(self, starnames.now()),
             clamp=None if self._viewctl.active else surface.get_clip())
         rnd.render_fleets(surface, ctx,
                           getattr(self._state, "ship_icons", None) or [],

@@ -30,8 +30,8 @@ hard partition at the line where the fields are equal, hides that two
 empires reach a system; the mockup with the overlapping nebula shows the
 mixed zone Data wants.
 
-**WHAT IT KNOWS.** Only owners the player knows (`renderer.star_label`'s
-rule, the one the star names follow): an unvisited system of an empire not
+**WHAT IT KNOWS.** Only owners the player knows (`starnames.owner_known`,
+the rule the star names' colours follow): an unvisited system of an empire not
 met has no territory, so the map never says what the game does not.
 
 Pure numpy and no pygame; `terrdraw` puts it on the screen.
@@ -79,8 +79,10 @@ class Empire:
 
 def empires(stars, players, player_num, omniscient, label_of):
     """The empires with at least one star the player knows the owner of,
-    in player order. `label_of(star)` is `renderer.star_label` bound to
-    the player: a star whose name is shown is a star whose owner is."""
+    in player order. `label_of(star)` is true for a star whose OWNER is
+    known (`starnames.owner_known` bound to the player). A name shown is
+    not enough: a visited star of an unmet owner has a name in the neutral
+    colour and no known owner."""
     by_player = {}
     for s in stars:
         owner = s.owner

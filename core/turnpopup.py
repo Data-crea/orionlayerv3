@@ -71,8 +71,6 @@ REF_OPTION_H = 46
 #: buttons stand under it at every window (work order 326 F).
 REF_ART_H = 560
 _art_cache = {}
-#: Seconds without a draw after which the Antaran room is a new visit.
-ROOM_GAP = 2.0
 
 
 # ── drawing and input ─────────────────────────────────────────────────
@@ -90,6 +88,9 @@ class View:
         #: None: the Space Dragon's star choice on the map (work order 319)
         self.point = None
         self._choosing = False     # the last frame drew that star choice
+        #: `state_key` of the Antaran room being shown, or None: the room's
+        #: animation belongs to ONE visit (`_end_room`)
+        self._room_key = None
         self.scroll = 0            # the ranked Turn Summary's offset in px
         self.scroll_info = None    # its track and extent, set by the draw
 
@@ -114,7 +115,18 @@ class View:
                                      info["page"] / 2)), info["max"])
         return True
 
+    def _end_room(self):
+        """The Antaran room's visit is over: the next one starts from frame
+        0 (antaroom.cpp:117 reopens the animation on every visit). Called
+        when the popup closes (`reset`), changes to another, or is another
+        kind - never guessed from the clock."""
+        if self._room_key is not None:
+            from core import popupart
+            popupart.reset()
+            self._room_key = None
+
     def reset(self):
+        self._end_room()
         self.armed = None
         self.scroll = 0
         self.scroll_info = None
@@ -134,6 +146,8 @@ class View:
         # first: no popup but the dragon's star choice keeps its star click
         self.point = None
         self.scroll_info = None     # only the ranked Turn Summary sets it
+        if popup["kind"] != "antaran_room":
+            self._end_room()
         choosing = self._choosing
         self._choosing = False
         if popup["kind"] == "combat_target":
@@ -266,9 +280,12 @@ class View:
         c = content(popup, state, words, app)
         from core import antaranroomhd, popupart
         now = time.monotonic()
-        if now - getattr(self, "_room_last", now) > ROOM_GAP:
-            popupart.reset()            # another visit: from frame 0
-        self._room_last = now
+        key = state_key(popup)
+        if key != self._room_key:
+            # TRANSCRIPTION `antaran_room_visit` (antaroom.cpp:117): every
+            # visit reopens the animation, so a new popup starts at frame 0
+            self._end_room()
+            self._room_key = key
         if not c["buttons"] or c["buttons"][0][1] is None:
             # nothing would answer a click: the panel, as before
             return None

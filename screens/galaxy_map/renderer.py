@@ -774,31 +774,32 @@ def render_star_names(surface, ctx, stars, heights, render_label,
                       pulses=None, clamp=None):
     """Star names with a one-pixel outline, centred under the icon.
 
-    Bails out entirely when the map is too dense to label — see
-    MAINSCR::Print_Star_Names_, which returns before drawing
-    anything on an extended map at maximum zoom-out.
+    Names are not drawn on an extended map at maximum zoom-out
+    (MAINSCR::Print_Star_Names_ returns first), a highlighted one apart.
 
     `render_label(text, colour)` returns a surface. It is a callable
     rather than a pygame Font because a lore-only name reads "(Name)",
     and the DEMO Bank Gothic draws parentheses as a watermark — the
     caller hands in Style.render_text, which splits the string across
-    two fonts. Keeping that decision out of here means the renderer
-    still knows nothing about skins.
+    two fonts, so the renderer knows nothing about skins.
 
     Work order 402: the name is `starnames.spec` (outposts lower-case and
     darker, a shared system split into its owners' colours), `pulses`
-    {star index: colour offset} brightens a highlighted name
-    (`Highlight_Star_`), `clamp` is the rect a name is pushed inside at
-    the widest zoom (TRANSCRIPTION `name_clamp`, mainscr.cpp:1274-1283),
-    and a surrender underlines it (TRANSCRIPTION `name_surrender`,
-    mainscr.cpp:1285-1313).
+    {star index: colour offset} brightens a highlighted name, `clamp` is
+    the rect a name is pushed inside at the widest zoom (TRANSCRIPTION
+    `name_clamp`, mainscr.cpp:1274-1283), and a surrender underlines it
+    (TRANSCRIPTION `name_surrender`, mainscr.cpp:1285-1313). A split name has neither: the original returns
+    after the bitmap name (:1262-1270). TRANSCRIPTION
+    `name_highlight_when_hidden`: `Highlight_Star_` has no
+    `Is_Extended_Max_Map_View_` test (mainscr.cpp:1833-1872, unlike :668),
+    so a star in `pulses` is named under `names_hidden` too.
     """
-    if ctx.names_hidden:
-        return
     view = ctx.view
     pulses = pulses or {}
     widest = ctx.map_scale == ctx.max_map_scale
     for s in stars:
+        if ctx.names_hidden and int(s.index) not in pulses:
+            continue
         sp = starnames.spec(s, player_num, players, omniscient, facts)
         if sp is None:
             continue
@@ -818,7 +819,7 @@ def render_star_names(surface, ctx, stars, heights, render_label,
         w = text.get_width()
         x = int(sx - w / 2)
         y = int(sy + ih * STAR_NAME_GAP)
-        if clamp is not None and widest:
+        if clamp is not None and widest and not sp.split:
             if x < clamp.left:
                 x = clamp.left
             elif x + w > clamp.right:
@@ -833,23 +834,37 @@ def render_star_names(surface, ctx, stars, heights, render_label,
                      for o, x0, x1 in starnames.spans(sp.split, w)]
         else:
             parts = [(0, w, None)]
-        for x0, x1, rgb in parts:
+        for n, (x0, x1, rgb) in enumerate(parts):
             img = text if rgb is None else render_label(sp.text, rgb)
-            area = pygame.Rect(x0, 0, x1 - x0, img.get_height())
-            surface.blit(img, (x + x0, y), area)
-            surface.blit(img, (x + x0 + 1, y), area)
-        _surrender_line(surface, ctx, s, player_num, players, sx,
-                        y + text.get_height(), w)
+            if not sp.split:
+                surface.blit(img, (x, y))
+                surface.blit(img, (x + 1, y))
+                continue
+            # a part keeps to its span (the last may run one pixel on), so
+            # the double draw does not bleed into the next owner's colour
+            keep = surface.get_clip()
+            right = x1 + (1 if n == len(parts) - 1 else 0)
+            surface.set_clip(keep.clip(pygame.Rect(
+                x + x0, y - 4, right - x0, img.get_height() + 8)))
+            surface.blit(img, (x, y))
+            surface.blit(img, (x + 1, y))
+            surface.set_clip(keep)
+        if not sp.split:
+            _surrender_line(surface, ctx, s, player_num, players, sx,
+                            y + text.get_height(), w)
 
 
 def _surrender_line(surface, ctx, s, player_num, players, sx, y, w):
     """TRANSCRIPTION `name_surrender` (mainscr.cpp:1285-1313): under the
-    name, in the colour of the empire the star's owner surrendered to
-    (`star.surrender_to[PLAYER_NUM]`, a player 0..7), a second line one
-    palette step on below map scale 30 — the other way for player colours
-    3 and 5. DEVIATION `name_step_darker`: the step is a brightness factor.
-    The line starts at the star's x, not the clamped name's, as the
-    original's does."""
+    name, for the empire the star's owner surrendered to
+    (`star.surrender_to[PLAYER_NUM]`, 0..7), a second line below map scale
+    30; it starts at the star's x, not the clamped name's.
+
+    DEVIATION `surrender_colour`: the original's colour is a palette index,
+    `surrender_colors` by the empire's colour, +1 for line two, -3 for
+    colours 3 and 5 (:1292-1301); HD has only the skin's RGB, so line one is
+    the empire's colour, line two x 1.25 (x 0.8 for 3 and 5), the width the
+    drawn name's. UNVERIFIED live."""
     slots = getattr(s, "surrender_to", None)
     if not slots or not 0 <= player_num < len(slots):
         return
@@ -859,8 +874,7 @@ def _surrender_line(surface, ctx, s, player_num, players, sx, y, w):
     rgb = _owner_rgb(players, to)
     t = max(1, int(round(ctx.px)))
     x0 = int(sx - w / 2)
-    # LOOK EXCEPTION transcription: the original's underline in the empire's
-    # colour (mainscr.cpp:1285-1313), not a panel's
+    # LOOK EXCEPTION transcription: the empire's own colour
     pygame.draw.rect(surface, rgb, (x0, y, w, t))
     if ctx.map_scale < 30:
         k = 0.8 if getattr(players[to], "color", None) in (3, 5) else 1.25

@@ -58,8 +58,7 @@ def left_release(screen):
     terrpanel.release(screen)
 
 
-#: The sidebar's windows: row key -> (layout.json field key, log name) and
-#: the help id whose region is the row's band (help.json, evanhelp.cpp:4).
+#: The sidebar's windows: row key -> (layout.json field key, log name).
 SIDEBAR_WINDOWS = {
     "treasury": ("treasury_window_field", "treasury window"),
     "command": ("command_window_field", "command window"),
@@ -67,32 +66,73 @@ SIDEBAR_WINDOWS = {
     "freighters": ("freighters_window_field", "freighters window"),
     "research": ("research_window_field", "research window"),
 }
-SIDEBAR_WINDOW_HELP = {"treasury": 286, "command": 288, "food": 290,
-                       "freighters": 291, "research": 292}
+
+#: TRANSCRIPTION `sidebar_window_bands` (mainscr.cpp:1559-1563): the five
+#: hidden fields `Add_Hidden_Field(x1, y1, x2, y2)` of the 640x480 plane,
+#: inclusive. Between them lie 2, 4, 2 and 3 rows with NO field: a click
+#: there opens nothing. The original's x span (545-613) and these y spans
+#: are the rule; `layout.json` repeats four of them for the live-field
+#: lookup and a check holds the two equal.
+SIDEBAR_FIELDS = {
+    "treasury": (545, 49, 613, 119),
+    "command": (545, 122, 613, 192),
+    "food": (545, 197, 613, 267),
+    "freighters": (545, 270, 613, 340),
+    "research": (545, 344, 613, 415),
+}
+
+
+def _row_boxes(screen, row):
+    names = (f"sb_{row}_text", f"sb_{row}_icon")
+    return [b.screen_rect for b in getattr(screen, "boxes", [])
+            if b.name in names and getattr(b, "screen_rect", None)]
 
 
 def sidebar_window_band(screen, row):
-    """The screen rect of one sidebar window: the row's help region (its
-    boxes grown by `pad_y`, so neighbours touch) across the panel's full
-    width, as the original's fields span the column (mainscr.cpp:1559-1568).
-    None when the layout has neither."""
-    spec = next((r for r in getattr(screen, "_help_regions", [])
-                 if r.get("help_id") == SIDEBAR_WINDOW_HELP[row]), None)
-    rect = screen.help_region_rect(spec) if spec else None
-    if rect is None:
+    """The window rect of one sidebar window's hidden field.
+
+    TRANSCRIPTION `sidebar_window_bands`: the field's native y span
+    (`SIDEBAR_FIELDS`, mainscr.cpp:1559-1563, y2 inclusive) mapped onto the
+    HD sidebar by ONE vertical scale: the five rows' own boxes
+    (`sb_<row>_text`/`_icon`, boxes.json) from the top of the first to the
+    bottom of the last stand for native rows 49 to 416, so the gaps of the
+    original (2, 4, 2, 3 rows) stay gaps, scaled.
+    HD EXTENSION `sidebar_band_x`: the HD sidebar is not on the 640x480
+    plane (its panel is the column on the right), so the field's x span is
+    the panel's width, not 545-613. Independent of help.json, which a mod may trim. None when
+    the layout has no row boxes or no panel."""
+    if row not in SIDEBAR_FIELDS:
         return None
+    boxes = [r for k in SIDEBAR_FIELDS for r in _row_boxes(screen, k)]
     panel = screen.box_rect("sidebar")
-    if panel:
-        panel = pygame.Rect(*screen.layout.rect(panel))
-        rect = pygame.Rect(panel.x, rect.y, panel.w, rect.h)
-    return rect
+    if not boxes or not panel:
+        return None
+    panel = pygame.Rect(*screen.layout.rect(panel))
+    top = min(r.top for r in boxes)
+    bottom = max(r.bottom for r in boxes)
+    first = min(f[1] for f in SIDEBAR_FIELDS.values())
+    last = max(f[3] for f in SIDEBAR_FIELDS.values()) + 1
+    scale = (bottom - top) / float(last - first)
+    _x1, y1, _x2, y2 = SIDEBAR_FIELDS[row]
+    y_top = int(round(top + (y1 - first) * scale))
+    y_end = int(round(top + (y2 + 1 - first) * scale))
+    return pygame.Rect(panel.x, y_top, panel.w, y_end - y_top)
 
 
 def sidebar_window_at(screen, x, y):
-    """The row key of the sidebar window under (x, y), or None."""
-    for row in SIDEBAR_WINDOW_HELP:
+    """The row key of the sidebar window under (x, y), or None.
+
+    A point in one of the original's gaps between two fields is nobody's.
+    HD EXTENSION `sidebar_box_hit`: a point on a row's own text or icon box
+    counts for that row even where the scaled field misses it, because the
+    HD boxes are sized to their content and may stick out of the scaled
+    band by a few pixels; it never reaches into a gap that no box covers."""
+    for row in SIDEBAR_FIELDS:
         band = sidebar_window_band(screen, row)
         if band is not None and band.collidepoint(x, y):
+            return row
+    for row in SIDEBAR_FIELDS:
+        if any(r.collidepoint(x, y) for r in _row_boxes(screen, row)):
             return row
     return None
 
@@ -122,12 +162,12 @@ def click(screen, screen_x, screen_y):
             activate_spec(screen, spec, spec["key"])
             return True
 
-    # THE SIDEBAR'S FIVE WINDOWS — the whole row band, not the readout inside
-    # it (TRANSCRIPTION `sidebar_window_bands`, mainscr.cpp:1559-1568: each
-    # `Add_Hidden_Field` spans x 545-613 and a band of 70 native rows with
-    # 2-3 between neighbours, so a click between two rows opens a window; work
-    # order 402). `sidebar_window_at` is the one hit-test, the band the help
-    # regions use. Each window keeps its own rule, found in the LIVE list by
+    # THE SIDEBAR'S FIVE WINDOWS — the original's hidden fields, not the
+    # readout inside them (TRANSCRIPTION `sidebar_window_bands`,
+    # mainscr.cpp:1559-1563: five fields y 49-119, 122-192, 197-267,
+    # 270-340, 344-415 with 2, 4, 2, 3 rows between them where NOTHING
+    # opens; work order 402). `sidebar_window_at` is the one hit-test.
+    # Each window keeps its own rule, found in the LIVE list by
     # shape, never by a remembered index (decision 20):
     #   Treasury   opens HD's tax rate popup (work order 230 D,
     #              mainscr_main.cpp:733-748; `taxrate`, through the map's modal)

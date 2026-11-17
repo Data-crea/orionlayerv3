@@ -89,6 +89,12 @@ options screen, default on, Alt+F8 (mainscr.cpp:3496), and `settings_raw`
 carries it. The one difference is the draw order (DEVIATION
 `relocation_after_black_holes`).
 
+DEVIATION `settings_absent_default`: a snapshot with NO settings block (a
+stand-in, no connection) says nothing, so neither option draws anything; a
+block that is present but too short to hold the byte reads the game's own
+defaults, relocation lines on and Enemy Moves off (initgame.cpp:73, :78);
+see `setting_on`.
+
 OMISSION: none left in this module.
 """
 import math
@@ -99,6 +105,7 @@ from core import palette
 from core import zoomtables as zt
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
+from core.structs import settings as settings_struct
 from core.structs import ship as ship_struct
 from core.structs import star as star_struct
 from screens.galaxy_map import ships as ship_icons
@@ -250,15 +257,31 @@ def _our_colony_or_any_outpost(state, star, player_num):
     return False
 
 
+#: The game's own defaults (a new game, `initgame.cpp:73` enemy_moves = 0,
+#: `:78` show_relocation_lines = 1).
+SETTING_DEFAULTS = {"enemy_moves": 0, "show_relocation_lines": 1}
+_SETTING_AT = {n: o for n, o, _k in settings_struct.SPEC.fields}
+
+
 def setting_on(state, name):
     """One `s_settings` byte from the wire's `settings_raw` (decision 23,
-    `core.structs.settings`), False when the block is absent."""
-    from core.structs import settings as settings_struct
+    `core.structs.settings`), read at its offset directly: this runs once
+    per ship icon per frame, so no 553-byte parse (no cache is needed for
+    a single index).
+
+    DEVIATION `settings_absent_default`: no block at all (a stand-in
+    snapshot, no connection) says nothing, so the option is OFF and nothing
+    is drawn; a block that is present but too short to hold the byte (an
+    older engine) says nothing of what the player chose, so the game's own
+    default applies (`SETTING_DEFAULTS`, initgame.cpp:73, :78): the
+    relocation lines stay on and Enemy Moves stays off."""
     raw = getattr(state, "settings_raw", b"") or b""
-    try:
-        return bool(getattr(settings_struct.parse(raw), name))
-    except ValueError:                      # a block too short to hold it
+    if not raw:
         return False
+    at = _SETTING_AT.get(name)
+    if at is None or at >= len(raw):
+        return bool(SETTING_DEFAULTS.get(name, 0))
+    return bool(raw[at])
 
 
 def enemy_moves_on(state):

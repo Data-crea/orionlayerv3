@@ -37,6 +37,12 @@ repository, never in the base pack) and decoded here through `core/lbx.py`:
                assigns (antaroom.cpp:57) may draw once more a pass
                (fields.cpp:815, :832); the pace is read from the code, not
                measured live.
+               DEVIATION `antaran_room_speed`: the original's wait is
+               `(ticks - animation_speedup) * 55 ms` (timer.cpp:50-62), so
+               its PageUp/PageDown animation speed changes the room's pace
+               (at +1 a 55 ms pass, at +2 and above none); HD keeps the
+               fixed 110 ms of speed 0 and does not apply the battle's
+               speed control (`cbclock`) to a popup.
                OMISSION `antaran_room_animations_off`: the original draws
                no animation with the "animations" option off
                (antaroom.cpp:17-19); HD always animates.
@@ -160,6 +166,9 @@ class Room:
         self.t0 = None
         self.drawn = 0
         self.surface = None
+        #: set by `_step` when a frame will not decode (a truncated file):
+        #: the room is then given up for the rest of the popup
+        self.broken = False
         lut = np.zeros((256, 3), np.uint8)
         for i, rgb in self.palette.items():
             if 0 <= i < 256:
@@ -175,8 +184,19 @@ class Room:
 
     def _step(self):
         h = self.head
-        lbx.decode_packed(self.blob, h.offsets[self.next_frame], h.width,
-                          h.height, into=self.canvas)
+        # Guarded as `event_picture` is: a truncated or half-written
+        # antaroom_1.bin passes the header and fails on a later frame;
+        # `decode_packed` answers None for a stream that runs out.
+        try:
+            done = lbx.decode_packed(self.blob, h.offsets[self.next_frame],
+                                     h.width, h.height, into=self.canvas)
+        except (lbx.LbxError, ValueError, IndexError, struct.error) as err:
+            log.warning("the Antaran room's frame %d will not decode (%s) "
+                        "- the panel is drawn", self.next_frame, err)
+            done = None
+        if done is None:
+            self.broken = True
+            return False
         self.next_frame += 1
         if self.next_frame >= h.frame_count:
             # file_ani.cpp:200-207: the header's loop frame, or frame 0 when
@@ -184,10 +204,14 @@ class Room:
             self.next_frame = self.loop_frame \
                 if self.loop_frame != h.frame_count - 1 else 0
         self.drawn += 1
+        return True
 
     def frame(self, now):
         """The picture at time `now` (seconds, any clock): frame 0 at the
-        first call, then one more every `ROOM_FRAME_S`."""
+        first call, then one more every `ROOM_FRAME_S`. None once a frame
+        will not decode (`broken`)."""
+        if self.broken:
+            return None
         if self.t0 is None:
             self.t0 = now
         due = int((now - self.t0) / ROOM_FRAME_S) + 1
@@ -198,7 +222,8 @@ class Room:
         if self.surface is None and behind < 1:
             behind = 1
         for _ in range(max(0, behind)):
-            self._step()
+            if not self._step():
+                return None
         if behind > 0 or self.surface is None:
             w, h = self.size
             rgb = self.lut[np.frombuffer(self.canvas, np.uint8)]
@@ -213,7 +238,8 @@ def room(folder=None):
     """The Antaran room, or None when the player's files were not
     extracted (or do not decode). Kept between frames; `reset` ends it."""
     if _room["tried"] and _room["folder"] == folder:
-        return _room["obj"]
+        obj = _room["obj"]
+        return None if obj is not None and obj.broken else obj
     src = source(folder)
     anim = _read(src, "antaroom_1.bin")
     pal = _read(src, "antaroom_0.bin")

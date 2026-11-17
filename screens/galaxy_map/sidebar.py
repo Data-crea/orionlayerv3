@@ -185,13 +185,16 @@ def research_readout(plr, labels, hstrings=None):
     turns = research.turns_until_complete(
         field, status, int(plr.research_accumulated),
         int(plr.research_produced), cost)
-    produced = f"{_fmt_thousands(plr.research_produced)} {unit}"
     if turns < 0:
         return label, (f"0 {unit}",), ""
     chance = research.chance(int(plr.research_accumulated),
                              int(plr.research_produced), cost)
     if turns == 0:
-        return label, (f"{chance}%",), produced
+        # TRANSCRIPTION `research_produced_plain` (mainscr_main.cpp:262-265):
+        # the stopped-project branch prints `%d %s`, UNgrouped
+        return label, (f"{chance}%",), f"{int(plr.research_produced)} {unit}"
+    # the running branch groups it (`Get_Comma_String`, :229-231)
+    produced = f"{_fmt_thousands(plr.research_produced)} {unit}"
     lines = []
     if chance > 0:
         lines.append(f"{chance}%")
@@ -343,6 +346,10 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
     # and negative colours measured off the mockup (`measured.text`).
     label_col, value_col, sub_col, warn_col = _hud_colours()
     warn_main, warn_sub = warn if isinstance(warn, tuple) else (warn, False)
+    # DEVIATION `warn_one_colour`: the original colours the balance with
+    # palette ramp 'K'..'M' and the "+/-N BC" line with ramp 75..77
+    # (mainscr_main.cpp:84-130, two different bases); HD has no ramp and
+    # pulses the one HUD negative colour on both lines.
     warn_col = pulse_colour(warn_col, ticks_ms)
     label_font = style.get_font(
         layout.font_size(int(fonts["label"] * font_scale)))
@@ -437,6 +444,9 @@ def render(surface, layout, style, geometry, plr, labels, rows=None,
     aligns = aligns or {}
     fonts = fonts or DEFAULT_FONTS
     bands = []
+    # the pulse's clock is read ONCE per render: two rows of one frame must
+    # not straddle a step and differ by one
+    now_ms = _ticks()
 
     for key in rows:
         geo = geometry.get(key)
@@ -458,7 +468,7 @@ def render(surface, layout, style, geometry, plr, labels, rows=None,
         draw_text_block(surface, style, layout, layout.rect(text_rect),
                         label, main, sub, warn,
                         font_scales.get(key, 1.0),
-                        aligns.get(key, "center"), fonts, _ticks())
+                        aligns.get(key, "center"), fonts, now_ms)
 
     if dividers and panel_box is not None:
         draw_dividers(surface, layout, panel_box, bands)

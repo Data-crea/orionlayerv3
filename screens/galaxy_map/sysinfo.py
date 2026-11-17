@@ -187,7 +187,7 @@ def _bare_colony(planet):
 
 
 def _may_see_orbit(state, planet, me, traits):
-    """`can_show_special_buildings` (sys.cpp:1343-1349): a ship of the
+    """`can_show_special_buildings` (sys.cpp:1382-1386): a ship of the
     player's in the system, a colony of the player's there, or
     Omniscience."""
     if traits and len(traits) > TRAIT_OMNISCIENCE and \

@@ -2,8 +2,9 @@
 (package 1), two small decorations the original draws with the stars.
 
 THE GATE ICONS (`Draw_A_Gate_Icon_`, mainscr.cpp:916-1010, called for every
-star by `Draw_Gate_Icons_` after the black holes and the stars,
-mainscr_main.cpp:938 and mainscr.cpp:747): beside the name of a system the
+star by `Draw_Gate_Icons_`: in the live frame after the black holes and
+BEFORE `Draw_Stars_` (mainscr_main.cpp:968, :988), in the overview redraw
+after the stars, mainscr.cpp:746-751): beside the name of a system the
 local player has VISITED, the Dimensional Portal's icon (BUFFER0.LBX
 19 + zoom_offset) and the Artemis Net's (31 + zoom_offset) for the player's
 own bit of `star.has_dimensional_portal` / `has_artemis_net`
@@ -18,6 +19,12 @@ own bit of `star.has_dimensional_portal` / `has_artemis_net`
                  only these two icons exist, and the original's cases of 3
                  and 4 icons (a 75 x 20 composite, :995-1010) can never be
                  reached: not built.
+  DEVIATION      `gate_over_stars`: HD draws the icons over the stars (the
+                 overview redraw's order, mainscr.cpp:746-751), the live
+                 loop draws the stars over them (mainscr_main.cpp:968,
+                 :988); the star sprites are drawn earlier by the map
+                 renderer and an icon stands beside the star, so the
+                 overlap is a few pixels at most. UNVERIFIED live.
   DEVIATION `map_gate_icon_drawn`: the pictures are the player's files
                  (not extracted), so HD draws what the system window draws
                  (`sysextras._picture` / `_drawn`, its `gate_icon_drawn`),

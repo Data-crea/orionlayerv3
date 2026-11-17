@@ -55,6 +55,17 @@ def wanted():
     return out
 
 
+#: The file `tools/setup.py` takes as proof of a finished extraction.
+SENTINEL = "event_0"
+
+
+def _write(path, data):
+    tmp = path + ".part"
+    with open(tmp, "wb") as fh:
+        fh.write(data)
+    os.replace(tmp, path)
+
+
 def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
     paths = {}
     for name in sorted({n for n, _e in wanted().values()}):
@@ -84,13 +95,18 @@ def extract(folder=None, out=DEFAULT_OUT, dry_run=False):
     if dry_run:
         return manifest
     os.makedirs(out, exist_ok=True)
-    for stem, (name, entry) in take.items():
-        with open(os.path.join(out, f"{stem}.bin"), "wb") as fh:
-            fh.write(files[name][entry])
-    with open(os.path.join(out, "manifest.json"), "w", encoding="utf-8") as fh:
+    # Every file goes through a temp name and a rename, so an interrupted run
+    # never leaves a half-written .bin under its real name, and the SENTINEL
+    # (`event_0.bin`, the file tools/setup.py looks for) is renamed LAST:
+    # a run that stops early is not mistaken for a finished extraction.
+    order = [s for s in take if s != SENTINEL] + [SENTINEL]
+    for stem in order:
+        name, entry = take[stem]
+        if stem == SENTINEL:
+            _write(os.path.join(out, "manifest.json"),
+                   (json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
         # indent=2: the tree's JSON convention (smoke check 062).
-        json.dump(manifest, fh, indent=2)
-        fh.write("\n")
+        _write(os.path.join(out, f"{stem}.bin"), files[name][entry])
     return manifest
 
 

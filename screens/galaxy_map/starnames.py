@@ -12,8 +12,8 @@ system, not only `star.owner`:
                  is 0..7 AND any colony owner at the star is in contact with
                  the local player (`Contact_With_One_Colony_`); otherwise
                  only a VISITED star shows its name, in the neutral colour.
-                 The local player is in contact with itself (`contact[self]`
-                 is 1 in every player of 40 saves read, 16 November 2026).
+                 The local player is in contact with itself: DEVIATION
+                 `self_contact`, see `_in_contact`.
   TRANSCRIPTION `name_outpost` (`Star_Is_Outpost_Star_`, harold.cpp:89-112;
                  mainscr.cpp:1462, :1484): a system with outposts and no
                  colony is written lower-case (`String_To_Lower_`) and its
@@ -146,7 +146,21 @@ def outpost_star(fact):
     return fact is not None and fact.outposts > 0 and fact.colonies == 0
 
 
+def ascii_lower(text):
+    """`String_To_Lower_` (strings.cpp:40-50) maps only 0x41-0x5A, so a
+    non-ASCII capital of a mod's or a translation's name stays as it is;
+    `str.lower()` would lower it. TRANSCRIPTION `name_outpost`."""
+    return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c
+                   for c in text)
+
+
 def _in_contact(local, player_num, owner):
+    """`Contact_With_Player_` (harold.cpp:665-670): `player[local].contact
+    [owner]` for an owner below the player count. DEVIATION `self_contact`:
+    the local player is in contact with itself here without reading the
+    array (the original reads `contact[self]`, which is 1 in all 40 saves
+    read on 16 November 2026), so a snapshot that leaves the own flag 0
+    does not hide the player's own systems. UNVERIFIED for a fresh game."""
     if owner == player_num:
         return True
     if local is None or not 0 <= owner < MAX_PLAYERS:
@@ -189,18 +203,28 @@ def spec(s, player_num, players, omniscient, facts=None):
             if not visited:
                 return None
             # TRANSCRIPTION `name_outpost`: neutral colour, two steps
-            return Spec(name.lower() if outpost else name, None,
+            return Spec(ascii_lower(name) if outpost else name, None,
                         2 if outpost else 0, None)
     text = f"({name})" if (omniscient and owner != player_num
                            and not visited) else name
     steps = 1 if outpost else 0
     if outpost:
-        text = text.lower()
+        text = ascii_lower(text)
     colour = owner if 0 <= owner < MAX_PLAYERS else None
     split = None
     if fact is not None and len(fact.owners) > 1:
         split = colony_split(fact, player_num, local, omniscient)
     return Spec(text, colour, steps, split)
+
+
+def owner_known(s, player_num, players, omniscient, facts=None):
+    """True when the star's name is drawn in its OWNER's colour: the
+    owner is met (or the player is omniscient). A visited star whose
+    owners are all unmet has a name, in the neutral colour, and says
+    nothing of who holds it (`Spec.owner` None), so the territory view
+    must not credit `s.owner` for it (`terrfield.empires`)."""
+    sp = spec(s, player_num, players, omniscient, facts)
+    return sp is not None and sp.owner is not None
 
 
 def colony_split(fact, player_num, local, omniscient):
@@ -253,25 +277,50 @@ def shade(rgb, level):
 
 
 def highlighted(screen):
-    """Star indices whose names pulse: the pointed-at star and the open
-    system window's (`mainscr_main.cpp:984-1008`; the ETA star stands in
-    for the first, OMISSION `eta_star_pulse`)."""
-    out = set()
+    """Star indices whose names pulse, in the original's call order: the
+    pointed-at star (`Highlight_Star_` of the ETA star, mainscr_main.cpp:
+    :984-996; OMISSION `eta_star_pulse`) and then the open system window's
+    star (:1019, `box_id == 0`). A list, not a set: each call steps
+    `selected_star_color_offset` once (see `pulses_of`)."""
+    out = []
     hov = getattr(screen, "_hover_star", None)
     if hov is not None:
-        out.add(int(hov.index))
+        out.append(int(hov.index))
     sysw = getattr(getattr(screen, "_state", None), "system_window", None)
-    if sysw and sysw.get("star", -1) >= 0:
-        out.add(int(sysw["star"]))
+    star = sysw.get("star", -1) if isinstance(sysw, dict) else -1
+    if isinstance(star, int) and star >= 0:
+        out.append(int(star))
     return out
+
+
+_clock = None
+
+
+def set_clock(fn):
+    """A test or the evidence tool drives the pulse's time (seconds), as
+    `core.planetspin.set_clock` does for the spin; None restores the real
+    one. Two renders of one picture must differ only by what a check
+    changes."""
+    global _clock
+    _clock = fn
+
+
+def now():
+    """The pulse's time in seconds: the driven clock, else the real one."""
+    import time
+    return _clock() if _clock is not None else time.monotonic()
 
 
 def pulses_of(screen, now):
     """{star index: colour offset} of every highlighted name at `now`
-    seconds — one offset for all of them, as the original's single
-    `selected_star_color_offset` is."""
-    stars = highlighted(screen)
-    if not stars:
-        return {}
-    level = pulse_level(now)
-    return {i: level for i in stars}
+    seconds. TRANSCRIPTION `name_pulse_sequence`: the original's single
+    `selected_star_color_offset` advances once per `Highlight_Star_` call
+    (mainscr.cpp:1833-1842), so with two highlighted stars the second one
+    is printed one step further along the sequence; a star named twice
+    keeps its last print, as the original's later draw covers the earlier.
+    INVENTION `name_pulse_pace`: the pace is by time per step, so two
+    highlights do not make the cycle twice as fast as the original's per-
+    frame stepping would."""
+    base = int(now / PULSE_STEP_S)
+    return {i: PULSE_SEQUENCE[(base + k) % len(PULSE_SEQUENCE)]
+            for k, i in enumerate(highlighted(screen))}
