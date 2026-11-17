@@ -44,7 +44,7 @@ import os
 
 import pygame
 
-from core import hestrings, monsterhull, textfit
+from core import hestrings, lang, monsterhull, textfit
 from core import zoomtables as zt
 from core.hud import blocks as hud
 from core.hud import text as hudtext
@@ -90,7 +90,10 @@ def values(ship, parts, hstrings, cfg, description):
     list's heading and the "None" row are HESTRNGS's (`headings`)."""
     def part(table, index):
         name = parts.name(table, index) if parts is not None else None
-        return name if name else cfg.get("unnamed", "#%d") % int(index)
+        # TECHNAME's names are the game's: stored, never translated
+        # (TRANSCRIPTION `engine_words_verbatim`, WO 409); '#%d' is HD's
+        return lang.stored(name) if name else cfg.get(
+            "unnamed", "#%d") % int(index)
 
     def number(value):
         return str(int(value)) if value is not None else cfg.get(
@@ -100,7 +103,8 @@ def values(ship, parts, hstrings, cfg, description):
         index = cfg.get(key)
         text = hstrings.message(index) if hstrings is not None \
             and index is not None else None
-        return text if text and text != str(index) else fallback
+        # HESTRNGS' word is the engine's (stored); the fallback is HD's
+        return lang.stored(text) if text and text != str(index) else fallback
 
     none = message("none", "None")
     heads = dict(cfg.get("headings", {}))
@@ -120,6 +124,8 @@ def values(ship, parts, hstrings, cfg, description):
         "specials": [part("specials", i) for i in specials] or [none],
         "headings": heads,
         "description": description,
+        "description_engine": not cfg.get("descriptions", {}).get(
+            str(int(ship.owner))),
     }
 
 
@@ -184,13 +190,25 @@ def _draw_sprite(screen, surface, rect, owner):
         center=rect.center))
 
 
-def _line(screen, surface, name, rect, text, colour, align="left", room=None):
+def _line(screen, surface, name, rect, text, colour, align="left", room=None,
+          engine=None):
     """One line of text in its band, fitted to the band's height
     (HD EXTENSION `font_scale`, work order 356: a band does not grow with
     the text size) and, when `room` is given, stepped down until it is no
-    wider than `room` px (a weapon's name beside its count)."""
+    wider than `room` px (a weapon's name beside its count).
+
+    `engine`: the text is the game's (a part's name, HESTRNGS' heading, the
+    space-monster text) and is drawn verbatim; None follows `lang.stored`
+    marking, so a cell is translated only when it is HD's own word
+    (TRANSCRIPTION `engine_words_verbatim`, WO 409)."""
     if not text:
         return
+    if engine is None:
+        engine = isinstance(text, lang.Stored)
+    if engine:
+        with lang.verbatim():
+            return _line(screen, surface, name, rect, text, colour, align,
+                         room, engine=False)
     size = textfit.fit_height_size(screen.style, syswindow.font(
         screen, name, 20), rect.height)
     surf = screen.style.render_text(text, size, tuple(colour[:3]))
@@ -219,6 +237,18 @@ def _rows(screen, surface, name, rect, heading, rows, count):
 def _texts(screen):
     text = hestrings.for_app(screen.app)
     return text if text.state == "ok" else None
+
+
+def description_lines(style, vals, size, width):
+    """The description cut to lines. The engine's own sentence (MAINTEXT, the
+    space monster's text) is cut as it is: `textfit.wrap_text` translates its
+    text whole first, which would translate a sentence equal to a table key
+    and measure the translation (review of work order 409); HD's own
+    sentence stays translated."""
+    if vals.get("description_engine"):
+        with lang.verbatim():
+            return textfit.wrap_text(style, vals["description"], size, width)
+    return textfit.wrap_text(style, vals["description"], size, width)
 
 
 def draw(screen, surface, r, model):
@@ -265,11 +295,10 @@ def draw(screen, surface, r, model):
     size = syswindow.font(screen, "monster_text", 20)
     y = text.y
     step = int(size * 1.25)
-    for line in textfit.wrap_text(screen.style, vals["description"], size,
-                                  text.width):
+    for line in description_lines(screen.style, vals, size, text.width):
         if y + step > text.bottom:
             break
         _line(screen, surface, "monster_text",
               pygame.Rect(text.x, y, text.width, step), line,
-              hudtext.colour("value"))
+              hudtext.colour("value"), engine=vals["description_engine"])
         y += step

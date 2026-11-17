@@ -345,7 +345,11 @@ def render_for(screen, surface):
         # original's paragraph.
         name_box = _box(screen, "planet_name")
         if name_box is not None and name_box.screen_rect is not None:
-            name_box.text = row["name"] if row is not None else None
+            # TRANSCRIPTION `engine_words_verbatim` (WO 409): the planet's
+            # name is the game's, stored: a name equal to a de.json key is
+            # not translated (found by the behavioural check, 090zzzzzzzzzzzzn)
+            name_box.text = lang.stored(row["name"]) \
+                if row is not None else None
             name_box.text_color = HEADING_COLOR
             name_box.render(surface, screen.layout, screen.style)
         text_box = _box(screen, "planet_paragraph")

@@ -141,9 +141,14 @@ def render(screen, surface, popup, state, app=None, words=None):
     size = max(nd.MIN_FONT, int(round(9 * bm.k)))
     colour = hudtext.colour("value")
     tx, ty = bm.point(bm.x0 + TITLE_AT[0], bm.y0 + TITLE_AT[1])
-    nd.blit_text(surface, style, popup.get("title") or "", tx, ty - size // 2,
-                 bm.rect.w - 2 * size, int(size * 1.25),
-                 hudtext.colour("title"), align="center")
+    # TRANSCRIPTION `engine_words_verbatim` (WO 409): the title is the
+    # engine's own line, ESTRINGS 458 filled with the planet's name
+    # (`Draw_Colony_Combat_Popup`, mainpups.cpp:2794; sent as
+    # `g_invasion.title`, mainpups.cpp:1425), not an HD word
+    with _lang.verbatim():
+        nd.blit_text(surface, style, popup.get("title") or "", tx,
+                     ty - size // 2, bm.rect.w - 2 * size, int(size * 1.25),
+                     hudtext.colour("title"), align="center")
     colony = a[0]
     climate, bg = gcdraw.colony_world(state, colony)
     art = gcart.load()

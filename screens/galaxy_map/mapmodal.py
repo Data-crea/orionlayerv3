@@ -41,11 +41,12 @@ once accepted. The game also refuses a character that would not fit the
 field's pixel width, which HD cannot measure in the game's font; the
 mirror may then show a character the game dropped, until the accept.
 """
+import contextlib
 import logging
 
 import pygame
 
-from core import gamebox, hestrings
+from core import gamebox, hestrings, lang
 from screens.galaxy_map import taxrate
 from core.hud import blocks as hud
 from core.hud import text as hudtext
@@ -177,14 +178,20 @@ class Modal:
         inner = hud.panel_inner(box, L.scale).inflate(-int(24 * L.scale), 0)
         prompt = hestrings.for_app(s.app).message(H_HOME_STAR) or ""
         size = max(12, int(34 * L.scale))
+        # TRANSCRIPTION `engine_words_verbatim` (WO 409): the prompt is the
+        # engine's HESTR 0x101 (`Change_Home_Star_Name_Popup`,
+        # namestar.cpp:153-156), the typed name is the player's own text,
+        # "ACCEPT" is HD's word and translates
         _text(surface, s, prompt, pygame.Rect(inner.x, inner.y + int(
-            16 * L.scale), inner.w, size), size, hudtext.colour("title"))
+            16 * L.scale), inner.w, size), size, hudtext.colour("title"),
+            engine=True)
         field = pygame.Rect(inner.x + int(60 * L.scale), inner.y + int(
             100 * L.scale), inner.w - int(120 * L.scale), int(64 * L.scale))
         hud.panel(surface, field, L.scale, dense=True)
         tsize = max(12, int(34 * L.scale))
-        img = s.style.render_text(self.text or " ", tsize,
-                                  hudtext.colour("button"))
+        with lang.verbatim():
+            img = s.style.render_text(self.text or " ", tsize,
+                                      hudtext.colour("button"))
         tx = field.x + int(18 * L.scale)
         ty = field.centery - img.get_height() // 2
         surface.blit(img, (tx, ty))
@@ -322,10 +329,13 @@ def surface_size(screen):
     return (screen.app.win_w, screen.app.win_h)
 
 
-def _text(surface, screen, text, rect, size, colour):
+def _text(surface, screen, text, rect, size, colour, engine=False):
     style = screen.style
-    while size > 10 and style.render_text(text, size, colour).get_width() \
-            > rect.w:
+
+    def render(px):
+        with lang.verbatim() if engine else contextlib.nullcontext():
+            return style.render_text(text, px, colour)
+    while size > 10 and render(size).get_width() > rect.w:
         size -= 1
-    img = style.render_text(text, size, colour)
+    img = render(size)
     surface.blit(img, img.get_rect(center=rect.center))

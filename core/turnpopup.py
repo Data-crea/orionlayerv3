@@ -476,13 +476,16 @@ def draw(surface, style, c):
     # to it (a leader offer's question ran past the panel's edge, seen in
     # work order 200 B's pictures)
     text_w = inner - (pic.get_width() + pad if pic is not None else 0)
+    # a popup may ink its lines in its own colour (TRANSCRIPTION
+    # `diplomacy_reply_colour`, work order 409: the requester's)
+    ink = c.get("line_colour") or colour
     with lang.verbatim():          # the popup's lines are the game's (200 C)
         for text in c["lines"]:
             if isinstance(text, tuple):       # a table row: label, value
-                rows.append((style.render_text(text[0], size, colour[:3]),
-                             style.render_text(text[1], size, colour[:3])))
+                rows.append((style.render_text(text[0], size, ink[:3]),
+                             style.render_text(text[1], size, ink[:3])))
                 continue
-            rows.extend(_wrap(style, text, size, text_w, colour) or [None])
+            rows.extend(_wrap(style, text, size, text_w, ink) or [None])
     step = int(size * 1.3)
     title = (style.render_text(c["title"], max(12, int(REF_TITLE_FONT * s)),
                                tuple(hudtext.colour("title")[:3]))

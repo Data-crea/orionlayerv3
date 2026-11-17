@@ -595,6 +595,14 @@ def _dragon_bribe(popup, state, words, app, anywhere):
     return {"lines": lines, "buttons": buttons, "art": art}
 
 
+def _requester_ink(colour):
+    """The owner colour (RGB) of a player colour index 0..7 as the map
+    draws it, None for anything else (the wire's -1)."""
+    from screens.galaxy_map.renderer import OWNER_COLORS
+    hit = OWNER_COLORS.get(int(colour))
+    return tuple(hit[:3]) if hit is not None else None
+
+
 def _diplomacy_reply(popup, state, words, app, anywhere):
     a = popup["args"]
     # TRANSCRIPTION `diplomacy_reply` (work order 408, open fix 122):
@@ -611,14 +619,21 @@ def _diplomacy_reply(popup, state, words, app, anywhere):
     # three hotkeys answers. Right click: help 677 on the popup, 678-680 on
     # the buttons (evanhelp.cpp:140-145): `right_buttons`, the field's own
     # help through the engine's list.
-    # OMISSION `diplomacy_reply_ink`: the original prints the message in the
-    # requester's colour (:4745-4750, args[4] carries it); HD draws the
-    # popup's own ink.
+    # TRANSCRIPTION `diplomacy_reply_colour` (work order 409): the original
+    # prints the message in the requester's colour (`player_color =
+    # main_palette_player_colors[player.color]`, `Get_Mox_Font_Colors(4,
+    # player_color, player_color + 3)`, mainscr.cpp:4770-4788); the engine
+    # sends that colour as args[4] (`MOX::player[requester].color`, -1 when
+    # the requester is out of range, mainscr.cpp:2542-2544), and HD inks the
+    # message in the same owner colour as the map's (`renderer.OWNER_COLORS`,
+    # which follows the player-colour preset). Out of range: HD's own ink.
+    # OMISSION `diplomacy_reply_ink`: the original's font style 4 is a ramp
+    # of four palette shades (colour .. colour + 3); HD inks one flat colour.
     # UNVERIFIED `diplomacy_reply_live`: a network game cannot be started
     # offline; drawn from the stand-in's bytes only (work order 408).
     lines = [popup["text"]] if popup.get("text") else []
     fields = [_act(state, a[1]), _act(state, a[2]), _act(state, a[3])]
-    return {"lines": lines,
+    return {"lines": lines, "line_colour": _requester_ink(a[4]),
             "buttons": [(words["diplo_accept"], fields[0]),
                         (words["diplo_ignore"], fields[1]),
                         (words["diplo_wait"], fields[2])],
@@ -674,6 +689,7 @@ def content(popup, state, words, app=None):
             "summary": out.get("summary"), "words": words,
             "summary_hidden": out.get("summary_hidden", 0),
             "art": out["art"], "art_event": out.get("art_event"),
+            "line_colour": out.get("line_colour"),
             "title_on_art": TITLE_ON_ART.get(kind)}
 
 
