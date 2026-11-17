@@ -144,6 +144,11 @@ def _same_key(a, b):
         for x, y in zip(a, b))
 
 
+#: The one sort with a key and no button (colsum.cpp:371, :1012-1013);
+#: it has a hotkey and no native click, so `_inject` sends the key.
+STORED_SORT = {"key": "stored", "hotkey": "t"}
+
+
 class ColonySummaryScreen(ScreenBase):
     SCREEN_NAME = "colony_summary"
     #: Its picture moves only with input, the game and the window: a frame
@@ -257,7 +262,8 @@ class ColonySummaryScreen(ScreenBase):
         # the entry key then sorts THAT list stably — the order
         # `colonyselect.game_order` builds. Without it the ties of the
         # entry key would stand in the order of a key HD never saw.
-        buttons = self._data.get("sort", {}).get("buttons", [])
+        buttons = (self._data.get("sort", {}).get("buttons", [])
+                   + [STORED_SORT])
         for key in dict.fromkeys(("name", self._sort_key)):
             spec = next((b for b in buttons if b["key"] == key), None)
             if spec is not None:
@@ -688,6 +694,12 @@ class ColonySummaryScreen(ScreenBase):
                 if self._state is not None:
                     self._sort(spec)
                 return
+        if char == STORED_SORT["hotkey"] and self._state is not None:
+            # TRANSCRIPTION stored_sort (work order 413, colsum.cpp:1012-1013):
+            # the game re-sorts on `t` (no header, g_sort_index 7), so HD's
+            # rows follow and `_sort` injects the key. UNVERIFIED live.
+            self._sort(STORED_SORT)
+            return
         ScreenBase.handle_key(self, key)
 
     def hotkeys_suspended(self):

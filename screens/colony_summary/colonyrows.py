@@ -328,7 +328,8 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     The dict keys ARE the interface to the two renderers: index,
     name, climate, pops, jobs, cells, held, no_farming, max_pop,
     producing,
-    producing_id, producing_state, producing_turns, can_buy for
+    producing_id, producing_state, producing_turns, can_buy, stored (the
+    hidden `t` sort, work order 413) for
     `colonylist.render()` — `can_buy` is False here and set by
     `colonybuy.annotate` to False, "buy" or "bought" (work order 322
     B1) — and size,
@@ -403,6 +404,10 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             "planet": int(col.planet),
             "name": colonyfacts.planet_name(col, planets, stars),
             "pops": col.n_pops,
+            # TRANSCRIPTION stored_sort (work order 413): the hidden
+            # hotkey `t` sorts on production_spent, descending
+            # (colsum.cpp:371, :508-510, :1012-1013-1014); UNVERIFIED live.
+            "stored": col.production_spent,
             "jobs": jobs,
             # ONE ENTRY PER DRAWN CELL, in the ORIGINAL'S OWN ORDER
             # (decision 48): `colonyicons.icon_pops` is the walk the
@@ -584,6 +589,8 @@ SORT_KEYS = {
     "science": _by("production", ECON_RESEARCH),
     "bc": _by("production", ECON_BC),
     "producing": prodname.sort_key,
+    # No button: only the hotkey `t` reaches it (colsum.cpp:371, :1012).
+    "stored": _by("stored"),
 }
 
 #: Keys that do not do what their button says. The screen reads this
