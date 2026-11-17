@@ -198,8 +198,12 @@ class GameState:
 
     @property
     def stardate_str(self):
-        """Stardate als lesbarer String (z.B. '350.1')."""
-        return f"{self.stardate // 10}.{self.stardate % 10}"
+        """The stardate as the original prints it (z.B. '350.1').
+
+        TRANSCRIPTION mainscr_main.cpp:8,19: the decimal sign is ',' for
+        languages 1 and 2 and '.' otherwise (`lang.decimal_separator`)."""
+        return (f"{self.stardate // 10}{lang.decimal_separator()}"
+                f"{self.stardate % 10}")
 
 
 class _Reader:

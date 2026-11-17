@@ -57,6 +57,9 @@ HOME_STAR_INPUT_AT = (165, 200)              # namestar.cpp:118-129
 TYPE_BUTTON, TYPE_INPUT = 0, 11
 MAX_CHARS = 14                               # 15-byte buffer (namestar.cpp:262)
 H_HOME_STAR = 0x101
+#: The help a right click opens, by modal kind: the whole screen's own box
+#: (evanhelp.cpp:136 -> 675; erichelp.cpp:41-43 -> 560).
+HELP_OF_KIND = {"home_star": 675, "tax_rate": 560}
 KEY_BACKSPACE, KEY_ENTER, KEY_ESC = 8, 13, 27
 
 
@@ -231,14 +234,17 @@ class Modal:
     def right(self, down):
         """The right button while a modal is up (work order 200 B): the name
         box's help is the whole screen's 675 (`Set_Input_Box_Help_List_`,
-        evanhelp.cpp:136, :362, namestar.cpp:305-307); a confirmation has
-        none (gendraw.cpp:60). Always True: the map under it does not pan."""
+        evanhelp.cpp:136, :362, namestar.cpp:305-307) and the tax rate
+        popup's the whole screen's 560 (TRANSCRIPTION `tax_popup_help`,
+        `Set_Tax_Rate_Popup_Help_List`, erichelp.cpp:41-43, :137-139, work
+        order 402); a confirmation has none (gendraw.cpp:60). Always True: the map under it does not pan."""
         s = self.screen
         if down and s.help.visible:
             s.help.close()
-        elif down and self.kind == "home_star":
-            s.help.open(675, *(s.helptext.entry(675) or
-                               s.helptext.missing_entry(675)))
+        elif down and self.kind in HELP_OF_KIND:
+            hid = HELP_OF_KIND[self.kind]
+            s.help.open(hid, *(s.helptext.entry(hid) or
+                               s.helptext.missing_entry(hid)))
         return True
 
     def click(self, x, y):

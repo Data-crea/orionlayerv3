@@ -58,6 +58,45 @@ def left_release(screen):
     terrpanel.release(screen)
 
 
+#: The sidebar's windows: row key -> (layout.json field key, log name) and
+#: the help id whose region is the row's band (help.json, evanhelp.cpp:4).
+SIDEBAR_WINDOWS = {
+    "treasury": ("treasury_window_field", "treasury window"),
+    "command": ("command_window_field", "command window"),
+    "food": (None, "food window"),
+    "freighters": ("freighters_window_field", "freighters window"),
+    "research": ("research_window_field", "research window"),
+}
+SIDEBAR_WINDOW_HELP = {"treasury": 286, "command": 288, "food": 290,
+                       "freighters": 291, "research": 292}
+
+
+def sidebar_window_band(screen, row):
+    """The screen rect of one sidebar window: the row's help region (its
+    boxes grown by `pad_y`, so neighbours touch) across the panel's full
+    width, as the original's fields span the column (mainscr.cpp:1559-1568).
+    None when the layout has neither."""
+    spec = next((r for r in getattr(screen, "_help_regions", [])
+                 if r.get("help_id") == SIDEBAR_WINDOW_HELP[row]), None)
+    rect = screen.help_region_rect(spec) if spec else None
+    if rect is None:
+        return None
+    panel = screen.box_rect("sidebar")
+    if panel:
+        panel = pygame.Rect(*screen.layout.rect(panel))
+        rect = pygame.Rect(panel.x, rect.y, panel.w, rect.h)
+    return rect
+
+
+def sidebar_window_at(screen, x, y):
+    """The row key of the sidebar window under (x, y), or None."""
+    for row in SIDEBAR_WINDOW_HELP:
+        band = sidebar_window_band(screen, row)
+        if band is not None and band.collidepoint(x, y):
+            return row
+    return None
+
+
 def click(screen, screen_x, screen_y):
     if screen.help_consumes_click(screen_x, screen_y):
         return True
@@ -83,70 +122,36 @@ def click(screen, screen_x, screen_y):
             activate_spec(screen, spec, spec["key"])
             return True
 
-    # THE RESEARCH WINDOW OPENS CHANGE MODE — work order 165 part B.
-    # The sidebar's last window is the one whose handler does
-    # something: it switches the game to SCREEN_TECH_CHANGE
-    # (mainscr_main.cpp:697-713) and `screens/research_change/` is the
-    # HD screen for it. The field is found in the LIVE list by shape,
-    # never by a remembered index (decision 20) — the same rule
-    # parking follows, and for the same reason: the turn-start research
-    # prompt also reports screen 0, and its fields are choice rows.
-    for _rw_box in ("sb_research_text", "sb_research_icon"):
-        box = screen.box_rect(_rw_box)
-        if not box or not pygame.Rect(*screen.layout.rect(box)).collidepoint(
-                screen_x, screen_y):
-            continue
+    # THE SIDEBAR'S FIVE WINDOWS — the whole row band, not the readout inside
+    # it (TRANSCRIPTION `sidebar_window_bands`, mainscr.cpp:1559-1568: each
+    # `Add_Hidden_Field` spans x 545-613 and a band of 70 native rows with
+    # 2-3 between neighbours, so a click between two rows opens a window; work
+    # order 402). `sidebar_window_at` is the one hit-test, the band the help
+    # regions use. Each window keeps its own rule, found in the LIVE list by
+    # shape, never by a remembered index (decision 20):
+    #   Treasury   opens HD's tax rate popup (work order 230 D,
+    #              mainscr_main.cpp:733-748; `taxrate`, through the map's modal)
+    #   Research   switches to SCREEN_TECH_CHANGE (work order 165 B,
+    #              mainscr_main.cpp:697-713; `screens/research_change/`) — the
+    #              turn-start research prompt also reports screen 0, and its
+    #              fields are choice rows, which is why the shape matters
+    #   Command    SCREEN_SHOW_COMMAND_POINTS 43 under `_skip_fields == 0`;
+    #   Freighters SCREEN_SCRAP_FREIGHTERS 35, or with no freighter the box
+    #              HESTR 0xDF (:726), which comes as MSGB (work order 310,
+    #              TRANSCRIPTION `sidebar_windows`, mainscr.cpp:1566, :1568,
+    #              mainscr_main.cpp:724-739). 35's slider is HD's turn popup
+    #              since open fix 104 (TPOP kind 20, id 80, work order 316),
+    #              its boxes HD's message box; 43's Command Summary is HD's
+    #              message box too (live work orders 310 and 378).
+    #   Food       has no handler in the original: the click is swallowed.
+    window = sidebar_window_at(screen, screen_x, screen_y)
+    if window is not None:
+        key, what = SIDEBAR_WINDOWS.get(window, (None, None))
         field = mapboxes.live_field(
             getattr(screen._state, "fields", None),
-            screen._data.get("research_window_field"))
+            screen._data.get(key)) if key else None
         if field is not None and screen.app.connected:
-            activate(screen, field.index, "research window")
-        return True
-
-    # THE TREASURY WINDOW OPENS THE TAX RATE POPUP — work order 230 D
-    # (mainscr_main.cpp:733-748): the sidebar's first window, found in the
-    # live list by shape as the research window is; the popup is HD's
-    # (`taxrate`, through the map's modal).
-    for _tw_box in ("sb_treasury_text", "sb_treasury_icon"):
-        box = screen.box_rect(_tw_box)
-        if not box or not pygame.Rect(*screen.layout.rect(box)).collidepoint(
-                screen_x, screen_y):
-            continue
-        field = mapboxes.live_field(
-            getattr(screen._state, "fields", None),
-            screen._data.get("treasury_window_field"))
-        if field is not None and screen.app.connected:
-            activate(screen, field.index, "treasury window")
-        return True
-
-    # THE COMMAND AND FREIGHTERS WINDOWS — work order 310 (309's finding 2),
-    # TRANSCRIPTION sidebar_windows: the second and fourth windows
-    # (mainscr.cpp:1566, :1568) compare the id as the others do
-    # (mainscr_main.cpp:724-739): Command sets SCREEN_SHOW_COMMAND_POINTS
-    # (43, under the guard `_skip_fields == 0`), Freighters
-    # SCREEN_SCRAP_FREIGHTERS (35), or with no freighter the box HESTR 0xDF
-    # (:726), which comes as MSGB. 35's `Scrap_Freighters_`
-    # (mainscr2.cpp:253-300) opens HESTR 0xEC when none can be scrapped
-    # (:259), the slider popup (0xED, :274), the confirmation 0xEE (:282)
-    # and the result 0xEF (:288). Neither screen has an HD view of its own:
-    # 35's slider is HD's turn popup since open fix 104 (TPOP kind 20, id 80,
-    # work order 316), its boxes HD's message box; 43's Command Summary is
-    # HD's message box too (live work orders 310 and 378). The food window has
-    # no handler in the original, so a click there is swallowed below.
-    for _sw_boxes, _sw_key, _sw_what in (
-            (("sb_command_text", "sb_command_icon"),
-             "command_window_field", "command window"),
-            (("sb_freighters_text", "sb_freighters_icon"),
-             "freighters_window_field", "freighters window")):
-        if not any(screen.box_rect(b) and pygame.Rect(*screen.layout.rect(
-                screen.box_rect(b))).collidepoint(screen_x, screen_y)
-                for b in _sw_boxes):
-            continue
-        field = mapboxes.live_field(
-            getattr(screen._state, "fields", None),
-            screen._data.get(_sw_key))
-        if field is not None and screen.app.connected:
-            activate(screen, field.index, _sw_what)
+            activate(screen, field.index, what)
         return True
 
     # The info panel is not map: a click on it that no window took is

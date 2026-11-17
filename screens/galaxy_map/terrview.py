@@ -11,6 +11,7 @@ import pygame
 from core.hud import blocks as hud
 from screens.galaxy_map import renderer as rnd
 from screens.galaxy_map import terrdraw
+from screens.galaxy_map import starnames
 from screens.galaxy_map import terrfield
 
 
@@ -26,9 +27,12 @@ def territory(screen):
     player_num = getattr(state, "player_num", 0)
     omni = screen._omniscient
     players = screen._players
+    # the colonies decide who is in contact (work order 402,
+    # `starnames`), as the names do
+    facts = starnames.facts_of(screen)
     emps = terrfield.empires(
         screen._stars, players, player_num, omni,
-        lambda s: rnd.star_label(s, player_num, players, omni))
+        lambda s: rnd.star_label(s, player_num, players, omni, facts))
     cols = colours()
     key = terrfield.state_key(emps, cols)
     cur = getattr(screen, "_territory", None)

@@ -310,6 +310,43 @@ def engine_language():
     return next((k for k, v in NUMBERS.items() if v == _state["engine"]), None)
 
 
+def number():
+    """The original's `_settings.language` for the text HD prints itself
+    where the original formats a number or a unit by it (work order 402).
+    The engine's own number wins when it names a language (2.. are the
+    ones HD does not offer, but the original's rules still know them);
+    otherwise the session's language, so a standalone German session —
+    no engine, so 0 on the wire — still prints German numbers."""
+    return _state["engine"] or NUMBERS.get(_state["language"], 0)
+
+
+def thousands_separator():
+    """TRANSCRIPTION `Get_Comma_String` (misc.cpp:594-598): ' ' for
+    language 1 (German), ',' for every other."""
+    return " " if number() == 1 else ","
+
+
+def decimal_separator():
+    """TRANSCRIPTION `Print_Main_Screen_Data` (mainscr_main.cpp:8): the
+    stardate's decimal sign is ',' for languages 1 and 2, '.' otherwise."""
+    return "," if number() in (1, 2) else "."
+
+
+#: TRANSCRIPTION `Get_Research_Unit_String` (mainscr.cpp:1041-1062), by
+#: `_settings.language`; anything not listed prints "RP".
+RESEARCH_UNITS = {1: "FP", 2: "PR", 3: "PI", 4: "PR"}
+
+
+def research_unit():
+    return RESEARCH_UNITS.get(number(), "RP")
+
+
+def group_thousands(value):
+    """`Get_Comma_String` (misc.cpp:594-): the value in groups of three
+    with the language's separator, '-' in front of a negative."""
+    return f"{value:,}".replace(",", thousands_separator())
+
+
 def wire_text(raw, encoding="latin-1"):
     """A string the engine sent: its bytes in latin-1 (or `encoding`), and
     in the German font's slots decoded when the engine speaks German

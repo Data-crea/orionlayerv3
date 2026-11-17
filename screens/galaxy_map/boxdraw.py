@@ -153,7 +153,8 @@ def drawable(screen):
         ident = boxmodel.wire_identity(state, box.kind) or clicked
         if box.kind == "system":
             model, why = boxmodel.system_model(
-                state, ident, box, _texts(screen), screen._omniscient)
+                state, ident, box, _texts(screen),
+                boxmodel.is_omniscient(state))
             names = SYSTEM_BOXES
         else:
             model, why = boxmodel.fleet_model(state, ident, box,
@@ -495,10 +496,16 @@ def render(screen, surface):
             screen._system_drawn = True
             screen._hover_star = None    # no map hover under it (226 F)
             _draw_system(screen, surface, r, model, hits)
+            # TRANSCRIPTION `wormhole_right` (sys.cpp:784-815): the line is
+            # `fonts::Print_Right` at the window's bottom right.
+            # DEVIATION `wormhole_place`: the right edge is HD's
+            # `system_text` box's (it ends before CLOSE), the colour is HD's
+            # text colour (the original's is Font_Colors2(1, 'n', 's'),
+            # UNVERIFIED live)
             syswindow.text(screen, surface, r["system_text"],
                            model["wormhole"],
                            syswindow.font(screen, "system_text", 16),
-                           TEXT_COLOR, "left")
+                           TEXT_COLOR, "right")
         else:
             _draw_fleet(screen, surface, r, model, hits)
             # the fleet box's help, as `Set_Main_Screen_Help_List_`
@@ -557,7 +564,15 @@ def handle_click(screen, x, y):
     """True when (x, y) is inside a drawn box. Fields go out by index; a
     ship cell sends MSG_SELECT_SHIP (open fix 21) with the opposite of the
     state the FSEL block showed; a ship in the system window's bar its
-    field (`_fleet`)."""
+    field (`_fleet`).
+
+    DEVIATION `box_drag`: a press on the window's or the fleet box's title
+    strip starts no drag. The original moves the box with the mouse
+    (`Move_Moveable_Box`, mainscr_main.cpp:1034-1040; the fleet box's drag
+    field, fleetpop.cpp:142) and keeps the place; HD's windows stand where
+    `boxes.json` puts them (movable in the F3 editor only), because the
+    engine's fields and its own `moveable_box` place do not follow an HD
+    drag and the next open would put the box back (UNVERIFIED live)."""
     for rect, action in reversed(getattr(screen, "_box_hits", [])):
         if rect.collidepoint(x, y):
             if isinstance(action, tuple) and action[0] == "fleet":

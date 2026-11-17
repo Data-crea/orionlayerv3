@@ -58,7 +58,10 @@ WARNING_FIELD = (505, 370, 622, 464)
 
 
 def planet_side(state, c):
-    """The battle planet's footprint side in cells (`planet_footprint`)."""
+    """The battle planet's footprint side in cells (`planet_footprint`).
+    TRANSCRIPTION `antares_planet_pointer` (work order 402): the Antaran
+    planet is unit 0 too and has no colony, so it takes the no-colony 6
+    (combat1.cpp:2453-2455); it needs no code of its own."""
     col = c.get("colony", -1)
     if col is None or col < 0:
         return NO_COLONY_SIDE

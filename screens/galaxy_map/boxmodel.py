@@ -86,7 +86,7 @@ THE TEXTS ARE THE ORIGINAL'S (HESTRNGS, `core/hestrings.py`):
 """
 from dataclasses import dataclass
 
-from core import hestrings
+from core import estrings, hestrings
 from core import mapcoords as mc
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct
@@ -359,6 +359,16 @@ def _local(state):
     return player_struct.parse(raws[n]) if 0 <= n < len(raws) else None
 
 
+def is_omniscient(state):
+    """TRANSCRIPTION `box_omniscient`: `HAROLD::Player_Is_Omniscient` for
+    the local player (harold.cpp:708-718): a Galactic Lore leader or the
+    racial trait, as `Ok_To_View_System` asks it (sys.cpp:75-86); the
+    trait-only half was the defect. UNVERIFIED live `has_galactic_lore`:
+    the member's offset (@3802) is read from the header only."""
+    local = _local(state)
+    return local is not None and player_struct.is_omniscient(local)
+
+
 def _contact(state, planets, local):
     raws = getattr(state, "colonies_raw", None) or []
     met = player_struct.contacts(local) if local is not None else []
@@ -485,6 +495,26 @@ def wire_stack(state, ships):
     return (chain, stack), None
 
 
+def fleet_title(state, first, text):
+    """TRANSCRIPTION `antaran_race_name`: the fleet box's title for the
+    head ship (fleetpop.cpp:595-615): H
+    0x66 with `Race_Name(owner)` for an owner below 9 — the player's own
+    race for 0-7, `race_names[13]` (E-string 0x292, "Antarans") for owner 8
+    (haccess.cpp:680-687; `player_raw` has only the eight players) — and
+    the ship's own name, upper-cased, for a monster (owner 9 and up)."""
+    if first.owner < 9:
+        if first.owner < 8:
+            raws = getattr(state, "player_raw", None) or []
+            local = player_struct.parse(raws[first.owner]) \
+                if first.owner < len(raws) else None
+            race = getattr(local, "race_name", "")
+        else:
+            race = estrings.antaran_race_name(
+                getattr(text, "language", "en")) or ""
+        return _msg(text, H_FLEET, race)
+    return str(first.name).upper()
+
+
 def fleet_model(state, ident, box, text):
     """(model, None) or (None, reason)."""
     if ident is None or ident.kind != "fleet":
@@ -522,12 +552,7 @@ def fleet_model(state, ident, box, text):
     # The head node's ship, as FLEETPOP titles the box (fleetpop.cpp:618,
     # :625).
     first = ships[stack[0]]
-    if first.owner < 9:
-        local = player_struct.parse(state.player_raw[first.owner]) \
-            if first.owner < len(state.player_raw or []) else None
-        title = _msg(text, H_FLEET, getattr(local, "race_name", ""))
-    else:
-        title = str(first.name).upper()
+    title = fleet_title(state, first, text)
     shown = visible
     nodes = chain[start:start + FLEET_ICONS_MAX]
     flags = state.fleet_selection["selected"]
@@ -543,18 +568,46 @@ def fleet_model(state, ident, box, text):
             # (fleetpop.cpp:148-162): a right click on one opens the ship's
             # detail view (TRANSCRIPTION `box_cell_detail`, `mapinput`)
             "fields": [getattr(f, "index", None) for f in icon_fields],
-            "selectable": [ships[i].owner == me and ships[i].status in
-                           ORDERABLE_STATUS for i in shown],
+            "selectable": [ships[i].owner == me
+                           and can_order(ships[i], getattr(state, "player_raw",
+                                                           None), me)
+                           for i in shown],
             "title": title, "status": fleet_status(state, first, stars, text),
             "close": box.close.index if box.close is not None else None}, None
 
 
-#: `SHIPMOVE::Can_Order_Ship_`: status 0 and 2 always; status 1 (in
-#: transit) only with the communications tech — that branch is left to
-#: the engine's own check in open fix 21, so HD offers the click and the
-#: FSEL block says whether it took (decision 33 covers one comparison,
-#: not a tech tree).
+#: `SHIPMOVE::Can_Order_Ship` (shipmove.cpp:409-455): status 0 and 2
+#: always; status 1 (in transit) only with a communications tech — the
+#: Hyperspace Communications application (91) alone, or Tachyon (180) /
+#: Sub-Space (176) Communications AND the ship within range of one of the
+#: player's relays (`has_tachyon` / `has_subspace` of a star within
+#: `ship_communication_range`, which is not on the wire).
 ORDERABLE_STATUS = (0, 1, 2)
+#: `TECH_APP_*` (orion2_consts.h:790, :875, :879) and
+#: `TECH_RESEARCH_STATUS_RESEARCHED` (:1391).
+TECH_HYPERSPACE_COMMS, TECH_SUB_SPACE_COMMS, TECH_TACHYON_COMMS = 91, 176, 180
+TECH_RESEARCHED = 3
+
+
+def can_order(ship, player_raw, me):
+    """TRANSCRIPTION `box_can_order` of `Can_Order_Ship` (shipmove.cpp:
+    409-455) for the tech half; UNVERIFIED `box_relay_range` and a DEVIATION:
+    a status 1 ship with Tachyon or Sub-Space Communications is OFFERED
+    without the relay-range test (the star flags and the two ranges are not
+    parsed), the engine's own check refuses a ship out of range (open fix
+    21); a ship with NO comms tech at all is not selectable, as there."""
+    if ship.status in (0, 2):
+        return True
+    if ship.status != 1:
+        return False
+    raws = player_raw or []
+    if not 0 <= me < len(raws):
+        return True        # no record to read: the engine decides
+    tech = player_struct.parse(raws[me]).tech_applications
+    if tech[TECH_HYPERSPACE_COMMS] == TECH_RESEARCHED:
+        return True
+    return TECH_RESEARCHED in (tech[TECH_TACHYON_COMMS],
+                               tech[TECH_SUB_SPACE_COMMS])
 
 
 def hover_status(state, star_index, stars, text):

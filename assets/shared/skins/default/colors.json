@@ -477,6 +477,49 @@
         4
       ]
     ],
+    "_relocation_line_note": "TRANSCRIBED (work order 402): the galaxy map's relocation line table, mainscr.cpp:847, indices 6E 6F 70 70 6E 6F 70 70. RGB of the main palette, FONTS.LBX entry 1 read with core.lbx.screen_palette: 6E and 6F equal the live reading of travel_line_green (brief 121), which confirms the method; 70 is read from the file only and is UNVERIFIED live.",
+    "relocation_line": [
+      [
+        0,
+        20,
+        0
+      ],
+      [
+        4,
+        56,
+        4
+      ],
+      [
+        0,
+        76,
+        0
+      ],
+      [
+        0,
+        76,
+        0
+      ],
+      [
+        0,
+        20,
+        0
+      ],
+      [
+        4,
+        56,
+        4
+      ],
+      [
+        0,
+        76,
+        0
+      ],
+      [
+        0,
+        76,
+        0
+      ]
+    ],
     "hover_ring": [
       170,
       200,

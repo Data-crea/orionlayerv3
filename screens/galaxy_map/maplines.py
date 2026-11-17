@@ -82,29 +82,14 @@ Red: it cannot."), where it differs from the original:
     mainscr_main.cpp:538-540). The one star with no line is the one the
     fleet already stands at (`moving` with `turns_left` 0).
 
-OMISSION, each with its reason:
-  * relocation lines (`Draw_Relocation_Links_`, mainscr.cpp:682-703):
-    **HALF OF THIS REASON IS SPENT, and the omission stands on the
-    other half.** It read "the setting and `relocate_ship_to` (star
-    offset 205) are not verified". Work order 144 verified offset 205
-    by the header route with twelve agreeing offsets and the struct
-    size — `core/structs/star.RELOCATE_OFFSET` carries the derivation —
-    and the Fleets minimap now draws these lines from it
-    (`fltdraw.draw_relocation_lines`), sharing this module's
-    `relocation_pairs`, `directional`, `wave_pieces` and `stroke`.
+RELOCATION LINES — TRANSCRIPTION since work order 402 (the OMISSION
+`relocation_lines` is closed): see `render_relocation_lines`. Its reason
+was "the setting is not known to be reachable"; it is option [7] of the
+options screen, default on, Alt+F8 (mainscr.cpp:3496), and `settings_raw`
+carries it. The one difference is the draw order (DEVIATION
+`relocation_after_black_holes`).
 
-    What still blocks THIS screen is the other half:
-    `_settings.show_relocation_lines` gates the galaxy map's loop
-    (mainscr.cpp:690) and does not gate the minimap's at all
-    (flt1.cpp:1480). The byte is at offset 8 of `s_settings` — nine
-    leading `uint8_t`, unambiguous — and `settings_raw` is on the wire,
-    but nothing has confirmed that the option is reachable in this
-    build's options screen, so drawing the galaxy map's lines would
-    mean guessing at whether a player can turn them off. Parked as
-    question 4 in `dev:doc/briefs/144-parked-for-data.md`.
-
-    Not deleted and not quietly satisfied: the data is shared, the look
-    is not, and this screen's own gate has still not been read.
+OMISSION: none left in this module.
 """
 import math
 
@@ -124,6 +109,10 @@ GREEN = tuple(tuple(c) for c in palette.require("galaxy_map",
                                                  "travel_line_green"))
 RED = tuple(tuple(c) for c in palette.require("galaxy_map",
                                                "travel_line_red"))
+#: mainscr.cpp:847 `Draw_Relocation_Links` table 6E 6F 70 70 6E 6F 70 70 —
+#: RGB in the skin (decision 14), read from FONTS.LBX entry 1.
+RELOCATION = tuple(tuple(c) for c in palette.require("galaxy_map",
+                                                      "relocation_line"))
 #: One colour per step, eight per period (line.cpp, `color_index & 7`).
 PERIOD = 8
 #: The phase clock: one step per 55 ms (HD EXTENSION B2, see above).
@@ -155,7 +144,7 @@ def relocation_pairs(state, player_num):
     `HACCESS::Star_Has_Relocation_` is `relocate_ship_to[player] != -1`
     and `HACCESS::Relocation_` returns the value (haccess.cpp:113-119),
     and both `FLT1::Draw_Fltscrn_Relocation_Lines_` (flt1.cpp:1480-1487)
-    and `MAINSCR::Draw_Relocation_Links_` (mainscr.cpp:691-697) walk
+    and `MAINSCR::Draw_Relocation_Links_` (mainscr.cpp:845-866) walk
     every star testing exactly that. So the fact lives here, once, and
     each screen supplies its own transform — which is decision 68 for
     the part of a line that is not the stroke.
@@ -165,14 +154,14 @@ def relocation_pairs(state, player_num):
 
       * colours — the minimap's table is palette 6,7,7,8,8,9,9,10
         (flt1.cpp:1460-1467), a GREY ramp in FONTS.LBX 9; the galaxy
-        map's is 0x6E,0x6F,0x70,0x70,... (mainscr.cpp:684), the green
+        map's is 0x6E,0x6F,0x70,0x70,... (mainscr.cpp:847), the green
         of the travel lines
       * direction — the minimap draws star -> target
         (flt1.cpp:1486 through ships.cpp:558-566), the galaxy map draws
-        star -> target as well (mainscr.cpp:697); the minimap's ends
+        star -> target as well (mainscr.cpp:860); the minimap's ends
         are nudged +4 at the star and +3 at the target
       * gating — the galaxy map is inside
-        `if (_settings.show_relocation_lines != 0)` (mainscr.cpp:690);
+        `if (_settings.show_relocation_lines != 0)` (mainscr.cpp:853);
         **the minimap is not gated at all**
 
     Underneath, both end in `SHIPS::Draw_Directional_Multi_Colored_Line_`
@@ -261,6 +250,23 @@ def _our_colony_or_any_outpost(state, star, player_num):
     return False
 
 
+def setting_on(state, name):
+    """One `s_settings` byte from the wire's `settings_raw` (decision 23,
+    `core.structs.settings`), False when the block is absent."""
+    from core.structs import settings as settings_struct
+    raw = getattr(state, "settings_raw", b"") or b""
+    try:
+        return bool(getattr(settings_struct.parse(raw), name))
+    except ValueError:                      # a block too short to hold it
+        return False
+
+
+def enemy_moves_on(state):
+    """The game option "Enemy Moves" (Alt+F3, mainscr.cpp:3466-3472;
+    `settings.enemy_moves`, default 0 initgame.cpp:73)."""
+    return setting_on(state, "enemy_moves")
+
+
 def destination_lines(state, ships, stars, game_zoom):
     """The icons that get a destination line, as dicts: `icon`, `ship`,
     `star`, `colour` ("green"/"red") and `start`, the native point at the
@@ -282,8 +288,13 @@ def destination_lines(state, ships, stars, game_zoom):
         dest = ship_struct.absolute_location(ship.location)
         own = ship.owner == me
         moving = own and dest != len(stars)
+        # TRANSCRIPTION (ships.cpp:437-443): `settings.enemy_moves != 0 ||
+        # Enemy_Ship_Heading_Toward_Our_Colony` for any non-local owner,
+        # the Antaran waves and monsters (owner >= 8) included.
         enemy = (not own and ship.status != 0 and 0 <= dest < len(stars)
-                 and _our_colony_or_any_outpost(state, stars[dest], me))
+                 and (enemy_moves_on(state)
+                      or _our_colony_or_any_outpost(state, stars[dest],
+                                                    me)))
         if not (moving or enemy or node == head):
             continue
         if not LOCATION_ENCODED <= ship.location < LOCATION_LIMIT \
@@ -295,10 +306,54 @@ def destination_lines(state, ships, stars, game_zoom):
     return out
 
 
+def render_relocation_lines(surface, ctx, state, stars, ms):
+    """The local player's relocation lines, star -> target, and the pairs
+    drawn.
+
+    TRANSCRIPTION `MAINSCR::Draw_Relocation_Links` (mainscr.cpp:845-866,
+    called from `Draw_Main_Screen` mainscr_main.cpp:948): inside
+    `settings.show_relocation_lines != 0` — game option [7] of the
+    options screen (loadsave.cpp:1039/1076), default 1 (initgame.cpp:78),
+    toggled by Alt+F8 (mainscr.cpp:3496-3500); the byte is offset 8 of
+    `s_settings` (`core.structs.settings`, decision 23) — every star with
+    `Star_Has_Relocation(star, PLAYER_NUM)` gets the colour wave
+    `RELOCATION` from its draw point to its target's, through
+    `directional` / `wave_pieces` like every other line (work order 402).
+    DEVIATION `relocation_after_black_holes`: the original draws these
+    before the black holes and the destination lines; HD draws them at the
+    head of `render_destination_lines`, which runs after the black-hole
+    pass, so a black hole's sprite sits under such a line, not over it."""
+    from core import mapcoords as mc
+    if not setting_on(state, "show_relocation_lines"):
+        return []
+    phase = phase_at(ms)
+    view = ctx.view
+    drawn = []
+    for index, target in relocation_pairs(state,
+                                          getattr(state, "player_num", 0)):
+        if not (0 <= index < len(stars) and 0 <= target < len(stars)):
+            continue
+        s, t = stars[index], stars[target]
+        ax, ay = mc.galaxy_to_native(s.x, s.y, state)
+        bx, by = mc.galaxy_to_native(t.x, t.y, state)
+        table, offset = directional(ax, ay, bx, by, RELOCATION, phase)
+        seg = clip(view.to_screen(s.x, s.y), view.to_screen(t.x, t.y),
+                   view.box)
+        if seg is None:
+            continue
+        for colour, p, q in wave_pieces(seg[0], seg[1], table, offset,
+                                        ctx.px):
+            stroke(surface, colour, p, q)
+        drawn.append((index, target))
+    return drawn
+
+
 def render_destination_lines(surface, ctx, state, ships, stars, game_zoom,
                              anchor, ms):
-    """Draw every destination line, under the stars (mainscr_main.cpp:965)."""
+    """Draw every destination line, under the stars (mainscr_main.cpp:965),
+    after the relocation lines (`render_relocation_lines`)."""
     from core import mapcoords as mc
+    render_relocation_lines(surface, ctx, state, stars, ms)
     lines = destination_lines(state, ships, stars, game_zoom)
     if not lines:
         return

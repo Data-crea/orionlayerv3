@@ -80,7 +80,7 @@ def shown_players(players, me, num_players):
     out = active_players(players, me, num_players)
     if not 0 <= me < len(players):
         return out
-    omni = player_struct.has_omniscience(players[me])
+    omni = player_struct.is_omniscient(players[me])   # harold.cpp:708-718
     for i in range(min(num_players, len(players))):
         if i != me and i not in out and (omni or players[i].eliminated):
             out.append(i)

@@ -437,9 +437,10 @@ def _player_knows_star(game_state, star_idx):
     """The reachable half of the original's own four-way test.
 
     `star.visited` is a bitmask over players and is read the way
-    `colonyrows` reads it; `player.has_omniscience` is the racial
-    pick, and its own docstring already says a False there is not
-    "no lore". The two routes HD cannot follow are recorded at
+    `colonyrows` reads it; `player.is_omniscient` is
+    `Player_Is_Omniscient` (harold.cpp:708-718, flt2.cpp:799): the racial
+    pick OR a Galactic Lore leader (`has_galactic_lore`, UNVERIFIED live:
+    no save holds a 1; work order 402). The two routes HD cannot follow are recorded at
     `_destination`.
     """
     stars = getattr(game_state, "stars", None) or []
@@ -448,7 +449,7 @@ def _player_knows_star(game_state, star_idx):
         return True
     raws = getattr(game_state, "player_raw", None) or []
     if 0 <= me < len(raws):
-        return player_struct.has_omniscience(player_struct.parse(raws[me]))
+        return player_struct.is_omniscient(player_struct.parse(raws[me]))
     return False
 
 

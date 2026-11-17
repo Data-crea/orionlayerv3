@@ -243,7 +243,7 @@ def scanned_star_words(game_state, view, words, index):
     met = player_struct.contacts(local) if local is not None else []
     owners = list(colony_owners(game_state, star))
     seen = (star_struct.visited_by(star, me)
-            or (local is not None and player_struct.has_omniscience(local))
+            or (local is not None and player_struct.is_omniscient(local))   # movebox.cpp:248
             or any(0 <= o < len(met) and met[o] for o in owners))
     if not seen:
         return words.hstring(H_UNKNOWN) or ""

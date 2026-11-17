@@ -12,13 +12,19 @@ TRANSCRIBED from SHIPS::Print_Eta_On_Ship_Icon_ (ships.cpp:482-506), which
   * the text is HESTRNGS 307, "eta %d", with `(uint8_t)turns_left`
     (:500-503);
   * in the owner's font colours (`Set_Player_Font_Style_`, :494); HD uses
-    the owner's colour the map's star names use;
+    the owner's colour the map's star names use; an Antaran or monster
+    stack (owner >= 8) the neutral base the original gives it
+    (harold.cpp:1131-1135), HD's neutral map text colour (work order 402);
   * font style 1 at zoom 0 and 1, style 0 beyond (:496-497);
   * printed RIGHT-aligned (`fonts::Print_Right_`) with its right edge at
     the icon's left edge plus the width, and its top at the icon's top
     plus the height, of the OWNER's own sprite header — entry
     205 + colour * 4 + (3 - zoom), `Get_Ship_Icon_Pict_Seg_(player, 0)`
-    (:490-492) — `zoomtables.SHIP_ICON_HEADER_DIM_BY_COLOUR`.
+    (:490-492) — `zoomtables.SHIP_ICON_HEADER_DIM_BY_COLOUR`; for an owner
+    >= 8 the header of the Antaran/monster sprite (ships.cpp:369-396,
+    `header_for_owner`, work order 402);
+  * which ships get one at all is `maplines.destination_lines`, now with
+    the "Enemy Moves" option (work order 402, ships.cpp:437-443).
 
 HD geometry follows the HD VIEWPORT, not the game's zoom (decision 35,
 Data 16 September 2026): the header index is 3 - `ctx.zoom`
@@ -53,6 +59,14 @@ from core.structs import ship as ship_struct
 from core.wire_protocol import EFFECT_PAIRS
 from screens.galaxy_map import mapboxes, maplines
 from screens.galaxy_map.renderer import NEUTRAL_COLOR, OWNER_COLORS
+
+#: MAX_PLAYERS (consts.h:7): an owner at or above it is the Antaran wave or a
+#: monster, which `Get_Player_Font_Colors` (harold.cpp:1131-1135) gives the
+#: neutral base (4, limit 11) and `Get_Ship_Icon_Pict_Seg_` its own sprite.
+MAX_PLAYERS = 8
+#: The colour value `labels` returns for such an owner; `OWNER_COLORS` has
+#: no entry for it, so `render` draws the map's neutral text colour.
+NEUTRAL_OWNER = -1
 
 #: HESTR_133_ETA_D (ships.cpp:500).
 ETA_MESSAGE = 307
@@ -104,11 +118,29 @@ def labels(state, ships, stars, players):
         if not ship_struct.LOCATION_MOVING_OFFSET <= ship.location \
                 < 2 * ship_struct.LOCATION_MOVING_OFFSET:
             continue
-        colour = (getattr(players[ship.owner], "color", 0)
+        colour = (NEUTRAL_OWNER if ship.owner >= MAX_PLAYERS
+                  else getattr(players[ship.owner], "color", 0)
                   if 0 <= ship.owner < len(players) else 0)
         out.append((line["icon"], line["ship"], colour,
                     ship.turns_left & 0xFF))
     return out
+
+
+def header_for_owner(owner, colour, zoom):
+    """(w, h) of the sprite header `Get_Ship_Icon_Pict_Seg_(owner, 0)`
+    returns (ships.cpp:336-397) — TRANSCRIPTION of its three branches:
+    owner < 8 the player's colour, entry 205 + colour * 4 + (3 - zoom);
+    owner 8 and 9..14 the Antaran's and each monster's own entries
+    (BUFFER0.LBX 237+ / 241+, `zoomtables.MONSTER_ICON_HEADER_DIM`), which
+    HD indexes by the same game zoom as the rest of the table. An
+    unknown monster falls back to the player header (never a crash)."""
+    if owner >= MAX_PLAYERS:
+        from screens.galaxy_map.ships import MONSTER_KINDS
+        dim = zt.monster_icon_header_dimension(MONSTER_KINDS.get(owner),
+                                               zoom)
+        if dim is not None:
+            return dim
+    return zt.ship_icon_header_dimension_for_colour(colour, 3 - zoom)
 
 
 def anchor_point(icon, ship, colour, ctx, anchor):
@@ -125,7 +157,7 @@ def anchor_point(icon, ship, colour, ctx, anchor):
         hx, hy = ship_icons.space_point(ship, ctx, anchor.stars)
         hy += ship_icons._stack_dy(icon, ship, ctx, anchor)
         left, top = hx - (cw >> 1) * ctx.px, hy - (ch >> 1) * ctx.px
-    w, h = zt.ship_icon_header_dimension_for_colour(colour, 3 - ctx.zoom)
+    w, h = header_for_owner(ship.owner, colour, ctx.zoom)
     return left + w * ctx.px, top + h * ctx.px
 
 

@@ -476,11 +476,18 @@ def _leader_level(popup, state, words, app, anywhere):
 
 
 def _gnn(popup, state, words, app, anywhere):
+    a = popup["args"]
     # HD EXTENSION `gnn_studio` (work order 383): Data's studio above the
     # message, from the mod folder only (`ART`); the title stands on the
     # picture's ceiling monitor (`TITLE_ON_ART`), as the original's "GNN"
     # does; the message stays below, where it always fits
     out = {"title": popup.get("title") or "GNN", "art": ART["gnn"]}
+    # TRANSCRIPTION `gnn_event_picture` (work order 402): argument 1 is the
+    # event id (events.cpp:2383; the intro sets none, so -1); `core/popupart`
+    # draws EVENTS.LBX `event_id + 2` (events.cpp:2053-2056) when the player's
+    # file was extracted, the studio above otherwise
+    if a[1] >= 0:
+        out["art_event"] = a[1]
     if popup.get("text"):
         out["lines"] = [popup["text"]]
     out["buttons"] = [(words["continue"], ("activate", anywhere)
@@ -534,8 +541,11 @@ def _antaran_room(popup, state, words, app, anywhere):
     # `ANTAROOM::Main_Antaran_Room_Screen_` (antaroom.cpp:26-80) prints
     # one ANTARMSG.LBX message (:107-114) and ends on a click on its
     # full-screen field or any key (:60-70); the room's picture and
-    # animation (ANTAROOM.LBX 0, 1) are not drawn (the HUD look of
-    # every turn popup, `hud_turn_popup` in core/turnpopup.py).
+    # animation are drawn by `core/antaranroomhd` from the player's
+    # ANTAROOM.LBX (entry 1 the animation, entry 0 its palette; work order
+    # 402); THIS panel (the HUD look of every turn popup, DEVIATION
+    # `hud_turn_popup` in core/turnpopup.py) is the fallback when the
+    # extraction is absent.
     # UNVERIFIED `antaran_room_live`: drawn from the stand-in's bytes
     # only; no test save brings an Antaran attack (work order 316)
     if popup.get("text"):
@@ -624,7 +634,8 @@ def content(popup, state, words, app=None):
             "leader": out["leader_rec"] if kind in LEADER_CARDS else None,
             "summary": out.get("summary"), "words": words,
             "summary_hidden": out.get("summary_hidden", 0),
-            "art": out["art"], "title_on_art": TITLE_ON_ART.get(kind)}
+            "art": out["art"], "art_event": out.get("art_event"),
+            "title_on_art": TITLE_ON_ART.get(kind)}
 
 
 #: A popup's HD picture by kind: a tree path no file of OrionLayer's fills

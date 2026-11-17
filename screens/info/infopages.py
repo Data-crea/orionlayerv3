@@ -35,7 +35,7 @@ def race_list(players, me, n_players, previously=False):
     if previously:
         out += [i for i in range(n) if i != me and not players[i].eliminated
                 and not met[i] and seen[i]]
-    omni = player_struct.has_omniscience(mine)
+    omni = player_struct.is_omniscient(mine)   # harold.cpp:708-718
     out += [i for i in range(n) if i not in out
             and (omni or players[i].eliminated)]
     return out

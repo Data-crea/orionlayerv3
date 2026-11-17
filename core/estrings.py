@@ -146,3 +146,21 @@ class EStrings:
         """
         entry = OPTION_STRINGS.get(int(production_id))
         return None if entry is None else self.string(entry)
+
+
+#: `MOX::race_names[13]` is `E_Strings(0x292)` (estrings.cpp:116), the name
+#: `HACCESS::Race_Name` answers for the id `MAX_PLAYERS` — the Antarans
+#: (haccess.cpp:686-687). TRANSCRIPTION `antaran_race_name`; the second
+#: source is the extracted table itself, whose entries 0x285-0x291 are the
+#: thirteen race names and 0x292 reads "Antarans" (a check holds it).
+E_ANTARANS = 0x292
+
+_ANTARAN_NAMES = {}
+
+
+def antaran_race_name(language="en"):
+    """`Race_Name(8)` in the player's language, or None where the table is
+    not extracted (the caller prints nothing rather than a made-up word)."""
+    if language not in _ANTARAN_NAMES:
+        _ANTARAN_NAMES[language] = EStrings(language).string(E_ANTARANS)
+    return _ANTARAN_NAMES[language]

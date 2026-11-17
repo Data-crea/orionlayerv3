@@ -19,7 +19,7 @@ order 248, F1 of 245: Fleets takes them over from Leaders, no copy).
           Fleets screen prints for `_scanned_small_ship` too (flt1.cpp:
           439-441): "<RACE> FLEET: " and the counts.
 """
-from core import hestrings
+from core import estrings, hestrings
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 
@@ -137,9 +137,12 @@ def stack_ships(game_state, icon):
 
 
 def fleet_words(game_state, icon, hstring, parts):
-    """`Print_Galmap_Scanned_Ship_`'s paragraph for a player's stack, or
-    "" where it prints a race name HD does not have (a tagged node or an
-    owner past the players — OMISSION `map_strip_monsters`)."""
+    """`Print_Galmap_Scanned_Ship_`'s paragraph for a player's or an
+    Antaran stack (owner 8 is not `> 8`, so officer.cpp:2229 leaves it on
+    the fleet-words branch and `Race_Name(8)` is "Antarans",
+    haccess.cpp:686-687), or "" where it prints a race name only (a
+    tagged node or a monster, owner past 8 — OMISSION
+    `map_strip_monsters`)."""
     if int(icon.node_idx) >= NODE_TAG_BASE:
         return ""
     stack = stack_ships(game_state, icon)
@@ -149,12 +152,15 @@ def fleet_words(game_state, icon, hstring, parts):
     ships = [ship_struct.parse(raws[i]) for i in stack]
     owner = int(ships[0].owner)
     players = getattr(game_state, "player_raw", None) or []
-    if not 0 <= owner < min(MAX_PLAYERS, len(players)):
+    if owner == MAX_PLAYERS:
+        race = estrings.antaran_race_name(getattr(parts, "language", "en"))
+    elif 0 <= owner < min(MAX_PLAYERS, len(players)):
+        race = player_struct.parse(players[owner]).race_name
+    else:
         return ""
     fleet = hstring(H_FLEET)
-    if not fleet:
+    if not fleet or race is None:
         return ""
-    race = player_struct.parse(players[owner]).race_name
     text = hestrings.printf(fleet, race).upper()
     count = {t: sum(1 for s in ships if s.ship_type == t)
              for t in (ship_struct.SHIP_TYPE_OUTPOST,

@@ -22,6 +22,7 @@ from core import palette
 from core import zoomtables as zt
 from core.hud import lru
 from core.structs import star as star_struct
+from screens.galaxy_map import starnames
 
 # ── Asset naming ─────────────────────────────────────────
 
@@ -746,40 +747,31 @@ def render_stars(surface, ctx, stars, cache, black_holes=None):
     return heights
 
 
-def star_label(s, player_num, players, omniscient):
+def star_label(s, player_num, players, omniscient, facts=None):
     """Name to draw for a star, or "" when it stays hidden.
 
-    Mirrors MAINSCR::Get_Star_Name_:
+    Mirrors MAINSCR::Get_Star_Name_ through `starnames.spec`:
       - black holes are never labelled
-      - without lore: an unvisited system with no contacted owner
-        shows nothing
+      - without lore: an unvisited system with no contacted colony owner
+        shows nothing; an outposts-only system is written lower-case
       - with lore: an unvisited foreign system shows "(Name)"
+    `facts` (starnames.facts_of) carries the colonies; without it the
+    star's own owner field stands in, as before work order 402.
     """
-    if star_struct.is_black_hole(s):
-        return ""
-    visited = star_struct.visited_by(s, player_num)
-    owner = s.owner
+    sp = starnames.spec(s, player_num, players, omniscient, facts)
+    return sp.text if sp is not None else ""
 
-    if not omniscient:
-        has_contact = False
-        if 0 <= owner < len(players) and owner != player_num:
-            from core.structs import player as player_struct
-            local = players[player_num] if player_num < len(players) else None
-            if local is not None:
-                has_contact = bool(player_struct.contacts(local)[owner])
-        elif owner == player_num:
-            has_contact = True
-        if not has_contact and not visited:
-            return ""
-        return s.name
 
-    if owner != player_num and not visited:
-        return f"({s.name})"
-    return s.name
+def _owner_rgb(players, owner):
+    pcol = getattr(players[owner], "color", None) if (
+        owner is not None and 0 <= owner < len(players)) else None
+    return (OWNER_COLORS.get(pcol, NEUTRAL_COLOR) if pcol is not None
+            else NEUTRAL_COLOR)[:3]
 
 
 def render_star_names(surface, ctx, stars, heights, render_label,
-                      player_num, players, omniscient):
+                      player_num, players, omniscient, facts=None,
+                      pulses=None, clamp=None):
     """Star names with a one-pixel outline, centred under the icon.
 
     Bails out entirely when the map is too dense to label — see
@@ -792,38 +784,89 @@ def render_star_names(surface, ctx, stars, heights, render_label,
     caller hands in Style.render_text, which splits the string across
     two fonts. Keeping that decision out of here means the renderer
     still knows nothing about skins.
+
+    Work order 402: the name is `starnames.spec` (outposts lower-case and
+    darker, a shared system split into its owners' colours), `pulses`
+    {star index: colour offset} brightens a highlighted name
+    (`Highlight_Star_`), `clamp` is the rect a name is pushed inside at
+    the widest zoom (TRANSCRIPTION `name_clamp`, mainscr.cpp:1274-1283),
+    and a surrender underlines it (TRANSCRIPTION `name_surrender`,
+    mainscr.cpp:1285-1313).
     """
     if ctx.names_hidden:
         return
     view = ctx.view
+    pulses = pulses or {}
+    widest = ctx.map_scale == ctx.max_map_scale
     for s in stars:
-        label = star_label(s, player_num, players, omniscient)
-        if not label:
+        sp = starnames.spec(s, player_num, players, omniscient, facts)
+        if sp is None:
             continue
-        colour = NEUTRAL_COLOR
-        owner = s.owner
-        if 0 <= owner < len(players):
-            pcol = getattr(players[owner], "color", None)
-            if pcol is not None:
-                colour = OWNER_COLORS.get(pcol, NEUTRAL_COLOR)
-
-        text = render_label(label, colour[:3])
-        shadow = render_label(label, OUTLINE_COLOR[:3])
+        level = pulses.get(int(s.index), 0)
+        base = _owner_rgb(players, sp.owner)
+        if sp.steps:
+            base = starnames.darker(base, sp.steps)
+        base = starnames.shade(base, level)
+        text = render_label(sp.text, base)
+        shadow = render_label(sp.text, OUTLINE_COLOR[:3])
         sx, sy = view.to_screen(s.x, s.y)
         ih = heights.get(s.index, 0)
         # HD EXTENSION `star_name_halo`: a soft dark glow round the
         # outline, so a name reads over a nebula or a bright star
         halo = _name_halo(text, shadow)
         pad = (halo.get_width() - text.get_width()) // 2
-        x = int(sx - text.get_width() / 2)
+        w = text.get_width()
+        x = int(sx - w / 2)
         y = int(sy + ih * STAR_NAME_GAP)
+        if clamp is not None and widest:
+            if x < clamp.left:
+                x = clamp.left
+            elif x + w > clamp.right:
+                x = clamp.right - w
         surface.blit(halo, (x - pad, y - pad))
         # HD EXTENSION `star_name_halo`: a two pixel outline and the name
         # drawn twice, one pixel apart, so the thin face reads heavier
         for dx, dy in _NAME_OUTLINE:
             surface.blit(shadow, (x + dx, y + dy))
-        surface.blit(text, (x, y))
-        surface.blit(text, (x + 1, y))
+        if sp.split:
+            parts = [(x0, x1, starnames.shade(_owner_rgb(players, o), level))
+                     for o, x0, x1 in starnames.spans(sp.split, w)]
+        else:
+            parts = [(0, w, None)]
+        for x0, x1, rgb in parts:
+            img = text if rgb is None else render_label(sp.text, rgb)
+            area = pygame.Rect(x0, 0, x1 - x0, img.get_height())
+            surface.blit(img, (x + x0, y), area)
+            surface.blit(img, (x + x0 + 1, y), area)
+        _surrender_line(surface, ctx, s, player_num, players, sx,
+                        y + text.get_height(), w)
+
+
+def _surrender_line(surface, ctx, s, player_num, players, sx, y, w):
+    """TRANSCRIPTION `name_surrender` (mainscr.cpp:1285-1313): under the
+    name, in the colour of the empire the star's owner surrendered to
+    (`star.surrender_to[PLAYER_NUM]`, a player 0..7), a second line one
+    palette step on below map scale 30 — the other way for player colours
+    3 and 5. DEVIATION `name_step_darker`: the step is a brightness factor.
+    The line starts at the star's x, not the clamped name's, as the
+    original's does."""
+    slots = getattr(s, "surrender_to", None)
+    if not slots or not 0 <= player_num < len(slots):
+        return
+    to = slots[player_num]
+    if not 0 <= to < len(players):
+        return
+    rgb = _owner_rgb(players, to)
+    t = max(1, int(round(ctx.px)))
+    x0 = int(sx - w / 2)
+    # LOOK EXCEPTION transcription: the original's underline in the empire's
+    # colour (mainscr.cpp:1285-1313), not a panel's
+    pygame.draw.rect(surface, rgb, (x0, y, w, t))
+    if ctx.map_scale < 30:
+        k = 0.8 if getattr(players[to], "color", None) in (3, 5) else 1.25
+        rgb2 = tuple(min(255, int(c * k)) for c in rgb)
+        # LOOK EXCEPTION transcription: the underline's second line
+        pygame.draw.rect(surface, rgb2, (x0, y + t, w, t))
 
 
 _NAME_OUTLINE = ((-1, 0), (2, 0), (0, -1), (0, 1), (-1, -1), (2, -1),

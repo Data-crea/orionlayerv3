@@ -69,6 +69,19 @@ SPEC = Spec("s_star_data", SIZE, [
     # until work order 243; as spec fields the engine's layout finds them
     ("planet_index",   195, "i16[5]"),
     ("relocate_ship_to", 205, "i16[8]"),
+    # `int8_t surrender_to[MAX_PLAYERS]` (orion2.h:3008), work order 402:
+    # after `relocate_ship_to` (205 + 16 = 221), `twinkling1`, `twinkling2`,
+    # `not_used3` (221-223) and before `in_nebula` (232, verified above):
+    # 224 by the header, and 224 + 8 = 232 closes the gap to the verified
+    # field. SECOND SOURCE (P602): on every star of 138 saves (6 of them
+    # real games) the run of -1 bytes at 224 is as long as the game's player
+    # count (2 and 5 seen, `dev:tools/struct_header_check.py` and the probe of
+    # work order 402), the rest 0 — an array initialised for the players in
+    # play. The reading "int8[8] at 205+" took `relocate_ship_to` (int16[8])
+    # for it. UNVERIFIED: no save holds a surrender, so a value 0..7 (the
+    # empire the star's owner surrendered to, colcalc.cpp:387) has not been
+    # seen on the wire.
+    ("surrender_to",   224, "i8[8]"),
     ("in_nebula",      232, "u8"),
 ], verified=True)
 

@@ -99,7 +99,7 @@ def slots(view, words):
     """`[Slot]` for the shown players, in the screen's order."""
     players, me = view.players, view.me
     mine = players[me]
-    omni = player_struct.has_omniscience(mine)
+    omni = player_struct.is_omniscient(mine)   # racescrn.cpp:122, harold.cpp:708-718
     met = player_struct.contacts(mine)
     out = []
     for i, p in enumerate(view.shown):

@@ -139,7 +139,9 @@ def sprite_path(screen, owner):
     so a star can show a creature that is not the one guarding it. HD
     shows the type that is there, drawn from the galaxy map's own master (`tools/make_ship_icons.py`'s
     panel export) — one source, no second set of artwork. A type without a
-    master (the amoeba today) has no file and the box stays EMPTY: no
+    master (the base pack's amoeba and antaran; the player's mod folder's
+    `ships/masters/<kind>.png` is cut into this panel file too, through
+    `res.resolve`, `core.usermod`) has no file and the box stays EMPTY: no
     stand-in, no silhouette."""
     kind = galaxy_ships.MONSTER_KINDS.get(int(owner))
     if kind is None:

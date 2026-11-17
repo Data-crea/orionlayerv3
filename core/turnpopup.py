@@ -29,15 +29,16 @@ typed in `assets/shared/turnpopup/labels.json` (decision 15).
 
 **DEVIATION `hud_turn_popup`**: the HUD panel instead of each popup's own
 artwork (SCIENCE.LBX and the technology animations, TURNSUM.LBX, the
-BUFFER0.LBX popup frames with the system display, EVENTS.LBX's GNN picture
-and animation, COLONY's landing art); the planet choice's (with a special's
+BUFFER0.LBX popup frames with the system display, EVENTS.LBX's GNN animation,
+COLONY's landing art); the planet choice's (with a special's
 text) and the discovery's panel (the latter only the fallback since
 `discovery_window`) list the star's planets (named) instead of the planets'
 pictures; the troop popup (open fix 98, work order 274) is a
 table of its lines under the planet's name, without the troops' figures; the science room
 lists every discovery at once where the original shows one per click (each
-click is still sent, as the original counts them); the GNN picture is not
-drawn. (A popup's right click is the original's since work order 200 —
+click is still sent, as the original counts them); the GNN's studio animation is not
+drawn (its news picture is, from the player's EVENTS.LBX since work order
+402, `core/popupart`; the Antaran room's scene too, `core/antaranroomhd`). (A popup's right click is the original's since work order 200 —
 TRANSCRIPTION `popup_right`, `turnpopupcontent.RIGHT_HELP`.)
 
 **THE COMBAT TARGET IS THE ORIGINAL'S WINDOW** (work order 228 B): the star
@@ -46,6 +47,8 @@ by the galaxy map's own system window code
 (`screens/galaxy_map/combattarget.py`) over the map — not this panel. The
 view below hands it the popup and keeps what it drew, in the same shape.
 """
+import time
+
 import pygame
 
 from core import helpformat, lang
@@ -68,6 +71,8 @@ REF_OPTION_H = 46
 #: buttons stand under it at every window (work order 326 F).
 REF_ART_H = 560
 _art_cache = {}
+#: Seconds without a draw after which the Antaran room is a new visit.
+ROOM_GAP = 2.0
 
 
 # ── drawing and input ─────────────────────────────────────────────────
@@ -168,6 +173,11 @@ class View:
                                          state, app)
             if drawn is not None:
                 return drawn
+        if popup["kind"] == "antaran_room":
+            drawn = self._render_antaran_room(surface, style, labels, popup,
+                                              state, app)
+            if drawn is not None:
+                return drawn
         if popup["kind"] == "colony_combat":
             return self._render_invasion(surface, popup, state, backdrop,
                                          app, labels)
@@ -235,6 +245,35 @@ class View:
             if not landinghd.render(surface, style, popup, state,
                                     c.get("title")):
                 landinghd.reset()
+                return None
+        whole = surface.get_rect()
+        self._base = None
+        self.rects = [(whole, a) for _l, a in c["buttons"][:1]]
+        self.buttons = [a for _l, a in c["buttons"]]
+        self.right = list(zip([whole] * len(c["right"]), c["right"]))
+        self.right_help = c["right_help"]
+        return self.rects
+
+    def _render_antaran_room(self, surface, style, labels, popup, state,
+                             app):
+        """TRANSCRIPTION `antaran_room_scene` (work order 402,
+        `core/antaranroomhd`): the room's animation over the whole window
+        with the message at its bottom; None when the player's pictures are
+        not extracted and the panel is drawn. The room ends on a click or a
+        key (antaroom.cpp:56-70), which the popup's one field answers."""
+        words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
+                                       if k in DEFAULT_WORDS and v})
+        c = content(popup, state, words, app)
+        from core import antaranroomhd, popupart
+        now = time.monotonic()
+        if now - getattr(self, "_room_last", now) > ROOM_GAP:
+            popupart.reset()            # another visit: from frame 0
+        self._room_last = now
+        if not c["buttons"] or c["buttons"][0][1] is None:
+            # nothing would answer a click: the panel, as before
+            return None
+        with lang.verbatim():           # the message is the game's (200 C)
+            if not antaranroomhd.render(surface, style, popup, now):
                 return None
         whole = surface.get_rect()
         self._base = None
@@ -433,6 +472,15 @@ def draw(surface, style, c):
              if c.get("title") else None)
     art = _art(c.get("art"), inner, int(REF_ART_H * s))
     mon = c.get("title_on_art") if art is not None and title else None
+    if c.get("art_event") is not None:
+        # TRANSCRIPTION `gnn_event_picture` (work order 402, `core/popupart`):
+        # the event's own news picture, from the player's EVENTS.LBX; the
+        # studio (mod folder) stays for an event without one
+        from core import popupart
+        shot = popupart.event_scaled(c["art_event"], inner,
+                                     int(REF_ART_H * s))
+        if shot is not None:
+            art, mon = shot, None
     if mon is not None:          # the title stands on the picture's monitor
         title_img, title = title, None
     opt_h = int(REF_OPTION_H * s)

@@ -57,6 +57,8 @@ from core.structs import planet as planet_struct
 from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from screens.galaxy_map import boxdraw
+from screens.galaxy_map import gateicons
+from screens.galaxy_map import starnames
 from screens.galaxy_map import distance
 from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
@@ -450,10 +452,13 @@ class GalaxyMapScreen(ScreenBase):
 
     @property
     def _omniscient(self):
-        """Galactic Lore from the local player's racial traits."""
+        """`HAROLD::Player_Is_Omniscient_` (harold.cpp:708-718): the racial
+        trait OR a hired Galactic Lore leader (officer.cpp:292). The leader
+        half (`has_galactic_lore`, player.py @3802) is UNVERIFIED on the
+        wire: no save holds a 1 (work order 402)."""
         if self._local is None:
             return False
-        return player_struct.has_omniscience(self._local)
+        return player_struct.is_omniscient(self._local)
 
     @property
     def _stars(self):
@@ -610,9 +615,20 @@ class GalaxyMapScreen(ScreenBase):
             # frame; render_star_names only blits what it is given.
             return self._labels.render(self.style, text, name_size, colour)
 
-        rnd.render_star_names(surface, ctx, self._stars, heights,
-                              render_label,
-                              player_num, self._players, omniscient)
+        # Gate icons and the visited dots go with the stars, under the names
+        # (work order 402; `gateicons`).
+        gateicons.render_gates(surface, ctx, self._stars, heights,
+                               player_num)
+        gateicons.render_dots(surface, ctx, self._stars, heights,
+                              player_num, self._players)
+        # `clamp`: the name pushed inside the window at the widest zoom
+        # (`name_clamp`) is the original's window, so not under the
+        # decoupled HD viewport, where the whole box is map.
+        rnd.render_star_names(
+            surface, ctx, self._stars, heights, render_label, player_num,
+            self._players, omniscient, facts=starnames.facts_of(self),
+            pulses=starnames.pulses_of(self, pygame.time.get_ticks() / 1000.0),
+            clamp=None if self._viewctl.active else surface.get_clip())
         rnd.render_fleets(surface, ctx,
                           getattr(self._state, "ship_icons", None) or [],
                           self._players, self._cache, self._tints,
@@ -631,6 +647,8 @@ class GalaxyMapScreen(ScreenBase):
             self._ping.render(surface, ctx, self._ping_position(ctx))
 
         if self._hover_star is not None:
+            # HD EXTENSION `hover_ring`: the ring round the pointed-at star
+            # (the original only pulses its name, `starnames`)
             sx, sy = view.to_screen(self._hover_star.x, self._hover_star.y)
             r = int(max(MIN_STAR_HIT_PX,
                         rnd.star_icon_width(ctx, self._hover_star) * 0.62))
@@ -695,15 +713,27 @@ class GalaxyMapScreen(ScreenBase):
         return hudview.nav_hit(self, key, x, y)
 
     def _render_hover_name(self, surface, view):
-        """Hovered system name, bottom-centre inside the map area.
-        The original has no hover feedback; this replaces the old
-        status_bar line now that that cutout is the TURN button."""
+        """HD EXTENSION `hover_name`: the pointed-at system's name,
+        bottom-centre inside the map area, as `renderer.star_label` says it
+        (a system the player has not met, a black hole: no name). The
+        original has its own hover feedback, the NAME pulsing brighter
+        (`Highlight_Star_`, mainscr_main.cpp:984-996; `starnames`); this
+        line replaces the old status_bar one now that that cutout is the
+        TURN button, and the ring is HD EXTENSION `hover_ring`."""
         if self._hover_star is None:
+            return
+        state = self._state
+        text = rnd.star_label(
+            self._hover_star, getattr(state, "player_num", 0), self._players,
+            self._omniscient, starnames.facts_of(self))
+        if not text:
             return
         # Stored scale, for the reason at the star names (work order 179).
         fs = self.box_font_scale_stored("map_area")
-        font = self.style.get_prop_font(self.layout.font_size(int(18 * fs)))
-        text = font.render(self._hover_star.name, True, STATUS_COLOR[:3])
+        # through the label cache: a lore name's brackets are a watermark
+        # in the DEMO face (see `render_label`)
+        text = self._labels.render(self.style, text, self.layout.font_size(
+            int(18 * fs)), STATUS_COLOR[:3])
         bx, by, bw, bh = view.box
         surface.blit(text, (bx + (bw - text.get_width()) // 2,
                             by + bh - text.get_height()

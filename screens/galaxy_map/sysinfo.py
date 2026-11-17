@@ -16,11 +16,11 @@ the engine:
                           in place of ")" for an outpost
   size, climate           the colony's climate where there is one
   population              H 0x181 (n pops, maximum) for a colony, H 0x162
-                          (maximum) otherwise; the maximum is the LOCAL
-                          player's (`Planet_Max_Population_For_Player_`;
-                          `colonyfacts.max_population`, with its marked
-                          deviations; Advanced City Planning the colony
-                          owner's, since work order 322)
+                          (maximum) otherwise; the maximum is
+                          `Planet_Max_Population_For_Player_` for the local
+                          player (`planet_maximum`, work order 402: the
+                          best race of a colony's pops, the local player's
+                          traits for an outpost or an empty planet)
   minerals[, gravity]     gravity only when it is not normal
   the orbit               star fortress, star base, battlestation, missile
                           base, ground batteries, stellar converter, fighter
@@ -92,15 +92,7 @@ def lines(state, planet_index, words, buildings):
            (f"{words.e(size_word) or ''}, {words.e(climate_word) or ''}", 0)]
     traits = player_struct.traits(player_struct.parse(players[me])) \
         if 0 <= me < len(players) else None
-    stand_in = colony if colony is not None else _bare_colony(planet)
-    # Advanced City Planning: the colony owner's research, the local
-    # player's for an unsettled planet (colcalc.cpp:927-929, :1021-1023;
-    # work order 322)
-    planner = int(colony.owner) if colony is not None else me
-    maximum = colonyfacts.max_population(
-        stand_in, planet, traits, colonyfacts.city_planning(
-            player_struct.parse(players[planner])
-            if 0 <= planner < len(players) else None))
+    maximum = planet_maximum(planet, colony, players, me, traits)
     if colony is not None:
         out.append((_fmt(words.h(H_POP), int(colony.n_pops), maximum), 0))
     else:
@@ -125,6 +117,64 @@ def lines(state, planet_index, words, buildings):
                                               special)) or "",
                     0 if built else 1))
     return out
+
+
+#: `TRAIT_COUNT` slots of an all-zero race (orion2_consts.h:976 is the
+#: last used index, 27) and `TRAIT_ENVIRONMENT_IMMUNE` (:972).
+_NO_TRAITS = 31
+TRAIT_ENVIRONMENT_IMMUNE = 23
+POP_RACE_NIBBLES = 10          # `races_present[10]` (colcalc.cpp:983-1009)
+
+
+def _race_traits(race, players):
+    """The trait array `Size_And_Climate_Race_Pop_Limit` reads for a race
+    nibble (colcalc.cpp:1028-1050): the player's own for 0-7; the nibble 8
+    is "considered immune" with no player record; 9 and up read none."""
+    if race < len(players) and race < 8:
+        return player_struct.traits(player_struct.parse(players[race]))
+    traits = [0] * _NO_TRAITS
+    if race == 8:
+        traits[TRAIT_ENVIRONMENT_IMMUNE] = 1
+    return traits
+
+
+def planet_maximum(planet, colony, players, me, traits):
+    """TRANSCRIPTION `box_max_population` of `Planet_Max_Population_For_
+    Player` for the local player (colcalc.cpp:975-1022; sys.cpp:1480-1483
+    passes `PLAYER_NUM`):
+
+      a settled colony (not an outpost) with pops: the BEST
+        `Colony_Race_Pop_Limit` over the race nibbles present
+        (:983-1009), each with its own traits, the colony's climate and
+        Biospheres, and the colony OWNER's Advanced City Planning
+        (:1104-1125); a settled colony with no pops: the local player's
+        race the same way (:991-993);
+      an outpost or an empty planet: the PLANET's climate and size with the
+        LOCAL player's traits and city planning, no Biospheres, cap 42
+        (:1012-1022).
+
+    A pop nibble past 9 is skipped (the original's `races_present` has ten
+    slots). UNVERIFIED live: nibble 8 (android) as `immune`, 9 (native) as
+    no traits — both read off the C++ only (`colony.py`: "8 is not
+    verified")."""
+    me_player = player_struct.parse(players[me]) \
+        if 0 <= me < len(players) else None
+    if colony is None or colony.outpost_flag:
+        return colonyfacts.max_population(
+            _bare_colony(planet), planet, traits,
+            colonyfacts.city_planning(me_player))
+    owner = int(colony.owner)
+    planner = colonyfacts.city_planning(
+        player_struct.parse(players[owner])
+        if 0 <= owner < len(players) else None)
+    count = int(colony.n_pops)
+    races = sorted({colony_struct.pop_player_index(int(colony.pop[i]))
+                    for i in range(min(count, len(colony.pop)))
+                    if colony_struct.pop_player_index(int(colony.pop[i]))
+                    < POP_RACE_NIBBLES}) if count else [me]
+    return max([colonyfacts.max_population(
+        colony, planet, _race_traits(race, players), planner)
+        for race in races] or [0])
 
 
 def _bare_colony(planet):

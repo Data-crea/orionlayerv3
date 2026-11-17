@@ -14,8 +14,11 @@ of from pixels:
                 turns left and the points produced — the original's four
                 cases, see `research_readout` (work order 129 D)
 
-Negative values render in the warning colour, matching the
-original's red pulse for a deficit.
+Negative values render in the warning colour, each LINE by its own sign
+(the balance by `bc`, the "+/-N BC" line by `surplus_bc`:
+mainscr_main.cpp:84-130), and the colour PULSES as the original's does
+(`pulse_colour`, DEVIATION `red_pulse_rate`: the shape is the original's,
+the colour mix and the rate are HD's).
 
 **Every element has its own box.** Each row owns two boxes in
 boxes.json, `sb_<row>_text` and `sb_<row>_icon`, so both can be
@@ -36,6 +39,7 @@ carry a sign.
 import pygame
 
 from core import hestrings
+from core import lang
 from core import palette
 from core import research
 from core.hud import text as hudtext
@@ -78,13 +82,64 @@ def _hud_colours():
             hudtext.colour("sub"), hudtext.colour("negative"))
 
 
+#: The original steps `red_color_pulse_value` once per pass of the main loop
+#: (mainscr_main.cpp:1071-1074): 0..8 and back, a cycle of 16 steps, from 0
+#: and +1 (harold.cpp:1396-1397). Its pass rate is the DOS timer's 18.2 Hz
+#: at most (timer.cpp:14-24; UNVERIFIED `red_pulse_live`). DEVIATION `red_pulse_rate`:
+#: HD steps by ELAPSED time (decision 78), one step per PULSE_STEP_MS.
+PULSE_STEP_MS = 55
+#: The pulse's time (ms). A test or the evidence tool drives it, as
+#: `core.planetspin.set_clock` does for the spin: two renders of one picture
+#: must differ only by what the check changes (None restores the real one).
+_ticks = pygame.time.get_ticks
+
+
+def set_clock(fn):
+    global _ticks
+    _ticks = fn or pygame.time.get_ticks
+
+PULSE_TOP = 8
+#: How far the colour rises toward `PULSE_TARGET` at the top of the pulse.
+#: The original lifts the palette index by value*4/7 (:92, :112), i.e. up to
+#: 4.57 steps of the red ramp; the share is INVENTION (HD has no ramp).
+PULSE_MIX = 0.45
+PULSE_TARGET = (255, 170, 160)
+
+
+def pulse_value(ticks_ms):
+    """`MOX::red_color_pulse_value` at `ticks_ms`: the triangle 0..8..0
+    (TRANSCRIPTION mainscr_main.cpp:1071-1074, harold.cpp:1396-1397)."""
+    step = int(ticks_ms // PULSE_STEP_MS) % (2 * PULSE_TOP)
+    return step if step <= PULSE_TOP else 2 * PULSE_TOP - step
+
+
+def pulse_colour(base, ticks_ms):
+    """`base` lifted toward a lighter red by the pulse; DEVIATION
+    `red_pulse_rate` and INVENTION `red_pulse_mix` (see PULSE_MIX)."""
+    k = PULSE_MIX * pulse_value(ticks_ms) / PULSE_TOP
+    return tuple(int(round(c + (t - c) * k))
+                 for c, t in zip(base[:3], PULSE_TARGET))
+
+
 def _fmt_signed(value):
-    """'+12' / '-3' — the original prints an explicit plus."""
+    """'+1,234' / '-3' — TRANSCRIPTION `sidebar_number_format`: the original
+    prints an explicit plus and, for the
+    treasury's surplus and the food, the number grouped like the balance
+    (mainscr_main.cpp:75-77, :139-141: `Get_Comma_String`)."""
+    text = _fmt_thousands(value)
+    return f"+{text}" if value >= 0 else text
+
+
+def _fmt_plain_signed(value):
+    """'+5' / '-3' for the rows the original prints with `%d`, not through
+    `Get_Comma_String` (command points :105, freighters :166)."""
     return f"+{value}" if value >= 0 else str(value)
 
 
 def _fmt_thousands(value):
-    return f"{value:,}".replace(",", " ")
+    """TRANSCRIPTION `Get_Comma_String` (misc.cpp:594-598): the separator is
+    ',' and only language 1 (German) prints ' '."""
+    return lang.group_thousands(value)
 
 
 def research_readout(plr, labels, hstrings=None):
@@ -113,7 +168,9 @@ def research_readout(plr, labels, hstrings=None):
         return text if text else fallback
 
     label = labels.get("research", "Research")
-    unit = labels.get("research_unit", "RP")
+    # TRANSCRIPTION `Get_Research_Unit_String` (mainscr.cpp:1041-1062): RP,
+    # FP (German), PR, PI, PR by language; a label overrides it (a mod).
+    unit = labels.get("research_unit") or lang.research_unit()
     if plr.research_breakthrough:
         return label, (message(0x183, labels.get("breakthrough",
                                                  "Breakthrough")),), ""
@@ -149,6 +206,11 @@ def research_readout(plr, labels, hstrings=None):
 def readout(key, plr, labels, monetary="BC", hstrings=None):
     """(label, main, sub, warn) for one sidebar row.
 
+    `warn` is a bool for the main line, or a (main, sub) pair where the
+    sub line has a sign of its own: the treasury's balance goes red only if
+    `bc` < 0 and its "+/-N BC" line only if `surplus_bc` < 0.
+    TRANSCRIPTION `deficit_colour_per_line` (mainscr_main.cpp:84-130).
+
     `plr` is a parsed s_player view, or None when disconnected —
     in that case every row shows a placeholder rather than zeros,
     so a missing connection never looks like a broke empire.
@@ -160,11 +222,11 @@ def readout(key, plr, labels, monetary="BC", hstrings=None):
     if key == "treasury":
         return (label, f"{_fmt_thousands(plr.bc)} {monetary}",
                 f"{_fmt_signed(plr.surplus_bc)} {monetary}",
-                plr.bc < 0 or plr.surplus_bc < 0)
+                (plr.bc < 0, plr.surplus_bc < 0))
 
     if key == "command":
         surplus = player_struct.command_point_surplus(plr)
-        return (label, _fmt_signed(surplus),
+        return (label, _fmt_plain_signed(surplus),
                 f"({plr.command_points})", surplus < 0)
 
     if key == "food":
@@ -172,7 +234,7 @@ def readout(key, plr, labels, monetary="BC", hstrings=None):
                 plr.surplus_food < 0)
 
     if key == "freighters":
-        return (label, _fmt_signed(plr.surplus_freighters),
+        return (label, _fmt_plain_signed(plr.surplus_freighters),
                 f"({plr.n_freighters})", plr.surplus_freighters < 0)
 
     if key == "research":
@@ -268,8 +330,11 @@ def _pair_surface(vt, st, gap):
 
 
 def draw_text_block(surface, style, layout, rect, label, main, sub,
-                    warn, font_scale, align, fonts):
-    """Label, value and sub inside one text box, vertically centred."""
+                    warn, font_scale, align, fonts, ticks_ms=0):
+    """Label, value and sub inside one text box, vertically centred.
+
+    `warn` is a bool (the value lines) or a (value, sub) pair; a warned
+    line takes the pulsing negative colour at `ticks_ms` (`pulse_colour`)."""
     x, y, w, h = rect
     # THE HUD's FACE AND COLOURS since decision 71 (work order 169): one
     # face for label and value, as Data's mockup has it — the
@@ -277,6 +342,8 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
     # glyphs, which Aldrich does not have — and the label, value, sub
     # and negative colours measured off the mockup (`measured.text`).
     label_col, value_col, sub_col, warn_col = _hud_colours()
+    warn_main, warn_sub = warn if isinstance(warn, tuple) else (warn, False)
+    warn_col = pulse_colour(warn_col, ticks_ms)
     label_font = style.get_font(
         layout.font_size(int(fonts["label"] * font_scale)))
     value_font = style.get_font(
@@ -289,9 +356,10 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
     # the research row prints the chance, the turns and the points — so
     # `main` is a string or a sequence of them.
     values = (main,) if isinstance(main, str) else tuple(main)
-    vts = [value_font.render(line, True, warn_col if warn else value_col)
+    vts = [value_font.render(line, True, warn_col if warn_main else value_col)
            for line in values]
-    st = sub_font.render(sub, True, sub_col) if sub else None
+    sub_now = warn_col if warn_sub else sub_col
+    st = sub_font.render(sub, True, sub_now) if sub else None
 
     if st is not None and sub.startswith(SUB_INLINE_PREFIX):
         vts[-1], st = _pair_surface(
@@ -310,10 +378,10 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
         scale_to = max(1, int(min(v.get_height() for v in vts) * 0.9))
         smaller = style.get_font(max(6, scale_to))
         vts = [_fit_width(smaller.render(line, True,
-                                         warn_col if warn else value_col), w)
+                                         warn_col if warn_main else value_col), w)
                for line in values]
         if st is not None:
-            st = _fit_width(sub_font.render(sub, True, sub_col), w)
+            st = _fit_width(sub_font.render(sub, True, sub_now), w)
         new_h = lt.get_height() + gap + sum(v.get_height() for v in vts) \
             + (st.get_height() if st is not None else 0)
         if new_h >= block_h:
@@ -390,7 +458,7 @@ def render(surface, layout, style, geometry, plr, labels, rows=None,
         draw_text_block(surface, style, layout, layout.rect(text_rect),
                         label, main, sub, warn,
                         font_scales.get(key, 1.0),
-                        aligns.get(key, "center"), fonts)
+                        aligns.get(key, "center"), fonts, _ticks())
 
     if dividers and panel_box is not None:
         draw_dividers(surface, layout, panel_box, bands)

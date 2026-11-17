@@ -338,6 +338,15 @@ def from_game(settings=None):
          "star system window fleet pictures — without them the window's "
          "fleet bar shows the map's ship icon instead of the original's",
          "python tools/sysship_art_extract.py"),
+        # THE TURN POPUPS' PICTURES (work order 402): the GNN news pictures
+        # and the Antaran room. Checked by the first picture, as the fleet
+        # pictures are (a .json here would also have to be on check 062's
+        # absent-allowed list).
+        (os.path.join(ROOT, "assets", "shared", "turnpopup", "gamedata",
+                      "event_0.bin"),
+         "turn popup pictures — without them the GNN popup draws the studio "
+         "for every event and the Antaran room draws its text panel",
+         "python tools/popup_art_extract.py"),
         # THE TACTICAL BATTLE (work order 197 C): ships, planets, ordnance,
         # effects and the battle palette.
         (os.path.join(ROOT, "screens", "combat", "assets", "gamedata",

@@ -477,16 +477,15 @@ def _resolve_sprite(cache, kind, step):
     project has no artwork for is still visible and still in the right
     place.
 
-    **DEVIATION, kept on purpose (Data, 14 September 2026).** Today that
-    is the AMOEBA and the ANTARAN: no HD master exists for either, and
-    both draw as the untinted grey player ship in their own footprint.
-    An invented picture, and marked as one — but on the map a monster
-    that vanished would be a gap against the original, which draws it,
-    so the stand-in stays until the artwork arrives. The Planets panel
-    decides the other way (an empty sprite box is an understandable
-    state there). The smoke test holds the set of kinds that reach this
-    branch to exactly {amoeba, antaran}: a new master, or a lost one,
-    fails it.
+    **DEVIATION `stand_in_sprite`, kept on purpose (Data, 14 September
+    2026).** Only a kind with NO master, in the base pack or in the player's
+    mod folder (`ships/masters/<kind>.png`, cut by `core.usermod`; read
+    through the resource stack at the load, so the map, the fleet box, the
+    system window's bar and the panel all see it), draws as the untinted
+    grey player ship: an invented picture, but a vanished monster would be
+    a gap against the original. Today that is the AMOEBA and the ANTARAN in
+    the base pack (the smoke test holds the pack's set to exactly those); a
+    master arriving ends the stand-in for its kind.
     """
     key = sprite_key(kind, step)
     if cache.has(key):
