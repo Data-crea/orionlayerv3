@@ -24,7 +24,7 @@ activates the whole-screen field the block names (:985-987).
 DEVIATION `hud_table`: HUD panels on the universal background where the
 original draws SCORE.LBX's picture and cursor. HD EXTENSION `score_header`:
 the player the tally is for ("<name>, <race>") above the lines, which the
-original does not print. INVENTION `score_title`: the original's title is in
+original does not print. TRANSCRIPTION `score_title`: the original's title is in
 its picture (SCORE.LBX); the word is typed in `layout.json` (decision 15).
 OMISSION `score_pop_pictures`: the rows of population and captured-colonist
 icons (`Draw_Pop`, score.cpp:1282-1345) and the race portraits of the
