@@ -26,10 +26,15 @@ original draws SCORE.LBX's picture and cursor. HD EXTENSION `score_header`:
 the player the tally is for ("<name>, <race>") above the lines, which the
 original does not print. TRANSCRIPTION `score_title`: the original's title is in
 its picture (SCORE.LBX); the word is typed in `layout.json` (decision 15).
-OMISSION `score_pop_pictures`: the rows of population and captured-colonist
-icons (`Draw_Pop`, score.cpp:1282-1345) and the race portraits of the
-eliminated players are not drawn; the figures and the names are. The block
-does not carry them (open fix 120). UNVERIFIED live: the screen has not
+TRANSCRIPTION/OMISSION `score_pop_pictures`: the rows of population and
+captured-colonist figures and the eliminated players' portraits are drawn
+from the numbers and snapshot the screen holds (`popicons.py`: the rule of
+`Draw_Pop`, score.cpp:1282-1345, and `Draw_Eliminated_Race_Pictures`); what
+the block does not carry (the original's random pick of figures, the
+contacts that weight the captured portraits) is named there as DEVIATION and
+UNVERIFIED, and a row whose pictures are not extracted (`python
+tools/raceicon_extract.py`, `python tools/score_art_extract.py`) is omitted.
+UNVERIFIED live: the screen has not
 been seen against a real game's end (Data's decision of 20 October 2026).
 """
 import logging
@@ -41,12 +46,17 @@ from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
 from core.screen_base import ScreenBase
+from screens.colony_summary import colonyfigures
+from screens.score import popicons
 
 log = logging.getLogger("score")
 
 #: The words' size in reference pixels (the shell's layout scales it) and
 #: the largest share of a row the text may fill.
 REF_FONT, MAX_FILL = 30, 0.62
+#: How tall the rows of people are, in text rows (HD's layout, not the
+#: original's pixels): the figures' row and the portraits' row.
+ICON_UNITS, PORTRAIT_UNITS = 1.5, 2.2
 #: The dim run of the leaders' dots (`Print_Score_String`: palette 0xD0..0xD1).
 DOT_DIM = 0.55
 
@@ -146,7 +156,18 @@ class ScoreScreen(ScreenBase):
         inner = shell.inner(panel, L).inflate(-2 * int(28 * s), 0)
         header = f"{score['name']}, {score['race_name']}".strip(", ")
         rows = rows_of(score)
-        row_h = inner.h // (len(rows) + 2)
+        extras = self._extras(score)
+        units = len(rows) + 2 + sum(
+            PORTRAIT_UNITS if k == "portraits" else ICON_UNITS
+            for k in extras.values())
+        row_h = int(inner.h // units)
+        # the figures are the game's 28 px sprites, never smaller
+        sprite = int(row_h * ICON_UNITS)
+        if extras and (sprite < colonyfigures.MASTER_SIZE
+                       or not self._figures_ok(sprite)):
+            extras = {k: v for k, v in extras.items() if v == "portraits"}
+            units = len(rows) + 2 + sum(PORTRAIT_UNITS for _ in extras)
+            row_h = int(inner.h // units)
         size = max(10, min(int(REF_FONT * s), int(row_h * MAX_FILL)))
         label = hudtext.colour("label")[:3]
         ink = hudtext.colour("value")[:3]
@@ -173,7 +194,85 @@ class ScoreScreen(ScreenBase):
             hudtext.blit(surface, right, r, align="right")
             self._dots(surface, left, right, r, f_size, dim)
             y += row_h
+            if kind in extras:
+                y += self._draw_pictures(surface, kind, extras[kind], y,
+                                         row_h, inner, sprite, score)
         self.render_shell(surface)
+
+    # ── the rows of people (work order 406) ────────────────────────────
+    def _extras(self, score):
+        """{row key: picture kind} for the rows that have pictures to draw
+        now: the names are worked out once here and kept for the draw."""
+        self._pics = {}
+        pops = popicons.pop_icons(score, self._state)
+        if pops:
+            self._pics["population"] = ("pop", pops)
+        cap = popicons.captured_icons(score)
+        if cap:
+            self._pics["captured_colonies"] = ("captured", cap)
+        shown = [d for d in score["defeated"]
+                 if popicons.portrait(d["race"])[0] is not None]
+        if shown:
+            self._pics["elimination"] = ("portraits", shown)
+        return {k: v[0] for k, v in self._pics.items()}
+
+    def _figures_ok(self, sprite):
+        """The population figures at this size, or False (not extracted)."""
+        return self._figure_set(sprite).state != "missing"
+
+    def _figure_set(self, sprite):
+        cache = self.__dict__.setdefault("_fig_sets", {})
+        if sprite not in cache:
+            cache.clear()
+            cache[sprite] = colonyfigures.FigureSet(self.app.res, sprite)
+        return cache[sprite]
+
+    def _draw_pictures(self, surface, row, kind, y, row_h, inner, sprite,
+                       score):
+        """One row of pictures under line `row` at `y`; returns its height.
+        Figures stand on `Draw_Pop`'s grid: 22 px steps for 28 px sprites."""
+        names = self._pics[row][1]
+        if kind == "portraits":
+            return self._draw_portraits(surface, names, y, row_h, inner)
+        figs = self._figure_set(sprite)
+        step = max(1, round(sprite * popicons.STEP / popicons.SPRITE))
+        for n, (dx, _dy) in enumerate(popicons.positions(
+                popicons.REG_MAX_POP if kind == "pop"
+                else popicons.CAP_MAX_POP, len(names))[0]):
+            pic = figs.get(names[n])
+            if pic is not None:
+                surface.blit(pic, (inner.x + dx * step // popicons.STEP, y))
+        return int(row_h * ICON_UNITS)
+
+    def _draw_portraits(self, surface, shown, y, row_h, inner):
+        """The eliminated players' portraits side by side, the defeat's
+        figure at the top of each and the name at its bottom
+        (`Draw_Eliminated_Race_Pictures`, score.cpp:725-790)."""
+        height = int(row_h * PORTRAIT_UNITS)
+        label = hudtext.colour("value")[:3]
+        x = inner.x
+        for d in shown:
+            pic, frame = popicons.portrait(d["race"])
+            if pic is None:
+                continue
+            k = max(1, height // (pic.get_height() + 2 * 1))
+            pic = pygame.transform.scale(pic, (pic.get_width() * k,
+                                               pic.get_height() * k))
+            surface.blit(pic, (x, y))
+            if frame is not None:
+                frame = pygame.transform.scale(frame, (frame.get_width() * k,
+                                                       frame.get_height() * k))
+                surface.blit(frame, (x - k, y - k))
+            fsz = max(10, int(row_h * 0.45))
+            fig = self.style.render_text("%d.%d" % divmod(d["figure"], 10),
+                                         fsz, label)
+            surface.blit(fig, (x + (pic.get_width() - fig.get_width()) // 2,
+                               y + k))
+            nm = self.style.render_text(d["name"], fsz, label)
+            surface.blit(nm, (x + max(0, (pic.get_width() - nm.get_width())
+                                      // 2), y + pic.get_height() - nm.get_height() - k))
+            x += pic.get_width() + popicons.BOX_GAP * k
+        return height
 
     def _dots(self, surface, left, right, r, size, colour):
         """The leaders: a run of dots from the label to the figure

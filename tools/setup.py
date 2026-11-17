@@ -347,6 +347,13 @@ def from_game(settings=None):
          "turn popup pictures — without them the GNN popup draws the studio "
          "for every event and the Antaran room draws its text panel",
          "python tools/popup_art_extract.py"),
+        # THE SCORE SCREEN'S PORTRAITS (work order 406): checked by the first
+        # picture, as the popups' are.
+        (os.path.join(ROOT, "assets", "shared", "score", "gamedata",
+                      "score_2.bin"),
+         "score screen portraits — without them the eliminated players are "
+         "named on their lines and no portrait is drawn",
+         "python tools/score_art_extract.py"),
         # THE TACTICAL BATTLE (work order 197 C): ships, planets, ordnance,
         # effects and the battle palette.
         (os.path.join(ROOT, "screens", "combat", "assets", "gamedata",

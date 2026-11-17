@@ -7,6 +7,6 @@
     "deviation_hud_table": "The tally in a HUD panel on the universal background, where the original draws SCORE.LBX's picture and its cursor (score.cpp:86-120).",
     "hd_extension_score_header": "The player the tally is for, above the lines; the original prints no name.",
     "transcription_score_title": "The title word HALL OF FAME: the original's score screen carries it in its picture, read off the native frame of the live run (work order 405); the German word is the Hall of Fame screen's (RUHMESHALLE).",
-    "omission_score_pop_pictures": "The rows of population icons and the race portraits of the eliminated players (Draw_Pop, score.cpp:1282-1345; Draw_Eliminated_Race_Pictures, :700-780) are not drawn; the figures and the names are."
+    "omission_score_pop_pictures": "The rows of people (Draw_Pop, score.cpp:1282-1345; Draw_Eliminated_Race_Pictures, :725-790) are drawn by popicons.py from the colonies and defeated players the snapshot holds: the rule is the original's (score_pop_rule, score_pop_count, score_captured_rule, score_portrait_boxes), the random picks are HD's even spread (DEVIATION score_pop_pick), the captured portraits' races UNVERIFIED (score_captured_races), the portrait frame DEVIATION (score_portrait_frame); a row whose pictures are not extracted is omitted (OMISSION)."
   }
 }

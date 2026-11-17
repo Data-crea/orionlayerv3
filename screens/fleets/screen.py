@@ -35,6 +35,7 @@ import pygame
 from core.screen_base import ScreenBase
 
 from core import hestrings
+from core import moveblocks
 from core import shipstacks
 from core import kentext
 from core.shipparts import ShipPartNames
@@ -45,7 +46,7 @@ from . import fltdraw
 from . import flthud
 from . import fltbox, fltmove, fltpaint, fltpanel, fltgeom, fltrows, fltscan
 from . import fltwire
-from . import fltdest, fltlight, fltminimap, fltshippic
+from . import fltdest, fltlight, fltminimap, fltpreview, fltshippic
 
 log = logging.getLogger("fleets")
 
@@ -64,6 +65,7 @@ class FleetsScreen(ScreenBase):
         self._total_rows = 0     # rows the filtered list needs
         self._icon_count = 0     # big icons the grid is holding
         self._status = ""        # the line under the inset map
+        self._status_tone = fltpreview.NORMAL    # DEVIATION `strip_tone`
         self._state = None       # the snapshot this frame was drawn from
         self._view = None        # fltwire.View: what may be believed
         self._cells = []         # fltrows.Cell per displayed slot
@@ -224,7 +226,20 @@ class FleetsScreen(ScreenBase):
                                           self._strings.message, self._parts)
         if self._scan_star < 0:
             return ""
-        if int(block.get("selected_count", 0) or 0) > 0:
+        # TRANSCRIPTION `status_states` (open fix 121, work order 406): with
+        # ships selected the strip is the move preview, from the engine's
+        # own verdict at the hovered star (flt2.cpp:349-354, :394-499).
+        # FMOV present and EMPTY is the original's else branch (nothing
+        # selected, RELOCATE mode, a full list): states 7 and 8. FMOV
+        # absent is an engine without the fix: the OMISSION stands and HD
+        # says nothing rather than name the star where the original
+        # prints a preview.
+        preview = fltpreview.strip(game_state, self._scan_star, self._strings)
+        if preview is not None:
+            self._status_tone = preview[1]
+            return preview[0]
+        if moveblocks.fleet_screen_verdicts(game_state) is None and \
+                int(block.get("selected_count", 0) or 0) > 0:
             return ""
         return fltrows.scanned_star_line(game_state, self._scan_star,
                                          self._strings)
@@ -370,7 +385,10 @@ class FleetsScreen(ScreenBase):
         fltdraw.draw_relocation_lines(surface, self, self._state, _stars,
                                       pygame.time.get_ticks())
         fltdest.draw(surface, self, self._state, _stars,
-                     pygame.time.get_ticks())
+                     pygame.time.get_ticks(),
+                     preview=fltpreview.preview_line(
+                         self._state, getattr(self._view, "block", None),
+                         self._scan_star))
         self._draw_fleet_light(surface, _stars)
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each

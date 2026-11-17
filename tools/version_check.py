@@ -205,6 +205,8 @@ FIX_NUMBERS = {
     "doc/ext_auto_turn_banner.patch": (118,),
     "doc/ext_multiplayer_lights.patch": (119,),
     "doc/ext_score_screen.patch": (120,),
+    # work order 406
+    "doc/ext_fleet_move_preview.patch": (121,),
 }
 
 

@@ -10,6 +10,15 @@
             2936) — the verdict the original computes on HOVER and colours
             its preview line from (mainscr.cpp:535-568).
 
+**ON THE FLEETS SCREEN TOO — open fix 121 (work order 406).** The same block,
+the same layout, is written on SCREEN_FLEET, always, before FILM, for the
+screen's own selection (`Build_Fltscrn_Ship_List`'s ships; flt2.cpp:349-354).
+There the star count is NUM_STARS with a record per star, or 0 and no record
+when nothing is selected, in RELOCATE mode or with a full list (the
+original's else branch, flt2.cpp:355-381). `fleet_screen_verdicts` names the
+three states: None (the engine does not know the question), `[]` (no
+verdict) and the list.
+
 Read WHOLE or left None (`core/colonyblocks.py`'s rule): a half-read table
 would colour some stars from nothing. An engine without the fix writes
 nothing and `gs.fleet_move` stays None — the map then draws no preview line
@@ -53,3 +62,17 @@ def build(verdicts):
     for v in verdicts:
         out += SPEC.pack({name: int(v.get(name, 0)) for name in FIELDS})
     return out
+
+
+def fleet_screen_verdicts(gs):
+    """The Fleets screen's verdicts, one record per star, in star order.
+
+    None: no FMOV on the wire — an engine without open fix 121 (the screen
+    keeps its OMISSION). `[]`: the block is there with no record — nothing
+    selected, RELOCATE mode or a full list, where the original takes its
+    else branch (flt2.cpp:355-381). Else a list the length of the star
+    table."""
+    move = getattr(gs, "fleet_move", None)
+    if not move:
+        return None
+    return list(move["verdicts"])

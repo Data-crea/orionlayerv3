@@ -626,6 +626,13 @@ LOCAL_PATCHES = {
         "OrionLayer, open fix 120.",
         "the engine does not send the end-of-game score screen (open fix "
         "120): HD shows the F12 notice"),
+    # Work order 406: on the fork's branch `orionlayer` only, 9e436604.
+    "doc/ext_fleet_move_preview.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 121.",
+        "the engine does not send the Fleets screen's move preview (open "
+        "fix 121): HD draws no preview line and the strip stays empty with "
+        "ships selected"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

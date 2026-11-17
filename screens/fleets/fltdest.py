@@ -22,16 +22,18 @@ map); the line is drawn from the icon to the star (ships.cpp:558-563), the
 wave through `maplines`' one routine (decision 68), clipped to the inset
 box like the relocation lines beside it (`fltdraw.draw_relocation_lines`).
 
-OMISSION `omission_preview_line`: the loop's first line — the selected
-stack's icon to the star under the pointer, green while the move is
-possible and red for a black hole or a refusal (flt1.cpp:130-170) — reads
-`_g_ship_move_info.moving`, the verdict `Ships_Try_To_Move_To_` just made
-for the SELECTED SHIPS. FMOV (open fix 48) carries that verdict only on
-SCREEN_MAIN, for the galaxy map's fleet box (ext_api.cpp:1259); on this
-screen it is not written, so HD cannot colour the line and draws none
-rather than guess. Needs an engine change (open fix list).
+TRANSCRIPTION `preview_line` (open fix 121, work order 406). The marking
+OMISSION `omission_preview_line` stands only against an engine without that
+fix. The loop's first line — the selected stack's icon
+to the star under the pointer, green while the move is possible and red for
+a black hole or a refusal (flt1.cpp:130-170) — reads `_g_ship_move_info.
+moving`, the verdict for the SELECTED SHIPS, which the engine now sends on
+this screen as FMOV (`fltpreview.preview_line`). It is drawn FIRST, before
+the other icons' lines, as the original's order is (:130-170, then :172).
+Against an engine without the fix no line is drawn (no verdict, no guess).
 
-UNVERIFIED live: the lines in a running game (headless renders only).
+UNVERIFIED live: the lines, the preview line included, in a running game
+(headless renders only).
 """
 from core.structs import planet as planet_struct
 from core.structs import colony as colony_struct
@@ -102,15 +104,16 @@ def lines(state):
     return out
 
 
-def draw(surface, screen, state, stars, ms):
+def draw(surface, screen, state, stars, ms, preview=None):
     """The lines on the inset, over the black and under the stars' next
-    paint. `stars` is `_inset_stars()` — box-local native points."""
+    paint. `stars` is `_inset_stars()` — box-local native points. `preview`
+    is `fltpreview.preview_line`'s entry, drawn first."""
     from screens.galaxy_map import maplines
     from . import fltdraw
     rect = fltdraw._rect(screen, "inset_map")
     if rect is None or not stars or state is None:
         return []
-    todo = lines(state)
+    todo = ([preview] if preview else []) + lines(state)
     if not todo:
         return []
     bx, by, nw, nh = fltgeom.REGIONS["inset_map"]

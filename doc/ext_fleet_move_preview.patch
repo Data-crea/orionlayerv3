@@ -1,0 +1,115 @@
+OrionLayer open fix 121 — the Fleets screen's move preview on the wire
+=====================================================================
+
+Work order 406. orion2re on the fork's branch `orionlayer` (v2.0.0), on top
+of open fix 120 and its README row. Not on `orionlayer-local`. In
+src/ext/ext_api.cpp only, under ORION2RE_EXT (the file is compiled only
+with it).
+
+The Fleets screen prints a move preview: the strip under the inset map says
+where the selected ships would get to (Print_Fltscrn_Scanned_Star_Name,
+flt2.cpp:338-522: H 0x67, 0x69/0x6A, 0x6B/0x6C, 0x21, 0x6E, 0x6F/0x70, 0xEB,
+0x73) and Draw_Fltscrn_Ship_Destination_Lines (flt1.cpp:130-170) colours the
+selected stack's line to the hovered star green or red. Both read
+g_ship_move_info, which flt2.cpp:349-354 fills on hover with
+SHIPMOVE::Ships_Try_To_Move_To over Build_Fltscrn_Ship_List's ships (the big
+icons with selected != 0, in display order, flt2.cpp:863-890) unless
+FLT1::relocate_button_mode is 1. FMOV (open fix 48) carried that verdict only
+for the galaxy map's fleet box (SCREEN_MAIN).
+
+The change. SerializeState writes "FMOV" on SCREEN_FLEET too, before FILM,
+in the layout of open fix 48 (version byte 1, int16 star count, uint8 record
+size 14, one s_ship_move_info per star) — the verdict is made at every star
+into a local struct, as the galaxy map's block does, the global untouched.
+The ships are gathered as Build_Fltscrn_Ship_List gathers them but without
+calling it, which opens a "Too many ships" box when the list is full. On this
+screen the block is ALWAYS written: with a selection and the relocate mode off
+the count is NUM_STARS and the records follow; with none selected, in RELOCATE
+mode or with a full list the count is 0 and no record follows (the original's
+else branch, flt2.cpp:355-381). So a client reads "FMOV present on the Fleets
+screen" as "this engine knows the question" and "count 0" as "no verdict:
+the strip names the star".
+
+Live: UNVERIFIED — see doc/orion2re_open_fixes.md entry 121. Built on the
+scratch clone `~/claude/clones/406_orion2re` (`linux-debug`, ORION2RE_EXT on);
+a misspelt call (`Ships_Try_To_Move_ToX`) is refused by the compiler.
+
+commit 9e4366048d1c32bc694b6230535cd538d273db99
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Tue Nov 17 12:08:31 2026 +0100
+
+    OrionLayer Open Fix 121: the Fleets screen's move preview on the wire (FMOV, same layout, now also on SCREEN_FLEET, before FILM: the block's star count is NUM_STARS with a 14-byte s_ship_move_info per star, SHIPMOVE::Ships_Try_To_Move_To over the ships of the big icons that are selected, in display order, as Build_Fltscrn_Ship_List collects them (flt2.cpp:863-890) without its "Too many ships" box; 0 stars and no records when nothing is selected, in RELOCATE mode (FLT1::relocate_button_mode 1) or with a full list, where the original takes its else branch), so a client draws the preview line (flt1.cpp:130-170) and the strip's eight move-preview states (flt2.cpp:338-522)
+    
+    OrionLayer, open fix 121.
+    
+    Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index b1be671e..bd58f563 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1285,6 +1285,64 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         }
+     }
+ 
++    // 14a. The move verdict of the FLEET SCREEN's selection: "FMOV" again,
++    //     same layout, written ONLY on SCREEN_FLEET (every other screen's
++    //     condition is the one above), and before FILM.
++    //     OrionLayer, open fix 121.
++    //
++    //     Print_Fltscrn_Scanned_Star_Name (flt2.cpp:338-522) and
++    //     Draw_Fltscrn_Ship_Destination_Lines (flt1.cpp:121-170) read
++    //     g_ship_move_info, which the former fills on hover from
++    //     Ships_Try_To_Move_To over Build_Fltscrn_Ship_List's ships
++    //     (flt2.cpp:349-354) unless the relocate button's mode is 1. The
++    //     galaxy map's box does not select these ships, so the block above
++    //     is silent here. The ships are gathered as Build_Fltscrn_Ship_List
++    //     does (flt2.cpp:863-890: the big icons with selected != 0, in
++    //     display order), WITHOUT calling it: it opens a User_Box when the
++    //     list is full. A full list (MAX_SHIPS) gives no verdict, as its
++    //     return value 0 does in the original.
++    //
++    //     THE COUNT SAYS WHETHER THE ORIGINAL RAN THE VERDICT: with a
++    //     selection and the relocate mode off it is the star count and
++    //     every star has its 14-byte record; with none selected, or in
++    //     RELOCATE mode, it is 0 and no record follows (the original takes
++    //     its else branch, flt2.cpp:355-381, which zeroes the struct). So
++    //     on this screen the block is ALWAYS written, and a client reads
++    //     "FMOV present" as "this engine knows the question".
++    if (current_screen == SCREEN_FLEET) {
++        static int16_t fids[SHIP_LIST_CAPACITY];
++        int16_t fcount = 0;
++        if (FLT1::relocate_button_mode != 1 && MOX::fltscrn_big_icon != nullptr) {
++            int16_t icons = MOX::n_fltscrn_big_icons;
++            if (icons > SHIP_LIST_CAPACITY) icons = SHIP_LIST_CAPACITY;
++            for (int16_t i = 0; i < icons && fcount >= 0; i++) {
++                if (MOX::fltscrn_big_icon[i].selected == 0) continue;
++                // A ship the table has no record for would be read unchecked.
++                if (MOX::fltscrn_big_icon[i].ship_idx < 0 ||
++                    MOX::fltscrn_big_icon[i].ship_idx >= MOX::NUM_SHIPS) continue;
++                fids[fcount++] = MOX::fltscrn_big_icon[i].ship_idx;
++                if (fcount >= MAX_SHIPS) fcount = -1;   // the original's "Too many ships"
++            }
++        }
++        if (fcount > 0) {
++            fids[fcount] = -1;   // Ships_Try_To_Move_To reads the list up to its -1
++        }
++        buf.push_back((uint8_t)'F');
++        buf.push_back((uint8_t)'M');
++        buf.push_back((uint8_t)'O');
++        buf.push_back((uint8_t)'V');
++        Write8(buf, 1);                                         // block version
++        Write16(buf, fcount > 0 ? MOX::NUM_STARS : (int16_t)0);
++        Write8(buf, (uint8_t)sizeof(s_ship_move_info));         // 14
++        if (fcount > 0) {
++            for (int16_t s = 0; s < MOX::NUM_STARS; s++) {
++                s_ship_move_info mi;
++                SHIPMOVE::Ships_Try_To_Move_To(fids, s, &mi);
++                WriteBytes(buf, &mi, sizeof(mi));
++            }
++        }
++    }
++
+     // 15. The generic message box that is up: "MSGB", written on ANY screen
+     //     while one is (the boxes run under their caller's id), and LAST.
+     //     OrionLayer, open fix 29.

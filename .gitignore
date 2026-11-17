@@ -176,6 +176,10 @@ screens/galaxy_map/assets/gamedata/
 # (tools/popup_art_extract.py, work order 402) — the same rule.
 assets/shared/turnpopup/gamedata/
 
+# The score screen's portraits out of the player's SCORE.LBX
+# (tools/score_art_extract.py, work order 406) — the same rule.
+assets/shared/score/gamedata/
+
 # F8 screenshots (main.App._save_screenshot) go to the player's own folder
 # since work order 219; one here came from the working directory and is a
 # picture of the game, never a file of the repository.
