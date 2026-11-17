@@ -20,6 +20,7 @@ from core.structs import star as star_struct
 from screens.galaxy_map import boxdraw
 from screens.galaxy_map import boxmodel
 from screens.galaxy_map import boxpaint
+from screens.galaxy_map import hudbanners
 from screens.galaxy_map import mapboxes
 from screens.galaxy_map import mapclick
 from screens.galaxy_map import mapeta
@@ -139,6 +140,9 @@ def sidebar_window_at(screen, x, y):
 
 def click(screen, screen_x, screen_y):
     if screen.help_consumes_click(screen_x, screen_y):
+        return True
+    # THE TURNS THAT RUN BY THEMSELVES end on a click (hudbanners.stop_chain)
+    if hudbanners.stop_chain(screen, "click"):
         return True
     # The territory panel (HD EXTENSION `territory_view`) is HD's own and
     # sends nothing to the game; a click on it is never the map's.
@@ -312,6 +316,8 @@ def activate(screen, field_id, what=""):
 
 def key_down(screen, key):
     if screen.help_consumes_key(key):
+        return True
+    if hudbanners.stop_chain(screen, "key"):
         return True
     if boxdraw.handle_key(screen, key):
         return True

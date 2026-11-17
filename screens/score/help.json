@@ -1,0 +1,6 @@
+{
+  "_comment": "The end-of-game score screen has no right-click help in the original: SCORE::Hi_Score_Screen calls fields::Deactivate_Help_List (score.cpp:497), so a right click shows nothing (TRANSCRIPTION score_no_help). Work order 403.",
+  "_source": "score.cpp:497",
+  "hd_extension": "The help popup auto-sizes to its text and scrolls when it cannot fit; the original draws a fixed box and lets FMTPARA wrap into it at a fixed 339 px (TEXTBOX::Draw_Help_Entry_, textbox.cpp:307). The deviation belongs to the panel rather than to any region, so it is marked once per file; this screen lists no region, so the panel never opens here.",
+  "regions": []
+}

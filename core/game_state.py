@@ -159,6 +159,15 @@ class GameState:
     #: The film that plays, open fix 112 (work order 320): None without
     #: the block (`core/filmblock.py` names every key).
     film: Optional[dict] = None              # "FILM", fix 112
+    #: The map's event banners, the auto-turn banner and the multiplayer
+    #: lights, open fixes 114, 118, 119 (work order 403): None without the
+    #: block (`core/mapbannerblocks.py` names every key).
+    map_banners: Optional[dict] = None     # "EVTB", fix 114
+    auto_turn: Optional[dict] = None         # "AUTO", fix 118
+    player_lights: Optional[dict] = None     # "PLRL", fix 119
+    #: The end-of-game score screen, open fix 120 (work order 403): None
+    #: without the block (`core/scoreblock.py` names every key).
+    score: Optional[dict] = None             # "SCOR", fix 120
     #: The ship detail view outside a battle, open fix 106 (work order
     #: 317): None without the block (`core/shipviewwire.py` names every key).
     ship_view: Optional[dict] = None         # "SHPV", fix 106
@@ -590,6 +599,9 @@ def _parse_chained_blocks(gs, data, pos):
     pos = settlewire.parse(gs, data, pos)     # STLR, open fix 103
     from core import colsumblock
     pos = colsumblock.parse(gs, data, pos)    # CSUM, open fix 110
+    from core import mapbannerblocks, scoreblock
+    pos = mapbannerblocks.parse(gs, data, pos)  # EVTB 114, AUTO 118, PLRL 119
+    pos = scoreblock.parse(gs, data, pos)     # SCOR, open fix 120
     from core import filmblock
     pos = filmblock.parse(gs, data, pos)      # FILM, open fix 112, LAST
     return pos

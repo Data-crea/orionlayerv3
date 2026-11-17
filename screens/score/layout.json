@@ -1,0 +1,12 @@
+{
+  "_comment": "The end-of-game score screen (work order 403, open fix 120). Its title is ARTWORK in the original (SCORE.LBX's picture), so the word is typed here per decision 15; every other word is the engine's own, from the block SCOR. A mod replaces this file.",
+  "words": {
+    "title": "SCORE"
+  },
+  "marks": {
+    "deviation_hud_table": "The tally in a HUD panel on the universal background, where the original draws SCORE.LBX's picture and its cursor (score.cpp:86-120).",
+    "hd_extension_score_header": "The player the tally is for, above the lines; the original prints no name.",
+    "invention_score_title": "The title word: the original's is part of its picture.",
+    "omission_score_pop_pictures": "The rows of population icons and the race portraits of the eliminated players (Draw_Pop, score.cpp:1282-1345; Draw_Eliminated_Race_Pictures, :700-780) are not drawn; the figures and the names are."
+  }
+}

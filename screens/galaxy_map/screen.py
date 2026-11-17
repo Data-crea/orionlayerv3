@@ -73,6 +73,7 @@ from screens.galaxy_map import viewctl
 from screens.galaxy_map import starfield as sf
 from screens.galaxy_map import floorlift
 from screens.galaxy_map import sidebar as sb
+from screens.galaxy_map import hudbanners
 from screens.galaxy_map import hudview
 from screens.galaxy_map import terrpanel, terrview
 
@@ -509,6 +510,7 @@ class GalaxyMapScreen(ScreenBase):
         terrpanel.render(self, surface)
         self._render_nav(surface)
         self._render_title(surface)
+        hudbanners.render(self, surface)
         if self._distance.on:
             ctx = self._map_context()
             if ctx is not None:
@@ -795,6 +797,8 @@ class GalaxyMapScreen(ScreenBase):
         function the click and the drawing use (decision 5)."""
         if spec.get("title"):
             return self.title_rect()
+        if spec.get("lights"):
+            return hudbanners.lights_rect(self, spec["lights"])
         return None
 
     # ── Home system ping ──────────────────────────────────

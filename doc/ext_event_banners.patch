@@ -1,0 +1,67 @@
+OrionLayer open fix 114 — the map's two event banners on the wire
+==================================================================
+
+Work order 403 (package B). orion2re on the fork's branch `orionlayer`
+(v2.0.0), on top of open fix 115 and its README row. Not on
+`orionlayer-local`. In src/ext/ext_api.cpp only, under ORION2RE_EXT (the
+file is compiled only with it).
+
+The main screen prints two banners while an event runs
+(mainscr_main.cpp:28-43, the word ESTR_BEAST at the top left with two
+lines above and below; :45-59, the hyperspace flux's H 0xE0 message at the
+right). Their conditions are EVENTS::Event_Check_Warp_Beast
+(events.cpp:217-225: event_data[EVENT_WARP_BEAST].status is 2, 4 or 6, for
+every player) and Event_Check_Hyperspace_Flux (events.cpp:207-215). event_data
+is in no block of the snapshot, so a client could not know.
+
+The change. SerializeState writes "EVTB" on every screen, before FILM (FILM
+stays the last block): uint8 version (1), uint8 the warp beast's event is
+active, uint8 the hyperspace flux's event is. Both functions only read
+event_data. Seven bytes per snapshot.
+
+Live: UNVERIFIED — no live run (Data's decision of 20 October 2026; work
+order 403 does not run the engine). Built on the scratch clone
+`~/claude/clones/403_orion2re` (`linux-debug`, ORION2RE_EXT on); a misspelt
+call (`Event_Check_Warp_BeastX`) is refused by the compiler.
+
+commit 72959b62bb587c7a446fda136e20f9b2d5da394e
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Tue Nov 17 07:36:18 2026 +0100
+
+    OrionLayer Open Fix 114: the map's two event banners on the wire (the block "EVTB", on every screen, before FILM: a version byte (1), uint8 the warp beast's event is active (EVENTS::Event_Check_Warp_Beast), uint8 the hyperspace flux is (Event_Check_Hyperspace_Flux)), so a client draws the banners mainscr_main.cpp:28-59 prints at the top left and right
+    
+    OrionLayer, open fix 114.
+    
+    Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 2df4536e..f0ec08e9 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -2750,6 +2750,26 @@ static void SerializeState(std::vector<uint8_t>& buf,
+         }
+     }
+ 
++    // 36a. The map's two event banners: "EVTB", written on EVERY screen
++    //     (HD reads it on the galaxy map), before FILM.
++    //     OrionLayer, open fix 114.
++    //     The main screen prints the warp beast's banner at the
++    //     top left while EVENTS::Event_Check_Warp_Beast holds
++    //     (mainscr_main.cpp:28-43) and the hyperspace flux's at the right
++    //     while Event_Check_Hyperspace_Flux does (:45-59); event_data is in
++    //     no other block. A version byte (1), then uint8 each: the beast
++    //     (status 2, 4 or 6 for every player, events.cpp:217-225) and the
++    //     flux (events.cpp:207-215). Both functions only read event_data.
++    {
++        buf.push_back((uint8_t)'E');
++        buf.push_back((uint8_t)'V');
++        buf.push_back((uint8_t)'T');
++        buf.push_back((uint8_t)'B');
++        Write8(buf, 1);                                   // block version
++        Write8(buf, EVENTS::Event_Check_Warp_Beast() != 0 ? (uint8_t)1 : (uint8_t)0);
++        Write8(buf, EVENTS::Event_Check_Hyperspace_Flux() != 0 ? (uint8_t)1 : (uint8_t)0);
++    }
++
+     // 37. The film that plays: "FILM", written ONLY while a FilmGuard lives
+     //     (SMACK::Play_Cinematic, smack.cpp:45), LAST. OrionLayer, open fix
+     //     112. A version byte, the length of the film's file name and its

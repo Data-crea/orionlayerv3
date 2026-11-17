@@ -494,4 +494,42 @@ def scanned_star_line(game_state, star_idx, strings=None):
     if not _player_knows_star(game_state, star_idx):
         return (strings.message(MSG_UNKNOWN_SYSTEM)
                 if strings is not None else "")
-    return getattr(stars[star_idx], "name", "") or ""
+    return _governed_name(game_state, stars[star_idx], strings)
+
+
+#: H 0x92 / 0x93: "%s ... %s ... %d" the star, its governor and his ETA
+#: (flt2.cpp:478-489); the literal beside them is `s_fmt_scanned_star_info`
+#: (mox.cpp:901).
+MSG_GOVERNOR_ETA_ONE, MSG_GOVERNOR_ETA_MANY = 0x92, 0x93
+GOVERNOR_FORMAT = "%s (%s)"
+
+
+def _governed_name(game_state, star, strings):
+    """State 7's text: the star's name, and with an officer assigned to a
+    colony of the player's there the governor's name and his ETA.
+
+    TRANSCRIPTION `strip_governor` (work order 403 A, flt2.cpp:469-489):
+    `officer_index[PLAYER_NUM]` -1 or no colony of the player's there ->
+    the plain name; else the leader's `eta` <= 0 -> "%s (%s)", 1 -> H 0x92,
+    more -> H 0x93 (name, leader name, eta). The leader record is verified
+    since work order 167 (`core/structs/leader.py`). UNVERIFIED live:
+    no save with an officer on the way was read."""
+    from core.structs import leader as leader_struct
+    name = getattr(star, "name", "") or ""
+    me = int(getattr(game_state, "player_num", 0) or 0)
+    officers = getattr(star, "officer_index", None) or ()
+    idx = int(officers[me]) if 0 <= me < len(officers) else -1
+    raws = getattr(game_state, "leaders_raw", None) or []
+    if idx == -1 or not (int(star.has_colony) >> (me & 0x1F)) & 1 or \
+            not 0 <= idx < len(raws):
+        return name
+    leader = leader_struct.parse(raws[idx])
+    eta = int(leader.eta)
+    if eta <= 0:
+        return hestrings.printf(GOVERNOR_FORMAT, name, leader.name)
+    template = strings.message(MSG_GOVERNOR_ETA_ONE if eta == 1
+                               else MSG_GOVERNOR_ETA_MANY) \
+        if strings is not None else None
+    if not template:
+        return name
+    return hestrings.printf(template, name, leader.name, eta)

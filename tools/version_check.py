@@ -200,6 +200,11 @@ FIX_NUMBERS = {
     "doc/ext_building_demolish.patch": (111,),
     "doc/ext_films.patch": (112,),
     "doc/ext_turn_summary_types.patch": (115,),
+    # work order 403, on the branch `orionlayer` after 115
+    "doc/ext_event_banners.patch": (114,),
+    "doc/ext_auto_turn_banner.patch": (118,),
+    "doc/ext_multiplayer_lights.patch": (119,),
+    "doc/ext_score_screen.patch": (120,),
 }
 
 

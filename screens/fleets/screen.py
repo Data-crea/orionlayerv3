@@ -43,9 +43,9 @@ from core import colonyfacts
 from . import fltart
 from . import fltdraw
 from . import flthud
-from . import fltbox, fltmove, fltpanel, fltgeom, fltrows, fltscan
+from . import fltbox, fltmove, fltpaint, fltpanel, fltgeom, fltrows, fltscan
 from . import fltwire
-from . import fltlight, fltminimap, fltshippic
+from . import fltdest, fltlight, fltminimap, fltshippic
 
 log = logging.getLogger("fleets")
 
@@ -123,6 +123,7 @@ class FleetsScreen(ScreenBase):
         self._arcs = kentext.ArcWords(language)
         self._view, self._cells, self._panel = None, [], []
         self._hover_cell = None
+        fltpaint.end(self)
         self._scan.clear()
         self._light.clear()
         self._scan_star, self._scan_small = -1, fltmove.CURRENT_FLEET
@@ -368,6 +369,8 @@ class FleetsScreen(ScreenBase):
         fltdraw.draw_inset(surface, self, _stars, self._state, self._art)
         fltdraw.draw_relocation_lines(surface, self, self._state, _stars,
                                       pygame.time.get_ticks())
+        fltdest.draw(surface, self, self._state, _stars,
+                     pygame.time.get_ticks())
         self._draw_fleet_light(surface, _stars)
         fltdraw.draw_status(surface, self, self._status)
         # The frame LAST, so its metal covers the two reference px each
@@ -568,26 +571,20 @@ class FleetsScreen(ScreenBase):
         return None
 
     def _toggle_slot(self, slot):
-        """Select or deselect the ship in one cell — MSG_SELECT_SHIP.
+        """A press on a grid cell: MSG_SELECT_SHIP for it and the start of
+        the painted selection (`fltpaint`, work order 403 A; open fix 28
+        makes it reach this screen at all — open fix 21's handler wants the
+        galaxy map's fleet box). Nothing is assumed about the result: the
+        selection HD draws next frame is the one FLTS reports."""
+        fltpaint.press(self, slot)
 
-        Open fix 28 makes this reach the fleet screen at all; open fix
-        21's handler refuses here (it wants the galaxy map's fleet box)
-        and writes an array this screen does not read. Nothing is
-        assumed about the result: the selection HD draws next frame is
-        the one the FLTS block reports, never the one sent.
+    def handle_left_release(self, screen_x, screen_y):
+        super().handle_left_release(screen_x, screen_y)
+        fltpaint.end(self)
 
-        Refused where the engine would refuse it (decision 33): a
-        foreign stack cannot be selected (flt1.cpp:1185, :1193) and
-        relocate mode 1 turns the painting off entirely (flt1.cpp:413).
-        """
-        if not (self.app.connected and self._view and self._view.ok):
-            return
-        if not self._view.own_stack:
-            return
-        if int(self._view.block.get("relocate_mode", 0)) == 1:
-            return
-        cell = self._cells[slot]
-        self.app.client.select_ship(cell.ship_idx, not cell.selected)
+    def handle_left_cancel(self):
+        super().handle_left_cancel()
+        fltpaint.end(self)
 
     def handle_mouse_motion(self, screen_x, screen_y):
         """The pointer over a ship shows that ship in the panel.
@@ -604,6 +601,7 @@ class FleetsScreen(ScreenBase):
         to send that would help, and a send per mouse movement would
         flood the input loop the API does have.
         """
+        fltpaint.motion(self, screen_x, screen_y)     # held button paints
         self._hover_cell = self._slot_at(screen_x, screen_y)
         if (self._view is not None and self._view.ok
                 and self._scan.hover(self._hover_cell, self._first_row,
@@ -699,6 +697,12 @@ class FleetsScreen(ScreenBase):
         without (`ScreenBase.no_view_reason`)."""
         if super().handle_right_button(down, screen_x, screen_y):
             return True
+        # a right click on a ship cell is the detail view's, and the engine
+        # ends RELOCATE on that same negative input
+        if down and not self._inert() and \
+                self._slot_at(screen_x, screen_y) is None and \
+                fltmove.right_click(self, screen_x, screen_y):
+            return True            # RELOCATE ends on a right click (403 A)
         if not down or self._inert() or not (
                 self._view is not None and self._view.ok and
                 self._view.own_stack):

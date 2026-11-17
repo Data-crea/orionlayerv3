@@ -6,7 +6,9 @@ calls `MAINSCR::Scan_Galaxy_Map_Fields_(scan_val.full, input, …)`; a
 match on `input` answers **result 0** with `clicked_star_id`, and with
 `_relocate_button_mode != 1` and `_merging_relocations == 0` that goes
 to `FLT2::Fltscrn_Move_Ships_(clicked_star_id)`. RELOCATE is the other
-branch entirely.
+branch (`Star_Relocation_`): since work order 403 A the same field is sent
+there too and the engine does the rest (`refusal`, `right_click`); a click
+on a small stack icon switches the shown fleet (`click_stack`).
 
 **THE POLARITY IS THE TRAP.** In `Scan_Galaxy_Map_Fields_` the second
 argument is `input` and a match there is the CLICK; the hover is the
@@ -115,42 +117,52 @@ def match(drawn, fields):
 
 
 def refusal(game_state, view, star_index):
-    """Why the move may not be sent, or None.
+    """Why the star click may not be sent, or None.
 
-    **DECISION 33, and only where it is one comparison.** The black
-    hole is: `_star[clicked].spectral_class == STAR_CLASS_BLACK_HOLE`
-    (flt1.cpp:640), one test, and the original answers it with a
-    `User_Box_` warning — which empties the field list, so refusing it
-    here also keeps the screen out of a box it did not need to enter.
-    Everything else the original checks —
-    `HACCESS::Player_Can_Order_Ship_` — reads data HD does not hold,
-    and is left to the game.
+    **DECISION 33, and only where it is one comparison.** What the
+    original's loop does with a star click, in its own order
+    (flt1.cpp:603-672): merging after F5 sets every relocation
+    (`merge_relocations`); RELOCATE mode 1 runs `Star_Relocation_`;
+    otherwise a black hole is answered with `User_Box_` H 0x78 (:651-654) — BEFORE
+    and without looking at the selection — and only then
+    `First_Selected_Ship_()` (:656) and `Player_Can_Order_Ship_`. Everything the
+    engine itself decides or says is let through (work order 403 A: its
+    boxes come through the message box, open fix 29); what is refused here
+    is what the original's own click does nothing with.
     """
     if view is None or not view.ok:
         return "the screen is not ready"
-    if (view.block or {}).get("merging_relocations"):
+    stars = getattr(game_state, "stars", None) or []
+    if (getattr(view, "block", None) or {}).get("merging_relocations"):
         # TRANSCRIPTION `merge_relocations` (work order 231 D): after F5 the
         # original's next star click sets every relocation of the player to
         # that star, with no selection and no black-hole test (flt1.cpp:
-        # 602-611, :655-664) — the engine answers with its box (H 0x77).
-        stars = getattr(game_state, "stars", None) or []
+        # 612-621, :661-672) — the engine answers with its box (H 0x77).
         return None if 0 <= star_index < len(stars) else "no such star"
+    if not 0 <= star_index < len(stars):
+        return "no such star"
+    if int((getattr(view, "block", None) or {}).get("relocate_mode", 0)) == 1:
+        # TRANSCRIPTION `relocate_target` (work order 403 A): in mode 1 the
+        # same click is `Star_Relocation_` (flt1.cpp:648-650) — the first
+        # click names the star to move from, the second the target; the
+        # engine keeps both (`scan_val.words[1]`, `relocate_target_star_idx`)
+        # and answers a refusal with its own boxes (H 0x82-0x88). No ship
+        # needs to be selected and a black hole is the engine's to judge.
+        return None
+    if star_struct.is_black_hole(stars[star_index]):
+        # TRANSCRIPTION `black_hole_box` (work order 403 A): `User_Box_`
+        # H 0x78 (flt1.cpp:651-655), with or without a selection. It used
+        # to be refused here to keep the screen out of a box; the box is an
+        # HD message box now (open fix 29, `core/msgbox`).
+        return None
     # `First_Selected_Ship()` scans EVERY icon (flt1.cpp:320-335); `view.rows`
     # holds only the displayed cells (at most 20), so a selection scrolled out
     # of sight read as "nothing selected" — the block carries all of them
     # (audit pass 2)
-    selected = (view.block or {}).get("ship_selected")
+    selected = (getattr(view, "block", None) or {}).get("ship_selected")
     if not (any(selected) if selected else view.selected_ships()):
         return ("no ship is selected — `First_Selected_Ship_()` is -1 "
                 "and the original's own click does nothing")
-    if int((view.block or {}).get("relocate_mode", 0)) == 1:
-        return ("RELOCATE mode is on: the same click sets a relocation "
-                "target instead (flt1.cpp:637)")
-    stars = getattr(game_state, "stars", None) or []
-    if not 0 <= star_index < len(stars):
-        return "no such star"
-    if star_struct.is_black_hole(stars[star_index]):
-        return "the game refuses a black hole (flt1.cpp:640-645)"
     return None
 
 
@@ -200,6 +212,9 @@ def click(screen, screen_x, screen_y):
     in_box, best = star_at(screen, screen_x, screen_y)
     if not in_box:
         return False
+    hit = stack_hit(screen, screen_x, screen_y)
+    if hit is not None:
+        return click_stack(screen, hit)
     if best is None:
         return True
     stars = screen._inset_stars()
@@ -222,18 +237,22 @@ def click(screen, screen_x, screen_y):
     if (screen._view.block or {}).get("merging_relocations"):
         log.info("map click: star %d -> field %d, every relocation there "
                  "(merge, F5)", best, field.index)
+    elif int((screen._view.block or {}).get("relocate_mode", 0)) == 1:
+        log.info("map click: star %d -> field %d, relocation (RELOCATE)",
+                 best, field.index)
     else:
         log.info("map click: star %d -> field %d, moving %d ship(s)",
                  best, field.index, len(screen._view.selected_ships()))
     screen.app.client.activate_field(field.index)
     return True
 
-def stack_at(screen, screen_x, screen_y):
-    """The index of the ship stack icon under the point in the inset, or
-    None — `Scan_Small_Ship_Icons_`' hover (flt1.cpp:668-682) through the
-    live list's hidden icon fields (`core/shipstacks.icon_at`, the Leaders
-    box's own test; work order 248). The icons stand in absolute native
-    pixels, so the point goes back through the inset's own rect."""
+def stack_hit(screen, screen_x, screen_y):
+    """`(icon index, live field)` of the ship stack icon under the point in
+    the inset, or None — `Scan_Small_Ship_Icons_`' scan (flt1.cpp:852-893)
+    through the live list's hidden icon fields (`core/shipstacks.icon_at`,
+    the Leaders box's own test; work order 248). The icons stand in
+    absolute native pixels, so the point goes back through the inset's own
+    rect."""
     box = next((b.screen_rect for b in screen.boxes
                 if b.name == "inset_map" and b.screen_rect), None)
     state = screen._state
@@ -244,9 +263,76 @@ def stack_at(screen, screen_x, screen_y):
     nx, ny, nw, nh = fltgeom.REGIONS["inset_map"]
     point = (nx + (screen_x - box.x) * nw / float(box.width),
              ny + (screen_y - box.y) * nh / float(box.height))
-    hit = shipstacks.icon_at(state, getattr(state, "fields", None) or [],
-                             point)
+    return shipstacks.icon_at(state, getattr(state, "fields", None) or [],
+                              point)
+
+
+def stack_at(screen, screen_x, screen_y):
+    """The index of the ship stack icon under the point, or None — the
+    hover (flt1.cpp:668-682)."""
+    hit = stack_hit(screen, screen_x, screen_y)
     return hit[0] if hit is not None else None
+
+
+def click_stack(screen, hit):
+    """A click on a small stack icon: the stack becomes the shown fleet.
+
+    TRANSCRIPTION `stack_click` (work order 403 A): `Scan_Small_Ship_Icons_`
+    answers a click on the icon's own field with result 0 — it takes the
+    icon (`Overlapped_Ship_Icon_Button_(&i, 7, 4)` cycles among icons within
+    7 x 4 px when the click repeats on the same spot, ships.cpp:567-620),
+    sets `_small_ship_stack_ptr` to its stack and redraws the screen
+    (flt1.cpp:852-867, :678-690). The field is a hidden one (type 0x29,
+    flt2.cpp:25-39), so ACTIVATE_FIELD is the click (decision 20) and the
+    cycling is the engine's. FLTS reports the new stack next frame.
+    The icon fields are added BEFORE the stars' (flt1.cpp:1260, :1267), and
+    the first field in list order wins a point (fields.cpp:1276-1290), so
+    over a star and an icon the click belongs to the icon.
+    UNVERIFIED live: the switch and the cycling."""
+    index, field = hit
+    if not screen.app.connected:
+        return True
+    log.info("map click: stack icon %d -> field %d", index, field.index)
+    screen.app.client.activate_field(field.index)
+    return True
+
+
+def right_click(screen, screen_x, screen_y):
+    """A right click while RELOCATE mode is on: leave the mode.
+
+    TRANSCRIPTION `relocate_cancel` (work order 403 A): the loop's first
+    branch is `if (input < 0 && relocate_button_mode == 1)` — a right click
+    on ANY field — which clears the pending star and the mode
+    (flt1.cpp:603-608). The original's second branch, `ret_map == 1 &&
+    mode 1` -> `Cancel_Star_Relocation_` (:645-646, :895-902), cannot run: `MAINSCR::
+    Scan_Galaxy_Map_Fields_` answers only 0, 4, 2 or -1 (mainscr.cpp:
+    3231-3259). So HD sends the right click on the star's own field when it
+    is on a star (the click the task named), else on the screen's last
+    field, the one that covers all 640 x 480 (flt1.cpp:1274). Returns True
+    when it went. UNVERIFIED live."""
+    view = screen._view
+    if view is None or not view.ok or not screen.app.connected or \
+            int((getattr(view, "block", None) or {}).get("relocate_mode", 0)) != 1:
+        return False
+    fields = getattr(screen._state, "fields", None) or []
+    field = None
+    in_box, star = star_at(screen, screen_x, screen_y)
+    if in_box and star is not None:
+        native = fltgeom.REGIONS["inset_map"]
+        field = match([(native[0] + sx, native[1] + sy)
+                       for sx, sy, _c in screen._inset_stars()],
+                      fields).get(star)
+    if field is None:
+        field = next((f for f in fields
+                      if f.field_type == fltwire.TYPE_HIDDEN
+                      and (f.x, f.y, f.x_end, f.y_end) == (0, 0, 639, 479)),
+                     None)
+    if field is None:
+        return False
+    log.info("right click in relocate mode: field %d, the mode ends",
+             field.index)
+    screen.app.client.cancel_field(field.index)
+    return True
 
 
 # The strip's "current fleet": not an icon index, so it never meets one.

@@ -214,6 +214,12 @@ SCREENS = {
     #: own frames over the held frame (decision 101, `core/filmview.py`);
     #: without the fix the film runs under its caller's id.
     86: ("(synthetic)",     None),             # a film
+    #: 87, synthetic, ON THE WIRE ONLY WITH OPEN FIX 120 (work order 403):
+    #: the end-of-game score screen (`SCORE::Hi_Score_Screen`,
+    #: score.cpp:490-545, the nine components before the Hall of Fame, which
+    #: keeps 14). `screens/score/` draws it from "SCOR"; without the fix it
+    #: runs under its caller's id and shows the F12 notice.
+    87: ("(synthetic)",     "score"),          # the end-of-game score screen
 }
 
 #: The last value of orion2re's own SCREEN enum:

@@ -326,6 +326,19 @@ class Dispatcher:
         if getattr(game_state, "multiplayer", None) is not None and \
                 "multiplayer" in self.screens:
             name = "multiplayer"
+        elif getattr(game_state, "auto_turn", None) is not None and \
+                screen_id in (12, 39) and "galaxy_map" in self.screens:
+            # HD EXTENSION `auto_turn_map` (work order 403, open fix 118):
+            # while the turns run by themselves ("AUTO" on the wire) the
+            # engine reports the turn's own id (12) or the report phase's,
+            # neither HD's, and the player would see the engine's picture;
+            # the map takes the window, draws the banner and stops the chain
+            # on a click or a key (`screens/galaxy_map/hudbanners.py`).
+            # ONLY on those two ids: the engine keeps the block on the wire
+            # for the whole of `Do_Next_Turn` (check_next_turn_exit_field
+            # stays 1), so a combat, a popup or a message box that comes
+            # during the chain keeps its own screen (review of WO 403).
+            name = "galaxy_map"
         else:
             name = next((n for n in self.shared_map.get(screen_id, ())
                          if self.screens[n].claims(game_state)),

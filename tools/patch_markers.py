@@ -602,6 +602,30 @@ LOCAL_PATCHES = {
         "Open fix 115: the Turn Summary's block (kind 2)",
         "the engine does not send the Turn Summary's messages with their "
         "type (open fix 115): HD ranks them by their words"),
+    # Work order 403: on the fork's branch `orionlayer` only, 72959b62.
+    "doc/ext_event_banners.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 114.",
+        "the engine does not send the map's event banners (open fix 114): "
+        "HD draws neither the warp beast's nor the hyperspace flux's"),
+    # Work order 403: on the fork's branch `orionlayer` only, fff33608.
+    "doc/ext_auto_turn_banner.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 118.",
+        "the engine does not send the auto-turn banner (open fix 118): HD "
+        "draws no banner and a click does not stop the chain"),
+    # Work order 403: on the fork's branch `orionlayer` only, 9557b23f.
+    "doc/ext_multiplayer_lights.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 119.",
+        "the engine does not send the multiplayer bar's lights (open fix "
+        "119): HD draws none"),
+    # Work order 403: on the fork's branch `orionlayer` only, 1d308edc.
+    "doc/ext_score_screen.patch": (
+        os.path.join("src", "game", "score.cpp"),
+        "OrionLayer, open fix 120.",
+        "the engine does not send the end-of-game score screen (open fix "
+        "120): HD shows the F12 notice"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with
