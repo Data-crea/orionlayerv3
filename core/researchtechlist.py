@@ -61,6 +61,7 @@ kind of thing that gets "corrected" by the next person to read it.
 """
 import pygame
 
+from core import lang
 from core import palette
 from core import researchlist
 from core import nativeview as geom_mod
@@ -355,8 +356,9 @@ def draw(surface, layout, style, popup, origin, names, wording):
     title = wording.list_title(popup.entry.group) if wording else None
     if title:
         size = layout.font_size(15)
-        surf = style.render_text(title, size, col("category",
-                                                  (128, 148, 186)))
+        with lang.verbatim():   # the category's name is the game's (WO 408)
+            surf = style.render_text(title, size, col("category",
+                                                      (128, 148, 186)))
         tx, ty = geom_mod.window_point(
             (popup.window_x(origin) + TITLE_DX, TITLE_Y), layout)
         surface.blit(surf, (tx - surf.get_width() // 2, ty))
@@ -376,7 +378,8 @@ def draw(surface, layout, style, popup, origin, names, wording):
                                  if names else str(app))
             width = geom_mod.window_width(lx + APP_X_OFFSET, label_y,
                                           APP_LABEL_WIDTH, layout)
-            size = _fit(style, text, width, layout.font_size(13))
+            with lang.verbatim():   # an application's name is the game's
+                size = _fit(style, text, width, layout.font_size(13))
             if popup.hover == (i, row):
                 # The click area keeps the transcribed row; the MARK is
                 # centred on the text by `researchband`, exactly as on

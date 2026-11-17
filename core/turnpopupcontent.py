@@ -28,6 +28,11 @@ DEFAULT_WORDS = {"close": "CLOSE",
                  # the Space Dragon's bribe (work order 319: MAINPUPS.LBX
                  # 0x46 refuse / close, 0x47 yes, art)
                  "dragon_no": "NO", "dragon_yes": "YES",
+                 # the reply to a human player's diplomacy request (work
+                 # order 408: BUFFER0.LBX 0x10, 0x11, 0x12, read off the
+                 # three pictures; the hotkeys A, I, W agree)
+                 "diplo_accept": "ACCEPT", "diplo_ignore": "IGNORE",
+                 "diplo_wait": "WAIT",
                  # the Turn Summary ranked by importance (work order 384)
                  "sum_colony": "COLONY EVENTS", "sum_empire": "EMPIRE",
                  "sum_ships": "SHIPS", "sum_spies": "SPIES",
@@ -223,7 +228,11 @@ RIGHT_HELP = {"turn_summary": 247, "planet_choice": 563,
               "leader_level": 564,
               # the Space Dragon's bribe: 561 over the whole screen
               # (erichelp.cpp:45-47, set at mainpups.cpp:521)
-              "dragon_bribe": 561}
+              "dragon_bribe": 561,
+              # the reply to a diplomacy request: 677 over the whole popup
+              # (evanhelp.cpp:140-145; the buttons' own 678-680 come from
+              # the engine's help list through `right_buttons`)
+              "diplomacy_reply": 677}
 
 
 def _act(state, index, how="activate"):
@@ -586,6 +595,36 @@ def _dragon_bribe(popup, state, words, app, anywhere):
     return {"lines": lines, "buttons": buttons, "art": art}
 
 
+def _diplomacy_reply(popup, state, words, app, anywhere):
+    a = popup["args"]
+    # TRANSCRIPTION `diplomacy_reply` (work order 408, open fix 122):
+    # `MAINSCR::Do_Reply_To_Diplomacy_Request` (mainscr.cpp:2475-2540) runs
+    # over the map when `Check_For_Diplomacy_Request` (:2646-2675) finds a
+    # human player asking for talks (game types 2 and 3, mainscr_main.cpp:
+    # 394-396; NOT a click on the request light, :1067-1100): the message
+    # H 0xDB over the requester's name and race name (:4732-4752), then
+    # ACCEPT (hotkey A, reply 1: `Accept_Diplomacy_Request`), IGNORE (I,
+    # reply 2: `Refuse_Diplomacy_Request`) and WAIT (W, reply 3:
+    # `Tell_Diplomacy_Requester_To_Wait`), left to right as the fields stand
+    # (+0x40, +0xBC, +0x13B, :4675-4725). ESC selects nothing: its hidden
+    # field's handle is thrown away (`unused_field`), so no key but the
+    # three hotkeys answers. Right click: help 677 on the popup, 678-680 on
+    # the buttons (evanhelp.cpp:140-145): `right_buttons`, the field's own
+    # help through the engine's list.
+    # OMISSION `diplomacy_reply_ink`: the original prints the message in the
+    # requester's colour (:4745-4750, args[4] carries it); HD draws the
+    # popup's own ink.
+    # UNVERIFIED `diplomacy_reply_live`: a network game cannot be started
+    # offline; drawn from the stand-in's bytes only (work order 408).
+    lines = [popup["text"]] if popup.get("text") else []
+    fields = [_act(state, a[1]), _act(state, a[2]), _act(state, a[3])]
+    return {"lines": lines,
+            "buttons": [(words["diplo_accept"], fields[0]),
+                        (words["diplo_ignore"], fields[1]),
+                        (words["diplo_wait"], fields[2])],
+            "right_buttons": [_field(state, a[i]) for i in (1, 2, 3)]}
+
+
 def _landing(popup, state, words, app, anywhere):
     a = popup["args"]
     return {"title": popup.get("title") or _planet_name(state, a[0]),
@@ -603,7 +642,7 @@ _BUILDERS = {"science": _science, "turn_summary": _turn_summary,
              "discovery": _system_choice, "leader_level": _leader_level,
              "gnn": _gnn, "troops": _troops, "slider": _slider,
              "antaran_room": _antaran_room, "dragon_bribe": _dragon_bribe,
-             "landing": _landing}
+             "landing": _landing, "diplomacy_reply": _diplomacy_reply}
 
 
 def content(popup, state, words, app=None):

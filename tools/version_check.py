@@ -207,6 +207,8 @@ FIX_NUMBERS = {
     "doc/ext_score_screen.patch": (120,),
     # work order 406
     "doc/ext_fleet_move_preview.patch": (121,),
+    # work order 408
+    "doc/ext_diplomacy_reply.patch": (122,),
 }
 
 

@@ -56,6 +56,7 @@ from core.structs import star as star_struct
 from core import colonyfacts
 
 from . import ldrdraw as draw
+from core import lang
 from core import nativedraw
 from . import ldrgeom as geom
 from . import ldrmap
@@ -204,9 +205,11 @@ def _draw_system(surface, screen, view, game_state, art, star):
     r = nativedraw.rect(layout, (geom.SYSTEM_AT[0], geom.SYSTEM_AT[1],
                            geom.VIEW_BOX[2] - 8, geom.VIEW_BOX[3] - 8))
     size = nativedraw.font_px(layout, "strip")
-    nativedraw.blit_text(surface, screen.style, stars[star].name, r.centerx,
-                   r.y + size // 2, r.w - 8, int(size * 1.2),
-                   draw.text_colour(art, "normal"), "center")
+    with lang.verbatim():           # the star's name is the game's (WO 408)
+        nativedraw.blit_text(surface, screen.style, stars[star].name,
+                             r.centerx, r.y + size // 2, r.w - 8,
+                             int(size * 1.2),
+                             draw.text_colour(art, "normal"), "center")
     raws = getattr(game_state, "planets_raw", None) or []
     planets = [(i, planet_struct.parse(raws[i]))
                for i in star_struct.planet_indices(stars[star])
@@ -233,10 +236,11 @@ def _draw_system(surface, screen, view, game_state, art, star):
                                centre, side // 2, max(1, side // 12))
         ink = draw.text_colour(art, "selected" if p.colony_index >= 0
                                else "normal")
-        nativedraw.blit_text(surface, screen.style,
-                       colonyfacts.star_planet_name(stars[star], index),
-                       centre[0], top + disc_max + note // 2, cell - 4,
-                       note, ink, "center")
+        with lang.verbatim():       # the planet's name is the game's (WO 408)
+            nativedraw.blit_text(surface, screen.style,
+                           colonyfacts.star_planet_name(stars[star], index),
+                           centre[0], top + disc_max + note // 2, cell - 4,
+                           note, ink, "center")
 
 
 def _draw_grid(surface, screen, view, game_state, art, block):
@@ -266,9 +270,10 @@ def _draw_grid(surface, screen, view, game_state, art, block):
         band = name_band(size)
         _draw_ship_picture(surface, screen, cell, rec, game_state,
                            picture_area(cell, band))
-        nativedraw.blit_text(surface, screen.style, rec.name, cell.centerx,
-                       cell.bottom - size - 2, cell.w - 4, size, ink,
-                       "center")
+        with lang.verbatim():       # the ship's name is the game's (WO 408)
+            nativedraw.blit_text(surface, screen.style, rec.name,
+                                 cell.centerx, cell.bottom - size - 2,
+                                 cell.w - 4, size, ink, "center")
         if int(block.get("picked_icon", -1)) == k:
             # LOOK EXCEPTION picture: the galaxy box's markers in the original's colours (officer.cpp)
             pygame.draw.rect(surface, draw.text_colour(art, "selected"),

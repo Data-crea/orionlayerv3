@@ -96,9 +96,12 @@ without the picture:
                  with as much light as it (`SUN_CANVAS_NATIVE`; until work
                  order 230 it took the map's zoom step, and shrank with it)
 """
+import contextlib
+
 import pygame
 
 from core import hestrings
+from core import lang
 from core import palette
 from core import textfit
 from core.hud import blocks as hud
@@ -162,10 +165,15 @@ def font(screen, name, default):
     return screen.layout.font_size(style.get("font_size", default))
 
 
-def text(screen, surface, rect, words, size, colour, align="center"):
+def text(screen, surface, rect, words, size, colour, align="center",
+         engine=False):
+    """`engine`: the words are the game's own (a star's or monster's name,
+    the wormhole line) and are drawn verbatim, so one equal to an HD word is
+    not translated alone (WO 408)."""
     if not words:
         return
-    surf = screen.style.render_text(words, size, tuple(colour[:3]))
+    with lang.verbatim() if engine else contextlib.nullcontext():
+        surf = screen.style.render_text(words, size, tuple(colour[:3]))
     x = {"left": rect.x, "right": rect.right - surf.get_width()}.get(
         align, rect.x + (rect.w - surf.get_width()) // 2)
     surface.blit(surf, (x, rect.y + (rect.h - surf.get_height()) // 2))
@@ -251,15 +259,17 @@ def title_colour():
     return at_floor(BLUE, TITLE_PANEL)
 
 
-def title(screen, surface, rect, words, size, s):
+def title(screen, surface, rect, words, size, s, engine=False):
     """The title in the blue with its shadow one native px down
     (`_Print_Centered_Shadow_Down_(…, 0x3D, …)`, sys.cpp:986); `s` device
     px per native px."""
     if not words:
         return
     drop = max(1, int(round(s)))
-    shadow = screen.style.render_text(words, size, tuple(TITLE_SHADOW[:3]))
-    face = screen.style.render_text(words, size, title_colour())
+    with lang.verbatim() if engine else contextlib.nullcontext():
+        shadow = screen.style.render_text(words, size,
+                                          tuple(TITLE_SHADOW[:3]))
+        face = screen.style.render_text(words, size, title_colour())
     x = rect.x + (rect.w - face.get_width()) // 2
     y = rect.y + (rect.h - face.get_height()) // 2
     surface.blit(shadow, (x, y + drop))
@@ -490,8 +500,9 @@ def info_box(screen, surface, view, lines, colour=INFO_TEXT):
     (`MISC::Draw_Darkened_Box_` at the content corner, sys.cpp:841, :1035)."""
     size = font(screen, "system_text", 16)
     gap = max(2, size // 3)
-    surfs = [(screen.style.render_text(t, size, tuple(colour)[:3]), g)
-             for t, g in lines if t]
+    with lang.verbatim():       # every line is the game's words (WO 408)
+        surfs = [(screen.style.render_text(t, size, tuple(colour)[:3]), g)
+                 for t, g in lines if t]
     if not surfs:
         return
     pad = max(3, size // 3)

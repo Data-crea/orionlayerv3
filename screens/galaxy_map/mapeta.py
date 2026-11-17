@@ -56,6 +56,7 @@ snapshots, the original draws this label only from its own main loop:
     change, which is a refused order. The snapshot before the effect
     carries the old `turns_left` ("A fresh message is not a fresh world").
 """
+from core import lang
 from core import zoomtables as zt
 from core.hestrings import printf
 from core.structs import ship as ship_struct
@@ -189,8 +190,9 @@ def render(surface, ctx, state, ships, stars, players, anchor, style,
         text = printf(template, turns)
         right, top = anchor_point(icons[icon_i], ships[ship_i], colour,
                                   ctx, anchor)
-        img = style.render_text(text, size,
-                                OWNER_COLORS.get(colour, NEUTRAL_COLOR)[:3])
+        with lang.verbatim():   # HESTRNGS' line and the turns (WO 408)
+            img = style.render_text(
+                text, size, OWNER_COLORS.get(colour, NEUTRAL_COLOR)[:3])
         ink = img.get_bounding_rect()
         surface.blit(img, (round(right) - ink.right, round(top) - ink.y))
         drawn.append((ship_i, text, (right, top)))

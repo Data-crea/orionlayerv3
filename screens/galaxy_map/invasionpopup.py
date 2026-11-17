@@ -47,6 +47,7 @@ import logging
 
 import pygame
 
+from core import lang as _lang
 from core.hestrings import printf
 from core.hud import blocks as hud
 from core.hud import text as hudtext
@@ -185,8 +186,9 @@ def render(screen, surface, popup, state, app=None, words=None):
 
     def line(words_, nx, ny, align="left"):
         x, y = bm.point(nx, ny)
-        nd.blit_text(surface, style, words_, x, y, bm.rect.w // 2, size,
-                     colour, align=align)
+        with _lang.verbatim():      # the game's ESTRINGS words (WO 408)
+            nd.blit_text(surface, style, words_, x, y, bm.rect.w // 2, size,
+                         colour, align=align)
 
     # the icons, colonists and troops through `Remap_Draw_`: COLONY2.LBX
     # 0x32's palette (`gcart.remap_palette`, mainpups.cpp:2702-2703)

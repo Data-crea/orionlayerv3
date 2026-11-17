@@ -34,6 +34,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 
+from core import lang
 from core import leaderportraits
 from core import nativedraw
 
@@ -312,10 +313,14 @@ def _render_cap(style, text, cap_px, colour, max_w=None):
     """`text` with capitals `cap_px` tall, shrunk to `max_w`; the surface
     and the y of its capitals' top inside it."""
     size = _cap_size(style, cap_px)
-    if max_w is not None:
-        size = nativedraw.fit(style, text or " ", max(1, max_w), size)
-    surf = style.render_text(text or " ", size, colour)
-    cap_top = style.render_text("H", size, colour).get_bounding_rect().y
+    # every word of a slot is the engine's (a name, a skill, a status, a
+    # cost line): verbatim, so one equal to an HD word stays as it is
+    # (work order 408)
+    with lang.verbatim():
+        if max_w is not None:
+            size = nativedraw.fit(style, text or " ", max(1, max_w), size)
+        surf = style.render_text(text or " ", size, colour)
+        cap_top = style.render_text("H", size, colour).get_bounding_rect().y
     return surf, cap_top
 
 
@@ -361,8 +366,9 @@ def _widest_skill_name(screen, size):
     hit = getattr(screen, "_widest_skill", None)
     if hit is not None and hit[0] == key:
         return hit[1]
-    w = max((screen.style.render_text(n, size, (255, 255, 255)).get_width()
-             for n in names if n), default=0)
+    with lang.verbatim():           # the engine's skill names (WO 408)
+        w = max((screen.style.render_text(n, size, (255, 255, 255))
+                 .get_width() for n in names if n), default=0)
     screen._widest_skill = (key, w)
     return w
 
@@ -378,8 +384,9 @@ def slot_of(screen, row):
     size = _cap_size(screen.style, slot.px(ldrslot.SKILL_CAP))
     values = [v for r in getattr(screen, "_rows", ()) or () for _s, _n, v
               in r.skills] + [v for _s, _n, v in row.skills]
-    widest_v = max((screen.style.render_text(v, size, (255, 255, 255))
-                    .get_width() for v in values if v), default=0)
+    with lang.verbatim():           # the engine's figures (WO 408)
+        widest_v = max((screen.style.render_text(v, size, (255, 255, 255))
+                        .get_width() for v in values if v), default=0)
     right = ldrslot.value_right(slot, _widest_skill_name(screen, size),
                                 widest_v)
     return ldrslot.Slot(box, inner, len(row.skills), right)
@@ -725,11 +732,16 @@ def draw_strip(surface, screen, native, text, art):
     DEVIATION `strip_ink`: the rows' ink, not the owner's colour ramp."""
     if not text:
         return
-    from core import textfit
     r = strip_rect(screen.layout, native)
     size = nativedraw.font_px(screen.layout, "strip")
     ink = text_colour(art, "normal")
     room = r.w - 6
+    with lang.verbatim():           # the engine's strip words (WO 408)
+        _strip_lines(surface, screen, r, text, size, ink, room)
+
+
+def _strip_lines(surface, screen, r, text, size, ink, room):
+    from core import textfit
     if screen.style.render_text(text, size, ink).get_width() <= room:
         nativedraw.blit_text(surface, screen.style, text, r.centerx,
                   r.y + (r.h - size) // 2, room, size, ink, "center")

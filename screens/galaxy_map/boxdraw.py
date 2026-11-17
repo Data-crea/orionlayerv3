@@ -99,6 +99,7 @@ import pygame
 from core.hud import blocks as hud
 
 from core import hestrings
+from core import lang
 from core import mouse
 from core import palette
 from screens.galaxy_map import (boxcells, boxmodel, boxpaint, fleetorders,
@@ -376,7 +377,8 @@ def _draw_fleet(screen, surface, r, model, hits):
         model["status"])
     colour = REFUSED if refused else TEXT_COLOR
     syswindow.text(screen, surface, r["fleet_status"], status,
-                   syswindow.font(screen, "fleet_status", 16), colour)
+                   syswindow.font(screen, "fleet_status", 16), colour,
+                   engine=True)           # a ship's name, a star, the engine's words
 
 
 #: A colony, outpost or transport ship's picture is wide (the slot pictures
@@ -485,12 +487,13 @@ def render(screen, surface):
                                                     r[names[0]], r[names[1]])
             syswindow.title(screen, surface, panel, model["title"],
                             syswindow.font(screen, names[1], 20),
-                            syswindow.native_scale(r[names[0]]))
+                            syswindow.native_scale(r[names[0]]),
+                            engine=True)
         else:
             syswindow.frame(screen, surface, r[names[0]])
             syswindow.text(screen, surface, r[names[1]], model["title"],
                            syswindow.font(screen, names[1], 20),
-                           syswindow.TITLE_COLOR)
+                           syswindow.TITLE_COLOR, engine=True)
         hits.append((r[names[0]], None))
         if model["kind"] == "system":
             screen._system_drawn = True
@@ -502,10 +505,12 @@ def render(screen, surface):
             # `system_text` box's (it ends before CLOSE), the colour is HD's
             # text colour (the original's is Font_Colors2(1, 'n', 's'),
             # UNVERIFIED live)
-            syswindow.text(screen, surface, r["system_text"],
-                           model["wormhole"],
-                           syswindow.font(screen, "system_text", 16),
-                           TEXT_COLOR, "right")
+            # the game's own word: verbatim (WO 408)
+            with lang.verbatim():
+                syswindow.text(screen, surface, r["system_text"],
+                               model["wormhole"],
+                               syswindow.font(screen, "system_text", 16),
+                               TEXT_COLOR, "right")
         else:
             _draw_fleet(screen, surface, r, model, hits)
             # the fleet box's help, as `Set_Main_Screen_Help_List_`

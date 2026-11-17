@@ -52,6 +52,7 @@ import logging
 
 import pygame
 
+from core import lang
 from core.hestrings import printf
 from screens.galaxy_map import boxdraw, boxmodel, sysfleets, sysorbits
 from screens.galaxy_map import syswindow
@@ -180,13 +181,14 @@ def special_block(screen, popup, app, width):
     pad = max(6, int(14 * scale))
     size = syswindow.font(screen, "system_text", 16)
     name = turnpopupcontent._special_name(app, popup["args"][1])
-    head = screen.style.render_text(
-        name, int(size * 1.25), tuple(hudtext.colour("title")[:3])) \
-        if name else None
-    body = [screen.style.render_text(t, size,
-                                     tuple(hudtext.colour("value")[:3]))
-            for t in textfit.wrap_text(screen.style, popup["text"], size,
-                                       width - 2 * pad)]
+    with lang.verbatim():       # the special's name and text are the game's
+        head = screen.style.render_text(
+            name, int(size * 1.25), tuple(hudtext.colour("title")[:3])) \
+            if name else None
+        body = [screen.style.render_text(t, size,
+                                         tuple(hudtext.colour("value")[:3]))
+                for t in textfit.wrap_text(screen.style, popup["text"], size,
+                                           width - 2 * pad)]
     step = int(size * 1.3)
     height = 2 * pad + (head.get_height() + pad // 2 if head else 0) + \
         step * len(body)
@@ -286,7 +288,7 @@ def render(screen, surface, popup, state, app=None):
             "planets": [], "fleets": [], "wormhole": ""}
     syswindow.title(screen, surface, panel, m["title"],
                     syswindow.font(screen, "system_title", 20),
-                    syswindow.native_scale(r["system_box"]))
+                    syswindow.native_scale(r["system_box"]), engine=True)
     view = r["system_view"]
     drawn = syswindow.draw_view(screen, surface, view, m, state)
     s = sysorbits.frame(view)[0]
@@ -298,7 +300,7 @@ def render(screen, surface, popup, state, app=None):
         syswindow.planet_info(screen, surface, view, drawn, pointer, state)
     syswindow.text(screen, surface, r["system_text"], m.get("wormhole"),
                    syswindow.font(screen, "system_text", 16),
-                   syswindow.TEXT_COLOR, "left")
+                   syswindow.TEXT_COLOR, "left", engine=True)
     close = r["system_close"]
     syswindow.close_button(screen, surface, close, syswindow.close_label(screen))
     syswindow.finish(screen, surface, corners)      # work order 235

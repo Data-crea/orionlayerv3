@@ -25,7 +25,7 @@ from core.hud import blocks as hud
 from core.hud import icons
 from core.hud import text as hudtext
 
-from core import palette
+from core import lang, palette
 
 from screens.galaxy_map import maplines
 
@@ -324,8 +324,10 @@ def draw_status(surface, screen, text, color=None):
     rect = content_rect(screen, "status_band")
     if rect is None or not text:
         return
-    icons.fitted_word(surface, screen.style, rect, text, color or col("label"),
-                      share=fltfonts.STATUS_SHARE)
+    with lang.verbatim():       # the game's star / ship words (WO 408)
+        icons.fitted_word(surface, screen.style, rect, text,
+                          color or col("label"),
+                          share=fltfonts.STATUS_SHARE)
 
 
 # ── The grid's content ────────────────────────────────────
@@ -543,11 +545,12 @@ def draw_cells(surface, screen, cells, art=None):
                 surface.blit(picture, at)
             if cell.name:
                 band = max(10, rect.height // 4)
-                icons.fitted_word(surface, screen.style,
-                                  pygame.Rect(rect.x, rect.bottom - band,
-                                              rect.width, band),
-                                  cell.name, col("label"),
-                                  share=fltfonts.CELL_NAME_SHARE)
+                with lang.verbatim():   # a ship's name is the game's (408)
+                    icons.fitted_word(surface, screen.style,
+                                      pygame.Rect(rect.x, rect.bottom - band,
+                                                  rect.width, band),
+                                      cell.name, col("label"),
+                                      share=fltfonts.CELL_NAME_SHARE)
             _mark_cell(surface, screen, cell, rect, hover)
             continue
         # The cell is split the way the original splits it: the picture
@@ -564,11 +567,12 @@ def draw_cells(surface, screen, cells, art=None):
                          patch.inflate(-patch.width // 3,
                                        -patch.height // 3))
         if cell.name:
-            icons.fitted_word(surface, screen.style,
-                              pygame.Rect(rect.x, rect.bottom - band,
-                                          rect.width, band),
-                              cell.name, col("label"),
-                              share=fltfonts.CELL_NAME_SHARE)
+            with lang.verbatim():       # a ship's name is the game's (408)
+                icons.fitted_word(surface, screen.style,
+                                  pygame.Rect(rect.x, rect.bottom - band,
+                                              rect.width, band),
+                                  cell.name, col("label"),
+                                  share=fltfonts.CELL_NAME_SHARE)
         _mark_cell(surface, screen, cell, rect, hover)
 
 

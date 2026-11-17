@@ -255,7 +255,12 @@ def verbatim():
     """The game's own text being drawn (a help entry, a message box, a
     popup's lines): `tr` leaves every piece of it alone, so a highlighted
     word inside a sentence ("~Farmers~ produce food") is not translated on
-    its own (seen in the German walk)."""
+    its own (seen in the German walk).
+
+    TRANSCRIPTION `engine_words_verbatim` (WO 408): every name, race word and
+    message line the ENGINE supplies is drawn under this, wherever a screen
+    draws one next to HD's own words (which keep `tr`), so a name that
+    equals a de.json key is not translated alone."""
     old, _state["verbatim"] = _state["verbatim"], True
     try:
         yield

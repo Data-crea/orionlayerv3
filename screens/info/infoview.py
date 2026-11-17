@@ -3,6 +3,8 @@ the surface and the local player's record (`screen.py` routes by page).
 Every text by its key through `core/modtexts`; see `screen.py` for what
 each page may send (nothing but RETURN) and `infotexts` for the keys.
 """
+import contextlib
+
 import pygame
 
 from core import lang
@@ -30,10 +32,11 @@ def history(screen, surface, me):
         x, gap = 233, 122
     for k, p in enumerate(order):
         colour = infodraw.player_colour(screen._players[p])
-        infodraw.infobox.line(surface, screen, screen._players[p].race_name,
-                              infodraw.R(screen, (x, y, x + max(gap, 120) - 8,
-                                                  y + 14)),
-                              infodraw.px(screen, "skill"), colour)
+        with lang.verbatim():       # the race's name is the game's (WO 408)
+            infodraw.infobox.line(
+                surface, screen, screen._players[p].race_name,
+                infodraw.R(screen, (x, y, x + max(gap, 120) - 8, y + 14)),
+                infodraw.px(screen, "skill"), colour)
         y += 19
         if k in (2, 5):
             x, y = x + gap, 64
@@ -156,8 +159,9 @@ def tech(screen, surface, me):
     # it and the other applications of the field you have (`infofacts`).
     infodraw.text(surface, screen, "tech.facts", geom.TECH_FACTS,
                   _facts(me, screen.tech_app))
-    infodraw.text(surface, screen, f"tech.body.{screen.tech_app}",
-                  geom.TECH_BODY, body)
+    with lang.verbatim():          # the game's application text (WO 408)
+        infodraw.text(surface, screen, f"tech.body.{screen.tech_app}",
+                      geom.TECH_BODY, body)
     for k, key in enumerate(pages.TECH_TABS):
         infodraw.button(surface, screen, geom.tech_tab_rect(k),
                         T(f"info.tech.tab.{key}", key), k == screen.tech_tab)
@@ -174,9 +178,13 @@ def races(screen, surface, me):
         if j < len(order):
             p = screen._players[order[j]]
             head = p.race_name.upper()
-            lines = pages.trait_lines(p)
+            # the trait lines and the eliminated word are HD's mod texts:
+            # translated here, because the block is drawn verbatim for the
+            # race's name (WO 408)
+            lines = [lang.tr(t) for t in pages.trait_lines(p)]
             if p.eliminated:
-                lines = [T("info.races.eliminated", "") or ""] + lines
+                lines = [lang.tr(T("info.races.eliminated", "") or "")] \
+                    + lines
             body = "\n".join([head, ""] + lines)
             if not p.eliminated:         # info.cpp:1719-1723
                 screen._race_shown[k] = (2, pages.trait_help(p))
@@ -188,8 +196,12 @@ def races(screen, surface, me):
         # marking covers it (196 E3).
         colour = infodraw.player_colour(p) if j < len(order) else \
             infodraw.NORMAL
-        infodraw.text(surface, screen, f"races.{k}", box,
-                      body.replace("^", ""), colour=colour)
+        # the race's name is the game's own word (WO 408); the panel of no
+        # race is HD's word and keeps the translation
+        with (lang.verbatim() if j < len(order)
+              else contextlib.nullcontext()):
+            infodraw.text(surface, screen, f"races.{k}", box,
+                          body.replace("^", ""), colour=colour)
     if len(order) > 4:
         infodraw.button(surface, screen, geom.RACE_PAGE_BUTTON,
                         f"{screen.race_page + 1}/2")

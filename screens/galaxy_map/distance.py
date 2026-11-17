@@ -42,12 +42,13 @@ palette 0x70-0x72 (0x4C-0x50 when blocked), not measured; HD prints the
 words in the brightest colour of the line's own green (the blocked line's
 red).
 """
+import contextlib
 import logging
 import math
 
 import pygame
 
-from core import hestrings
+from core import hestrings, lang
 from core import mapcoords as mc
 from screens.galaxy_map import maplines
 
@@ -212,7 +213,10 @@ class Mode:
             words = hestrings.printf(fmt, parsecs(a, b))
             colour = max(maplines.GREEN, key=sum)
         size = screen.layout.font_size(16)
-        img = screen.style.render_text(words, size, tuple(colour)[:3])
+        # HESTRNGS' word and the figure are the game's (WO 408); the
+        # "blocked" fallback without the strings is HD's and stays translated
+        with (lang.verbatim() if text else contextlib.nullcontext()):
+            img = screen.style.render_text(words, size, tuple(colour)[:3])
         # native px -> window px: the map window is native 22..527
         k = ctx.view.box[2] / float(mc.MAP_RIGHT - mc.MAP_LEFT)
         x = q[0] + TEXT_DX * k

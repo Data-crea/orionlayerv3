@@ -235,7 +235,7 @@ def draw(screen, surface, r, model):
         hud.panel(surface, r[name], scale)
     syswindow.text(screen, surface, r["monster_title"], model["title"],
                    syswindow.font(screen, "monster_title", 24),
-                   hudtext.colour("title"))
+                   hudtext.colour("title"), engine=True)
     pic = r["monster_picture"]
     # HD EXTENSION `monster_stars` (Data, 30 October 2026): the picture stands
     # on the system window's own star field, so the box is not an empty dark

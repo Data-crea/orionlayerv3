@@ -220,6 +220,14 @@ SCREENS = {
     #: keeps 14). `screens/score/` draws it from "SCOR"; without the fix it
     #: runs under its caller's id and shows the F12 notice.
     87: ("(synthetic)",     "score"),          # the end-of-game score screen
+    #: 88, synthetic, ON THE WIRE ONLY WITH OPEN FIX 122 (work order 408):
+    #: the reply to a human player's diplomacy request in a network game
+    #: (`MAINSCR::Do_Reply_To_Diplomacy_Request`, mainscr.cpp:2475-2540: its
+    #: own input loop over the map, ACCEPT / IGNORE / WAIT). A turn popup
+    #: (TPOP kind 26) drawn over the map by `core/turnpopup.py`, no screen
+    #: of its own; without the fix the loop runs under the map's id and the
+    #: player sees the engine's picture behind the F12 notice.
+    88: ("(synthetic)",     None),             # the reply to a diplomacy request
 }
 
 #: The last value of orion2re's own SCREEN enum:

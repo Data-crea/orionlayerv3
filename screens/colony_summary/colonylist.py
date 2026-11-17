@@ -83,6 +83,7 @@ and the track length — is in `colonyrows.py` and marked there.
 
 import pygame
 
+from core import lang
 from core import palette
 
 from core import textfit
@@ -541,8 +542,10 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
         left += step
         room = max(1, room - step)
     colour = ROW_NAME if scanned else ROW_NAME_DIM
-    lines = [(style.render_text(
-        _fit(row["name"], style, name_px, room, cfg), name_px, colour), 0)]
+    with lang.verbatim():       # the planet's name is the game's (WO 408)
+        lines = [(style.render_text(
+            _fit(row["name"], style, name_px, room, cfg), name_px, colour),
+            0)]
     detail = _detail_text(row, cfg)
     if detail:
         lines.append((style.render_text(detail, small_px, DETAIL_COLOR),

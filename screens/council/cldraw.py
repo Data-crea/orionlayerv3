@@ -11,7 +11,7 @@ import re
 
 import pygame
 
-from core import palette, textfit
+from core import lang, palette, textfit
 from core.hud import blocks as hud
 from core.hud import text as hudtext
 from core.structs import player as player_struct
@@ -49,10 +49,21 @@ def _size(scale, k=1.0):
     return max(12, int(round(19 * scale * k)))
 
 
-def _line(surface, style, text, size, rgb, rect, align):
+def _render(style, text, size, rgb, engine=False):
+    """One line as a picture. `engine`: the text came from the game (a
+    player's or race's name, the council's message and menu) and is drawn
+    verbatim, so a name equal to an HD word is not translated while its
+    neighbours stay as they are (WO 408); HD's own words keep `lang.tr`."""
+    if not engine:
+        return style.render_text(text, size, rgb)
+    with lang.verbatim():
+        return style.render_text(text, size, rgb)
+
+
+def _line(surface, style, text, size, rgb, rect, align, engine=False):
     if not text:
         return
-    img = style.render_text(text, size, rgb)
+    img = _render(style, text, size, rgb, engine)
     if img.get_width() > rect.w:
         img = pygame.transform.smoothscale(img, (rect.w, img.get_height()))
     hudtext.blit(surface, img, rect, align=align)
@@ -72,7 +83,8 @@ def draw(surface, screen, council, state):
     if r is not None:
         inner = r.inflate(-2 * pad, -pad)
         for line, align in zip(council["lines"], ("left", "center", "right")):
-            _line(surface, style, line, _size(scale), text_rgb, inner, align)
+            _line(surface, style, line, _size(scale), text_rgb, inner, align,
+                  engine=True)
 
     if clhall.active():
         _hall(surface, style, scale, council, state, who, text_rgb, dim_rgb)
@@ -105,10 +117,10 @@ def _nominee(surface, style, scale, r, council, k, who, text_rgb, dim_rgb):
           pygame.Rect(r.x, y, r.w, h), "center")
     y += int(h * 1.4)
     _line(surface, style, name, h, rgb, pygame.Rect(r.x, y, r.w, h),
-          "center")
+          "center", engine=True)
     y += int(h * 1.3)
     _line(surface, style, race, _size(scale), rgb,
-          pygame.Rect(r.x, y, r.w, h), "center")
+          pygame.Rect(r.x, y, r.w, h), "center", engine=True)
     y += int(h * 2.0)
     big = _size(scale, 2.6)
     _line(surface, style, str(council["received"][k]), big, text_rgb,
@@ -147,7 +159,7 @@ def _members(surface, style, scale, r, council, who, text_rgb, dim_rgb):
                                                    None))
         label = f"{race}  {name}" if race else name
         _line(surface, style, label, size, owner_rgb(colour),
-              row.inflate(-size, 0), "left")
+              row.inflate(-size, 0), "left", engine=True)
         _line(surface, style, str(m["votes"]), size, text_rgb,
               row.inflate(-size, 0), "right")
         y += row_h
@@ -164,15 +176,15 @@ def _coloured(style, line, size, text_rgb, names):
         spans = [(m.start(), m.end(), names[m.group(0)])
                  for m in re.finditer(r"(?<!\w)(?:%s)(?!\w)" % pat, line)]
     if not spans:
-        return style.render_text(line, size, text_rgb)
+        return _render(style, line, size, text_rgb, True)
     parts, at = [], 0
     for a, b, rgb in spans:
         if a > at:
-            parts.append(style.render_text(line[at:a], size, text_rgb))
-        parts.append(style.render_text(line[a:b], size, rgb))
+            parts.append(_render(style, line[at:a], size, text_rgb, True))
+        parts.append(_render(style, line[a:b], size, rgb, True))
         at = b
     if at < len(line):
-        parts.append(style.render_text(line[at:], size, text_rgb))
+        parts.append(_render(style, line[at:], size, text_rgb, True))
     out = pygame.Surface((sum(i.get_width() for i in parts),
                           max(i.get_height() for i in parts)),
                          pygame.SRCALPHA)
@@ -190,8 +202,10 @@ def _message(surface, style, scale, r, council, text_rgb, dim_rgb,
     y = r.y
     names = {n: owner_rgb(c) for n, _race, c in (who or {}).values()
              if len(n) > 1}
-    for line in textfit.wrap_text(style, council["message"] or "", size,
-                                  r.w):
+    with lang.verbatim():           # the engine's message (WO 408)
+        message = textfit.wrap_text(style, council["message"] or "", size,
+                                    r.w)
+    for line in message:
         img = _coloured(style, line, size, text_rgb, names)
         if y + img.get_height() > r.bottom:
             break
@@ -202,7 +216,7 @@ def _message(surface, style, scale, r, council, text_rgb, dim_rgb,
     if menu:
         y += size
         _line(surface, style, menu["title"].strip(), size, dim_rgb,
-              pygame.Rect(r.x, y, r.w, size * 2), "center")
+              pygame.Rect(r.x, y, r.w, size * 2), "center", engine=True)
         y += size * 2
         items = [(i, it) for i, it in enumerate(menu["items"])
                  if it["text"].strip()]
@@ -212,9 +226,10 @@ def _message(surface, style, scale, r, council, text_rgb, dim_rgb,
         x = r.centerx - total // 2
         for i, it in items:
             b = pygame.Rect(x, min(y, r.bottom - bh), bw, bh)
-            hud.small_button(surface, b, scale,
-                             "normal" if it["enabled"] else "disabled",
-                             it["text"].strip(), style_renderer=style)
+            with lang.verbatim():       # the engine's menu word (WO 408)
+                hud.small_button(surface, b, scale,
+                                 "normal" if it["enabled"] else "disabled",
+                                 it["text"].strip(), style_renderer=style)
             if it["enabled"]:
                 rects.append((b, i))
             x += bw + size
@@ -228,7 +243,9 @@ def _message(surface, style, scale, r, council, text_rgb, dim_rgb,
 def _plate(surface, style, scale, rect, lines):
     """A dark plate with centred lines [(text, size, rgb)] — the hall's
     label, over a picture and so on its own ground."""
-    imgs = [style.render_text(t, s, c) for t, s, c in lines if t]
+    # a line is (text, size, rgb) or (text, size, rgb, engine)
+    imgs = [_render(style, l[0], l[1], l[2], len(l) > 3 and l[3])
+            for l in lines if l[0]]
     if not imgs:
         return
     pad = max(4, int(6 * scale))
@@ -273,7 +290,7 @@ def _hall(surface, style, scale, council, state, who, text_rgb, dim_rgb):
                                 max(2, int(4 * scale)))
         _plate(surface, style, scale,
                pygame.Rect(rect.x, rect.bottom + int(4 * scale), rect.w, 0),
-               [(name, _size(scale, 0.75), owner_rgb(colour)),
+               [(name, _size(scale, 0.75), owner_rgb(colour), True),
                 (f"{m['votes']}", _size(scale, 0.75), text_rgb)])
     for k, rect in enumerate(stands):
         player = council["nominees"][k]
@@ -285,8 +302,8 @@ def _hall(surface, style, scale, council, state, who, text_rgb, dim_rgb):
         if council["voter"] == player:
             pygame.draw.ellipse(surface, owner_rgb(colour), rect,
                                 max(2, int(3 * scale)))
-        lines = [(name, _size(scale, 1.1), owner_rgb(colour)),
-                 (race, _size(scale, 0.8), owner_rgb(colour)),
+        lines = [(name, _size(scale, 1.1), owner_rgb(colour), True),
+                 (race, _size(scale, 0.8), owner_rgb(colour), True),
                  (f"{council['received'][k]} VOTES RECEIVED  ·  "
                   f"{council['own_votes'][k]} OWN", _size(scale, 0.75),
                   dim_rgb)]

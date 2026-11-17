@@ -76,6 +76,7 @@ special's popup, titled "Star System %s" (sys.cpp:736-776).
 """
 import pygame
 
+from core import lang
 from core.structs import player as player_struct
 
 H_ARTEMIS, H_PORTAL = 0x17B, 0x17C
@@ -205,8 +206,10 @@ def gate_hover(screen, surface, view, state, hits, pointer, text):
     label = (text.message(over[3]) if text is not None else None) or ""
     words = gate_text(label, over[4], race_names(state))
     size = syswindow.font(screen, "system_text", 16)
-    width = screen.style.render_text(label, size, (255, 255, 255)).get_width()
-    lines = textfit.wrap_text(screen.style, words, size, width + 2)
+    with lang.verbatim():       # the game's gate text (WO 408)
+        width = screen.style.render_text(label, size,
+                                         (255, 255, 255)).get_width()
+        lines = textfit.wrap_text(screen.style, words, size, width + 2)
     me = getattr(state, "player_num", 0)
     colour = syswindow.owner_colour(sysfleets.player_colour_index(state, me))
     syswindow.info_box(screen, surface, view,
@@ -250,11 +253,12 @@ def draw_monster(screen, surface, view, colour, name_colour):
     name, desc = monster_words(screen)
     size = syswindow.font(screen, "system_view", 16)
     surfs = []
-    if name:
-        surfs.append(screen.style.render_text(name, size, name_colour))
-    for line in (textfit.wrap_text(screen.style, desc, size,
-                                   int(view.w * 0.9)) if desc else []):
-        surfs.append(screen.style.render_text(line, size, colour))
+    with lang.verbatim():       # the special's name and text are the game's
+        if name:
+            surfs.append(screen.style.render_text(name, size, name_colour))
+        for line in (textfit.wrap_text(screen.style, desc, size,
+                                       int(view.w * 0.9)) if desc else []):
+            surfs.append(screen.style.render_text(line, size, colour))
     y = view.y + (view.h - sum(sf.get_height() for sf in surfs)) // 2
     for sf in surfs:
         surface.blit(sf, (view.x + (view.w - sf.get_width()) // 2, y))

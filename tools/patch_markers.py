@@ -633,6 +633,13 @@ LOCAL_PATCHES = {
         "the engine does not send the Fleets screen's move preview (open "
         "fix 121): HD draws no preview line and the strip stays empty with "
         "ships selected"),
+    # Work order 408: on the fork's branch `orionlayer` only, 62af0dac.
+    "doc/ext_diplomacy_reply.patch": (
+        os.path.join("src", "game", "mainscr.cpp"),
+        "OrionLayer, open fix 122.",
+        "the engine does not send the reply to a human player's diplomacy "
+        "request (open fix 122): HD shows the F12 notice over the engine's "
+        "popup"),
 }
 
 #: Patches that are REPORTED to Joes and not yet applied: listed with

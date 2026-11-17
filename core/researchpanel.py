@@ -22,11 +22,14 @@ rather than clipping it. An HD font cannot be squeezed, so the size
 comes down until the string fits — the same intent, and the nearest
 thing available. DEVIATION, in each screen's marked list.
 """
+import contextlib
+
 import pygame
 
 from core.hud import blocks as hud
 from core.hud import glyphs
 
+from core import lang
 from core import palette
 from core import researchart
 from core import researchband
@@ -236,8 +239,15 @@ def _fit(style, text, max_w, size):
     return MIN_FONT
 
 
+def _game(engine=True):
+    """The scope a game name is measured and drawn in: verbatim, so a field,
+    application or category name that equals an HD word is not translated
+    alone (WO 408). `engine` False is HD's own word (the placeholder)."""
+    return lang.verbatim() if engine else contextlib.nullcontext()
+
+
 def _blit_text(surface, style, text, pos, max_w, size, color, scale=None,
-               bold=BOLD):
+               bold=BOLD, engine=True):
     """One name, shrunk to fit, through Style.render_text (decision 30).
 
     Every string here can carry game data — a field name, an
@@ -247,9 +257,10 @@ def _blit_text(surface, style, text, pos, max_w, size, color, scale=None,
     """
     if not text:
         return None
-    size = _fit(style, text, max_w, size)
-    surf = (style.render_text(text, size, color) if scale is None
-            else shadowed(style, text, size, color, scale, bold))
+    with _game(engine):
+        size = _fit(style, text, max_w, size)
+        surf = (style.render_text(text, size, color) if scale is None
+                else shadowed(style, text, size, color, scale, bold))
     surface.blit(surf, pos)
     return surf
 
@@ -344,7 +355,8 @@ def row_label(layout, style, entry, row, text):
     """
     label_x, label_y, label_w = label_anchor(entry, row)
     width = geom_mod.window_width(label_x, label_y, label_w, layout)
-    size = _fit(style, text or "", width, layout.font_size(ROW_FONT))
+    with _game(not entry.placeholder):
+        size = _fit(style, text or "", width, layout.font_size(ROW_FONT))
     band = researchband.band(layout, style, size, (label_x, label_y),
                              *entry.band_span())
     return size, width, band.move(0, _ink_drop(layout.scale, ROW_BOLD))
@@ -372,9 +384,10 @@ def word_rects(layout, style, entry, words, names):
     name = names.field_name(entry.field) if names else None
     if name:
         name_x, name_y, name_w = name_anchor(entry)
-        size = _fit(style, name, geom_mod.window_width(
-            name_x, name_y, name_w, layout), layout.font_size(19))
-        surf = style.render_text(name, size, (255, 255, 255))
+        with _game():
+            size = _fit(style, name, geom_mod.window_width(
+                name_x, name_y, name_w, layout), layout.font_size(19))
+            surf = style.render_text(name, size, (255, 255, 255))
         out.append(surf.get_rect(topleft=geom_mod.window_point(
             (name_x, name_y), layout)))
     for row in range(len(entry.apps)):
@@ -383,7 +396,8 @@ def word_rects(layout, style, entry, words, names):
             continue
         size, _width, _band = row_label(layout, style, entry, row, text)
         label_x, label_y, _w = label_anchor(entry, row)
-        surf = style.render_text(text, size, (255, 255, 255))
+        with _game(not entry.placeholder):
+            surf = style.render_text(text, size, (255, 255, 255))
         out.append(surf.get_rect(topleft=geom_mod.window_point(
             (label_x, label_y), layout)))
     return tuple(out)
@@ -503,4 +517,4 @@ def _draw_entry(surface, layout, style, entry, hover, words, names, wording,
                    if is_current and (every_row
                                       or marks_row(names, app, current[1]))
                    else col("row", _ink(228, 234, 242, 184, 192, 206)), layout.scale,
-                   ROW_BOLD)
+                   ROW_BOLD, engine=not entry.placeholder)

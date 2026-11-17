@@ -35,7 +35,12 @@ KINDS = {1: "science", 2: "turn_summary", 3: "leader_hire",
          # work order 322 E: open fix 109 (`doc/ext_system_picker.patch`),
          # the diplomacy system picker; its tail is `core.systempickerwire`'s,
          # its view the audience's (`screens/audience/aupicker.py`)
-         25: "system_picker"}
+         25: "system_picker",
+         # work order 408: open fix 122 (`doc/ext_diplomacy_reply.patch`),
+         # the reply to a human player's diplomacy request in a network
+         # game (`MAINSCR::Do_Reply_To_Diplomacy_Request`, mainscr.cpp:2475);
+         # no tail, its view the generic popup's
+         26: "diplomacy_reply"}
 #: The ids open fix 49 reports (40, 52 and 33 are the game's own); 68 and
 #: 69 are open fix 91's.
 IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
@@ -43,7 +48,7 @@ IDS = {40: "turn_summary", 52: "science", 59: "leader_hire",
        64: "combat_target", 33: "landing", 68: "colony_combat",
        69: "ground_combat", 70: "council", 71: "troops",
        80: "slider", 82: "antaran_room", 83: "mutation",
-       84: "dragon_bribe", 85: "system_picker"}
+       84: "dragon_bribe", 85: "system_picker", 88: "diplomacy_reply"}
 #: The system display's slots (MAX_PLANETS_PER_STAR) and ship buttons.
 SLOTS, SHIP_SLOTS = 5, 15
 

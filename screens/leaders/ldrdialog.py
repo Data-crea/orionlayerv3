@@ -36,6 +36,7 @@ import pygame
 
 from core.hud import blocks as hud
 
+from core import lang
 from core import leaderportraits
 from core import textfit
 
@@ -120,15 +121,17 @@ def draw_popup(surface, screen, view, rows_words, art, game_state):
     title_rect = nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1))
     from core import leaderskills as ls
     name = ls.leader_name(rec, title_word or "", the_word)
-    _paragraph(surface, screen, name, title_rect, ink,
-               nativedraw.font_px(layout, "name"))
+    with lang.verbatim():       # the leader's name is the engine's (WO 408)
+        _paragraph(surface, screen, name, title_rect, ink,
+                   nativedraw.font_px(layout, "name"))
     _popup_skills(surface, screen, rec, level, words, art, ink)
     question = ldrpopup.question(view, idx, words.h, title_word or "",
                                  the_word)
     x, y, w, h = ldrpopup.MESSAGE_RECT
-    _paragraph(surface, screen, question or "",
-               nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1)), ink,
-               nativedraw.font_px(layout, "strip"))
+    with lang.verbatim():       # the engine's HESTR question (WO 408)
+        _paragraph(surface, screen, question or "",
+                   nativedraw.rect(layout, (x, y, x + w - 1, y + h - 1)),
+                   ink, nativedraw.font_px(layout, "strip"))
     for key, sprite_name, native in (
             ("reject", "popup_reject", ldrpopup.REJECT_RECT),
             ("hire", "popup_hire", ldrpopup.HIRE_RECT)):
@@ -164,13 +167,15 @@ def _popup_skills(surface, screen, rec, level, words, art, ink):
                 at[1] + side.get_height() // 2)))
         at = nativedraw.point(layout, ldrpopup.TEXT_X + geom.SKILL_NAME_DX, y)
         value = ldrrows.skill_value(sid, level, words.unit)
-        drawn = nativedraw.blit_text(surface, screen.style, value, right,
-                                     at[1], right - at[0], size, ink,
-                                     "right")
-        nativedraw.blit_text(surface, screen.style,
-                       words.estring(ls.SKILL_NAME_ESTRINGS[sid]) or "",
-                       at[0], at[1], (drawn.x if drawn else right) - at[0] - 4,
-                       size, ink)
+        with lang.verbatim():   # the engine's figure and skill name (WO 408)
+            drawn = nativedraw.blit_text(surface, screen.style, value, right,
+                                         at[1], right - at[0], size, ink,
+                                         "right")
+            nativedraw.blit_text(
+                surface, screen.style,
+                words.estring(ls.SKILL_NAME_ESTRINGS[sid]) or "",
+                at[0], at[1], (drawn.x if drawn else right) - at[0] - 4,
+                size, ink)
         y += geom.SKILL_STEP
 
 
@@ -195,8 +200,9 @@ def skill_help_rect(screen, title, body):
     layout = screen.layout
     size = nativedraw.font_px(layout, "strip")
     width = nativedraw.rect(layout, (0, 0, TEXTBOX_TEXT_W - 1, 0)).w
-    lines = textfit.wrap_text(screen.style, body or "", size, width)
-    line_h = screen.style.render_text("Ag", size, (0, 0, 0)).get_height()
+    with lang.verbatim():       # the game's skill text (WO 408)
+        lines = textfit.wrap_text(screen.style, body or "", size, width)
+        line_h = screen.style.render_text("Ag", size, (0, 0, 0)).get_height()
     native_h = int(round(len(lines) * line_h
                          / nativedraw.native_scale(layout)))
     h = min(TEXTBOX_PAD_H + native_h, geom.NATIVE_H - 8)
@@ -212,13 +218,15 @@ def draw_skill_help(surface, screen, title, body, art):
     ink = draw.text_colour(art, "normal")
     head = draw.text_colour(art, "selected")
     scale = nativedraw.native_scale(screen.layout)
-    nativedraw.blit_text(surface, screen.style, title, r.centerx,
-                   r.y + int(8 * scale), r.w - int(20 * scale),
-                   nativedraw.font_px(screen.layout, "name"), head, "center")
     y = r.y + int(TEXTBOX_TEXT_DY * scale)
     x = r.x + int(TEXTBOX_TEXT_DX * scale)
-    for line in lines:
-        surf = screen.style.render_text(line, size, ink)
-        surface.blit(surf, (x, y))
-        y += surf.get_height()
+    with lang.verbatim():       # the game's skill text (WO 408)
+        nativedraw.blit_text(
+            surface, screen.style, title, r.centerx, r.y + int(8 * scale),
+            r.w - int(20 * scale), nativedraw.font_px(screen.layout, "name"),
+            head, "center")
+        for line in lines:
+            surf = screen.style.render_text(line, size, ink)
+            surface.blit(surf, (x, y))
+            y += surf.get_height()
     return r

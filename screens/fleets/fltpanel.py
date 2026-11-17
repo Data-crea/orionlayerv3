@@ -19,7 +19,7 @@ module's docstring lists as omitted.
 """
 import logging
 
-from core import textfit
+from core import lang, textfit
 
 from . import fltrows
 from . import fltshippic
@@ -147,8 +147,9 @@ def panel_block(screen, lines, words=None, rect=None, px=None):
     texts = [f"{label}: {value}" if label else str(value)
              for label, value in lines]
     colour = col("label")
-    rendered, size = textfit.squeeze_block(
-        screen.style, texts, rect.width, rect.height, sizes, colour)
+    with lang.verbatim():       # the ship's lines are the game's (WO 408)
+        rendered, size = textfit.squeeze_block(
+            screen.style, texts, rect.width, rect.height, sizes, colour)
     if textfit.block_height(rendered) <= rect.height:
         return rendered, size, 0
 
@@ -267,25 +268,28 @@ def draw_columns(surface, screen, panel, rect):
     widths = (max(8, stops["right_label"] - stops["entry"]),
               max(8, rect.x + rect.width - stops["right_entry"]))
     for size in range(px, floor - 1, -1):
-        line_h = screen.style.render_text("Wg", size, colour).get_height()
-        head = [_head_row(screen, slot, size, colour, stops)
-                for slot in panel.head]
-        headings = []
-        if panel.weapons_heading:
-            headings.append((screen.style.render_text(
-                panel.weapons_heading, size, dim), stops["label"]))
-        if panel.specials_heading:
-            headings.append((screen.style.render_text(
-                panel.specials_heading, size, dim), stops["right_label"]))
-        cols = []
-        for i, items in enumerate((panel.weapons, panel.specials)):
-            block = []
-            for text in items:
-                block.extend(textfit.wrap_rendered(
-                    screen.style, text, size, widths[i],
-                    DAMAGED_RED if isinstance(text, fltrows.Damaged)
-                    else colour))
-            cols.append(block)
+        with lang.verbatim():   # every word of the panel is the game's (408)
+            line_h = screen.style.render_text("Wg", size,
+                                              colour).get_height()
+            head = [_head_row(screen, slot, size, colour, stops)
+                    for slot in panel.head]
+            headings = []
+            if panel.weapons_heading:
+                headings.append((screen.style.render_text(
+                    panel.weapons_heading, size, dim), stops["label"]))
+            if panel.specials_heading:
+                headings.append((screen.style.render_text(
+                    panel.specials_heading, size, dim),
+                    stops["right_label"]))
+            cols = []
+            for i, items in enumerate((panel.weapons, panel.specials)):
+                block = []
+                for text in items:
+                    block.extend(textfit.wrap_rendered(
+                        screen.style, text, size, widths[i],
+                        DAMAGED_RED if isinstance(text, fltrows.Damaged)
+                        else colour))
+                cols.append(block)
         rows = len(head) + bool(headings) + max(len(c) for c in cols)
         if rows * line_h > rect.height:
             continue
@@ -382,10 +386,11 @@ def draw_paragraph(surface, screen, para, words=None):
     paragraphs = paragraph_text(screen.helptext, para)
     asked = panel_font_px(screen)
     floor = max(1, screen.layout.font_size(PANEL_MIN_FONT))
-    rendered, size = textfit.squeeze_block(
-        screen.style, paragraphs, rect.width, rect.height,
-        [n for n in range(asked, floor - 1, -1)] or [asked],
-        col("panel_paragraph"))
+    with lang.verbatim():       # HELP.LBX's paragraph, the game's (WO 408)
+        rendered, size = textfit.squeeze_block(
+            screen.style, paragraphs, rect.width, rect.height,
+            [n for n in range(asked, floor - 1, -1)] or [asked],
+            col("panel_paragraph"))
     height = textfit.block_height(rendered)
     dropped = 0
     if height > rect.height:

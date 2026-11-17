@@ -32,6 +32,7 @@ from core.structs import star as star_struct
 from screens.galaxy_map import sysorbits
 
 from . import ldrdraw
+from core import lang
 from core import nativedraw
 from . import ldrgeom as geom
 from . import ldrpics
@@ -183,7 +184,9 @@ def draw(surface, screen, game_state, art, star):
     hits = sysorbits.draw(surface, r, model(game_state, star), planet,
                           at=frame_at(screen), colours=ring_colours())
     size = nativedraw.font_px(layout, "strip")
-    nativedraw.blit_text(surface, screen.style, stars[star].name, r.centerx,
-                   r.y + size // 2, r.w - 8, int(size * 1.2),
-                   ldrdraw.text_colour(art, "normal"), "center")
+    with lang.verbatim():           # the star's name is the game's (WO 408)
+        nativedraw.blit_text(surface, screen.style, stars[star].name,
+                             r.centerx, r.y + size // 2, r.w - 8,
+                             int(size * 1.2),
+                             ldrdraw.text_colour(art, "normal"), "center")
     return hits

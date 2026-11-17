@@ -12,7 +12,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import shell
 
-from core import listgrid, palette, textfit
+from core import lang, listgrid, palette, textfit
 from screens.colony_summary import colonyinset, colonyplanets
 from screens.galaxy_map.renderer import OWNER_COLORS
 
@@ -168,13 +168,17 @@ def render_list(screen, surface, rows, cells, first, hover_index,
         size = max(1, int(bh * float(cfg.get("disc_share", 0.72))))
         if discs is None:
             discs = colonyplanets.set_for(screen, size)
-        _render_planet_cell(screen, surface, cols.get("planet"), by, bh,
-                            words["planet"], row, colour, discs, size,
-                            upper, lower)
-        for key in COLUMN_KEYS[1:]:
-            if key in cols:
-                _render_pair(screen.style, surface, cols[key], by, bh,
-                             words[key], colour, upper, lower)
+        # every cell is the engine's own text (a planet's and star's name,
+        # the owner's race, the game's climate and size words): verbatim,
+        # so a word equal to an HD word is not translated alone (WO 408)
+        with lang.verbatim():
+            _render_planet_cell(screen, surface, cols.get("planet"), by, bh,
+                                words["planet"], row, colour, discs, size,
+                                upper, lower)
+            for key in COLUMN_KEYS[1:]:
+                if key in cols:
+                    _render_pair(screen.style, surface, cols[key], by, bh,
+                                 words[key], colour, upper, lower)
 
 
 def _render_planet_cell(screen, surface, col, by, bh, words, row, colour,
@@ -322,9 +326,11 @@ def render_status(screen, surface, status):
     screen.style.draw_plate(surface, rect, screen.layout.scale, OUTLINE)
     if not status or not status[0]:
         return
-    surf = _text(screen.style, status[0],
-                 screen.layout.font_size(_font(screen, "status_line", 22)),
-                 STATUS_COLORS[status[1]], rect.width - 8)
+    with lang.verbatim():       # the game's status text or a star name (408)
+        surf = _text(screen.style, status[0],
+                     screen.layout.font_size(_font(screen, "status_line",
+                                                   22)),
+                     STATUS_COLORS[status[1]], rect.width - 8)
     surface.blit(surf, surf.get_rect(center=rect.center))
 
 

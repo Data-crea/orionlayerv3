@@ -51,6 +51,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import hover
 from core.hud import text as hudtext
+from core import lang
 from core import nativedraw as nd
 
 from . import racesband
@@ -165,15 +166,20 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
         ignored = (screen.words_ignored, at[0], at[1],
                    racesband.inner(layout, cell).w,
                    nd.font_px(layout, "note"))
-        reach = racesband.line_rect(style, *ignored, "center")
+        with lang.verbatim():           # the engine's word (WO 408)
+            reach = racesband.line_rect(style, *ignored, "center")
     name_at = nd.point(layout, px + geom.NAME_W // 2, py + geom.NAME_DY)
-    racesband.in_cell(surface, layout, style, cell, slot.name, name_at[0],
-                      name_at[1],
-                      nd.rect(layout, (0, 0, geom.NAME_W - 1, 0)).w,
-                      nd.font_px(layout, "status"), ink(art, "high"),
-                      "center", reach=reach)
-    if ignored is not None:
-        nd.blit_text(surface, style, *ignored, ink(art, "high"), "center")
+    # the player's name and the engine's IGNORED word are the game's own
+    # text: verbatim, so a name equal to an HD word stays as it is (WO 408)
+    with lang.verbatim():
+        racesband.in_cell(surface, layout, style, cell, slot.name, name_at[0],
+                          name_at[1],
+                          nd.rect(layout, (0, 0, geom.NAME_W - 1, 0)).w,
+                          nd.font_px(layout, "status"), ink(art, "high"),
+                          "center", reach=reach)
+        if ignored is not None:
+            nd.blit_text(surface, style, *ignored, ink(art, "high"),
+                         "center")
     _draw_text(surface, screen, slot, art)
     _draw_bar(surface, screen, i, slot.relation if slot.active else None,
               art)
@@ -253,10 +259,12 @@ def _no_contact(surface, screen, i, art):
     tx, ty = geom.TEXT[i]
     at = nd.point(screen.layout, tx + geom.NO_CONTACT_DX,
                   ty + geom.NO_CONTACT_DY)
-    nd.blit_text(surface, screen.style, screen.words_no_contact, at[0], at[1],
-                 nd.rect(screen.layout, (0, 0, geom.TEXT_BOX[0], 0)).w,
-                 nd.font_px(screen.layout, "name"), ink(art, "normal"),
-                 "center")
+    with lang.verbatim():               # the engine's word (WO 408)
+        nd.blit_text(surface, screen.style, screen.words_no_contact, at[0],
+                     at[1],
+                     nd.rect(screen.layout, (0, 0, geom.TEXT_BOX[0], 0)).w,
+                     nd.font_px(screen.layout, "name"), ink(art, "normal"),
+                     "center")
 
 
 def _draw_text(surface, screen, slot, art):
@@ -273,8 +281,9 @@ def _draw_text(surface, screen, slot, art):
     size = min(size, max(nd.MIN_FONT, int(step * 0.85)))
     y = box.y + (box.h - step * len(slot.lines)) // 2
     for line in slot.lines:
-        nd.blit_text(surface, screen.style, line, box.centerx, y, box.w,
-                     size, ink(art, "normal"), "center")
+        with lang.verbatim():           # the engine's treaty line (WO 408)
+            nd.blit_text(surface, screen.style, line, box.centerx, y, box.w,
+                         size, ink(art, "normal"), "center")
         y += step
 
 
@@ -326,6 +335,11 @@ def relation_word(surface, screen, slot, art):
                             y + geom.SLIDER_SIZE[1] - 1))
     size = nd.font_px(layout, "status")
     text = slot.relation_word
+    with lang.verbatim():               # the engine's word (WO 408)
+        return _relation_word(surface, style, layout, knob, text, size, art)
+
+
+def _relation_word(surface, style, layout, knob, text, size, art):
     first = racesband.line_rect(style, text, knob.centerx, knob.y, knob.w,
                                 size, "center")
     if first is None:
@@ -443,7 +457,8 @@ def draw_bonuses(surface, screen, bonuses, art):
             continue
         # `Squeeze_Centered_Print_(x, y, text, w)`: centred in [x, x + w].
         at = nd.point(layout, x + w // 2, y)
-        nd.blit_text(surface, screen.style, f"{label}{value}%", at[0], at[1],
-                     nd.rect(layout, (0, 0, w, 0)).w,
-                     nd.font_px(layout, "status"), ink(art, "normal"),
-                     "center")
+        with lang.verbatim():           # the engine's word (WO 408)
+            nd.blit_text(surface, screen.style, f"{label}{value}%", at[0],
+                         at[1], nd.rect(layout, (0, 0, w, 0)).w,
+                         nd.font_px(layout, "status"), ink(art, "normal"),
+                         "center")

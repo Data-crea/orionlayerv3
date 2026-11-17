@@ -128,6 +128,7 @@ mark a star one way.
 """
 import pygame
 
+from core import lang
 from core import palette
 from screens.galaxy_map.renderer import OWNER_COLORS
 
@@ -362,7 +363,8 @@ def render(surface, stars, label, area, cfg, layout, style,
     if not label:
         return
     size = layout.font_size(cfg.get("label_font", 15))
-    text = style.render_text(str(label), size, LABEL_COLOR[:3])
+    with lang.verbatim():       # the scanned star's name is the game's (408)
+        text = style.render_text(str(label), size, LABEL_COLOR[:3])
     lx = rect.x + int(LABEL_NATIVE[0] * rect.w / 128.0)
     ly = rect.y + int(LABEL_NATIVE[1] * rect.h / 91.0)
     surface.blit(text, (lx - text.get_width() // 2,

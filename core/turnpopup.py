@@ -621,6 +621,19 @@ KEY_KINDS = ("science", "turn_summary", "planet_choice", "discovery",
              "antaran_room")
 
 
+def key_code(event):
+    """The key's code as a hotkey is matched: 27 for ESC, else the upper-case
+    letter. `"ß".upper()` is "SS" (two characters, `ord` raises), so a
+    character that does not fold to one stays itself (review of work order
+    408)."""
+    import pygame as _pg
+    if event.key == _pg.K_ESCAPE:
+        return 27
+    ch = (event.unicode or " ")[0]
+    up = ch.upper()
+    return ord(up) if len(up) == 1 else ord(ch)
+
+
 def key_action(view, popup, event):
     """The action a key answers: ESC / Enter / Space on the last button —
     or, on the colony combat popup (work order 232 C), the button whose
@@ -636,9 +649,11 @@ def key_action(view, popup, event):
     # the Space Dragon's bribe too (work order 319): NO / CLOSE carries ESC
     # (E 135), YES E 561's "y" (`Update_Dragon_New_Star_Fields_`,
     # mainpups.cpp:2135-2151)
-    if popup["kind"] in ("colony_combat", "slider", "dragon_bribe"):
-        code = 27 if event.key == pygame.K_ESCAPE else \
-            ord((event.unicode or " ")[0].upper())
+    # the reply to a diplomacy request (work order 408, open fix 122):
+    # the hotkeys A, I, W are its buttons' own, ESC answers nothing
+    if popup["kind"] in ("colony_combat", "slider", "dragon_bribe",
+                         "diplomacy_reply"):
+        code = key_code(event)
         for action in view.buttons:
             f = action[1] if action is not None else None
             if f is not None and (f.hotkey or 0) in (code, ord(chr(

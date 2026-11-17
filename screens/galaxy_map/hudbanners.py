@@ -53,8 +53,11 @@ turns that run by themselves; while the auto-turn block stands (ids 12 and
 39) HD prints a small dim line in the map area's bottom right
 (`labels.auto_turn_hint` in layout.json, translated by `lang.tr`): ESC stops
 it, and any key or a click does too (DEVIATION `auto_turn_any_key`).
-OMISSION `diplomacy_reply_popup`: the reply to a human's request
-(mainscr.cpp:2475-2540, help 677-680) is not built.
+TRANSCRIPTION `diplomacy_reply_popup`: a diplomacy light has no click
+(Draw_Diplomacy_Request_Lights, mainscr.cpp:1067-1100 adds no field): the
+reply to a human's request (:2475-2540, help 677-680) is a popup the engine
+opens by itself, HD's since work order 408 (open fix 122,
+`core/turnpopupcontent.py` `_diplomacy_reply`).
 """
 import logging
 
@@ -123,7 +126,8 @@ def _banner(screen, surface, text, right, rect, now):
     s = screen.layout.scale
     size = screen.layout.font_size(BANNER_FONT)
     colour = sb.pulse_colour(WARM, now)
-    img = screen.style.render_text(text, size, colour)
+    with lang.verbatim():       # the engine's ESTRINGS / HESTRNGS word (408)
+        img = screen.style.render_text(text, size, colour)
     inset = int(BANNER_INSET * s)
     y = rect.y + int(BANNER_TOP * s)
     x = rect.right - inset - img.get_width() if right else left_edge(
@@ -180,7 +184,8 @@ def render_auto_banner(screen, surface):
     if block is None or rect is None or not block.get("text"):
         return
     size = screen.layout.font_size(BANNER_FONT)
-    img = screen.style.render_text(block["text"], size, (240, 240, 248))
+    with lang.verbatim():       # the engine's race and stardate (WO 408)
+        img = screen.style.render_text(block["text"], size, (240, 240, 248))
     pad = int(14 * screen.layout.scale)
     box = pygame.Rect(0, 0, img.get_width() + 2 * pad,
                       img.get_height() + 2 * pad)

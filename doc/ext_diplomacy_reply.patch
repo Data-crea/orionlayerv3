@@ -1,0 +1,137 @@
+OrionLayer open fix 122 — the reply to a human player's diplomacy request on the wire
+====================================================================================
+
+Work order 408. orion2re on the fork's branch `orionlayer` (v2.0.0), on top
+of open fix 121 and its README row. Not on `orionlayer-local`. In
+src/game/mainscr.cpp under ORION2RE_EXT, and a comment row in
+src/ext/ext_api.cpp's TPOP table.
+
+In a network game (game type 2 or 3) the main screen's loop calls
+MAINSCR::Check_For_Diplomacy_Request (mainscr_main.cpp:394-396,
+mainscr.cpp:2646-2675) every pass: when NETMOX::Human_Requesting_Diplomacy
+names a player, MAINSCR::Do_Reply_To_Diplomacy_Request (mainscr.cpp:2475-2540)
+runs ITS OWN input loop over the map — the popup of BUFFER0.LBX 0x0F with
+three buttons: ACCEPT (0x10, hotkey A, reply 1: Accept_Diplomacy_Request,
+which opens the diplomacy screen), IGNORE (0x11, hotkey I, reply 2:
+Refuse_Diplomacy_Request) and WAIT (0x12, hotkey W, reply 3:
+Tell_Diplomacy_Requester_To_Wait), and the message H_Message 0xDB over the
+requester's name and race name (Draw_Reply_To_Diplomacy_Request,
+mainscr.cpp:4732-4752). It is NOT started by a click on the request light
+(Draw_Diplomacy_Request_Lights, :1067-1100, draws and has no field). ESC is a
+hidden whole-screen field whose handle is thrown away (`unused_field`), so it
+selects nothing and the loop goes on. Right click: help 677 over the popup,
+678 / 679 / 680 on the buttons (evanhelp.cpp:140-145, :516-530). The loop is
+a modal one with its own fields; nothing of it reached a client but pixels
+and a field list under the caller's id.
+
+The change. While the loop runs a TurnPopupGuard reports id 88 and TPOP
+kind 26 (no new block, no new version: TPOP is version 1 for every kind but
+the Turn Summary's): args [0] the requester, [1] the accept field, [2] the
+invoke field (reply 2, Refuse), [3] the wait field, [4] the requester's
+colour (-1 when the requester is out of range); text = the message formatted
+once before the loop, as the drawing function formats it (H 0xDB, name, race
+name), into a buffer that outlives the loop; title empty; no tail. The guard
+ends when the loop does. Read only; nothing in the game's play changes.
+
+Live: UNVERIFIED — see doc/orion2re_open_fixes.md entry 122: a network game
+cannot be started offline, and the hotseat game (the project's only live
+path) never has a request (NETMOX::human_diplomacy_request_mask is set by
+the network layer only). Built as a syntax check of the changed files against
+the build's own flags and PCH on the scratch clone
+`~/claude/clones/408_orion2re` (ORION2RE_EXT on; a misspelt variable is
+refused by the compiler); ~/orion2re/out is not rebuilt by this work.
+
+commit 62af0dac2821bb60a07cbabff7d5c96caad35fb8
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Tue Nov 17 14:49:58 2026 +0100
+
+    OrionLayer Open Fix 122: the reply to a human player's diplomacy request on the wire (MAINSCR::Do_Reply_To_Diplomacy_Request reports id 88 and TPOP kind 26 while its loop runs: the requester, the three reply fields accept (A), invoke = refuse (I, the picture reads IGNORE) and wait (W), the requester's colour, and the message H 0xDB with the requester's name and race name as text; ESC selects nothing in the original and is not sent)
+    
+    OrionLayer, open fix 122.
+    
+    Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index bd58f563..805ea708 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -1512,6 +1512,19 @@ static void SerializeState(std::vector<uint8_t>& buf,
+     //                                                          "Choose A System:", text = the
+     //                                                          statement (diplomacy_message);
+     //                                                          the tail below
++    //     26    88  the reply to a human player's diplomacy request in a network
++    //               game (MAINSCR::Do_Reply_To_Diplomacy_Request, mainscr.cpp:2475,
++    //               called from Check_For_Diplomacy_Request in the main screen's
++    //               loop, mainscr_main.cpp:394-396; open fix 122)
++    //                                                        [0] the requester [1] accept
++    //                                                          (reply 1, hotkey A) [2] invoke
++    //                                                          (reply 2 = refuse, hotkey I,
++    //                                                          the picture reads IGNORE) [3] wait
++    //                                                          (reply 3, hotkey W) [4] the
++    //                                                          requester's colour; text = the
++    //                                                          message H 0xDB with the
++    //                                                          requester's name and race name;
++    //                                                          no tail
+     //
+     //     Written: version, kind, n_args + args, title, text (int16
+     //     length + raw bytes each), then per kind:
+diff --git a/src/game/mainscr.cpp b/src/game/mainscr.cpp
+index 968b7d40..5a909a89 100755
+--- a/src/game/mainscr.cpp
++++ b/src/game/mainscr.cpp
+@@ -6,6 +6,9 @@
+ #include "game/serialization.h"
+ #include "lua/lua_mod_runtime.h"
+ #include "lua/lua_network.h"
++#ifdef ORION2RE_EXT
++#include "ext/ext_api.h"  // OrionLayer, open fix 122. TurnPopupGuard.
++#endif
+ 
+ namespace MAINSCR {
+     constexpr uint32_t k_max_game_data_payload_bytes = NETMOX::NETMOX_MAX_GAME_DATA_PAYLOAD_BYTES;
+@@ -2511,6 +2514,35 @@ namespace MAINSCR {
+ 
+         EVANHELP::Set_Diplomacy_Request_Help_List(popup_x, popup_y);
+ 
++#ifdef ORION2RE_EXT
++        // OrionLayer, open fix 122. The reply popup on the wire while its loop
++        // runs: id 88, TPOP kind 26. The message is formatted here exactly as
++        // Draw_Reply_To_Diplomacy_Request does (H_Message 0xDB over the
++        // requester's name and race name, :4732-4752), once, into a buffer that
++        // outlives the loop (MOX::temp_string is the original's scratch).
++        // args [0] the requester, [1] accept (the original's reply 1,
++        // Accept_Diplomacy_Request, hotkey A), [2] invoke (reply 2,
++        // Refuse_Diplomacy_Request, hotkey I; its picture reads IGNORE),
++        // [3] wait (reply 3, Tell_Diplomacy_Requester_To_Wait, hotkey W),
++        // [4] the requester's colour. ESC (the hidden whole-screen field
++        // Add_Reply_To_Diplomacy_Request_Fields adds, its handle thrown away
++        // as unused_field) selects nothing in the original: the loop goes on,
++        // so no dismiss field is sent.
++        static char ext_text[256];
++        ext_text[0] = '\0';
++        if (requester_id >= 0 && requester_id < MOX::NUM_PLAYERS && requester_id < MAX_PLAYERS) {
++            snprintf(ext_text, sizeof(ext_text), HAROLD::H_Message(0xDB),
++                     MOX::player[requester_id].name, MOX::player[requester_id].race_name);
++        }
++        ext::TurnPopupGuard ext_popup(88, 26, nullptr, ext_text);
++        ext_popup.arg(0, requester_id);
++        ext_popup.arg(1, first_reply_field);
++        ext_popup.arg(2, second_reply_field);
++        ext_popup.arg(3, third_reply_field);
++        ext_popup.arg(4, (requester_id >= 0 && requester_id < MOX::NUM_PLAYERS && requester_id < MAX_PLAYERS)
++                             ? (int16_t)MOX::player[requester_id].color : (int16_t)-1);
++#endif
++
+         while (!has_selection) {
+             const int16_t input_field = fields::Get_Input();
+ 
+@@ -2532,6 +2564,9 @@ namespace MAINSCR {
+             }
+         }
+ 
++#ifdef ORION2RE_EXT
++        ext_popup.end();  // OrionLayer, open fix 122. The popup is no longer the screen's.
++#endif
+         allocate::Pop_Block(MOX::screen_seg);
+         EVANHELP::Set_Main_Screen_Help_List();
+         MAINSCR::already_faded_into_main_screen = 0;

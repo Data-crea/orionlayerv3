@@ -341,9 +341,10 @@ class LeadersScreen(ScreenBase):
         at = nativedraw.point(self.layout, tx, ty)
         fit_w = nativedraw.rect(self.layout,
                              (tx, ty, tx + ldrgeom.HIRE_COST_FIT_W - 1, ty)).w
-        nativedraw.blit_text(surface, self.style, text, at[0], at[1], fit_w,
-                          nativedraw.font_px(self.layout, "cost"),
-                          ldrdraw.text_colour(art, "normal"))
+        with lang.verbatim():       # the engine's HESTR line (WO 408)
+            nativedraw.blit_text(surface, self.style, text, at[0], at[1],
+                                 fit_w, nativedraw.font_px(self.layout, "cost"),
+                                 ldrdraw.text_colour(art, "normal"))
 
     def _draw_strips(self, surface):
         """The strip under the view box — the displayed star (colony
