@@ -118,13 +118,15 @@ def strip(game_state, star_idx, strings):
 
 def preview_line(game_state, block, star_idx):
     """`{"icon", "star", "colour"}` for the preview line, or None —
-    flt1.cpp:130-170. `block` is FLTS's dict."""
+    flt1.cpp:130-170. `block` is FLTS's dict. Gated on the verdict list
+    being non-empty, not on FLTS's `selected_count`: the original gates on
+    the selection flags (`First_Selected_Ship`), the same flags FMOV is
+    built from, which holds no record when nothing is selected (WO 407)."""
     verdicts = moveblocks.fleet_screen_verdicts(game_state)
     stars = getattr(game_state, "stars", None) or []
     block = block or {}
     if not verdicts or int(block.get("relocate_mode", 0)) == 1 or \
-            int(block.get("stack", -1)) <= -1 or \
-            int(block.get("selected_count", 0) or 0) <= 0:
+            int(block.get("stack", -1)) <= -1:
         return None
     if not 0 <= star_idx < min(len(verdicts), len(stars)):
         return None

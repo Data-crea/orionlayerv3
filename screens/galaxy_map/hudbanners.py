@@ -40,13 +40,19 @@ order from the left; dimmed until every other human is done.
 TRANSCRIPTION `diplomacy_lights` (:1067-1100): in a network game, one per
 bit of the request mask, in player order from the right.
 DEVIATION `lights_place`: the original draws at native x = 0x49 + n w and
-0x1FA - n w, y 5 (above the map); HD draws them in the map's top edge,
-round, in the owner colours.
+0x1FA - n w, y 5 (above the map, in the frame's top bar); HD draws them in
+its own top bar at the same native x (x 3 at 1920 wide), round, in the owner
+colours (seen against the engine's frame, work order 407).
 INVENTION `lights_look`: the original's lights are animation frames
 (`player_lights_seg`); HD draws discs, the diplomacy ones pulsing.
 TRANSCRIPTION `multiplayer_help`: the help (302, 303) is the original's
 list (evanhelp.cpp:229-237): 303 over the done lights in a hotseat and a
 network game, 302 over the diplomacy lights in a game of type 2 only.
+INVENTION `auto_turn_hint`: the original shows no word about how to stop the
+turns that run by themselves; while the auto-turn block stands (ids 12 and
+39) HD prints a small dim line in the map area's bottom right
+(`labels.auto_turn_hint` in layout.json, translated by `lang.tr`): ESC stops
+it, and any key or a click does too (DEVIATION `auto_turn_any_key`).
 OMISSION `diplomacy_reply_popup`: the reply to a human's request
 (mainscr.cpp:2475-2540, help 677-680) is not built.
 """
@@ -54,7 +60,7 @@ import logging
 
 import pygame
 
-from core import estrings, hestrings
+from core import estrings, hestrings, lang
 from screens.galaxy_map import renderer
 from screens.galaxy_map import sidebar as sb
 
@@ -67,10 +73,15 @@ HSTR_FLUX = 0xE0
 ESC = 0x1B
 #: Sizes in reference pixels (the layout scales them).
 BANNER_FONT, BANNER_INSET, BANNER_TOP, BANNER_LINE = 26, 16, 58, 2
-LIGHT_DIAMETER, LIGHT_GAP, LIGHT_INSET, LIGHT_TOP = 30, 10, 14, 6
+# the first light's native x (0x49) and the diplomacy row's (0x1FA) scaled by
+# 1920/640, the bar's own y, a disc small enough for the bar
+LIGHT_DIAMETER, LIGHT_GAP, LIGHT_X_LEFT, LIGHT_X_RIGHT, LIGHT_TOP = \
+    22, 8, 0x49 * 3, 0x1FA * 3, 14
 LIGHT_SLOTS = 6                    # MAX_PLAYERS: the help band's width
 PULSE_LEN = sb.PULSE_TOP
 WARM = (214, 70, 54)
+HINT_FONT, HINT_INSET, HINT_COLOUR = 14, 14, (150, 154, 168)
+HINT_WORDS = "ESC stops the autoplay"
 #: Seconds between two presses that stop the chain (a key held down).
 STOP_GAP_S = 0.4
 _stopped_at = {}
@@ -182,14 +193,32 @@ def render_auto_banner(screen, surface):
     surface.blit(img, (box.x + pad, box.y + pad))
 
 
+def render_auto_hint(screen, surface):
+    """INVENTION `auto_turn_hint`: the small dim line telling which key
+    stops the chain, in the map area's bottom right; drawn only while the
+    auto-turn block is on the wire at id 12 or 39, no panel, and the
+    banner stays mid-map clear of it."""
+    rect = screen.box_screen_rect("map_area")
+    if auto_turn(getattr(screen, "_state", None)) is None or rect is None:
+        return
+    words = lang.tr((getattr(screen, "_data", None) or {}).get(
+        "labels", {}).get("auto_turn_hint") or HINT_WORDS)
+    img = screen.style.render_text(words, screen.layout.font_size(HINT_FONT),
+                                   HINT_COLOUR)
+    inset = int(HINT_INSET * screen.layout.scale)
+    surface.blit(img, (rect.right - inset - img.get_width(),
+                       rect.bottom - inset - img.get_height()))
+
+
 def _slot(screen, rect, n, from_right):
     s = screen.layout.scale
     d = int(LIGHT_DIAMETER * s)
     step = d + int(LIGHT_GAP * s)
-    inset = int(LIGHT_INSET * s)
-    y = rect.y + int(LIGHT_TOP * s)
-    x = (rect.right - inset - d - n * step) if from_right \
-        else left_edge(screen, rect, y, y + d) + n * step
+    # the window's own offset (a window that is not 16:9): the title plate
+    # and the HUD move with it
+    y = int(LIGHT_TOP * s + screen.layout.offset_y)
+    x = int(((LIGHT_X_RIGHT * s) - d - n * step) if from_right
+            else LIGHT_X_LEFT * s + n * step) + int(screen.layout.offset_x)
     return pygame.Rect(x, y, d, d)
 
 
@@ -220,7 +249,7 @@ def _disc(surface, rect, colour, bright, ring=(12, 12, 16)):
 
 
 def render_lights(screen, surface, now=None):
-    """The multiplayer lights in the map's top edge."""
+    """The multiplayer lights in the window's top bar."""
     block = getattr(getattr(screen, "_state", None), "player_lights", None)
     rect = screen.box_screen_rect("map_area")
     if block is None or rect is None:
@@ -249,6 +278,7 @@ def render(screen, surface):
     render_banners(screen, surface)
     render_lights(screen, surface)
     render_auto_banner(screen, surface)
+    render_auto_hint(screen, surface)
 
 
 # ── stopping the auto-turn chain ─────────────────────────────────────────

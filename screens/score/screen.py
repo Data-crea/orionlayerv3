@@ -19,7 +19,9 @@ engine reports the caller's id and the F12 notice stays.
 
 TRANSCRIPTION `score_order`: the lines and their order are
 `Draw_Hi_Score_Screen`'s (score.cpp:86-120). TRANSCRIPTION `score_leaders`:
-label, dots, figure (:904-950). TRANSCRIPTION `score_out`: a click or ESC
+label, dots, figure (:904-950). TRANSCRIPTION `score_words_verbatim`: the engine's lines, names and
+figures are drawn untranslated (`lang.verbatim`), HD's own title and words
+still go through `lang.tr` (WO 407). TRANSCRIPTION `score_out`: a click or ESC
 activates the whole-screen field the block names (:985-987).
 DEVIATION `hud_table`: HUD panels on the universal background where the
 original draws SCORE.LBX's picture and cursor. HD EXTENSION `score_header`:
@@ -41,7 +43,7 @@ import logging
 
 import pygame
 
-from core import scoreblock
+from core import lang, scoreblock
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
@@ -174,7 +176,7 @@ class ScoreScreen(ScreenBase):
         dim = tuple(int(c * DOT_DIM) for c in label)
         y = inner.y
         if header:
-            hudtext.blit(surface, self.style.render_text(header, size, label),
+            hudtext.blit(surface, self._engine_text(header, size, label),
                          pygame.Rect(inner.x, y, inner.w, row_h),
                          align="center")
         y += row_h
@@ -186,9 +188,8 @@ class ScoreScreen(ScreenBase):
                                  max(1, int(2 * s)))
             small = kind == "defeated"
             f_size = max(10, int(size * (0.8 if small else 1.0)))
-            left = self.style.render_text(words, f_size, label if small
-                                          else ink)
-            right = self.style.render_text(figure, f_size, ink)
+            left = self._engine_text(words, f_size, label if small else ink)
+            right = self._engine_text(figure, f_size, ink)
             r = pygame.Rect(inner.x, y, inner.w, row_h)
             hudtext.blit(surface, left, r, align="left")
             hudtext.blit(surface, right, r, align="right")
@@ -264,15 +265,25 @@ class ScoreScreen(ScreenBase):
                                                        frame.get_height() * k))
                 surface.blit(frame, (x - k, y - k))
             fsz = max(10, int(row_h * 0.45))
-            fig = self.style.render_text("%d.%d" % divmod(d["figure"], 10),
-                                         fsz, label)
+            fig = self._engine_text("%d.%d" % divmod(d["figure"], 10), fsz,
+                                    label)
             surface.blit(fig, (x + (pic.get_width() - fig.get_width()) // 2,
                                y + k))
-            nm = self.style.render_text(d["name"], fsz, label)
+            nm = self._engine_text(d["name"], fsz, label)
             surface.blit(nm, (x + max(0, (pic.get_width() - nm.get_width())
                                       // 2), y + pic.get_height() - nm.get_height() - k))
             x += pic.get_width() + popicons.BOX_GAP * k
         return height
+
+    def _engine_text(self, text, size, colour):
+        """The engine's own words and figures, drawn untranslated:
+        `render_text` runs `lang.tr`, which would turn a line that happens
+        to equal one of HD's own English words ('Technology') into German
+        while its neighbours stay English; the engine's lines are already in
+        the engine's language (WO 407). HD's own words (the title, in the
+        shell) keep the translation."""
+        with lang.verbatim():
+            return self.style.render_text(text, size, colour)
 
     def _dots(self, surface, left, right, r, size, colour):
         """The leaders: a run of dots from the label to the figure

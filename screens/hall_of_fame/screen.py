@@ -37,6 +37,7 @@ import logging
 import pygame
 
 from core import frameslot
+from core import lang
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
@@ -148,7 +149,11 @@ class HallOfFameScreen(ScreenBase):
                       "score": str(row["score"])}
             for key, x0, x1, align in COLUMNS:
                 r = column_rect(x0, x1, y)
-                t = self.style.render_text(values[key], size, ink[:3])
+                # the engine's own name, race word and figures: verbatim, so
+                # a name that equals a translation key is not translated
+                # (work order 407)
+                with lang.verbatim():
+                    t = self.style.render_text(values[key], size, ink[:3])
                 if t.get_width() > r.w + int(40 * s) and align == "left":
                     # the original fits race and difficulty to their
                     # windows (score.cpp:363-385); HD lets a long word run
@@ -209,7 +214,11 @@ class HallOfFameScreen(ScreenBase):
                       "score": str(row["score"])}
             for (key, x0, x1, align) in spec["columns"]:
                 r = at(x0, x1, y0, y1).inflate(-2 * pad, 0)
-                t = self.style.render_text(values[key], size, ink[:3])
+                # the engine's own name, race word and figures: verbatim, so
+                # a name that equals a translation key is not translated
+                # (work order 407)
+                with lang.verbatim():
+                    t = self.style.render_text(values[key], size, ink[:3])
                 if t.get_width() > r.w and align == "left":
                     t = t.subsurface(pygame.Rect(0, 0, r.w, t.get_height()))
                 hudtext.blit(surface, t, r, align=align)
