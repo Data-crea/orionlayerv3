@@ -96,6 +96,12 @@ class ScoreScreen(ScreenBase):
         self._data = self.app.res.load_json(
             "screens/score/layout.json", {}) or {}
 
+    def exit(self):
+        # leaving the tally ends the one-snapshot grace: a later id 87
+        # without a block is not this game's (review of WO 404)
+        self._kept = None
+        super().exit()
+
     def claims(self, game_state):
         # The engine keeps id 87 for one more snapshot after the tally's
         # loop ended (`g_score_live` is already false, the block gone; review

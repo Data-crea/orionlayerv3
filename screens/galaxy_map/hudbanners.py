@@ -196,8 +196,8 @@ def _slot(screen, rect, n, from_right):
 def lights_rect(screen, kind):
     """The help band over one row of lights (help.json `lights`): the
     done lights' row from the left, the diplomacy lights' from the right;
-    None without the block, and the diplomacy one outside a game of type 2
-    (evanhelp.cpp:229-237)."""
+    None without the block, the done one outside game types 1 and 2 and the
+    diplomacy one outside type 2 (evanhelp.cpp:229-237)."""
     block = getattr(getattr(screen, "_state", None), "player_lights", None)
     rect = screen.box_screen_rect("map_area")
     if block is None or rect is None:
