@@ -30,7 +30,8 @@ a click on the whole-screen hidden field that `Do_Next_Turn` adds while
 "end of turn wait" is off (hotkey ESC), or the ESC key. A click reaches the
 engine only if HD sends it, so a click activates that field (found in the
 live list by its rectangle, never by a remembered index) and falls back to
-ESC. DEVIATION `auto_turn_any_key`: any other key stops it too (the
+ESC (the original has a third path HD does not copy: a mouse button held
+while `Draw_Mini_Main_Screen` runs sets `auto_turn_exit`, mainscr.cpp:561-568). DEVIATION `auto_turn_any_key`: any other key stops it too (the
 original's stops only on ESC). UNVERIFIED live.
 
 TRANSCRIPTION `player_done_lights` (mainscr.cpp:2958-3005): in a hotseat or
@@ -203,6 +204,8 @@ def lights_rect(screen, kind):
         return None
     if kind == "diplomacy" and block["game_type"] != 2:
         return None
+    if kind == "done" and block["game_type"] not in (1, 2):
+        return None            # evanhelp.cpp:229-237: types 1 and 2 only
     first = _slot(screen, rect, 0, kind == "diplomacy")
     last = _slot(screen, rect, LIGHT_SLOTS - 1, kind == "diplomacy")
     band = first.union(last)

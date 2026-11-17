@@ -97,7 +97,22 @@ class ScoreScreen(ScreenBase):
             "screens/score/layout.json", {}) or {}
 
     def claims(self, game_state):
-        return getattr(game_state, "score", None) is not None
+        # The engine keeps id 87 for one more snapshot after the tally's
+        # loop ended (`g_score_live` is already false, the block gone; review
+        # of WO 403). The last block carries that snapshot, so the screen
+        # does not flash the F12 notice before the Hall of Fame.
+        block = getattr(game_state, "score", None)
+        if block is not None:
+            self._kept = block
+            return True
+        kept = getattr(self, "_kept", None)
+        if kept is not None:
+            try:
+                game_state.score = kept
+            except AttributeError:
+                return False
+            return True
+        return False
 
     def wants_original(self):
         return False
