@@ -241,7 +241,7 @@ def map_click(screen, view, sx, sy):
     # It was already true and it was true BY ACCIDENT: the dispatcher
     # routes input to the top screen, so the map has no clicks to send
     # while the game is elsewhere. That is an exclusion that happens to
-    # hold, not a rule — and the gate above (ships.ScreenStateGate) made
+    # hold, not a rule — and the gate above (stategate.ScreenStateGate) made
     # it worth saying out loud, because while the id is not 0 the state
     # this reads is the last screen-0 one and a click computed from it
     # would look perfectly reasonable. Work order 137 B.

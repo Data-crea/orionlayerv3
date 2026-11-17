@@ -246,7 +246,7 @@ def foreign_fields(fields, cells, icons):
     TOP-LEFT is `_ship_icon[i].x/y` — which is on the wire. So the class
     is matched against the snapshot's own icon positions and needs no
     margin at all. (Those coordinates are the fleet inset's while this
-    screen is up, which is exactly what `ships.ScreenStateGate` keeps
+    screen is up, which is exactly what `stategate.ScreenStateGate` keeps
     off the galaxy map; here they are what they say they are.)
     """
     cell_rects = {(x, y, x + 58, y + 57) for x, y in cells}

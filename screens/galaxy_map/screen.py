@@ -58,6 +58,8 @@ from core.structs import player as player_struct
 from core.structs import ship as ship_struct
 from screens.galaxy_map import boxdraw
 from screens.galaxy_map import gateicons
+from screens.galaxy_map import starnamedraw
+from screens.galaxy_map import stategate
 from screens.galaxy_map import starnames
 from screens.galaxy_map import distance
 from screens.galaxy_map import mapboxes
@@ -130,8 +132,8 @@ class GalaxyMapScreen(ScreenBase):
         self._ping = home_ping.HomePing()
         self._viewctl = viewctl.ViewControl()   # decoupled HD viewport
         # State the Fleets and Officers screens rewrite for their own
-        # inset is theirs, not the map's (ships.GATED_FIELDS).
-        self._state_gate = ship_icons.ScreenStateGate()
+        # inset is theirs, not the map's (stategate.GATED_FIELDS).
+        self._state_gate = stategate.ScreenStateGate()
         self._pan_from = None                   # right-drag anchor
         self._eta_lock = None                   # mapeta: order pending
         self._eta_cache = {}
@@ -320,7 +322,7 @@ class GalaxyMapScreen(ScreenBase):
         # THE ONE PLACE A SNAPSHOT BECOMES THE MAP'S STATE, so it is the
         # one place another screen's state is kept out: the Fleets and
         # Officers screens rewrite `s_ship_icon` and `_cur_map_scale`
-        # for their own inset while they are up (ships.GATED_FIELDS
+        # for their own inset while they are up (stategate.GATED_FIELDS
         # names each with its source). Everything downstream reads
         # `_state` and needs no rule of its own — except `park_game`
         # below, which is handed the RAW snapshot on purpose.
@@ -626,7 +628,7 @@ class GalaxyMapScreen(ScreenBase):
         # `clamp`: the name pushed inside the window at the widest zoom
         # (`name_clamp`) is the original's window, so not under the
         # decoupled HD viewport, where the whole box is map.
-        rnd.render_star_names(
+        starnamedraw.render_star_names(
             surface, ctx, self._stars, heights, render_label, player_num,
             self._players, omniscient, facts=starnames.facts_of(self),
             pulses=starnames.pulses_of(self, starnames.now()),
@@ -716,7 +718,7 @@ class GalaxyMapScreen(ScreenBase):
 
     def _render_hover_name(self, surface, view):
         """HD EXTENSION `hover_name`: the pointed-at system's name,
-        bottom-centre inside the map area, as `renderer.star_label` says it
+        bottom-centre inside the map area, as `starnamedraw.star_label` says it
         (a system the player has not met, a black hole: no name). The
         original has its own hover feedback, the NAME pulsing brighter
         (`Highlight_Star_`, mainscr_main.cpp:984-996; `starnames`); this
@@ -725,7 +727,7 @@ class GalaxyMapScreen(ScreenBase):
         if self._hover_star is None:
             return
         state = self._state
-        text = rnd.star_label(
+        text = starnamedraw.star_label(
             self._hover_star, getattr(state, "player_num", 0), self._players,
             self._omniscient, starnames.facts_of(self))
         if not text:

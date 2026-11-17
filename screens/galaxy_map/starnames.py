@@ -1,5 +1,5 @@
 """What the galaxy map's star names say and how they are coloured — work
-order 402 (package 1), the rules `renderer.star_label` used to approximate
+order 402 (package 1), the rules `starnamedraw.star_label` used to approximate
 with the star's single owner field.
 
 No pygame here: every rule is a plain function a check can call.
