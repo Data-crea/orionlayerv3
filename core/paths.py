@@ -44,7 +44,20 @@ def _pick(env, key, default, environ, settings):
 
 
 def engine(environ=None, settings=None):
-    """The orion2re binary to start."""
+    """The orion2re binary to start.
+
+    With nothing set, the engine DEPLOYED INTO THE GAME FOLDER comes before
+    the old build-tree default (work order 418): orion2re v2.0.1 looks for
+    its data (`data/base.zip`, `orion2re.cfg`, the mods) and the original's
+    files in the folder its binary stands in, and a build made with
+    `-DORION2RE_GAME_DIR` puts the engine and that data into the game folder.
+    The build tree's own binary stops with "fonts.lbx could not be found"."""
+    environ_ = os.environ if environ is None else environ
+    if not environ_.get(ENGINE_ENV) and \
+            not (_settings(settings) or {}).get(ENGINE_KEY):
+        deployed = os.path.join(game_dir(environ, settings), "orion2re")
+        if os.path.isfile(deployed):
+            return os.path.abspath(deployed)
     return _pick(ENGINE_ENV, ENGINE_KEY, DEFAULT_ENGINE, environ, settings)
 
 

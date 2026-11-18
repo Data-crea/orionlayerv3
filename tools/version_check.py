@@ -93,6 +93,8 @@ RE_ENGINE = re.compile(
     r'ENGINE_VERSION\s*\[\s*\]\s*=\s*"([^"]+)"')
 RE_LABEL = re.compile(
     r'GAME_VERSION_LABEL\s*\[\s*\]\s*=\s*"([^"]+)"')
+RE_ENGINE_LABEL = re.compile(
+    r'ENGINE_VERSION_LABEL\s*\[\s*\]\s*=\s*"([^"]+)"')
 
 #: The register of required and reported patches, each with its marker,
 #: lives in `tools/patch_markers.py` (work order 246: the tables are data,
@@ -240,7 +242,8 @@ def find_tree(argv):
     candidates = argv[1:] if len(argv) > 1 else DEFAULT_TREES
     for cand in candidates:
         path = os.path.expanduser(cand)
-        if os.path.isfile(os.path.join(path, "src", "version.h")):
+        if os.path.isfile(os.path.join(path, "src", "version.h")) or \
+                os.path.isfile(os.path.join(path, "src", "version.h.in")):
             return path
     return None
 
@@ -280,9 +283,18 @@ def main():
     engine = grep(os.path.join(tree, "src", "version.h"), RE_ENGINE)
     label = grep(os.path.join(tree, "src", "game", "consts.h"),
                  RE_LABEL)
-    print(f"            src/version.h ENGINE_VERSION      : "
+    # v2.0.1 (work order 418): the number is the file `VERSION`, the header
+    # is generated from `src/version.h.in` and the label is its own constant
+    if engine is None and os.path.isfile(os.path.join(tree, "VERSION")):
+        with open(os.path.join(tree, "VERSION"), errors="replace") as fh:
+            engine = fh.read().strip() or None
+        label = grep(os.path.join(tree, "src", "version.h.in"),
+                     RE_ENGINE_LABEL)
+        label = label.replace("@PROJECT_VERSION@", engine or "") \
+            if label else None
+    print(f"            ENGINE_VERSION (src/version.h or VERSION) : "
           f"{engine or '(not found)'}")
-    print(f"            src/game/consts.h VERSION_LABEL   : "
+    print(f"            version label (consts.h or version.h.in)  : "
           f"{label or '(not found)'}")
 
     problems = []
