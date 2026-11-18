@@ -314,7 +314,8 @@ LOCAL_PATCHES = {
         "SELECT NEW RESEARCH can commit a row nobody chose (open fix 26)"),
     # Applied 1 October 2026 by work order 197: ee844b0b, on 6f69de27.
     "doc/ext_combat_events_merge.patch": (
-        os.path.join("src", "game", "cmbtmis.cpp"),
+        # upstream main moved Kill_Missile / Merge_Missile here (work order 419)
+        os.path.join("src", "game", "missile_tracking.cpp"),
         "OrionLayer, open fix 63.",
         "CMEV reports hundreds of missile merges of empty slots (open fix "
         "63): the battle's event stream does not fit its state"),
