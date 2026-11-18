@@ -19,6 +19,7 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 import struct as _st
 
 from core import lang
+from core.blockreader import Reader
 
 HEAD = "<Bhhhhhh"
 HEAD_SIZE = _st.calcsize(HEAD)
@@ -31,8 +32,8 @@ def parse(gs, data, pos):
     gs.combat_popup = None
     if data[pos:pos + 4] != b"CPOP" or pos + 4 + HEAD_SIZE + 1 > len(data):
         return pos
-    (version, screen, serial, unit, low, high, chosen) = _st.unpack_from(
-        HEAD, data, pos + 4)
+    (version, screen, serial, unit, low, high, chosen) = Reader(
+        data, pos + 4).take(HEAD)
     at = pos + 4 + HEAD_SIZE
     n = data[at]
     if version != 1 or screen not in (SCAN, BOARD) or at + 1 + n > len(data):

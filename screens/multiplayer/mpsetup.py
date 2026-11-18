@@ -54,10 +54,14 @@ V2_WORDS = {"network": "ONLINE", "online": "LAN"}
 
 
 def selected(fields, settings_raw=None):
-    """The chosen type. orion2re v2 (work order 243) shows no COMM INFO, so
-    its list cannot say; the settings record can (`multi_player_game_type`,
-    the value the radios write). On the old engine the list says it: J and
-    C → online, J alone → network, neither → hotseat (multplay.cpp:608-634).
+    """The chosen type. On orion2re v2 the list may not say it: the source
+    has no COMM INFO button in the setup (TRANSCRIPTION multplay.cpp:585-586
+    sets `field_id_setup = -1000`, the router configuration comes from the
+    local interface config; :185-188 draws that slot greyed), but work order
+    245's live walk reported one — UNVERIFIED which build showed it, so the
+    settings record is read first (`multi_player_game_type`, the value the
+    radios write). On the old engine the list says it: J and C → online, J
+    alone → network, neither → hotseat (multplay.cpp:608-634 of 1.60).
     """
     from core.structs import layout
     if settings_raw and layout.generation() >= 2:

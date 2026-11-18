@@ -194,6 +194,10 @@ class Clip:
                         os.path.join(gdir, name)))
         except (pygame.error, OSError) as err:
             _once(("glow", gdir), "audience video: glow %s (%s)", gdir, err)
+            self._glow_meta = None        # a loop that never arrives is no motion
+            return
+        if not patches:
+            self._glow_meta = None        # same: nothing to loop, so no redraw
             return
         self._glow = patches              # whole or not at all
 
@@ -285,6 +289,7 @@ class Clip:
                 _once(("rect", self.path), "audience video: the glow of %s "
                       "does not fit the frame", self.path)
                 self._glow = []
+                self._glow_meta = None    # nothing will ever move again
                 return self._surface
             self._glow = patches = [p.convert_alpha() for p in patches]
             self._held = self._surface.copy()
@@ -313,6 +318,14 @@ class Clip:
     @property
     def playing(self):
         return self.ok and not self.ended
+
+    @property
+    def moving(self):
+        """True while the picture can still change with time: the film is
+        playing, or it has ended and a glow loop is declared (the loop
+        loads in the background, so a declared one counts from the start,
+        never only once its patches are in)."""
+        return self.ok and (not self.ended or self._glow_meta is not None)
 
     def close(self):
         if self.ok or self._names:
@@ -384,7 +397,7 @@ class Player:
 
     @property
     def moving(self):
-        return self.clip is not None and (self.clip.playing or
+        return self.clip is not None and (self.clip.moving or
                                           self.prev is not None)
 
     def stop(self, keep=None):

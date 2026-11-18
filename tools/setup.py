@@ -219,6 +219,14 @@ def from_game(settings=None):
          f"no category names, and falls back",
          "python tools/billtext_extract.py"
          + (f" --lang {lang}" if lang != "en" else "")),
+        # FONTS.LBX: the six font styles' pixel heights, measured by the
+        # original's own table (fonts.cpp:135-154). Nothing draws from it
+        # yet — it turns the sizes measured off screenshots into
+        # transcriptions (state `core.fonts`); 
+        (os.path.join(ROOT, "assets", "shared", "fonts", "font_styles.json"),
+         "font style heights (not drawn from yet; the sizes the layout "
+         "measured off screenshots become transcriptions)",
+         "python tools/font_extract.py"),
         # MAINTEXT.LBX: the system-special descriptions. Nothing draws
         # them yet — the galaxy map's popups are their own brief.
         (os.path.join(ROOT, *maintext_file(lang).split("/")),

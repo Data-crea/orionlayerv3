@@ -25,6 +25,8 @@ as before.
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 HEAD = "<BhB"
 SLOTS = 15
 SIZE = _st.calcsize(HEAD) + SLOTS * _st.calcsize("<hh")
@@ -37,15 +39,14 @@ def parse(gs, data, pos):
     gs.system_window = None
     if data[pos:pos + 4] != b"SYSW" or pos + 4 + SIZE > len(data):
         return pos
-    version, star, viewable = _st.unpack_from(HEAD, data, pos + 4)
+    rd = Reader(data, pos + 4)
+    version, star, viewable = rd.take(HEAD)
     if version != 1:
         return pos
-    at = pos + 4 + _st.calcsize(HEAD)
     ships = []
     for _ in range(SLOTS):
-        field, node = _st.unpack_from("<hh", data, at)
+        field, node = rd.take("<hh")
         ships.append({"field": field, "ship": node})
-        at += 4
     gs.system_window = {"star": star, "viewable": bool(viewable),
                         "ships": ships}
     return pos + 4 + SIZE

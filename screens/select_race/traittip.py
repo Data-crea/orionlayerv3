@@ -82,8 +82,11 @@ def draw(surface, L, style, hit):
     width = int(TIP_W * L.scale)
     lines = info_panel.markup_lines(font, lang.tr(text), width - 2 * pad,
                                     info_panel._desc_colour)
-    head = style.get_font(L.font_size(TIP_HEAD)).render(
-        title.upper(), True, rnd.COL_HEADING)
+    # The one text path (`Style.render_text`): a mod font with missing
+    # glyphs is substituted here too, and a string with no blocked
+    # character costs what font.render() cost.
+    head = style.render_text(title.upper(), L.font_size(TIP_HEAD),
+                             rnd.COL_HEADING)
     line_h = int(fs * info_panel.DESC_LINE)
     gap = int(GAP * L.scale)
     height = 2 * pad + head.get_height() + gap + len(lines) * line_h

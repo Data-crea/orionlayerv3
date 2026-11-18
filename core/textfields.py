@@ -20,6 +20,7 @@ the fix writes none.
 import struct as _st
 
 from core import lang
+from core.blockreader import Reader
 
 
 def s8(data, pos):
@@ -38,7 +39,7 @@ def input_field(data, pos):
     """Fix 51's input field at `pos`: (dict, end)."""
     if pos + 3 > len(data):
         raise ValueError("short")
-    field, limit = _st.unpack_from("<hB", data, pos)
+    field, limit = Reader(data, pos).take("<hB")
     text, at = s8(data, pos + 3)
     if at >= len(data):
         raise ValueError("short")

@@ -60,6 +60,7 @@ assets/shared/help/help_*.json
 # (decisions 38, 40, 42); the loader carries a format version and the
 # colony screen explains an absent file rather than drawing nothing.
 assets/shared/names/
+assets/shared/fonts/font_styles.json
 
 # UNMODIFIED sprites out of STARBG.LBX, used as test fixtures. The
 # HD artwork in nebula/ is derived work and stays; this is the

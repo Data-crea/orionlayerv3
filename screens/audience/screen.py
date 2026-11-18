@@ -51,11 +51,17 @@ log = logging.getLogger("audience")
 
 class AudienceScreen(ScreenBase):
     SCREEN_NAME = "audience"
-    #: Its picture moves only with input, the game and the window: a frame
-    #: that would draw it again is not drawn (work order 273, `core/drawgate`).
-    #: not still: the ambassador's clip moves with time (`auvideo`, work
-    #: order 359); the gate draws every frame while this screen is up.
-    STILL = False
+    #: Its picture moves only with input, the game and the window, except
+    #: while the ambassador's clip (or the glow loop held after it) runs
+    #: (`auvideo`, work order 359): the draw gate asks the INSTANCE
+    #: (`core/drawgate.still`), so a player without clips, or with one that
+    #: has ended and has no glow, is gated like every still screen and one
+    #: with a moving clip draws every frame (work orders 273, 415).
+    @property
+    def STILL(self):
+        from . import auvideo
+        return not auvideo.PLAYER.moving
+
     # Literal, as every screen's is (the id check reads them off the
     # source); `augeom` names the same, and the smoke group holds the two.
     GAME_SCREEN_ID = 57

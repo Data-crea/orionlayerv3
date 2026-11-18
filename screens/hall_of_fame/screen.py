@@ -33,6 +33,7 @@ EXTENSION `plate_frame`, OMISSION `reset_key`. Work order 361 removed HD
 EXTENSION `exit_button`: the original has no button either.
 """
 import logging
+import time
 
 import pygame
 
@@ -133,7 +134,7 @@ class HallOfFameScreen(ScreenBase):
         # (x 139-155, score.cpp:542-547).
         label = hudtext.colour("label")
         y = inner.y
-        flash_on = (pygame.time.get_ticks() // FLASH_MS) % 2 == 0
+        flash_on = (int(time.monotonic() * 1000) // FLASH_MS) % 2 == 0
         ink = hudtext.colour("value")
         for row in rows:
             if row["record"] == hof["flash"] and hof["flash"] >= 0 and \
@@ -197,7 +198,7 @@ class HallOfFameScreen(ScreenBase):
         hudtext.blit(surface, self.style.render_text(
             self.words("title"), max(10, int(tr.h * 0.5)), label[:3]), tr,
             align="center")
-        flash_on = (pygame.time.get_ticks() // FLASH_MS) % 2 == 0
+        flash_on = (int(time.monotonic() * 1000) // FLASH_MS) % 2 == 0
         pad = int(spec.get("pad", 12) * box.w / pw)
         for n, (row, (y0, y1)) in enumerate(zip(rows, spec["rows"]), 1):
             field = at(spec["columns"][0][1], spec["columns"][-1][2], y0, y1)

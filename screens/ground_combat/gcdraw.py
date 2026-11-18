@@ -158,7 +158,7 @@ def draw(surface, screen, popup, state):
         surface.set_clip(old)
         scale = fm.scale
     else:
-        scale = geom.scale_for(lay, 640 * 3)
+        scale = geom.scale_for(lay, geom.NATIVE_W * 3)
     for side, name in enumerate(geom.BAND):
         r = screen.box_screen_rect(name)
         if r is not None:

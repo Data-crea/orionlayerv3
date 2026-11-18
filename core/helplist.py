@@ -17,6 +17,8 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 ENTRY = "<5h"
 ENTRY_SIZE = _st.calcsize(ENTRY)
 MAX = 64
@@ -28,12 +30,12 @@ def parse(gs, data, pos):
     gs.help_list = None
     if data[pos:pos + 4] != b"HLPL" or pos + 7 > len(data):
         return pos
-    version, n = _st.unpack_from("<Bh", data, pos + 4)
+    version, n = Reader(data, pos + 4).take("<Bh")
     end = pos + 7 + n * ENTRY_SIZE
     if version != 1 or not 0 < n <= MAX or end > len(data):
         return pos
-    gs.help_list = [_st.unpack_from(ENTRY, data, pos + 7 + i * ENTRY_SIZE)
-                    for i in range(n)]
+    rd = Reader(data, pos + 7)
+    gs.help_list = [rd.take(ENTRY) for _ in range(n)]
     return end
 
 

@@ -24,6 +24,7 @@ import logging
 
 import pygame
 
+from core import nativeview as nat
 from core import settlewire
 from core.hud import shell
 from screens.colony_summary import colonymove, colonypick
@@ -60,7 +61,7 @@ def button_rect(screen):
     surface = pygame.Rect(screen.box_screen_rect(geom.SURFACE_REGION[0]))
     inner = shell.inner(surface, screen.layout)
     w, h = shell.button_size(screen.layout)
-    x = surface.x + surface.w * 307 // 640
+    x = surface.x + surface.w * 307 // nat.NATIVE_W
     return pygame.Rect(min(x, inner.right - w), inner.y, w, h)
 
 

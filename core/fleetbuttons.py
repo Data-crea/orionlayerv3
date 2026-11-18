@@ -22,6 +22,8 @@ the fix writes none and the box offers no order buttons, as before.
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 #: The buttons in the block's order, with the help entry the original
 #: appends for each (evanhelp.cpp, `Set_Main_Screen_Help_List_`: 305 Attack
 #: Antares, 306 Colonize, 307 Engage, 308 Unload Transports, 309 Outpost).
@@ -38,14 +40,15 @@ def parse(gs, data, pos):
     gs.fleet_buttons = None
     if data[pos:pos + 4] != b"FBTN" or pos + 4 + SIZE > len(data):
         return pos
-    version, stack, star, ignore = _st.unpack_from(HEAD, data, pos + 4)
+    version, stack, star, ignore = Reader(data, pos + 4).take(HEAD)
     if version != 1:
         return pos
     at = pos + 4 + _st.calcsize(HEAD)
     out = {"stack": stack, "star": star,
            "ignores_enemies": None if ignore == 0xFF else bool(ignore)}
+    rd = Reader(data, at)
     for name, _help in BUTTONS:
-        offered, field = _st.unpack_from("<Bh", data, at)
+        offered, field = rd.take("<Bh")
         out[name] = {"offered": bool(offered), "field": field}
         at += 3
     gs.fleet_buttons = out

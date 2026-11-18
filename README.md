@@ -236,6 +236,11 @@ the screens without game data.
   fleet, F5 / F6 the previous and next own star, F9 the distance between
   stars, F10 a quick save.
 - On the galaxy map the mouse wheel zooms and a right drag pans.
+- **F3** opens the layout editor, for moving and resizing a screen's boxes
+  with the mouse or by typing numbers. It is safe to try: a save goes into
+  your mod folder and never into the project itself, and you cannot delete
+  a box. The note on `boxes.json` under "What you can override" in
+  [MODDING.md](MODDING.md) says how the panel works.
 
 ### German
 

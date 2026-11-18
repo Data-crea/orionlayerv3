@@ -49,8 +49,9 @@ ENV = "ORIONLAYER_DRAW_ALWAYS"
 
 def still(screen):
     """True for a screen whose picture changes only with input, the game's
-    messages, the window or itself being replaced."""
-    return screen is None or bool(getattr(type(screen), "STILL", False))
+    messages, the window or itself being replaced. Read off the instance
+    (work order 415): the audience's is a property that follows its clip."""
+    return screen is None or bool(getattr(screen, "STILL", False))
 
 
 class DrawGate:

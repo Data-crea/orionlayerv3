@@ -48,6 +48,7 @@ Under AUTO, playback, a box, the log or the help over the field: HD's own
 pointer (the original keeps whatever list it set last).
 """
 from core import cursor
+from core import nativeview as nat
 from .cbbeamfx import get_angle
 
 #: the original's pointer pictures are 24 px a side, the point 12 px in
@@ -124,7 +125,7 @@ class Pointer:
         if n is None or art is None:
             cursor.clear_override()
             return None
-        k = max(1, int(win_h / 480))
+        k = max(1, int(win_h / nat.NATIVE_H))
         key = (n, k, id(art))
         img = self._scaled.get(key)
         if img is None:

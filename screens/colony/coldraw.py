@@ -69,6 +69,7 @@ from screens.colony_summary import colonysurfaces, colonytrack
 from screens.colony_summary.colonyplanets import painted as painted_planet
 from screens.colony_summary.colonyplanets import set_for as planet_set_for
 from core import nativedraw as nd
+from core import nativeview as nat
 
 from . import colart
 from . import colbuildings
@@ -739,7 +740,7 @@ def _units(surface, screen, view, words, state=None):
         # spaced by the same factor, UNIT_LIFT native px off the frame,
         # on a plate with a shadow each (`_unit_plate`).
         x_native = UNIT_PAD + slot * 30 * UNIT_BOOST
-        x, foot = nd.point(screen.layout, x_native, 480 - UNIT_LIFT)
+        x, foot = nd.point(screen.layout, x_native, nat.NATIVE_H - UNIT_LIFT)
         big = nd.magnified(pic, screen.layout) if pic is not None else None
         if big is not None:
             big = pygame.transform.smoothscale(
@@ -753,7 +754,7 @@ def _units(surface, screen, view, words, state=None):
         # a lone figure with its count spans the original's three slots
         # (colony_main.cpp:1208, :1217-1224), a figure of a row one
         span = nd.point(screen.layout, x_native + step * UNIT_BOOST * (
-            3 if count is not None else 1), 480)[0] - x
+            3 if count is not None else 1), nat.NATIVE_H)[0] - x
         hit = pygame.Rect(x, top, max(span, big.get_width() if big is not None
                                       else 0), foot - top)
         known = next((h for h in screen.unit_hits if h[0] == kind), None)
@@ -764,7 +765,7 @@ def _units(surface, screen, view, words, state=None):
         if count is not None:
             fmt = words.e(0x7C) or "x %d"
             cx, _y = nd.point(screen.layout,
-                              (slot + 1) * step * UNIT_BOOST, 480)
+                              (slot + 1) * step * UNIT_BOOST, nat.NATIVE_H)
             w = nd.rect(screen.layout, ((slot + 1) * step, 470,
                                         (slot + 1) * step + 59, 470)).w
             texts.append((printf(fmt, count), cx, top, w))

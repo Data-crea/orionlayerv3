@@ -17,6 +17,8 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 HEAD = "<BhhBBBBB"
 HEAD_SIZE = _st.calcsize(HEAD)
 #: the lights, top to bottom, as the panel and its hidden fields order them
@@ -29,7 +31,7 @@ def parse(gs, data, pos):
     gs.combat_options = None
     if data[pos:pos + 4] != b"COPT" or pos + 4 + HEAD_SIZE > len(data):
         return pos
-    version, serial, order_info, *flags = _st.unpack_from(HEAD, data, pos + 4)
+    version, serial, order_info, *flags = Reader(data, pos + 4).take(HEAD)
     if version != 1:
         return pos
     gs.combat_options = {"serial": serial, "panel_up": order_info == 0,

@@ -22,6 +22,8 @@ the fix writes none, and HD shows no mode, as before.
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 HEAD = "<BB"
 SIZE = _st.calcsize(HEAD)
 
@@ -32,7 +34,7 @@ def parse(gs, data, pos):
     gs.merging_relocations = None
     if data[pos:pos + 4] != b"MREL" or pos + 4 + SIZE > len(data):
         return pos
-    version, flag = _st.unpack_from(HEAD, data, pos + 4)
+    version, flag = Reader(data, pos + 4).take(HEAD)
     if version != 1:
         return pos
     gs.merging_relocations = bool(flag)

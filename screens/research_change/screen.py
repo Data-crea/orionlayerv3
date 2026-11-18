@@ -113,9 +113,8 @@ disappear (decision 61):
   DEVIATION     a name too wide is SHRUNK, where `Squeeze_Print_`
                 compresses the glyphs (`core/researchpanel.py`)
 
-NOT YET IN `MARKED` (work order 326 E — the set is held equal by smoke
-checks 080 and 080a, which this order's part may not change; the key is
-for the run that owns them):
+IN `MARKED` since work order 415 (it was named here, outside the set, from
+work order 326 E):
 
   HD EXTENSION  `field_pictures` — a painted picture per category in its
                 box, from the player's mod folder
@@ -147,6 +146,7 @@ MARKED = {
     "title": "HD EXTENSION",
     "category_label_as_text": "DEVIATION",
     "shrink_instead_of_squeeze": "DEVIATION",
+    "field_pictures": "HD EXTENSION",
 }
 
 

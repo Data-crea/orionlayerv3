@@ -69,6 +69,7 @@ import pygame
 
 from core import combatblocks as cbk
 from core import lang
+from core import nativeview as nat
 from core.hud import blocks as hud
 from core.hud import style as hudstyle
 from core.hud import text as hudtext
@@ -320,7 +321,7 @@ class Panel:
     @staticmethod
     def area(win_w, win_h):
         """The panel's band: the original's 129 of 480 rows, at the bottom."""
-        h = int(win_h * 129 / 480 * 0.75)
+        h = int(win_h * 129 / nat.NATIVE_H * 0.75)
         return pygame.Rect(0, win_h - h, win_w, h)
 
     def draw(self, surface, style, unit, names, ken, actives, board_mode, live,

@@ -17,6 +17,8 @@ Read WHOLE or left None (`core/colonyblocks.py`'s rule).
 """
 import struct as _st
 
+from core.blockreader import Reader
+
 FORMAT = "<Bhhhhhh"
 SIZE = _st.calcsize(FORMAT)
 
@@ -27,8 +29,8 @@ def parse(gs, data, pos):
     gs.fleet_box_scroll = None
     if data[pos:pos + 4] != b"FBSC" or pos + 4 + SIZE > len(data):
         return pos
-    (version, stack, first, visible, total, up, down) = _st.unpack_from(
-        FORMAT, data, pos + 4)
+    (version, stack, first, visible, total, up, down) = Reader(
+        data, pos + 4).take(FORMAT)
     if version != 1:
         return pos
     gs.fleet_box_scroll = {"stack": stack, "first_visible_row": first,
