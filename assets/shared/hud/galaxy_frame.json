@@ -103,7 +103,9 @@
   ],
   "top_right": {
     "right": 2526,
-    "cy": 41
+    "cy": 41,
+    "min_left": 2040,
+    "max_bottom": 70
   },
   "game_word": [
     140,
@@ -111,5 +113,21 @@
     180,
     72
   ],
-  "_map_window_note": "The star map's box: its native viewport (the box fitted to the game's 506:400, centred) stays clear of the picture's art - the frame's bottom contour is at y 1238 or lower for every x in the viewport, 42 px of air for the names that hang under the lowest stars; the top clears y 76. The height 1100 is OURS, chosen against that measure and against 006d's word contrast (the fixture's Draconis label touches a background star's glow: 3.3:1 at 1084, 4.6:1 at 1100), decision 53."
+  "_map_window_note": "The star map's box: its native viewport (the box fitted to the game's 506:400, centred) stays clear of the picture's art - the frame's bottom contour is at y 1238 or lower for every x in the viewport, 42 px of air for the names that hang under the lowest stars; the top clears y 76. The height 1100 is OURS, chosen against that measure and against 006d's word contrast (the fixture's Draconis label touches a background star's glow: 3.3:1 at 1084, 4.6:1 at 1100), decision 53.",
+  "_top_right_note": "The status block's right edge, its middle line, and the box it must stay inside: right of min_left and above max_bottom. The top bar is a dark fill the block stands ON, but its line falls from y 45 to y 80 at about x 1990 (alpha column at x 1980-2020) and the lower line runs at y 74-80 right of it; the block must reach neither (measured off the picture). The smoke test 011a holds the block inside the box at every window size.",
+  "nav_icon_right": {
+    "colonies": 292,
+    "planets": 627,
+    "fleets": 975,
+    "leaders": 1280,
+    "races": 1584,
+    "info": 1886
+  },
+  "label_gap": 30,
+  "label_pad_right": 24,
+  "turn_label": [
+    2226,
+    2500
+  ],
+  "_label_note": "The words of the icon bar: each starts label_gap px right of its icon's right edge (nav_icon_right, measured off the picture) and may reach label_pad_right px short of its segment's right edge; the play button's word stands right of its triangle (turn_label, x from, x to). The picture carries no text; the words are drawn in code, as the nav buttons' were (Data saw the bar without them on 18 November 2026)."
 }

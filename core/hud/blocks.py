@@ -405,6 +405,30 @@ def picture_button(surface, rect, scale, state="normal"):
     _blit_shape(surface, rect, _cached(key, build))
 
 
+def picture_label(surface, style_renderer, rect, label, role, state,
+                  text_h=None):
+    """A button's WORD over a picture that has the button but no text
+    (work order 420): drawn left-aligned in `rect` — the room the picture
+    leaves right of its icon — in the label colour of every state (the
+    press is orange, decision 92), and squeezed to the room when it would
+    run past it, as the shell squeezes a long German word."""
+    r = pygame.Rect(rect)
+    if not label or r.w < 4 or r.h < 4:
+        return
+    col = hudtext.colour(role)
+    if state == "pressed":
+        from core import pressfeedback
+        col = tuple(pressfeedback.pressed_colour()[:3])
+    s = hudtext.render(style_renderer, label.upper(), role, text_h or r.h,
+                       col)
+    ink = s.get_bounding_rect()
+    if ink.w > r.w:
+        s = pygame.transform.smoothscale(
+            s, (max(1, int(s.get_width() * r.w / ink.w)),
+                max(1, int(s.get_height() * r.w / ink.w))))
+    hudtext.blit(surface, s, r, align="left")
+
+
 def _label(surface, style_renderer, rect, label, role, state, icon, scale,
            text_h=None):
     if icon is None and not label:

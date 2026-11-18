@@ -127,8 +127,24 @@ def is_default():
     return _hue is None and _sat is None and _bright is None
 
 
-def delta():
-    return 0.0 if _hue is None else (float(_hue) - REFERENCE)
+def delta(accent=None):
+    """The hue turn for the player's setting. `accent` is the hue of the
+    ACCENT a painted piece carries, where it is not the HUD's measured
+    one (`PICTURE_ACCENT`): the piece turns by the setting less its own
+    accent, so its accent lands on the setting as the code colours' does."""
+    return 0.0 if _hue is None else (float(_hue) - (accent or REFERENCE))
+
+
+#: The accent hue of a painted piece whose blue is not the HUD's measured
+#: 196 (REFERENCE): Data's galaxy frame picture, whose blue lines measure
+#: 215.6 degrees (36919 visible pixels with saturation > 0.5 and
+#: lightness > 0.25 between 170 and 260 degrees, weighted by saturation x
+#: lightness — the smoke test, 006b, re-derives it off the pack's
+#: picture). Turned by the same `delta()` as the code, it landed 19.6
+#: degrees off every other screen at every setting (Data, 18 November 2026:
+#: "die Farbe der Rahmen unterscheidet sich von anderen Bildschirmen beim
+#: Farbwechsel").
+PICTURE_ACCENT = {"galaxy_frame": 215.6}
 
 
 def set_tone(hue_value=None, sat_value=None, bright_value=None):
@@ -367,10 +383,11 @@ def rotate(rgb, d=None):
                      b_factor=1.0)
 
 
-def rotate_pixels(rgb, d=None, keep=None):
+def rotate_pixels(rgb, d=None, keep=None, accent=None):
     """An (H, W, 3) uint8 image of a HUD component through the rule,
     current setting unless `d` is given (then the hue alone); a new
-    array. `keep`: pixels that stay (the plate's lamps)."""
+    array. `keep`: pixels that stay (the plate's lamps). `accent`: the
+    piece's own accent hue where it is not the HUD's (`PICTURE_ACCENT`)."""
     # NO FLOORS ON PAINTED ARTWORK (work order 172). The floors lift a
     # colour whose measured luminance is an edge's to a fixed minimum;
     # on a painted GRADIENT — the plate's glossy centre glow — that lifted
@@ -380,5 +397,5 @@ def rotate_pixels(rgb, d=None, keep=None):
     # because an edge still darkens only with the square root.
     if d is not None:
         return transform_array(rgb, d, 1.0, 1.0, keep=keep, floors=False)
-    return transform_array(rgb, delta(), sat(), bright(), keep=keep,
+    return transform_array(rgb, delta(accent), sat(), bright(), keep=keep,
                            floors=False)

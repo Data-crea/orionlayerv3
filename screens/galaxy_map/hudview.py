@@ -139,15 +139,19 @@ def render_status(screen, surface):
     big = hudtext.colour("value")[:3]
     dim = hudtext.colour("label")[:3]
     # (text, role, capital height in picture px, colour, gap to the next)
-    parts = [(clock, "value", 34, big, 30), (version, "label", 19, dim, 14),
-             (None, None, 0, None, 14), (name, "label", 19, big, 0)]
+    # Sized to stand RIGHT of the picture's top bar's step (its line falls
+    # from y 45 to y 80 at picture x ~1990, `top_right.min_left`): the first
+    # build (34 / 19 px caps) reached x 1960 and the name stood on the
+    # step — Data saw it at once (18 November 2026).
+    parts = [(clock, "value", 27, big, 24), (version, "label", 15, dim, 11),
+             (None, None, 0, None, 11), (name, "label", 15, big, 0)]
     x = picture_rect(screen, (right, cy, 0, 0)).x
     cy_px = picture_rect(screen, (0, cy, 0, 0)).y
     for text, role, cap, col, gap in parts:
         if text is None:
             # the bar between the name and the version: the HUD's own
             # separator block (screens draw no lines of their own)
-            h = int(26 * k)
+            h = int(21 * k)
             hud.separator(surface, cy_px - h // 2, cy_px + h // 2,
                           x - int(2 * k), screen.layout.scale, vertical=True)
             x -= int(4 * k) + int(gap * k)
@@ -235,6 +239,26 @@ def render_nav(screen, surface):
         else:
             state = "normal"
         hud.picture_button(surface, rect, screen.layout.scale, state)
+        _nav_word(screen, surface, spec, rect, state)
+
+
+def _nav_word(screen, surface, spec, rect, state):
+    """The button's word, right of the icon the picture holds (the picture
+    carries no text): the word's room is measured in `galaxy_frame.json`."""
+    geo = geometry()
+    key = spec["key"]
+    if key == "turn":
+        x0, x1 = geo["turn_label"]
+        room = picture_rect(screen, (x0, geo["turn"][1], x1 - x0,
+                                     geo["turn"][3]))
+        role = "action"
+    else:
+        x0 = geo["nav_icon_right"][key] + geo["label_gap"]
+        x1 = geo["nav_x"][key][1] - geo["label_pad_right"]
+        room = picture_rect(screen, (x0, geo["nav_y"][0], x1 - x0,
+                                     geo["nav_y"][1]))
+        role = "button"
+    hud.picture_label(surface, screen.style, room, spec["label"], role, state)
 
 
 def nav_rect(screen, key):

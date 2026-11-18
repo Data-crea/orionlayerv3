@@ -179,7 +179,8 @@ def _tinted_sparse(name, img, key):
     uniq, inv = np.unique(packed, return_inverse=True)
     cols = np.stack([uniq >> 16, (uniq >> 8) & 255, uniq & 255],
                     axis=-1).astype(np.uint8).reshape(-1, 1, 3)
-    turned = tint.rotate_pixels(cols, keep=None).reshape(-1, 3)
+    turned = tint.rotate_pixels(
+        cols, keep=None, accent=tint.PICTURE_ACCENT.get(name)).reshape(-1, 3)
     px[live] = turned[inv.reshape(-1)]
     del px
     return out
