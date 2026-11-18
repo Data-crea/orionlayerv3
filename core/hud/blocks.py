@@ -377,6 +377,34 @@ def slant_hit(rect, x, y):
     return r.x + d <= cx <= r.right - (s - d)
 
 
+def picture_button(surface, rect, scale, state="normal"):
+    """The lit look of a button that is PART OF A PICTURE (work order 420):
+    the galaxy map's frame holds the buttons, so nothing can be redrawn
+    under the pointer — hover and pressed are an overlay in the button's
+    rectangle, in the colours of the drawn buttons' states (`button.
+    hover_fill` / `hover_edge`), a rim and a translucent fill. "normal"
+    draws nothing."""
+    rect = pygame.Rect(rect)
+    if state == "normal" or rect.w < 6 or rect.h < 6:
+        return
+    key = ("picbtn", rect.w, rect.h, round(scale, 4), state)
+
+    def build():
+        fill, edge = _button_colours(state)
+        surf = pygame.Surface(rect.size, pygame.SRCALPHA)
+        strong = state == "pressed"
+        surf.fill(tuple(fill[:3]) + (110 if strong else 56,))
+        w = max(2, int(round(2 * scale)))
+        rim = tuple(edge[:3]) + (230 if strong else 150,)
+        for r in (pygame.Rect(0, 0, rect.w, w),
+                  pygame.Rect(0, rect.h - w, rect.w, w),
+                  pygame.Rect(0, 0, w, rect.h),
+                  pygame.Rect(rect.w - w, 0, w, rect.h)):
+            surf.fill(rim, r)
+        return surf, 0
+    _blit_shape(surface, rect, _cached(key, build))
+
+
 def _label(surface, style_renderer, rect, label, role, state, icon, scale,
            text_h=None):
     if icon is None and not label:

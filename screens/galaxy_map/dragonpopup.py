@@ -74,9 +74,11 @@ def render(host, surface, style, c, popup, state):
     h = max(bh, len(rows) * step) + pad
     bar = None
     if host is not None:
-        from screens.galaxy_map import hudview
-        bar = hudview.nav_rect(host, "turn")
-    bottom = (bar.top if bar is not None else win_h) - int(REF_GAP * s)
+        # work order 420: the strip stands on the map window's bottom edge,
+        # clear of the frame picture's bar (which it hung above the TURN
+        # button of the drawn HUD before)
+        bar = host.box_screen_rect("map_area")
+    bottom = (bar.bottom if bar is not None else win_h) - int(REF_GAP * s)
     strip = pygame.Rect((win_w - w) // 2, bottom - h, w, h)
     hud.popup(surface, strip, s)
     y = strip.y + (h - len(rows) * step) // 2

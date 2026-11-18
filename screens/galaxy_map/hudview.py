@@ -1,4 +1,22 @@
-"""The galaxy map's HUD: title plate, info panel and nav row (decision 71).
+"""The galaxy map's HUD: Data's frame picture, its words and its buttons
+(decision 104, work order 420; decision 71 for the pre-104 look).
+
+**Since work order 420 the HUD is ONE PICTURE** — `core.hud.art.GALAXY_FRAME`,
+a base-pack picture that follows the player's frame colour — with the
+hamburger button (GAME), the info panel's compartments and the icon bar
+with the play button in it. Everything the picture cannot say is drawn
+here over it: the GAME word, the readouts and the HUD's own icons in the
+panel, hover and pressed over a button, and the status block at the top
+right (`OrionRE | v<engine version>   <time>`). The rectangles are the
+picture's measured parts (`assets/shared/hud/galaxy_frame.json`).
+
+HD EXTENSION `galaxy_frame` (work order 420, Data): the picture, the status
+block and the colour that follows the player's frame colour are ours — MOO2
+has one look and no such block; marked in the status document and held by
+smoke checks 007, 011a and 006c.
+
+The old text of this docstring, which still holds for the seam it names:
+title plate, info panel and nav row (decision 71).
 
 Split out of `screen.py` by work order 169 along the seam the screen
 already had — `screen.py` keeps loading, geometry of the map and input
@@ -11,12 +29,17 @@ own panel or button.
 its word goes; `nav_rect` / `nav_hit` are where a nav button is drawn
 and the shape it is hit as.
 """
+import json
+import time
+
 import pygame
 
 from core import lang
+from core import resources
+from core.config import ORION2RE_VERSION
 
 from core import mouse as mouse_input
-from core.config import REF_W
+from core.config import REF_H, REF_W
 from core.hud import art as hudart
 from core.hud import blocks as hud
 from core.hud import text as hudtext
@@ -25,61 +48,142 @@ from screens.galaxy_map import sidebar as sb
 from screens.galaxy_map import terrpanel
 
 
-def plate_centre_x(screen):
-    """Where the title plate is centred: the MAP's horizontal centre
-    (work order 171). Since 170 the map ends at the info panel, so the
-    window's centre put the plate visibly right of the map's. Falls back
-    to the content area's centre while the map box has no rect."""
-    L = screen.layout
-    box = screen.box_screen_rect("map_area")
-    if box is None:
-        return L.offset_x + REF_W * L.scale / 2
-    return box.x + box.w / 2
+#: The picture's pixel to the layout's reference pixel (1920 / 2560).
+PICTURE_REF = 0.75
+_geo = {}
+
+
+def geometry():
+    """The picture's measured parts, in its own pixels
+    (`assets/shared/hud/galaxy_frame.json`, measured by the store's
+    galaxy-frame tool)."""
+    if not _geo:
+        with open(resources.res.shared("hud", "galaxy_frame.json"),
+                  encoding="utf-8") as f:
+            _geo.update(json.load(f))
+    return _geo
+
+
+def picture_rect(screen, rect):
+    """A rectangle in the picture's pixels as a window rect: the picture
+    is drawn over the layout's content area (16:9, centred), as the
+    reference space is."""
+    k = PICTURE_REF
+    x, y, w, h = rect
+    return pygame.Rect(*screen.layout.rect((x * k, y * k, w * k, h * k)))
+
+
+def frame_rect(screen):
+    """Where the frame picture is drawn: the whole content area."""
+    return pygame.Rect(*screen.layout.rect((0, 0, REF_W, REF_H)))
+
+
+def render_frame(screen, surface):
+    """Data's frame picture over the map, in the player's frame colour.
+    A pack without it draws nothing (absent is a state, decision 38)."""
+    r = frame_rect(screen)
+    img = hudart.frame(r.w, r.h)
+    if img is not None:
+        surface.blit(img, r.topleft)
 
 
 def title_rect(screen):
-    """The title plate's text box in device px."""
-    # From the WINDOW's top edge (work order 170), as the bar hangs from
-    # its bottom one: on a window taller than 16:9 both reach the edge.
-    return hud.title_plate_rect(plate_centre_x(screen), 0,
-                                screen.layout.scale)[1]
+    """The hamburger button in device px: the GAME button's click area,
+    its help region and the frame the word sits in."""
+    return picture_rect(screen, geometry()["hamburger"])
+
+
+#: The time of day the status block shows (`time.localtime`), replaced by a
+#: test or an evidence render that needs one frozen picture. It is the
+#: wall clock, read once per frame — not decision 78's `planetspin.now()`,
+#: a monotonic elapsed time that cannot say HH:MM.
+_wall_clock = time.localtime
+
+
+def set_wall_clock(fn):
+    """Inject the clock (`fn()` -> a `time.struct_time`), or None."""
+    global _wall_clock
+    _wall_clock = fn or time.localtime
+
+
+def status_words(now=None):
+    """The status block's three words: ("OrionRE", "v2.0.1", "18:56") —
+    the engine's version OrionLayer is built for
+    (`core.config.ORION2RE_VERSION`) and the local time."""
+    t = now or _wall_clock()
+    return ("OrionRE", f"v{ORION2RE_VERSION}",
+            time.strftime("%H:%M", t))
+
+
+def _word(screen, text, role, cap_px, colour):
+    """`text` in `role`'s face, its capital height `cap_px` PICTURE pixels
+    tall at the picture's own size (the HUD's measured sizing: a word's
+    size follows the box it stands in, decision 71)."""
+    from core.hud import style as hudstyle
+    k = PICTURE_REF * screen.layout.scale
+    ratio = float(hudstyle.get().get(f"text.{role}.cap"))
+    return hudtext.render(screen.style, text, role,
+                          cap_px * 4 / 3 * k / ratio, colour)
+
+
+def render_status(screen, surface):
+    """`OrionRE | v<version>   <time>` at the top right, as in Data's
+    mock-up ("Neon Galactic Strategy Command Map"): the name and the time
+    in the value colour, the version dimmer, a thin bar between the name
+    and the version. Right-aligned to the picture's `top_right.right`,
+    centred on `top_right.cy`."""
+    geo = geometry()["top_right"]
+    name, version, clock = status_words()
+    k = PICTURE_REF * screen.layout.scale
+    right, cy = geo["right"], geo["cy"]
+    big = hudtext.colour("value")[:3]
+    dim = hudtext.colour("label")[:3]
+    # (text, role, capital height in picture px, colour, gap to the next)
+    parts = [(clock, "value", 34, big, 30), (version, "label", 19, dim, 14),
+             (None, None, 0, None, 14), (name, "label", 19, big, 0)]
+    x = picture_rect(screen, (right, cy, 0, 0)).x
+    cy_px = picture_rect(screen, (0, cy, 0, 0)).y
+    for text, role, cap, col, gap in parts:
+        if text is None:
+            # the bar between the name and the version: the HUD's own
+            # separator block (screens draw no lines of their own)
+            h = int(26 * k)
+            hud.separator(surface, cy_px - h // 2, cy_px + h // 2,
+                          x - int(2 * k), screen.layout.scale, vertical=True)
+            x -= int(4 * k) + int(gap * k)
+            continue
+        img = _word(screen, text, role, cap, col)
+        ink = img.get_bounding_rect()
+        surface.blit(img, (x - ink.right, cy_px - ink.y - ink.h // 2))
+        x -= ink.w + int(gap * k)
 
 
 def render_title(screen, surface):
-    """The HUD title plate and its word (layout.json `frame.title`).
-
-    The pressed GAME word is orange, as BUFFER0.LBX 1's frame 1 is.
-    The word is centred BY INK (`core.hud.text.blit`), the fix of
-    16 September 2026 for an all-caps word sitting high."""
+    """The word GAME on the hamburger button (layout.json `frame.title`)
+    and the status block. The pressed GAME word is orange, as BUFFER0.LBX
+    1's frame 1 is. The word is centred BY INK (`core.hud.text.blit`)."""
     cfg = screen._data.get("frame", {})
     title = cfg.get("title", screen.FRAME_TITLE)
-    L = screen.layout
-    hud.title_plate(surface, plate_centre_x(screen),
-                    0, L.scale, title, screen.style,
-                    colour=screen.pressed.colour(
-                        "title", hudtext.colour("title"))[:3])
+    box = picture_rect(screen, geometry()["game_word"])
+    col = screen.pressed.colour("title", hudtext.colour("title"))[:3]
+    word = _word(screen, title.upper(), "title", 22, col)
+    hudtext.blit(surface, word, box, align="left")
+    render_status(screen, surface)
 
 
 def render_sidebar(screen, surface):
-    """The info panel: a HUD panel, its separators where the HUD has
-    them (above every row but the first), the HUD's own icons, and the
-    readouts in code."""
+    """The info panel's CONTENT: the HUD's own icons and the readouts in
+    code, over the frame picture's compartments (the panel and its
+    separators are the picture's since work order 420)."""
     box = screen.box_rect("sidebar")
     if not box:
         return
     L = screen.layout
-    panel = pygame.Rect(*L.rect(box))
-    hud.panel(surface, panel, L.scale)
     state = screen._state
     stardate = (str(getattr(state, "stardate_str", "--"))
                 if state is not None else "--")
     rows = screen._data.get("sidebar_rows") or sb.DEFAULT_ROWS
     geometry = screen._sidebar_geometry(rows, set(hudart.ICONS))
-    x0, x1 = hud.separator_span(panel, L.scale)
-    pad = int(screen._data.get("sidebar_row_pad", 8) * L.scale)
-    tops = sorted(L.rect(text)[1] for text, _ in geometry.values())
-    for top in tops[1:]:
-        hud.separator(surface, x0, x1, top - pad, L.scale)
     for key, (_text, icon) in geometry.items():
         if icon is not None and key in hudart.ICONS:
             _blit_icon(surface, key, pygame.Rect(*L.rect(icon)))
@@ -112,9 +216,9 @@ def _blit_icon(surface, key, r):
 
 
 def render_nav(screen, surface):
-    """The six nav buttons (HUD slanted buttons, each with the HUD's
-    icon for it) and TURN (the action button). Hover lights a button;
-    the pressed one is drawn active."""
+    """The six nav buttons and TURN are in the picture (the icons and the
+    play triangle); hover lights a button and the pressed one is drawn
+    pressed, an overlay in its rectangle (`hud.picture_button`)."""
     # Window coordinates, not desktop coordinates: in fullscreen the
     # content sits inside black bars and a raw get_pos() puts the
     # highlight one bar-width off the pointer.
@@ -130,26 +234,19 @@ def render_nav(screen, surface):
             state = "hover"
         else:
             state = "normal"
-        icon = key if key in hudart.ICONS else None
-        draw = hud.action_button if key == "turn" else hud.slant_button
-        draw(surface, rect, screen.layout.scale, state, spec["label"],
-             icon=icon, style_renderer=screen.style)
+        hud.picture_button(surface, rect, screen.layout.scale, state)
 
 
 def nav_rect(screen, key):
-    """The window rect, anchors included: the bar hangs from the
-    window's bottom edge (work order 170)."""
+    """The button's window rect, from its box (the picture's measured
+    segment of the icon bar, or the play button)."""
     return screen.box_screen_rect(f"nav_{key}")
 
 
 def nav_hit(screen, key, x, y):
-    """A nav button is hit as the shape it is drawn as: TURN's
-    rectangle, the others' parallelogram."""
+    """A nav button is hit as the rectangle it lights as (decision 5)."""
     rect = nav_rect(screen, key)
-    if rect is None:
-        return False
-    return (rect.collidepoint(x, y) if key == "turn"
-            else hud.slant_hit(rect, x, y))
+    return rect is not None and rect.collidepoint(x, y)
 
 
 def render_backdrop(screen, surface):
@@ -171,6 +268,7 @@ def render_backdrop(screen, surface):
         screen._update_box_layout()
         screen._backdrop_size = size
     screen._render_map(surface)
+    render_frame(screen, surface)
     render_sidebar(screen, surface)
     terrpanel.render(screen, surface)
     render_nav(screen, surface)

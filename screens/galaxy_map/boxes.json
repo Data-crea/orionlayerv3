@@ -3,12 +3,11 @@
     {
       "name": "map_area",
       "rect": [
-        0,
-        75,
-        1613,
-        917
+        60,
+        72,
+        1487,
+        825
       ],
-      "anchor_v": "stretch",
       "style": {
         "font_scale": 1.0
       }
@@ -16,10 +15,10 @@
     {
       "name": "sidebar",
       "rect": [
-        1619,
-        85,
-        241,
-        846
+        1556,
+        87,
+        350,
+        729
       ],
       "style": {
         "font_scale": 1.3
@@ -28,12 +27,11 @@
     {
       "name": "nav_turn",
       "rect": [
-        1610,
-        998,
-        250,
-        62
+        1558,
+        969,
+        338,
+        75
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 26
       }
@@ -41,12 +39,11 @@
     {
       "name": "nav_colonies",
       "rect": [
-        41,
-        998,
-        250,
-        62
+        128,
+        980,
+        252,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -54,12 +51,11 @@
     {
       "name": "nav_planets",
       "rect": [
-        297,
-        998,
-        250,
-        62
+        380,
+        980,
+        249,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -67,12 +63,11 @@
     {
       "name": "nav_fleets",
       "rect": [
-        563,
-        998,
-        250,
-        62
+        629,
+        980,
+        234,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -80,12 +75,11 @@
     {
       "name": "nav_leaders",
       "rect": [
-        817,
-        998,
+        863,
+        980,
         250,
-        62
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -93,12 +87,11 @@
     {
       "name": "nav_races",
       "rect": [
-        1086,
-        998,
-        250,
-        62
+        1113,
+        980,
+        209,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -106,12 +99,11 @@
     {
       "name": "nav_info",
       "rect": [
-        1348,
-        998,
-        250,
-        62
+        1322,
+        980,
+        212,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -119,10 +111,10 @@
     {
       "name": "sb_stardate_text",
       "rect": [
-        1648,
-        93,
-        194,
-        100
+        1596,
+        116,
+        153,
+        84
       ],
       "style": {
         "font_scale": 1.2,
@@ -132,10 +124,10 @@
     {
       "name": "sb_treasury_text",
       "rect": [
-        1648,
-        209,
-        102,
-        132
+        1596,
+        227,
+        153,
+        74
       ],
       "style": {
         "font_scale": 1.2,
@@ -145,19 +137,19 @@
     {
       "name": "sb_treasury_icon",
       "rect": [
-        1754,
-        242,
-        86,
-        75
+        1755,
+        227,
+        120,
+        74
       ]
     },
     {
       "name": "sb_command_text",
       "rect": [
-        1648,
-        357,
-        96,
-        129
+        1596,
+        317,
+        153,
+        69
       ],
       "style": {
         "font_scale": 1.2,
@@ -167,19 +159,19 @@
     {
       "name": "sb_command_icon",
       "rect": [
-        1748,
-        375,
-        92,
-        97
+        1755,
+        317,
+        120,
+        69
       ]
     },
     {
       "name": "sb_food_text",
       "rect": [
-        1648,
-        502,
-        91,
-        118
+        1596,
+        402,
+        153,
+        65
       ],
       "style": {
         "font_scale": 1.2,
@@ -189,19 +181,19 @@
     {
       "name": "sb_food_icon",
       "rect": [
-        1743,
-        529,
-        93,
-        72
+        1755,
+        402,
+        120,
+        65
       ]
     },
     {
       "name": "sb_freighters_text",
       "rect": [
-        1648,
-        636,
-        102,
-        123
+        1596,
+        483,
+        153,
+        66
       ],
       "style": {
         "font_scale": 1.2,
@@ -211,19 +203,19 @@
     {
       "name": "sb_freighters_icon",
       "rect": [
-        1754,
-        677,
-        92,
-        60
+        1755,
+        483,
+        120,
+        66
       ]
     },
     {
       "name": "sb_research_text",
       "rect": [
-        1648,
-        775,
-        106,
-        148
+        1596,
+        565,
+        153,
+        85
       ],
       "style": {
         "font_scale": 1.2,
@@ -233,10 +225,10 @@
     {
       "name": "sb_research_icon",
       "rect": [
-        1758,
-        799,
-        94,
-        116
+        1755,
+        565,
+        120,
+        85
       ]
     },
     {
@@ -247,9 +239,9 @@
       },
       "rect": [
         261,
-        108,
+        76,
         1080,
-        800
+        796
       ]
     },
     {
@@ -519,12 +511,11 @@
     {
       "name": "map_area",
       "rect": [
-        0,
-        75,
-        1613,
-        917
+        60,
+        72,
+        1487,
+        825
       ],
-      "anchor_v": "stretch",
       "style": {
         "font_scale": 1.0
       }
@@ -532,10 +523,10 @@
     {
       "name": "sidebar",
       "rect": [
-        1619,
-        85,
-        241,
-        846
+        1556,
+        87,
+        350,
+        729
       ],
       "style": {
         "font_scale": 1.3
@@ -544,12 +535,11 @@
     {
       "name": "nav_turn",
       "rect": [
-        1610,
-        998,
-        250,
-        62
+        1558,
+        969,
+        338,
+        75
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 26
       }
@@ -557,12 +547,11 @@
     {
       "name": "nav_colonies",
       "rect": [
-        41,
-        998,
-        250,
-        62
+        128,
+        980,
+        252,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -570,12 +559,11 @@
     {
       "name": "nav_planets",
       "rect": [
-        297,
-        998,
-        250,
-        62
+        380,
+        980,
+        249,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -583,12 +571,11 @@
     {
       "name": "nav_fleets",
       "rect": [
-        563,
-        998,
-        250,
-        62
+        629,
+        980,
+        234,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -596,12 +583,11 @@
     {
       "name": "nav_leaders",
       "rect": [
-        817,
-        998,
+        863,
+        980,
         250,
-        62
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -609,12 +595,11 @@
     {
       "name": "nav_races",
       "rect": [
-        1086,
-        998,
-        250,
-        62
+        1113,
+        980,
+        209,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -622,12 +607,11 @@
     {
       "name": "nav_info",
       "rect": [
-        1348,
-        998,
-        250,
-        62
+        1322,
+        980,
+        212,
+        69
       ],
-      "anchor_v": "bottom",
       "style": {
         "font_size": 18
       }
@@ -635,10 +619,10 @@
     {
       "name": "sb_stardate_text",
       "rect": [
-        1648,
-        93,
-        194,
-        100
+        1596,
+        116,
+        153,
+        84
       ],
       "style": {
         "font_scale": 1.2,
@@ -648,10 +632,10 @@
     {
       "name": "sb_treasury_text",
       "rect": [
-        1648,
-        209,
-        102,
-        132
+        1596,
+        227,
+        153,
+        74
       ],
       "style": {
         "font_scale": 1.2,
@@ -661,19 +645,19 @@
     {
       "name": "sb_treasury_icon",
       "rect": [
-        1754,
-        242,
-        86,
-        75
+        1755,
+        227,
+        120,
+        74
       ]
     },
     {
       "name": "sb_command_text",
       "rect": [
-        1648,
-        357,
-        96,
-        129
+        1596,
+        317,
+        153,
+        69
       ],
       "style": {
         "font_scale": 1.2,
@@ -683,19 +667,19 @@
     {
       "name": "sb_command_icon",
       "rect": [
-        1748,
-        375,
-        92,
-        97
+        1755,
+        317,
+        120,
+        69
       ]
     },
     {
       "name": "sb_food_text",
       "rect": [
-        1648,
-        502,
-        91,
-        118
+        1596,
+        402,
+        153,
+        65
       ],
       "style": {
         "font_scale": 1.2,
@@ -705,19 +689,19 @@
     {
       "name": "sb_food_icon",
       "rect": [
-        1743,
-        529,
-        93,
-        72
+        1755,
+        402,
+        120,
+        65
       ]
     },
     {
       "name": "sb_freighters_text",
       "rect": [
-        1648,
-        636,
-        102,
-        123
+        1596,
+        483,
+        153,
+        66
       ],
       "style": {
         "font_scale": 1.2,
@@ -727,19 +711,19 @@
     {
       "name": "sb_freighters_icon",
       "rect": [
-        1754,
-        677,
-        92,
-        60
+        1755,
+        483,
+        120,
+        66
       ]
     },
     {
       "name": "sb_research_text",
       "rect": [
-        1648,
-        775,
-        106,
-        148
+        1596,
+        565,
+        153,
+        85
       ],
       "style": {
         "font_scale": 1.2,
@@ -749,10 +733,10 @@
     {
       "name": "sb_research_icon",
       "rect": [
-        1758,
-        799,
-        94,
-        116
+        1755,
+        565,
+        120,
+        85
       ]
     },
     {
@@ -763,9 +747,9 @@
       },
       "rect": [
         261,
-        108,
+        76,
         1080,
-        800
+        796
       ]
     },
     {

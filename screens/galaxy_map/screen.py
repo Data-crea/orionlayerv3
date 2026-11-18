@@ -508,6 +508,7 @@ class GalaxyMapScreen(ScreenBase):
         # the whole window (`floorlift.render_floor`), so a second blit of
         # the same picture would only cost a frame's worth of pixels.
         self._render_map(surface)
+        hudview.render_frame(self, surface)
         self._render_sidebar(surface)
         terrpanel.render(self, surface)
         self._render_nav(surface)

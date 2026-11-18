@@ -13,6 +13,7 @@ command brings them back.
 """
 import logging
 
+import numpy as np
 import pygame
 
 from core import resources
@@ -28,6 +29,11 @@ log = logging.getLogger("hud")
 ICONS = ("treasury", "command", "food", "freighters", "research",
          "colonies", "planets", "fleets", "leaders", "races", "info", "turn")
 TITLE_PLATE = "title_plate"
+#: The galaxy map's frame picture (work order 420, decision 104): Data's
+#: authored RGBA picture, a BASE-PACK picture at `assets/shared/hud/
+#: galaxy_frame.png` (decision 95), not a cut piece — `_load` looks for it
+#: beside `galaxy_hud.png`, not under `cut/`.
+GALAXY_FRAME = "galaxy_frame"
 #: The settings window's masks (work order 251, `tools/hud_cut.py`
 #: SETTINGS_ICONS): white with alpha, drawn in a word's colour by `mask`.
 MASKS = ("appearance", "gameplay", "graphics", "system")
@@ -58,6 +64,8 @@ _warned = set()
 def _load(name):
     if name not in _raw:
         path = resources.res.shared("hud", "cut", name + ".png")
+        if not path and name == GALAXY_FRAME:
+            path = resources.res.shared("hud", name + ".png")
         img = None
         if path:
             try:
@@ -89,6 +97,13 @@ def icon(key, height):
 
 
 for_button = glyphs.for_button
+
+
+def frame(width, height):
+    """The galaxy map's frame picture at `width` x `height` device px, in
+    the player's frame colour (its orange lamps as painted), or None when
+    the pack lacks it (absent is a state, decision 38)."""
+    return fit(GALAXY_FRAME, height, width)
 
 
 def mask(key, height, colour):
@@ -131,11 +146,46 @@ def fit(name, height, width=None):
         if small is None:
             small = _plain.put(plain, pygame.transform.smoothscale(
                 img, (int(width), int(height))))
-        out = _scaled.put(key, _tinted(name, small))
+        out = _scaled.put(key, _tinted(name, small, key))
     return out
 
 
-def _tinted(name, img):
+#: The galaxy frame's lamp masks, per size: they do not depend on the colour,
+#: so a change of colour costs the tint alone (work order 420).
+_lamps = {}
+
+
+def _tinted_sparse(name, img, key):
+    """`_tinted` for the full-window frame picture (work order 420): the
+    SAME rule (`tint.rotate_pixels`), but run over the picture's DISTINCT
+    colours of its visible pixels only. The frame is 2560x1440 and more
+    than two thirds of it is transparent or black, so the plain per-pixel
+    run took 1.4 s per colour change at 1440p and 2.9 s at 2160p — the
+    slider of the GAME menu's Settings would have stood still. The result
+    is exact for every pixel it touches; a pixel of alpha 0 or of 3/255 or
+    less in every channel is left as painted (a black one stays black)."""
+    out = img.copy()
+    px = pygame.surfarray.pixels3d(out)
+    keep = _lamps.get(key)
+    if keep is None:
+        if len(_lamps) > 8:
+            _lamps.clear()
+        keep = _lamps[key] = tint.lamp_mask(px)
+    live = ((pygame.surfarray.pixels_alpha(out) > 0)
+            & (px.max(axis=2) > 3) & ~keep)
+    rgb = px[live]
+    packed = ((rgb[:, 0].astype(np.uint32) << 16)
+              | (rgb[:, 1].astype(np.uint32) << 8) | rgb[:, 2])
+    uniq, inv = np.unique(packed, return_inverse=True)
+    cols = np.stack([uniq >> 16, (uniq >> 8) & 255, uniq & 255],
+                    axis=-1).astype(np.uint8).reshape(-1, 1, 3)
+    turned = tint.rotate_pixels(cols, keep=None).reshape(-1, 3)
+    px[live] = turned[inv.reshape(-1)]
+    del px
+    return out
+
+
+def _tinted(name, img, key=None):
     """The piece in the player's frame colour (HD EXTENSION, work order
     170): the same rule as every code-drawn colour, per pixel, for the
     pieces in `tint.FOLLOWS` — the WHOLE piece, since 172, the plate's
@@ -143,9 +193,12 @@ def _tinted(name, img):
     is untouched."""
     if name not in tint.FOLLOWS or tint.is_default():
         return img
+    if name == GALAXY_FRAME and key is not None:
+        return _tinted_sparse(name, img, key)
     out = img.copy()
     px = pygame.surfarray.pixels3d(out)
-    keep = tint.lamp_mask(px) if name == TITLE_PLATE else None
+    keep = (tint.lamp_mask(px) if name in (TITLE_PLATE, GALAXY_FRAME)
+            else None)
     px[...] = tint.rotate_pixels(px, keep=keep)
     del px
     return out
@@ -165,4 +218,5 @@ def reset():
     _raw.clear()
     _scaled.clear()
     _plain.clear()
+    _lamps.clear()
     _warned.clear()

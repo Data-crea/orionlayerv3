@@ -2,12 +2,12 @@
   "_comment": "All galaxy map data. Field IDs verified against the orion2re Galaxy Map field dump (24 fields) in dev:doc/ext_api_dokumentation_v3.md — with one correction from a live screenshot: field 14 (hotkey R) is the RACES button, not Research; the dump's label was a guess. Research is opened via the sidebar in the original. Layout mirrors the original: stardate tops the sidebar column, TURN sits bottom-right (the former status_bar cutout).",
   "frame": {
     "title_rect": [
-      658,
-      6,
-      316,
-      53
+      35,
+      7,
+      217,
+      54
     ],
-    "_note": "No frame image since decision 71 (work order 169; the cockpit frame and tools/frame_holes.py's boxes were removed by work order 189). The screen is the HUD layout: the map's floor in map_area, the title plate (also the GAME button) drawn in code by hudview.title_rect/render_title, the info panel and the nav bar. `title` here is the plate's word; `title_rect` is kept for reference only — the click area is hudview.title_rect.",
+    "_note": "Since decision 104 (work order 420) the screen wears Data's frame picture (a base-pack picture, drawn by hudview.render_frame): the map's floor in map_area, the hamburger button of the picture (also the GAME button), the info panel and the icon bar are the picture's. `title` here is the word drawn on the hamburger button; `title_rect` is the button in reference px (picture px * 0.75) for reference only — the click area is hudview.title_rect.",
     "title": "Game",
     "_title_note": "The original's top bar reads GAME and the bar itself is the game menu button (field 6, hotkey G). Kept literal rather than naming the screen."
   },
@@ -145,7 +145,7 @@
     "sub": 18
   },
   "sidebar_row_pad": 8,
-  "_sidebar_row_pad_note": "Reference px between a sidebar row's text box and the separator above it (decision 71): dev:tools/hud_boxes.py writes the sb_*_text boxes this far inside their bands, and the screen draws each separator this far above its row's text. Ours, not measured.",
+  "_sidebar_row_pad_note": "Reference px a sidebar row's band reaches past its text box (the help regions and the window clicks of the rows, `sidebar.py`): dev:tools/hud_boxes.py writes the sb_*_text boxes inside the picture's compartments, so the band IS its compartment (text box + pad each side) and the screen shell's inset and element gap are this number too (style.json shell). Ours, not measured.",
   "_sidebar_icon_note": "The readouts' icons are the HUD's glyphs (hudview); the PNG icons under assets/icons/ were loaded and never drawn and are gone since work order 269. POSITIONS ARE NOT HERE: every row owns two boxes in boxes.json, sb_<row>_text and sb_<row>_icon, both draggable and font-scalable in the F3 editor. sidebar_fonts are reference sizes multiplied by each text box's own font_scale. A text box style may carry \"align\": left | center | right. The icons are an HD addition; the original prints these five numbers over full-cell artwork.",
   "labels": {
     "treasury": "Treasury",

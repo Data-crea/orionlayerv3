@@ -1,0 +1,115 @@
+{
+  "_comment": "Work order 420 (decision 104): where the parts of the galaxy map's frame picture (base pack, assets/shared/hud/galaxy_frame.png, Data's 'Strategiekarte_1440p_ohne_Gebaeude', RGBA 2560x1440) are, in the PICTURE's own pixels. Measured off the picture by the developer store's galaxy-frame tool, which the smoke test runs against the pack's picture; screens/galaxy_map/boxes.json is written from this file by the store's boxes tool and held to it within 1 px. Reference space (1920x1080) is picture px * 0.75.",
+  "picture": [
+    2560,
+    1440
+  ],
+  "hamburger": [
+    46,
+    9,
+    289,
+    72
+  ],
+  "map_window": [
+    80,
+    96,
+    1983,
+    1100
+  ],
+  "panel": [
+    2074,
+    116,
+    467,
+    972
+  ],
+  "head": [
+    2100,
+    144,
+    420,
+    133
+  ],
+  "dividers": [
+    412,
+    525,
+    633,
+    743,
+    877
+  ],
+  "compartments": {
+    "treasury": [
+      292,
+      412
+    ],
+    "command": [
+      412,
+      525
+    ],
+    "food": [
+      525,
+      633
+    ],
+    "freighters": [
+      633,
+      743
+    ],
+    "research": [
+      743,
+      877
+    ]
+  },
+  "text_x": [
+    2128,
+    204
+  ],
+  "icon_x": [
+    2340,
+    160
+  ],
+  "nav_y": [
+    1307,
+    92
+  ],
+  "nav_x": {
+    "colonies": [
+      170,
+      507
+    ],
+    "planets": [
+      507,
+      839
+    ],
+    "fleets": [
+      839,
+      1151
+    ],
+    "leaders": [
+      1151,
+      1484
+    ],
+    "races": [
+      1484,
+      1763
+    ],
+    "info": [
+      1763,
+      2045
+    ]
+  },
+  "turn": [
+    2078,
+    1292,
+    450,
+    100
+  ],
+  "top_right": {
+    "right": 2526,
+    "cy": 41
+  },
+  "game_word": [
+    140,
+    9,
+    180,
+    72
+  ],
+  "_map_window_note": "The star map's box: its native viewport (the box fitted to the game's 506:400, centred) stays clear of the picture's art - the frame's bottom contour is at y 1238 or lower for every x in the viewport, 42 px of air for the names that hang under the lowest stars; the top clears y 76. The height 1100 is OURS, chosen against that measure and against 006d's word contrast (the fixture's Draconis label touches a background star's glow: 3.3:1 at 1084, 4.6:1 at 1100), decision 53."
+}

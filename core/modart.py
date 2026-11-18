@@ -56,6 +56,9 @@ NOT_LISTED = {
         "a whole directory, replaced through mods/ only (decision 17)",
     "assets/shared/hud/galaxy_hud.png":
         "the sheet the HUD pieces are cut from (tools/hud_cut.py)",
+    "assets/shared/hud/galaxy_frame.png":
+        "Data's own frame picture of the galaxy map (work order 420, "
+        "decision 104) — OrionLayer's, not the game's",
     "assets/shared/hud/settings_icons.png":
         "the sheet the settings window's tab icons are cut from "
         "(tools/hud_cut.py, work order 251)",

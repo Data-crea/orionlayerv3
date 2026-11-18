@@ -45,8 +45,9 @@ REFERENCE = 196
 #: The cut pieces the frame colour turns. The title plate is frame; the
 #: nav glyphs and the TURN triangle are frame-coloured glyphs and follow
 #: by default (parked, 170 P4); the info panel's pictures never do.
-FOLLOWS = {"title_plate", "icon_colonies", "icon_planets", "icon_fleets",
-           "icon_leaders", "icon_races", "icon_info", "icon_turn"}
+FOLLOWS = {"title_plate", "galaxy_frame", "icon_colonies", "icon_planets",
+           "icon_fleets", "icon_leaders", "icon_races", "icon_info",
+           "icon_turn"}
 # The button glyphs (work order 179) are line art in the nav glyphs' own
 # blue and turn with the frame colour as the nav glyphs do.
 from core.hud import glyphs as _glyphs  # noqa: E402
