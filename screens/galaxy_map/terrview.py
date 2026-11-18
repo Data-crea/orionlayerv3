@@ -78,6 +78,34 @@ def area(view, scale):
     return pygame.Rect(view.box).inflate(-2 * pad, -2 * pad)
 
 
+def paint_area(screen, view):
+    """Where a territory's fill and borders are drawn since work order 420:
+    the frame picture's whole free window (`territory_window` of
+    `galaxy_frame.json`), which holds the star box and goes on past it —
+    a border was cut flat at the star box's top and bottom (Nazin,
+    Draconis; Data, 18 November 2026) where the picture still left room,
+    and the picture's own art, drawn after the map, covers what lies under
+    it. Never smaller than `area`."""
+    from screens.galaxy_map import hudview
+    win = hudview.picture_rect(screen, hudview.geometry()["territory_window"])
+    return win.union(area(view, screen.layout.scale))
+
+
+class _PaintView:
+    """The map view with another `box`: the territory's fill and borders
+    read the rectangle they draw into from `view.box` (the part of the
+    field to take, the border layer's size, the clip of a path), so the
+    wider paint area (`paint_area`) goes in as the box and everything
+    else — scale, offsets, the clicks' transform — is the view's own."""
+
+    def __init__(self, view, box):
+        self._view = view
+        self.box = box
+
+    def __getattr__(self, name):
+        return getattr(self._view, name)
+
+
 def render_under(screen, surface, ctx):
     app = screen.app
     terr = territory(screen)
@@ -86,9 +114,10 @@ def render_under(screen, surface, ctx):
     view = ctx.view
     op = terrdraw.opacity(app)
     clip = surface.get_clip()
-    surface.set_clip(area(view, screen.layout.scale))
+    paint = paint_area(screen, view)
+    surface.set_clip(paint)
     try:
-        _draw_under(screen, surface, view, terr, op)
+        _draw_under(screen, surface, _PaintView(view, paint), terr, op)
     finally:
         surface.set_clip(clip)
 

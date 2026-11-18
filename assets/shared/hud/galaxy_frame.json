@@ -129,5 +129,12 @@
     2226,
     2500
   ],
-  "_label_note": "The words of the icon bar: each starts label_gap px right of its icon's right edge (nav_icon_right, measured off the picture) and may reach label_pad_right px short of its segment's right edge; the play button's word stands right of its triangle (turn_label, x from, x to). The picture carries no text; the words are drawn in code, as the nav buttons' were (Data saw the bar without them on 18 November 2026)."
+  "_label_note": "The words of the icon bar: each starts label_gap px right of its icon's right edge (nav_icon_right, measured off the picture) and may reach label_pad_right px short of its segment's right edge; the play button's word stands right of its triangle (turn_label, x from, x to). The picture carries no text; the words are drawn in code, as the nav buttons' were (Data saw the bar without them on 18 November 2026).",
+  "territory_window": [
+    0,
+    56,
+    2066,
+    1174
+  ],
+  "_territory_window_note": "Where a territory's fill and borders may be drawn (picture px): the whole free window of the picture, not only the star box (map_window) - a territory is a shape, not a sprite, and was cut flat at the star box's top and bottom where the frame still left room (Data, 18 November 2026: Nazin, Draconis). Top 56 clears the top bar's line (y 45), bottom 1230 the bottom contour (y 1238 or lower right of x 373; the art covers whatever lies below), right 2066 the info panel (x 2074); left 0, the picture is open there. OURS, chosen against that measure (decision 53); 090zzzzzzzzn holds it around the star box."
 }
