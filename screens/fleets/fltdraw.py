@@ -681,12 +681,17 @@ def draw_inset(surface, screen, stars, game_state, art=None):
 RELOCATION_RAMP = tuple(tuple(c) for c in palette.require(
     "fleets", "relocation_line"))
 
-#: `Draw_Ship_Destination_Line_` nudges the STAR end by +4
+#: `Draw_Ship_Destination_Line_` nudges the SOURCE end by +4
 #: (ships.cpp:552-553, the non-main-screen branch) and
-#: `Draw_Fltscrn_Relocation_Lines_` passes the TARGET end already
-#: nudged by +3 (flt1.cpp:1486). Native px, inside the inset box.
-RELOCATION_FROM_NUDGE = 4
-RELOCATION_TO_NUDGE = 3
+#: `Draw_Fltscrn_Relocation_Lines_` passes the TARGET end nudged by +3
+#: (flt1.cpp:1486) — but both stars come from `Get_Galaxy_Map_Star_XY`
+#: with marker mode 1, which has ALREADY taken 3 off (movebox.cpp:343-366).
+#: Net: the target end is the star's own point (+0) and the source end +1.
+#: HD took the nudges without the 3 (the same fault as the green destination
+#: line, `fltdest.STAR_NUDGE`, Data, 19 November 2026). Native px, inside
+#: the inset box, from the point the dot is drawn at.
+RELOCATION_FROM_NUDGE = 4 - 3
+RELOCATION_TO_NUDGE = 3 - 3
 
 
 def draw_relocation_lines(surface, screen, state, stars, ms):

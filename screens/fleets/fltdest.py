@@ -15,12 +15,18 @@ draws a line from the icon to the star it heads for:
     NOT consult the options screen's "enemy moves" setting: the function
     is not called here at all.
 
-The line ends are the star's drawn point `+3, +3` (`out_x + 3`, flt1.cpp:
-161-173, :207-210) and the icon's top-left `+4, +4` (`Draw_Ship_Destination
-_Line_`, ships.cpp:552-553, the branch for every screen but the galaxy
-map); the line is drawn from the icon to the star (ships.cpp:558-563), the
-wave through `maplines`' one routine (decision 68), clipped to the inset
-box like the relocation lines beside it (`fltdraw.draw_relocation_lines`).
+The line ends are the star's point and the icon's top-left `+4, +4`
+(`Draw_Ship_Destination_Line_`, ships.cpp:552-553, the branch for every
+screen but the galaxy map). The star's end is `out_x + 3` (flt1.cpp:161-173,
+:207-210) of `Get_Galaxy_Map_Star_XY` called with marker mode 1, which has
+ALREADY taken 3 off (`star_center_offset`, movebox.cpp:343-366): the two
+cancel and the line ends ON the star's own point, the one the dot is drawn
+at. HD took only the `+3` and ended every line 3 native px (about 10 HD px)
+right of and below its star (Data, 19 November 2026: "es zeigt immer
+etwas daneben an"). The line is drawn from the icon to the star
+(ships.cpp:558-563), the wave through `maplines`' one routine (decision
+68), clipped to the inset box like the relocation lines beside it
+(`fltdraw.draw_relocation_lines`).
 
 TRANSCRIPTION `preview_line` (open fix 121, work order 406). The marking
 OMISSION `omission_preview_line` stands only against an engine without that
@@ -42,9 +48,25 @@ from core.structs import star as star_struct
 
 from . import fltgeom
 
-#: `out_x + 3` at the star and `x2 + 4` at the icon (see the header).
-STAR_NUDGE = 3
+#: At the star `Get_Galaxy_Map_Star_XY`'s `-3` (marker mode 1) and the
+#: caller's `+3` cancel; at the icon `x2 + 4` (see the header).
+STAR_NUDGE = 3 - 3
 ICON_NUDGE = 4
+
+
+def ends(rect, native, icon_xy, star_xy):
+    """The line's two ends in window pixels: `rect` the inset's box,
+    `native` its native `(x, y, w, h)`, `icon_xy` the stack icon's
+    absolute native top-left, `star_xy` the star's box-local native point
+    (`colonyfacts.galaxy_inset_stars`). One place, so a check can hold the
+    star's end to where the dot is drawn (`fltdraw.draw_inset`)."""
+    bx, by, nw, nh = native
+    fx, fy = rect.width / float(nw), rect.height / float(nh)
+    a = (rect.x + (int(icon_xy[0]) - bx + ICON_NUDGE) * fx,
+         rect.y + (int(icon_xy[1]) - by + ICON_NUDGE) * fy)
+    b = (rect.x + (star_xy[0] + STAR_NUDGE) * fx,
+         rect.y + (star_xy[1] + STAR_NUDGE) * fy)
+    return a, b
 
 
 def _ours(state, star):
@@ -131,9 +153,7 @@ def draw(surface, screen, state, stars, ms, preview=None):
         if int(icon.x) < 0 or int(icon.y) < 0:
             continue                     # not placed (the -1 sentinel)
         sx, sy, _c = stars[line["star"]]
-        a = (rect.x + (int(icon.x) - bx + ICON_NUDGE) * fx,
-             rect.y + (int(icon.y) - by + ICON_NUDGE) * fy)
-        b = (rect.x + (sx + STAR_NUDGE) * fx, rect.y + (sy + STAR_NUDGE) * fy)
+        a, b = ends(rect, (bx, by, nw, nh), (icon.x, icon.y), (sx, sy))
         table, offset = maplines.directional(
             a[0], a[1], b[0], b[1],
             maplines.RED if line["colour"] == "red" else maplines.GREEN,
