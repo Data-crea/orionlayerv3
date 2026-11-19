@@ -53,7 +53,7 @@ from . import gmfill, gmlang
 #: click help regions name (help.json `orionlayer_band`).
 BANDS = ("colours", "frame", "tone", "glass", "fill", "fill_tone",
          "text_size", "floor",
-         "map_black", "monsters", "map_ships", "frame_rate", "idle_rate",
+         "map_black", "monsters", "map_ships", "ship_look", "frame_rate", "idle_rate",
          "painted", "livery", "mods", "mod_files", "mod_open", "hotkeys",
          "language")
 
@@ -78,6 +78,10 @@ MONSTER_STEPS = ("on", "off")
 #: The galaxy map's ship pictures (work order 311, `galaxy_map/shippics`),
 #: default on; the map reads it at every draw.
 MAP_SHIP_STEPS = ("on", "off")
+
+#: How the map draws a player's ship (HD EXTENSION `ship_look`,
+#: `galaxy_map/ships.LOOKS`), default lighter; the map reads it at every draw.
+SHIP_LOOK_STEPS = ("original", "lighter", "vivid", "distinct")
 
 #: The mod folder switch (work order 173, decision 72), default off since
 #: work order 197 (`core.usersettings`). Switching it ON starts the
@@ -365,6 +369,7 @@ def render(screen, surface):
               "map_black": ("map_black", "Black map background"),
               "monsters": ("monsters", "Monster values"),
               "map_ships": ("map_ships", "Map ship pictures"),
+              "ship_look": ("ship_look", "Map ship look"),
               "frame_rate": ("frame_rate", "Frame rate"),
               "idle_rate": ("idle_rate", "When idle"),
               "painted": ("painted", "Painted detail"),

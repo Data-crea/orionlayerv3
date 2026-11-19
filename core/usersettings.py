@@ -89,6 +89,12 @@ DEFAULTS = {
     # The galaxy map's stacks as their strongest ship's picture (work order
     # 311, `screens/galaxy_map/shippics`), on or off; applied at once.
     "map_ship_pictures": "on",
+    # How a player's ship is drawn on the galaxy map (Data, 19 November 2026;
+    # the marking is in `screens/galaxy_map/ships`): original, lighter, vivid
+    # or distinct; applied at once. "lighter" is a step away from the
+    # original's look, the one Data asked for when the grey ships sank into
+    # the space picture.
+    "map_ship_look": "lighter",
     # The galaxy map's background picture replaced by black (work order
     # 326, Data's decision; `screens/galaxy_map/floorlift`), on or off;
     # applied at once. Off: the picture, as decision 71 has it.

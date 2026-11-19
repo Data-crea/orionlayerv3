@@ -266,6 +266,13 @@
         "on": "On",
         "off": "Off"
       },
+      "ship_look": "Map ship look",
+      "ship_look_steps": {
+        "original": "Original",
+        "lighter": "Lighter",
+        "vivid": "Stronger",
+        "distinct": "Own colours"
+      },
       "map_black": "Black map background",
       "map_black_steps": {
         "off": "Off",
@@ -456,6 +463,10 @@
     "orionlayer.map_ships": {
       "title": "MAP SHIP PICTURES",
       "body": "On: each of your stacks on the galaxy map shows its strongest ship \u2014 the Avenger first, then the largest hull, then the dearest design \u2014 in your colour, and every other empire's stack the ship the game puts at its head. A colony, outpost or transport stack shows its picture from the map's ship picture slot (doc/modding_galaxy_map.md); without one, and for a ship without a picture, the ship icon. Off: the ship icon for every stack, as the original draws it. Applied at once."
+    },
+    "orionlayer.ship_look": {
+      "title": "MAP SHIP LOOK",
+      "body": "How a player's ships are drawn on the galaxy map, so that they stand out from the background picture and from each other. Original: as drawn before. Lighter: lifted toward white by a fifth. Stronger: the colours stronger, then lifted. Own colours: each empire's ships repainted in a colour of their own, brighter \u2014 brown and orange, silver, blue and violet apart. Under a colour-blind palette Own colours draws Stronger, the palette keeps its own colours. Monsters are not changed. Applied at once."
     },
     "orionlayer.map_black": {
       "title": "BLACK MAP BACKGROUND",

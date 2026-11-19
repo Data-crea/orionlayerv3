@@ -66,6 +66,7 @@ the star is unambiguous.
 import logging
 import math
 
+import numpy as np
 import pygame
 
 from core import palette, playercolors
@@ -123,6 +124,13 @@ DEFAULT_FIT = "height"
 #: 2026, the tinted sprites compared byte for byte.
 SHIP_COLORS = {}
 
+#: HD EXTENSION `ship_look` (Data, 19 November 2026): the colour each owner's
+#: ship is painted in under the setting `map_ship_look` "distinct" — the skin's
+#: `galaxy_map` ship_look_0..7, same order as SHIP_COLORS, no code default
+#: (decision 14). Only under the original player colours: a preset (the
+#: colour-blind palette) keeps its own colours and "distinct" then draws "vivid".
+SHIP_LOOK = {}
+
 
 @palette.on_preset
 def _bind_ship_colours():
@@ -132,6 +140,8 @@ def _bind_ship_colours():
     Registered in `layout.json` `_markings`."""
     SHIP_COLORS.update({i: palette.require("galaxy_map", f"ship_{i}")
                         for i in range(8)})
+    SHIP_LOOK.update({i: palette.require("galaxy_map", f"ship_look_{i}")
+                      for i in range(8)})
 
 
 _bind_ship_colours()
@@ -141,6 +151,28 @@ _bind_ship_colours()
 #: this fraction keeps the specular pixels bright while the midtones
 #: still carry the player colour. 0 reproduces banner.py's behaviour.
 TINT_KEEP_WHITE = 0.22
+
+#: HD EXTENSION `ship_look` (Data, 19 November 2026): how a player's ship is
+#: drawn on the galaxy map, the setting `map_ship_look` (the OrionLayer
+#: window's GAMEPLAY tab). Measured off the 16:21 render of the eight-colour
+#: save: the silver hull's mean stood at about 0.03 (linear) against a
+#: background of 0.03 to 0.07 once the map had its space picture, a contrast of
+#: 1.04 to 1.56 : 1, brown and orange 6 degrees of hue apart, violet at
+#: saturation 0.23.
+#:   original  the drawing as it was
+#:   lighter   lifted toward white by SHIP_LIGHTEN (the default)
+#:   vivid     the colour's chroma x VIVID_CHROMA, then lifted
+#:   distinct  repainted in the skin's ship_look colours, brighter
+LOOK_SETTING, LOOK_DEFAULT = "map_ship_look", "lighter"
+LOOKS = ("original", "lighter", "vivid", "distinct")
+SHIP_LIGHTEN = 0.20
+VIVID_CHROMA = 1.7
+#: "distinct": the plating's lightness x DISTINCT_GAIN + DISTINCT_ADD, and a
+#: silver (a target with no chroma) lifted by SILVER_LIFT instead.
+DISTINCT_GAIN, DISTINCT_ADD, SILVER_LIFT = 1.4, 0.05, 0.45
+#: The plating is the pixels whose chroma is above PLATE_CHROMA and whose hue
+#: is within PLATE_HUE degrees of the ship's own plating hue.
+PLATE_CHROMA, PLATE_HUE = 0.12, 40.0
 
 #: Drawn when a sprite is missing entirely — the pre-existing
 #: behaviour, so a project without the ship assets still shows fleets.
@@ -266,6 +298,87 @@ def _lift(color, keep=TINT_KEEP_WHITE):
     return tuple(int(round(c + (255 - c) * keep)) for c in color[:3])
 
 
+def _lighten(out, fraction=None):
+    """Lift the sprite copy `out`'s RGB toward white by `fraction` (HD
+    EXTENSION `ship_lighten`): v -> v * (1 - f) + 255 * f, alpha untouched.
+    A multiply by 1 - f and an add of 255 f, so the highlights cannot clip."""
+    f = SHIP_LIGHTEN if fraction is None else fraction
+    if f <= 0:
+        return out
+    keep = int(round(255 * (1.0 - f)))
+    out.fill((keep, keep, keep), special_flags=pygame.BLEND_RGB_MULT)
+    add = int(round(255 * f))
+    out.fill((add, add, add), special_flags=pygame.BLEND_RGB_ADD)
+    return out
+
+
+def look_of(settings):
+    """The setting `map_ship_look` as one of LOOKS; the default for an
+    unknown or absent value (tests that pass no settings)."""
+    v = settings.get(LOOK_SETTING) if settings is not None else None
+    return v if v in LOOKS else LOOK_DEFAULT
+
+
+def _hue_chroma(rgb):
+    """Hue (degrees) and chroma of `rgb`, 0..1 in the last axis."""
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    d = np.maximum(mx - mn, 1e-9)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    h = np.where(mx == r, ((g - b) / d) % 6,
+                 np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60.0
+    return h, mx - mn
+
+
+def _repaint(rgb, colour_idx):
+    """`rgb` (w, h, 3, 0..1) with the plating repainted in the skin's
+    ship_look colour for `colour_idx`, at the plating's own lightness
+    x DISTINCT_GAIN + DISTINCT_ADD (the battle's own blend,
+    `cbpaint.at_lum`); the engines, glints and outline keep their pixels."""
+    from screens.combat import cbpaint
+    h, ch = _hue_chroma(rgb)
+    plate = ch > PLATE_CHROMA
+    if not plate.any():
+        return rgb
+    ang = np.radians(h[plate])
+    h0 = np.degrees(np.arctan2(np.sin(ang).mean(), np.cos(ang).mean())) % 360
+    near = np.abs((h - h0 + 180) % 360 - 180) < PLATE_HUE
+    w = (np.clip((ch - PLATE_CHROMA / 2) / PLATE_CHROMA, 0, 1)
+         * near)[..., None]
+    lum = rgb[..., 0] * .3 + rgb[..., 1] * .59 + rgb[..., 2] * .11
+    col = cbpaint.at_lum(np.clip(lum * DISTINCT_GAIN + DISTINCT_ADD, 0, 1),
+                         SHIP_LOOK[colour_idx])
+    return rgb * (1 - w) + col * w
+
+
+def _restyle(sprite, colour_idx, look):
+    """HD EXTENSION `ship_look`: a copy of `sprite` drawn in `look`; the
+    sprite itself when it is "original". The colour is the owner's colour
+    index (0-7), None for a picture without one."""
+    if look == "original":
+        return sprite
+    out = sprite.copy()
+    if look == "lighter" or colour_idx not in SHIP_LOOK:
+        return _lighten(out)
+    px = pygame.surfarray.pixels3d(out)
+    rgb = px.astype(np.float32) / 255
+    if look == "distinct" and \
+            palette.active_preset() == playercolors.ORIGINAL:
+        target = SHIP_LOOK[colour_idx]
+        if max(target) - min(target) < 40:       # a silver: no chroma to paint
+            del px
+            return _lighten(out, SILVER_LIFT)
+        new = _repaint(rgb, colour_idx)
+        px[...] = (np.clip(new, 0, 1) * 255 + 0.5).astype(np.uint8)
+        del px
+        return out
+    mx, mn = rgb.max(-1, keepdims=True), rgb.min(-1, keepdims=True)
+    mid = (mx + mn) / 2                          # "vivid" and distinct's fallback
+    px[...] = (np.clip(mid + (rgb - mid) * VIVID_CHROMA, 0, 1) * 255
+               + 0.5).astype(np.uint8)
+    del px
+    return _lighten(out)
+
+
 class TintCache:
     """Tinted copies of the greyscale player sprite, per (key, colour).
 
@@ -276,6 +389,7 @@ class TintCache:
 
     def __init__(self):
         self._tinted = {}
+        self._lit = {}
         self._gen = palette.generation()
         # the stacks' ship pictures are made at the box's size too, so they
         # go with the tinted sprites (HD EXTENSION `strongest_ship_icon`)
@@ -289,9 +403,11 @@ class TintCache:
             self._gen = palette.generation()
             self.clear()
 
-    def get(self, base, cache_key, color_idx):
+    def get(self, base, cache_key, color_idx, look=None):
         self.follow()
-        key = (cache_key, base.get_width(), base.get_height(), color_idx)
+        look = look or LOOK_DEFAULT
+        key = (cache_key, base.get_width(), base.get_height(), color_idx,
+               look)
         hit = self._tinted.get(key)
         if hit is not None:
             return hit
@@ -300,13 +416,34 @@ class TintCache:
             return base
         out = base.copy()
         out.fill(_lift(color), special_flags=pygame.BLEND_RGB_MULT)
+        out = _restyle(out, color_idx, look)
         if len(self._tinted) > 256:     # the width varies with the zoom
             self._tinted.clear()
         self._tinted[key] = out
         return out
 
+    def lit(self, pic, colour_idx=None, look=None):
+        """`pic` drawn in `look` (`_restyle`), made once per picture, colour
+        and look: the stack pictures (`shippics`) are cached surfaces that
+        other screens share, so the copy is ours and the picture itself is
+        not touched."""
+        self.follow()
+        look = look or LOOK_DEFAULT
+        if look == "original":
+            return pic
+        k = (id(pic), colour_idx, look)
+        hit = self._lit.get(k)
+        if hit is not None and hit[0] is pic:
+            return hit[1]
+        if len(self._lit) > 256:
+            self._lit.clear()
+        out = _restyle(pic, colour_idx, look)
+        self._lit[k] = (pic, out)
+        return out
+
     def clear(self):
         self._tinted.clear()
+        self._lit.clear()
         self.pictures.clear()
 
 
@@ -676,6 +813,7 @@ def render(surface, ctx, icons, players, cache, tints,
     """
     if not icons:
         return
+    look = look_of(settings)
     owners = resolve_owners(icons, ships or [], nodes)
     # HD EXTENSION `owner_marks`
     marks = playercolors.colour_blind(palette.active_preset())
@@ -703,7 +841,9 @@ def render(surface, ctx, icons, players, cache, tints,
             pic = _stack_picture(icon, owner, players, tints, ships, nodes,
                                  me, settings, box_w, box_h)
             if pic is not None:
-                iconhalo.blit_haloed(surface, pic, cx, cy)
+                iconhalo.blit_haloed(
+                    surface, tints.lit(pic, _player_color(players, owner),
+                                       look), cx, cy)
                 if marks:
                     ownermark.draw(surface, left, top, box_w, box_h,
                                    _player_color(players, owner))
@@ -728,7 +868,7 @@ def render(surface, ctx, icons, players, cache, tints,
         if kind == PLAYER_KIND:
             color_idx = _player_color(players, owner)
             if color_idx is not None:
-                sprite = tints.get(sprite, key, color_idx)
+                sprite = tints.get(sprite, key, color_idx, look)
 
         iconhalo.blit_haloed(surface, sprite, cx, cy)
         if marks and kind == PLAYER_KIND:

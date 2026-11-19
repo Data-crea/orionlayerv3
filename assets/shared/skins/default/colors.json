@@ -616,6 +616,47 @@
       138,
       20
     ],
+    "_ship_look_note": "HD EXTENSION ship_look (Data, 19 November 2026): the colours the galaxy map paints each owner's ship in under the setting map_ship_look 'distinct' (screens/galaxy_map/ships.py SHIP_LOOK, _repaint), in the order of ship_0..7: red, yellow, green, silver, blue, brown, purple, orange. OURS, chosen by eye against the 16:21 render of the eight-colour save and the variant sheet (brown a dark copper so that it stands apart from orange, silver a light metal grey, violet a real violet); the plating takes the colour at its own lightness x 1.4 + 0.05. Only under the original player colours: a preset keeps its own.",
+    "ship_look_0": [
+      232,
+      52,
+      44
+    ],
+    "ship_look_1": [
+      246,
+      214,
+      36
+    ],
+    "ship_look_2": [
+      58,
+      206,
+      88
+    ],
+    "ship_look_3": [
+      205,
+      212,
+      222
+    ],
+    "ship_look_4": [
+      52,
+      122,
+      255
+    ],
+    "ship_look_5": [
+      150,
+      92,
+      52
+    ],
+    "ship_look_6": [
+      192,
+      72,
+      228
+    ],
+    "ship_look_7": [
+      255,
+      140,
+      12
+    ],
     "panel_background": [
       8,
       11,
