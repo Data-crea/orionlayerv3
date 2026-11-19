@@ -12,7 +12,7 @@
   ],
   "map_window": [
     80,
-    96,
+    115,
     1983,
     1100
   ],
@@ -113,7 +113,7 @@
     180,
     72
   ],
-  "_map_window_note": "The star map's box: its native viewport (the box fitted to the game's 506:400, centred) stays clear of the picture's art - the frame's bottom contour is at y 1238 or lower for every x in the viewport, 42 px of air for the names that hang under the lowest stars; the top clears y 76. The height 1100 is OURS, chosen against that measure and against 006d's word contrast (the fixture's Draconis label touches a background star's glow: 3.3:1 at 1084, 4.6:1 at 1100), decision 53.",
+  "_map_window_note": "The star map's box: its native viewport (the box fitted to the game's 506:400, centred). The stars the game can place (mapgen_layout.cpp:131-151: scaled x 24..488, y 22..382 less 8, 6 or 4; a save of 54 stars measured at x 28..479, y 22..375) stand in picture px at x 438..1718 and y 173..1143..1154 here, which centres them in the picture's hole (y 46 to 1274 or lower over x 438..1718; Data, 19 November 2026: the picture sat 21 px high, 108 px of air above the topmost star against 150 below the lowest, the box 19 px too far up). The names that hang under the lowest stars (about 50 px, estimated) end at y 1205, 34 px above the contour at its tightest (1239 at x 375..437, outside the stars). The height 1100 is OURS, chosen against the frame's art and against 006d's word contrast (the fixture's Draconis label touches a background star's glow: 3.3:1 at 1084, 4.6:1 at 1100), decision 53.",
   "_top_right_note": "The status block's right edge, its middle line, and the box it must stay inside: right of min_left and above max_bottom. The top bar is a dark fill the block stands ON, but its line falls from y 45 to y 80 at about x 1990 (alpha column at x 1980-2020) and the lower line runs at y 74-80 right of it; the block must reach neither (measured off the picture). The smoke test 011a holds the block inside the box at every window size.",
   "nav_icon_right": {
     "colonies": 292,
