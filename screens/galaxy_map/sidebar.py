@@ -322,15 +322,31 @@ def blit_icon(surface, cache, key, rect):
                           y + (h - scaled.get_height()) // 2))
 
 
+def _digit_height(font):
+    """The ink height of a digit in `font` — what the eye reads as the
+    figure's height, not the line box's."""
+    return font.render("0", True, (255, 255, 255)).get_bounding_rect().height
+
+
+def _inline_drop(value_font, sub_font):
+    """How far the inline sub's surface hangs below the value's top so the
+    CENTRES of the two figures meet: the baselines' ascent difference less
+    half the difference of the digits' heights.
+
+    Bottom-aligned line boxes put "(6)" about 7 px below "-3"; sharing the
+    baseline (the first fix) still left the small figure's middle 5 px under
+    the big one's, and Data read "-3 (6)" as not on one height (19 November
+    2026, twice). Centred, the smaller figure sits in the bigger one's
+    middle, brackets reaching a little past it both ways."""
+    base = value_font.get_ascent() - sub_font.get_ascent()
+    lift = (_digit_height(value_font) - _digit_height(sub_font)) // 2
+    return max(0, base - lift)
+
+
 def _pair_surface(vt, st, gap, drop=None):
     """Value and inline sub merged, so they can be shrunk together.
-
-    `drop` is how far the sub's surface hangs below the value's top so the
-    two BASELINES meet: the value font's ascent less the sub font's. Without
-    it the two line boxes were bottom-aligned, and the bigger face's deeper
-    descent lifted its baseline above the smaller one's: "(6)" and "(15)"
-    stood about 7 px lower than the number beside them at 2560x1440 (Data,
-    19 November 2026, "ein Versatz bei den Zahlen")."""
+    `drop`: see `_inline_drop`; without it the two line boxes are bottom-
+    aligned (the first, faulty rule)."""
     if drop is None:
         drop = vt.get_height() - st.get_height()
     drop = max(0, drop)
@@ -381,7 +397,7 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
     if st is not None and sub.startswith(SUB_INLINE_PREFIX):
         vts[-1], st = _pair_surface(
             vts[-1], st, max(1, int(INLINE_GAP * layout.scale)),
-            value_font.get_ascent() - sub_font.get_ascent()), None
+            _inline_drop(value_font, sub_font)), None
     vts = [_fit_width(v, w) for v in vts]
     st = _fit_width(st, w) if st is not None else None
 
