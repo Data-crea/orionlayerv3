@@ -142,8 +142,10 @@ def render_status(screen, surface):
     # Sized to stand RIGHT of the picture's top bar's step (its line falls
     # from y 45 to y 80 at picture x ~1990, `top_right.min_left`): the first
     # build (34 / 19 px caps) reached x 1960 and the name stood on the
-    # step — Data saw it at once (18 November 2026).
-    parts = [(clock, "value", 27, big, 24), (version, "label", 15, dim, 11),
+    # step — Data saw it at once (18 November 2026). Clock 27 -> 19 and
+    # GAME 22 -> 16 after his looks: "etwas zu groß", then "sieht immer noch
+    # gleich groß aus" at 23 / 19 (19 November).
+    parts = [(clock, "value", 19, big, 24), (version, "label", 15, dim, 11),
              (None, None, 0, None, 11), (name, "label", 15, big, 0)]
     x = picture_rect(screen, (right, cy, 0, 0)).x
     cy_px = picture_rect(screen, (0, cy, 0, 0)).y
@@ -170,7 +172,7 @@ def render_title(screen, surface):
     title = cfg.get("title", screen.FRAME_TITLE)
     box = picture_rect(screen, geometry()["game_word"])
     col = screen.pressed.colour("title", hudtext.colour("title"))[:3]
-    word = _word(screen, title.upper(), "title", 22, col)
+    word = _word(screen, title.upper(), "title", 16, col)
     hudtext.blit(surface, word, box, align="left")
     render_status(screen, surface)
 
