@@ -322,13 +322,23 @@ def blit_icon(surface, cache, key, rect):
                           y + (h - scaled.get_height()) // 2))
 
 
-def _pair_surface(vt, st, gap):
-    """Value and inline sub merged, so they can be shrunk together."""
+def _pair_surface(vt, st, gap, drop=None):
+    """Value and inline sub merged, so they can be shrunk together.
+
+    `drop` is how far the sub's surface hangs below the value's top so the
+    two BASELINES meet: the value font's ascent less the sub font's. Without
+    it the two line boxes were bottom-aligned, and the bigger face's deeper
+    descent lifted its baseline above the smaller one's: "(6)" and "(15)"
+    stood about 7 px lower than the number beside them at 2560x1440 (Data,
+    19 November 2026, "ein Versatz bei den Zahlen")."""
+    if drop is None:
+        drop = vt.get_height() - st.get_height()
+    drop = max(0, drop)
     surf = pygame.Surface(
         (vt.get_width() + gap + st.get_width(),
-         max(vt.get_height(), st.get_height())), pygame.SRCALPHA)
+         max(vt.get_height(), drop + st.get_height())), pygame.SRCALPHA)
     surf.blit(vt, (0, 0))
-    surf.blit(st, (vt.get_width() + gap, vt.get_height() - st.get_height()))
+    surf.blit(st, (vt.get_width() + gap, drop))
     return surf
 
 
@@ -370,7 +380,8 @@ def draw_text_block(surface, style, layout, rect, label, main, sub,
 
     if st is not None and sub.startswith(SUB_INLINE_PREFIX):
         vts[-1], st = _pair_surface(
-            vts[-1], st, max(1, int(INLINE_GAP * layout.scale))), None
+            vts[-1], st, max(1, int(INLINE_GAP * layout.scale)),
+            value_font.get_ascent() - sub_font.get_ascent()), None
     vts = [_fit_width(v, w) for v in vts]
     st = _fit_width(st, w) if st is not None else None
 
