@@ -388,6 +388,23 @@ def _ordered():
     return collections.OrderedDict
 
 
+def _rim(screen):
+    """The gold plate's corner size on this screen: a thin rim, because the
+    table's content runs within a few px of its panel's edge."""
+    return max(12, round(15 * screen.layout.scale))
+
+
+def _rim_over(screen, surface, rect):
+    """**HD EXTENSION `plate_from_galaxy_frame`**: the galaxy frame's rim
+    over a window's own panel (fill, glass and tint stay the panel's)."""
+    from core.hud import plate
+    c = _rim(screen)
+    # the rim stands OUTSIDE the panel's rect, so nothing the panel holds is
+    # touched (the planet picture, the text, the clear margins)
+    plate.plate(surface, pygame.Rect(rect).inflate(2 * c, 2 * c), fill=None,
+                size=c, mode="hud")
+
+
 def render_fills(screen, surface):
     """Every cutout that shows content gets its panel fill.
 
@@ -445,6 +462,7 @@ def render_fills(screen, surface):
             # LOOK EXCEPTION picture: the galaxy inset's measured black inside its panel (movebox.cpp:36-38)
             surface.fill(tuple(_pal.require("colony_summary", colour))[:3],
                          hud.panel_inner(outer, screen.layout.scale))
+        _rim_over(screen, surface, outer)
         holed.add(name)
     # SINCE DECISION 71 (work order 169) A WINDOW IS A HUD PANEL. The
     # frame that used to cover the fill's bleed is not drawn, so each
@@ -469,3 +487,4 @@ def render_fills(screen, surface):
         hud.panel(surface, rect, scale, dense=(name == "table"))
         if isinstance(panels.get(name), str):
             _fill(name, box)
+        _rim_over(screen, surface, rect)

@@ -27,6 +27,10 @@ import pygame
 ICONS = ("propose", "break", "demand", "gift", "exchange", "war",
          "surrender", "bye")
 ICON_REL = "screens/audience/assets/icons"
+#: **HD EXTENSION `rows_without_icons`** (Data's Darlok mockup, 20 Nov): the
+#: rows are slim capsules with the words only; the icons stay installable
+#: (`tools/audience_icons_install.py`) and come back with this switch.
+ROW_ICONS = False
 EMBLEM_REL = "assets/shared/banner/emblems"
 
 #: The gold the mockup is drawn in; `pal()` turns it with the player's
@@ -131,6 +135,16 @@ def fitted(pic, box_w, box_h):
               max(1, round(pic.get_height() * k))))
 
 
+def plate(surface, rect, fill=PANEL):
+    """**HD EXTENSION `plate_from_galaxy_frame`** (Data, 20 Nov): the panel
+    and the bar are the gold plate cut from the galaxy map frame
+    (`core.hud.plate`, shared with the colony summary); without the picture
+    the drawn `frame`."""
+    from core.hud import plate as gold_plate
+    if not gold_plate.plate(surface, rect, fill):
+        frame(surface, rect, fill=fill, cut=max(8, rect.h // 7))
+
+
 def frame(surface, rect, fill=PANEL, cut=None, line=None, width=2):
     """A chamfered dark panel with a double gold border."""
     c = cut if cut is not None else max(6, rect.h // 7)
@@ -213,9 +227,10 @@ def menu(surface, screen, view, lay, text_at, hovered):
     centre)` prints a line; `hovered(rect)` answers the pointer."""
     from core.hud import text as hudtext
     items = view.items()
-    frame(surface, lay.panel, cut=max(8, lay.panel.w // 28))
+    plate(surface, lay.panel)
     title = (view.audience["title"] or "").strip()
     main = len(items) == len(ICONS)
+    icons = main and ROW_ICONS
     if main:
         title = MAIN_TITLE    # INVENTION `menu_title_mockup`
     if title:
@@ -238,14 +253,14 @@ def menu(surface, screen, view, lay, text_at, hovered):
                                       else p.off_line),
               width=3 if lit else 1)
         pad = max(18, r.h // 2)           # the words keep off the card's edge
-        pic = picture(f"{ICON_REL}/{ICONS[n]}.png") if main else None
+        pic = picture(f"{ICON_REL}/{ICONS[n]}.png") if icons else None
         if pic is not None:
             ic = fitted(pic, int(r.h * 1.1), r.h - 8)
             if not item["enabled"]:
                 ic = ic.copy()
                 ic.set_alpha(110)
             surface.blit(ic, (r.x + pad, r.centery - ic.get_height() // 2))
-        x = r.x + pad + (int(r.h * 1.1) + pad // 2 if main else 0)
+        x = r.x + pad + (int(r.h * 1.1) + pad // 2 if icons else 0)
         colour = (p.lit if lit else hudtext.colour("value")) \
             if item["enabled"] else p.off_text
         text_at(item["text"].strip(), x, r.centery, r.right - x - pad,
@@ -257,7 +272,7 @@ def bar(surface, screen, view, lay, text_at, header):
     line, the statement. `header` is the line over it or ''."""
     from core.textfit import wrap_text
     b = lay.bar
-    frame(surface, b, cut=max(8, b.h // 6))
+    plate(surface, b)
     gap = b.h // 7
     x = b.x + gap + 6
     sym = emblem(screen_race(view))
