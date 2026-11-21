@@ -661,8 +661,7 @@ class ColonySummaryScreen(ScreenBase):
         """
         mouse = mouse_input.pos()
         colonysort.render(surface, self._sort_buttons(), self._sort_key,
-                          mouse, self.style, colonysort.font_size(self),
-                          NAV_ACTIVE_BG, NAV_HOVER_BG, SORT_TEXT)
+                          mouse, self.style)
         # RETURN IS BACK UNDER THE FRAME — 12 September 2026, Data's
         # eighth slot. It was drawn after the frame for one day, with
         # the header plates, because the artwork cut no hole for it.

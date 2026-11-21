@@ -246,8 +246,7 @@ def button_at(buttons, x, y):
     return None
 
 
-def render(surface, buttons, active_key, mouse,
-           style, font_size, active_bg, hover_bg, text):
+def render(surface, buttons, active_key, mouse, style):
     """Draw the seven words. The renderer's half of `layout`.
 
     **ONE COLOUR FOR ALL SEVEN — 12 September 2026, Data's decision.**

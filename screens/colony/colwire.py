@@ -162,7 +162,6 @@ class View:
                            for i in star_struct.planet_indices(self.star)]
             # the planet indices, for the turning spheres (WO 331)
             self.system_ids = list(star_struct.planet_indices(self.star))
-        self.drawing_display = block["drawing_display"]
         self.autobuild_enabled = bool(block["autobuild_enabled"])
         players = getattr(state, "player_raw", None) or []
         owner = self.colony.owner

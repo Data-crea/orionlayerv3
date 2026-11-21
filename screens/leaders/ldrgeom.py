@@ -92,10 +92,6 @@ def portrait_field(i):
     return (x1, y, x2, y + dy2)
 
 
-def text_y(i):
-    return row_top(i) + TEXT_DY
-
-
 def skill_help_rects(left, top, n_special, n_general):
     """The help fields `Add_Skill_Description_Help_Fields_` adds for a
     leader with these displayed skills, top down (officer.cpp:3893-3975):

@@ -87,19 +87,6 @@ class Box:
             return self.screen_rect.collidepoint(screen_x, screen_y)
         return False
 
-    def _scaled_glow_offsets(self, layout):
-        """Convert glow offsets from reference to pixel space."""
-        glows_ref = self.style.get("glows")
-        if not glows_ref:
-            return None
-        offsets = {}
-        for key in ("tl", "tr", "bl", "br"):
-            if key in glows_ref:
-                ox, oy = glows_ref[key]
-                offsets[key] = (int(ox * layout.scale),
-                                int(oy * layout.scale))
-        return offsets if offsets else None
-
     def render(self, surface, layout, style_renderer):
         """Draw the box using the style renderer."""
         if self.hidden or self.screen_rect is None:
@@ -113,8 +100,6 @@ class Box:
                 surface, self.screen_rect,
                 label=label, hover=self.hover,
                 font_size=font_size, style=self.style,
-                glow_offsets=self._scaled_glow_offsets(layout),
-                glow_rotations=self.style.get("glow_rot"),
                 icon=self.icon,
             )
         elif skin == "asset":

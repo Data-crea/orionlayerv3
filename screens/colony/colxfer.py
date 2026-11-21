@@ -348,13 +348,6 @@ def engine_decides(w):
         any(r.get(k) for k in CONFIG_BOUND)
 
 
-def next_question(state, source_index, held, dest_index, answers, job=-1,
-                  plague=None):
-    """The first question the answers so far do not carry, or None."""
-    return walk(state, source_index, held, dest_index, answers, job,
-                plague).question
-
-
 def job_refusal(src, word, job):
     """`Give_Colonist_New_Job_`'s refusal for a transfer (colmove.cpp:
     535-575), or 0: 1 a native to research or industry (:542-545), 2 an

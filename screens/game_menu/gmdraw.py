@@ -291,7 +291,7 @@ def _settings(screen, surface):
     area_box = box(screen, "settings_rows")
     if area_box is not None and area_box.screen_rect:
         size = _size(screen, area_box)
-        ids, alts = rule.get("label_ids", []), rule.get("alt", [])
+        alts = rule.get("alt", [])
         rows = list(bands(area_box.screen_rect, nodes.OPTIONS))
         labels = _row_labels(screen, rule, rows, size)
         for i, band in enumerate(rows):

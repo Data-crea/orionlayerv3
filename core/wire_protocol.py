@@ -89,9 +89,9 @@ MSG_CANCEL_FIELD  = 0x83
 #: Fundament 52.
 MSG_SET_JOBS      = 0x84
 #: Select or deselect ONE ship in the open fleet box: int16 ship_idx,
-#: uint8 selected. NOT IN THE ENGINE until
-#: `doc/ext_fleet_select_ship.patch` (open fix 21) is applied, and an
-#: engine without it drops the message — so HD sends it only while the
+#: uint8 selected. In the fork's engine since open fix 21
+#: (`doc/ext_fleet_select_ship.patch`); a stock engine
+#: drops the message — so HD sends it only while the
 #: snapshot carries open fix 20's FSEL block, and reads the effect back
 #: off that block instead of assuming it.
 MSG_SELECT_SHIP   = 0x85
@@ -113,7 +113,7 @@ MSG_INJECT_RIGHT_CLICK = 0x87
 #: 58 (`doc/ext_combat_commands.patch`, work order 194): consumed where the
 #: human's input is read, the original's own code then does the action; the
 #: engine says taken or refused in CMEV (event 18). An engine without the fix
-#: drops it. WIRE ONLY: no screen sends it yet.
+#: drops it.
 MSG_COMBAT_COMMAND = 0x88
 #: Open fix 64 (work order 197): the Races screen's spies and missions as one
 #: list — uint8 n, n x (uint8 player, uint8 spies, uint8 mission 1-3 or 0
@@ -169,9 +169,9 @@ MSG_DEMOLISH = 0x8C
 EFFECT_PAIRS = 2
 
 #: Server -> client: the GAME popup's ten save slots, sent right after a
-#: FIELD_LIST while the Load or Save dialog is up. NOT IN THE ENGINE
-#: until `doc/ext_save_slots.patch` is applied; without it the message
-#: never arrives and the HD dialogs show slot numbers only (an HD
+#: FIELD_LIST while the Load or Save dialog is up. In the fork's
+#: engine (`doc/ext_save_slots.patch`); a stock engine
+#: never sends it and the HD dialogs show slot numbers only (an HD
 #: STATE, decision 60). Open fix 14.
 MSG_SAVE_SLOTS    = 0x14
 

@@ -263,10 +263,6 @@ class Entry:
         """
         return self.x, self.x + ROW_X_SPAN
 
-    def cost_anchor(self):
-        """Where the "N RP" string ENDS — it is printed right-aligned."""
-        return (self.x + COST_DX, self.y + COST_DY)
-
     def field_name_anchor(self):
         """(x, y, max width) of the field name (tech.cpp:700)."""
         return (self.x + FIELD_NAME_DX, self.y + FIELD_NAME_DY,

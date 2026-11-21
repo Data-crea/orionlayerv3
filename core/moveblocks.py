@@ -6,8 +6,8 @@
             (mainscr_main.cpp:451-453). A version byte, int16 the star
             count, uint8 the struct size (14), then per star the
             `s_ship_move_info` `SHIPMOVE::Ships_Try_To_Move_To_` fills for
-            the box's selected ships (shipmove.cpp:776-969; orion2.h:2921-
-            2936) — the verdict the original computes on HOVER and colours
+            the box's selected ships (shipmove.cpp:776-969; orion2.h:2765-
+            2779) — the verdict the original computes on HOVER and colours
             its preview line from (mainscr.cpp:535-568).
 
 **ON THE FLEETS SCREEN TOO — open fix 121 (work order 406).** The same block,

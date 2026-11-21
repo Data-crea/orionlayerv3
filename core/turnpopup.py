@@ -278,7 +278,7 @@ class View:
         words = dict(DEFAULT_WORDS, **{k: v for k, v in (labels or {}).items()
                                        if k in DEFAULT_WORDS and v})
         c = content(popup, state, words, app)
-        from core import antaranroomhd, popupart
+        from core import antaranroomhd
         now = time.monotonic()
         key = state_key(popup)
         if key != self._room_key:
@@ -509,7 +509,7 @@ def draw(surface, style, c):
         rendered = _wrap(style, label, size, inner - 2 * pad, colour) or []
         opts.append((rendered, action))
     opts_h = sum(max(opt_h, len(r) * step + pad // 2) for r, _a in opts)
-    bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
+    bh = int(REF_BUTTON[1] * s)
     text_h = sum(step if r is not None else step // 2 for r in rows)
     if pic is not None:
         text_h = max(text_h, pic.get_height())

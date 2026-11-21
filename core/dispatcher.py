@@ -223,11 +223,6 @@ class Dispatcher:
         from core import glassfx
         return glassfx.glassed(surface, blur, dim)
 
-    @staticmethod
-    def _blurred(surface, blur):
-        from core import glassfx
-        return glassfx.blurred(surface, blur)
-
     def update_screens(self, game_state=None):
         """Per-frame update for parent AND overlay."""
         if self.active:

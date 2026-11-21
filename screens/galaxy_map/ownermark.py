@@ -26,11 +26,6 @@ _MADE = {}
 _KEEP = 64
 
 
-def shape_for(colour):
-    """The shape name of an owner colour (0..7)."""
-    return SHAPES[int(colour) % len(SHAPES)]
-
-
 def _draw(surf, name, c, r, col):
     """`name`'s shape centred on (c, c), half-extent `r`, in `col`."""
     t = max(2, int(r * 0.42))

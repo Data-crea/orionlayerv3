@@ -92,13 +92,6 @@ def corner(rect_h, size=None):
     return max(16, min(round(rect_h * 0.1), rect_h // 3, 56))
 
 
-def inset_rect(rect, size=None):
-    """The dark middle of a plate at `rect`: inside the rim, which is
-    `inset` px deep (the part a caller may fill or draw into)."""
-    i = int(corner(rect.h, size) * .52)
-    return rect.inflate(-2 * i, -2 * i)
-
-
 def plate(surface, rect, fill=FILL, size=None, mode="gold"):
     """Draw the plate at `rect`; False when the picture is missing. With
     `fill=None` only the rim is drawn, over whatever stands there."""

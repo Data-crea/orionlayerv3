@@ -170,7 +170,7 @@ class LogWindow:
 
     def __init__(self):
         self.open, self.first, self.rect = False, None, None
-        self.close_rect = self.list_rect = None
+        self.close_rect = None
         self._rows = 1
         #: work order 324 (UNVERIFIED live): `body` and the cell pictures
         #: are kept; `draw` ran both for every visible cell every frame.
@@ -283,9 +283,8 @@ class LogWindow:
                          style_renderer=style)
         top = r.y + pad * 2 + title.get_height()
         bar_w = max(6, int(10 * scale))
-        self.list_rect = lr = pygame.Rect(r.x + pad, top,
-                                          r.w - 3 * pad - bar_w,
-                                          self.close_rect.y - pad - top)
+        lr = pygame.Rect(r.x + pad, top, r.w - 3 * pad - bar_w,
+                         self.close_rect.y - pad - top)
         rows = self._body(log, colours)
         self._rows = visible = max(1, lr.h // line_h)
         last_first = max(0, len(rows) - visible)

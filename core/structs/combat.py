@@ -134,12 +134,12 @@ MISSILE_SPEC = Spec("s_missile", 26, [
     ("fighter_count", 23, "i8"), ("pad", 24, "i8"), ("is_active", 25, "i8"),
 ], verified=True)
 
-#: s_ship_move_info, field for field (orion2.h:2921-2936), 14 bytes.
+#: s_ship_move_info, field for field (orion2.h:2765-2779), 14 bytes.
 MOVE_INFO_SPEC = Spec("s_ship_move_info", 14, [
     ("blackhole_blocks", 0, "i8"), ("insufficient_fuel", 1, "i8"),
     ("immobile", 2, "i8"), ("pad", 3, "i8"), ("turns_left", 4, "u8"),
     ("moving", 5, "i8"), ("out_of_range", 6, "i8"), ("has_navigator", 7, "i8"),
-    ("traveling_speed", 8, "i8"), ("parsecs", 9, "u8"),
+    ("traveling_speed", 8, "u8"), ("parsecs", 9, "u8"),
     ("uses_wormhole", 10, "i8"), ("has_jumpgate_route", 11, "i8"),
     ("has_stargate_route", 12, "i8"), ("hyperspace_flux", 13, "i8"),
 ], verified=True)

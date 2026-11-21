@@ -38,7 +38,6 @@ the one asked for; the draw never waits for a disk.
 **UNVERIFIED `film_restored_live`.** Not seen in a live run with the
 engine (the index FILM reports against the sound's pace).
 """
-import json
 import logging
 import os
 import threading
@@ -238,12 +237,3 @@ class Player:
             log.exception("film %s: restored frame not drawn", name)
             self.clip.failed = True
             return None
-
-
-def read_fps(path):
-    """The clip's frame rate from `clip.json`, or None (display only)."""
-    try:
-        with open(os.path.join(path, "clip.json"), encoding="utf-8") as fh:
-            return float(json.load(fh)["fps"])
-    except (OSError, ValueError, KeyError, TypeError):
-        return None

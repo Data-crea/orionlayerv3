@@ -41,7 +41,7 @@ def _pair(fmt, value):
     return label.strip(), rest.strip()
 
 
-def _items(fmt_a, fmt_b, values):
+def _items(values):
     """Items two to a line, as the formats alternate (87/88, 89/90)."""
     rows, line = [], []
     for v in values:
@@ -67,12 +67,12 @@ def design_lines(view, e, names):
         name = names.name(table, int(w.type)) or names.name("weapons", int(w.type)) or ""
         weapons.append(f"{int(w.count)} {name}")
     out.append((_fmt(e(geom.E_WEAPONS), "").strip(),))
-    out += _items(None, None, weapons)
+    out += _items(weapons)
     specials = [names.name("specials", b) or "" for b in
                 ship_struct.special_bits(view)]
     if specials:
         out.append((_fmt(e(geom.E_SPECIALS), "").strip(),))
-        out += _items(None, None, specials)
+        out += _items(specials)
     return out
 
 

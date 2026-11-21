@@ -264,16 +264,14 @@ class StyleRenderer:
     # -- Public drawing API --
 
     def draw_button(self, surface, rect, label="", hover=False,
-                    font_size=16, style=None, glow_offsets=None,
-                    glow_rotations=None, icon=None):
+                    font_size=16, style=None, icon=None):
         """The `button` box skin: the HUD's slanted button (decision 71).
 
         The skin texture, the two border lines and the corner glow images
         this drew until work order 169 are the cockpit look 71 replaced;
-        work order 189 removed them from the skin. `font_size`,
-        `glow_offsets` and `glow_rotations` are accepted and unused — a
-        HUD label is sized from the button's own height, and a box that
-        still carries them in `boxes.json` must not raise."""
+        work order 189 removed them from the skin. `font_size`
+        is accepted and unused — a HUD label is sized from the button's
+        own height."""
         hud.slant_button(surface, rect, _scale_of(surface),
                          "hover" if hover else "normal", label,
                          icon=icon, style_renderer=self)

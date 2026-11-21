@@ -373,7 +373,7 @@ class View:
     def _chrome(self, pen, turn):
         """The window, the boxes' fills and titles, the head and its X."""
         R, px, text, button = pen.R, pen.px, pen.text, pen.button
-        label, value, head = pen.label, pen.value, pen.head
+        value, head = pen.value, pen.head
         surface, scale, k = pen.surface, pen.scale, pen.k
         # DEVIATION `scan_fills`: Data's fills, the HUD's edges
         hud.popup(surface, R(*WINDOW), scale, fill=GROUND)

@@ -106,7 +106,7 @@ SPEC = Spec("s_leader_data", SIZE, [
     ("display_level_popup", 56, "i8"),
     ("status",              57, "i8"),
     ("player_index",        58, "i8"),
-], verified=True)
+], verified=True, keep_kind=("display_level_popup",))
 
 
 def parse(raw):

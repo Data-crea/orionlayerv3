@@ -176,7 +176,7 @@ class MultiplayerScreen(ScreenBase):
                                   getattr(self._state, "settings_raw", None))
         bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
         gap = int(REF_GAP * s)
-        foot = self._caption(surface, panel, s)
+        self._caption(surface, panel, s)
         halves = shell.split(shell.inner(panel, L), L, [1.0, 1.0])
         y = panel.y + int(50 * s)
         for half, keys, kind in ((halves[0], ("network", "online", "hotseat"),
