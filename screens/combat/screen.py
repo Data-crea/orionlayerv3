@@ -265,7 +265,7 @@ class CombatScreen(CombatInput, ScreenBase):
         Shifter is unused this turn (`Used_Teleporter`, bit 0 of
         `combat_status_flags`, v2 cmbtfir2.cpp:399-401): then the engine's
         bitmap holds the teleporter's range (v2 combat1_fields.cpp:11-19,
-        :2908-2921) — empty with a Phase Shifter, alone or beside the
+        :84-91) — empty with a Phase Shifter, alone or beside the
         teleporter, so the gate opens and nothing is drawn, as in the
         original."""
         live = getattr(self._state, "combat", None)
