@@ -14,7 +14,7 @@ players, initgame.cpp:280-296); `Load_Player_Special_Names_` takes the
 32 trait names out of entry `language + 8` (loader.cpp:105-127), one
 file for every language.
 
-**WHAT IT PRINTS** (`Draw_Race_Selection_Screen_`, racesel.cpp:1007-1074):
+**WHAT IT PRINTS** (`Draw_Race_Selection_Screen_`, race_display.cpp:81-140):
 first every bonus trait (1..9) whose byte is not 0, as its name and
 `_special_bonus[trait - 1][level - 1]` with a "+" when positive — Food
 halved, "1/2" for a Food or Tax bonus of 1, "1" for any other Tax bonus;
@@ -66,7 +66,7 @@ def string_file(language="en"):
 
 def bonus_text(trait, level):
     """The value the original appends to a bonus trait's name
-    (racesel.cpp:1040-1062), with its "+" — or None for a level the
+    (race_display.cpp:95-117), with its "+" — or None for a level the
     table does not hold."""
     if not (1 <= trait <= len(SPECIAL_BONUS) and 1 <= level <= 3):
         return None

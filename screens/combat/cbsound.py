@@ -16,7 +16,7 @@ TRANSCRIPTION `sound_player`, what the engine's own player does
              (`Find_Free_Channel_`, :1261-1277; none free: no sound), at the
              master volume (`Play_Sound_File_`, :1229), which is the game's
              Sound Fx level (`Set_Sound_Max_Volume_(_settings.sound_fx_level)`,
-             harold.cpp:364, loadsave.cpp:1725) — gain = volume / 100
+             harold.cpp:364, loadsave.cpp:1613) — gain = volume / 100
              (`Set_SDL_Stream_Gain_`, :132-138)
   fade       `Fadeout_Sound_(h, step)` stores the step (:1029-1035); every
              `Sound_Update_` (:322-346, from `Mox_Update_` once a frame)

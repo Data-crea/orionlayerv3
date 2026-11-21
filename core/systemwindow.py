@@ -9,7 +9,7 @@
             omniscient, not a black hole, or the colonies view); then fifteen
             slots, slot = owner, each int16 the ship field (-1000 unused)
             and int16 the stack's head node (-1 unused) — the fleet bar
-            (`Build_System_Popup_Ships_`, sys.cpp:2160-2193;
+            (`Build_System_Popup_Ships_`, sys.cpp:2098-2131;
             `Add_System_Display_Popup_Fields_`, :1845-1870).
 
 WHY: the window's star was on the wire nowhere, so HD named a window only by

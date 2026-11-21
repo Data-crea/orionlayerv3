@@ -16,7 +16,7 @@
             uint8 turns_left and int8 moving, out_of_range, blackhole_blocks,
             insufficient_fuel.
 
-WHY: `Planet_Summary_Screen` (plntsum.cpp:1929-2136) keeps its list, its
+WHY: `Planet_Summary_Screen` (plntsum.cpp:928-1094) keeps its list, its
 scroll window and its send mode where only it can read them; HD could
 neither arm a send nor click the row the game shows, nor show an order's
 ETA or undo it. Read WHOLE or left None: an engine without the fix writes

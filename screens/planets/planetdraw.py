@@ -60,7 +60,7 @@ COLUMN_KEYS = ("planet", "climate", "gravity", "minerals", "size")
 
 
 def row_color(row, hover):
-    """`Colony_Owner_Colors_` (plntsum.cpp:2204): the owner's player colour
+    """`Colony_Owner_Colors_` (plntsum.cpp:1110): the owner's player colour
     or the neutral ramp, the hover shade for highlight type 1."""
     colour = row.get("owner_color")
     if colour is None or colour not in OWNER_COLORS:

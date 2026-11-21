@@ -1,6 +1,6 @@
 """One leader slot laid out after Data's mockup — work order 255, Part B.
 
-WHAT THE ORIGINAL DOES. `Print_Officer_Data_` (officer.cpp:3578-3838) prints
+WHAT THE ORIGINAL DOES. `Print_Officer_Data_` (officer.cpp:3378-3654) prints
 a row at native places (`ldrgeom`): the 73 x 88 portrait in a 75 x 90 cell
 at the left, the name centred in 160 px, the two cost lines in the right
 column, one line per skill (icon, name, bonus) stepping 17 px, the status

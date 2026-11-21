@@ -577,11 +577,11 @@ class GalaxyMapScreen(ScreenBase):
                              layer=self._wormholes)
         # The black holes before the lines and the stars, in their own pass
         # (TRANSCRIPTION `black_hole_order`, Draw_Black_Holes_ before
-        # Do_Ship_Destination_Lines_ and Draw_Stars_, mainscr_main.cpp:967-979).
+        # Do_Ship_Destination_Lines_ and Draw_Stars_, mainscr_main.cpp:692-700).
         heights = rnd.render_stars(surface, ctx, self._stars, self._cache,
                                    black_holes=True)
         # Destination lines under the stars, as the original draws them
-        # (mainscr_main.cpp:965, before Draw_Stars_).
+        # (mainscr_main.cpp:690, before Draw_Stars_).
         maplines.render_destination_lines(
             surface, ctx, self._state, self._ships, self._stars,
             self._game_zoom(), anchor, pygame.time.get_ticks())

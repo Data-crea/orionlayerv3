@@ -38,7 +38,7 @@ def same_firing(first, ev):
     """`ev` is another shot of `first`'s FIRE: a beam shot at the same
     target from the same unit, recorded right after it (v2
     cmbtfire.cpp:1497). The Energy Absorber's discharge (slot -1, open fix
-    74) is its own loop (v2 cmbtfire.cpp:1973)."""
+    74) is its own loop (v2 cmbtfire.cpp:1458)."""
     return ev["kind"] == "beam_shot" and all(
         ev.get(f) == first.get(f) for f in ("source", "target",
                                              "at_missile")) and \

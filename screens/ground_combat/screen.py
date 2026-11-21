@@ -11,7 +11,7 @@ and explosion is the frame the engine drew last, and both boxes are the
 engine's numbers and lines — HD computes no motion and no result. Without
 the block the id is no screen's, and the F12 notice stands as before
 (decision 76). The invasion's outcome is decided before the screen opens
-(`invasion::Invade_`, invasion.cpp:858-891); the screen replays it.
+(`invasion::Invade_`, invasion.cpp:805-838); the screen replays it.
 
 **WHAT IT SENDS**, as the original's loop answers it (:232-262): a click
 anywhere is the full-screen field [0] — the first, while both sides fight,

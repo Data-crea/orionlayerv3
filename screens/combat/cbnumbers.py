@@ -24,7 +24,7 @@ damage from 0xB0-0xBA (orange, fading to dark red), the shields' from
 Every hit event carries both values (open fix 56): `past_shields` is
 `accum_hit_x` / `dmg_accum` / `total_damage`, `absorbed` is `accum_hit_y` /
 `sys_dmg_accum` / `struct_damage` (the shields' share, whatever the name) (cmbtfire.cpp:1497, cmbtmis.cpp:886,
-cmbtspec.cpp:1989, combinit.cpp:3306). Until work order 265 HD drew only
+cmbtspec.cpp:1989, combinit.cpp:2124). Until work order 265 HD drew only
 the first, in one yellow.
 
 The side: a beam's is `Do_Get_SFX_Draw_Shield_Facing` (beams.cpp:2092-

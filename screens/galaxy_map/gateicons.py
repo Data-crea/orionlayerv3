@@ -3,7 +3,7 @@
 
 THE GATE ICONS (`Draw_A_Gate_Icon_`, mainscr.cpp:916-1010, called for every
 star by `Draw_Gate_Icons_`: in the live frame after the black holes and
-BEFORE `Draw_Stars_` (mainscr_main.cpp:968, :988), in the overview redraw
+BEFORE `Draw_Stars_` (mainscr_main.cpp:693, :988), in the overview redraw
 after the stars, mainscr.cpp:746-751): beside the name of a system the
 local player has VISITED, the Dimensional Portal's icon (BUFFER0.LBX
 19 + zoom_offset) and the Artemis Net's (31 + zoom_offset) for the player's

@@ -23,7 +23,7 @@ a box ONLY when the live field list agrees with the name:
     planet of that star, and every planet has one. A field is centred on
     the window corner plus (0x0D + 0xA1, 0x2F + 0x5A) plus
     `GEO::Get_Orbit_Display_X_Y_` (sys.cpp:1829-1834 with the offsets of
-    `Wrapper_For_Normal_System_Fields_`, mainscr.cpp:4391-4406), and that
+    `Wrapper_For_Normal_System_Fields_`, mainscr.cpp:3832-3847), and that
     position lies on `GEO::_orbit_consts[orbit + 1]` (geo.cpp:5-13). The
     engine sorts the display slots by their y (`qsort_sys_disp_`,
     sys.cpp:172 and :316), so the field ORDER says nothing about which

@@ -48,8 +48,8 @@ group not drawn, and morale as a number where the original draws
 sprites — are stated in `layout.json` under
 `output._deviation_note`, with what it would take to undo each. A
 third is gone: BC was not drawn until the geometry settled it.
-`y_pos` starts at 349 and steps 18 (colsum.cpp:1170-1173) and morale
-is at 421 (colsum.cpp:1176), so there is room above it for exactly
+`y_pos` starts at 349 and steps 18 (colsum_details.cpp:267-270) and morale
+is at 421 (colsum_details.cpp:273), so there is room above it for exactly
 four production rows — 349, 367, 385, 403 — and not three, which
 agrees with `ECON_COUNT` being 4 without having to take the constant
 on trust.

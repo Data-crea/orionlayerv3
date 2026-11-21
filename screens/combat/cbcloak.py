@@ -48,7 +48,7 @@ Space Teleporter's move (`CEV_MOVE` with teleport 1) dissolves the unit out
 of its cell and into the new one in the same ten frames (five under FAST):
 its glow-0 picture through `Vanish_Bitmap_` at 0, 10 .. 90 % where it was
 and 100, 90 .. 10 % where it goes (`Draw_Teleporting_Ship_`,
-cmbtmov1.cpp:816-886; `Vanish_Bitmap_Pixels_`, shear.cpp:540-588: a pixel
+cmbtmov1.cpp:486-556; `Vanish_Bitmap_Pixels_`, shear.cpp:540-588: a pixel
 is dropped where `_noise_table` is below the percentage, four pixels to a
 table word, the walk jumping by the dword count squared at each row's end
 and after a pixel of 0x80 or more; 100 % draws nothing).

@@ -64,7 +64,7 @@ log = logging.getLogger("scorepop")
 
 REL = "assets/shared/score/gamedata"
 HOW = "python tools/score_art_extract.py"
-#: Draw_Pop's constants (score.cpp:1290-1345).
+#: Draw_Pop's constants (score.cpp:1138-1193).
 MAX_ICONS = 16
 GRID_X0, STEP, SPRITE = 140, 22, 28
 ROW_BELOW = 28

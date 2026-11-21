@@ -264,7 +264,7 @@ class CombatScreen(CombatInput, ScreenBase):
         left, or with none while a working Sub-Space Teleporter or Phase
         Shifter is unused this turn (`Used_Teleporter`, bit 0 of
         `combat_status_flags`, v2 cmbtfir2.cpp:399-401): then the engine's
-        bitmap holds the teleporter's range (v2 combat1.cpp:2835-2843,
+        bitmap holds the teleporter's range (v2 combat1_fields.cpp:11-19,
         :2908-2921) — empty with a Phase Shifter, alone or beside the
         teleporter, so the gate opens and nothing is drawn, as in the
         original."""

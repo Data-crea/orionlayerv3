@@ -573,7 +573,7 @@ def handle_click(screen, x, y):
 
     DEVIATION `box_drag`: a press on the window's or the fleet box's title
     strip starts no drag. The original moves the box with the mouse
-    (`Move_Moveable_Box`, mainscr_main.cpp:1034-1040; the fleet box's drag
+    (`Move_Moveable_Box`, mainscr_main.cpp:755-761; the fleet box's drag
     field, fleetpop.cpp:142) and keeps the place; HD's windows stand where
     `boxes.json` puts them (movable in the F3 editor only), because the
     engine's fields and its own `moveable_box` place do not follow an HD
@@ -665,7 +665,7 @@ def system_open(screen):
     map's grid field, through which a star or a ship is hit
     (mainscr_main.cpp:421-438), stays live around it
     (Add_Moveable_Box_Fields_ then Add_Grid_Field_, mainscr.cpp:1406,
-    :1426; the window's fields mainscr.cpp:4391-4404). HD blocks the whole
+    :1426; the window's fields mainscr.cpp:3832-3845). HD blocks the whole
     map while it is open, by Data's decision 5 of work order 226 F.
     Registered in `layout.json` `_markings`."""
     return bool(getattr(screen, "_system_drawn", False))

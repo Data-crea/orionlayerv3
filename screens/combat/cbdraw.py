@@ -14,7 +14,7 @@ noted); what HD does otherwise is marked.
               a 1 px box in palette 177 (v2 cmbtdrw1.cpp:698-757; work order
               304, `draw_footprint`)
   a unit      its picture at the cell's centre offset (10 / 20 / 30 by size,
-              combinit.cpp:3019-3075) less 28 px, the facing's quadrant
+              combinit.cpp:2143-2199) less 28 px, the facing's quadrant
               tweak and (2, 3) (`Get_Draw_Ship_Offsets_`,
               cmbtdrw1.cpp:1909-1976); the planet at its own offsets
   the cursor  COMBAT.LBX 0x20 + {0, 1, 2} by size at (-3,-3) / (-5,-4) /
@@ -41,7 +41,7 @@ LEGAL_EDGE = (150, 225, 255, 235)
 _LEGAL = {}
 #: a unit's footprint, cells a side by size class: the original's
 #: `footprint = (size_class + 1) / 2` capped at 2, plus one
-#: (`Set_Legal_Moves`, v2 combat1.cpp:2846-2849)
+#: (`Set_Legal_Moves`, v2 combat1_fields.cpp:22-25)
 FOOT = {0: 1, 1: 2, 2: 2, 3: 3, 4: 3, 5: 3}
 #: TRANSCRIPTION `footprint_frame` (work order 304): the red frame's colour,
 #: battle palette 177 (`graphics::Box(..., 1, 177)`, v2 cmbtdrw1.cpp:752)
@@ -63,7 +63,7 @@ FIGHTER_TYPE = {31: 0, 29: 1, 30: 2, 28: 3}
 #: facing` of entries 0-63 (`Load_Individual_Ship_Pictures_` loads
 #: `fighter_seg[MAX_PLAYERS][i]` from entry i + 0x40, i below 16,
 #: combinit.cpp:2836-2840; `Draw_Fighter_` reads `fighter_seg[owner][type *
-#: 16 + facing]`, cmbtmis.cpp:1527). DEVIATION `antaran_fighter_type`: only
+#: 16 + facing]`, cmbtmis.cpp:939). DEVIATION `antaran_fighter_type`: only
 #: type 0's slots are loaded for the Antarans, the others are null in the
 #: original; HD draws the one picture for every type.
 ANTARAN_FIGHTER = 0x40
@@ -578,7 +578,7 @@ def engines_off(u):
     """TRANSCRIPTION `dark_engines` (work order 222, Data's decision 2):
     the unit is drawn at frame 0, its engines off — its player pressed
     DONE this turn, or it was captured (`is_captured`, set for good by a
-    capture that is not telepathic, cmbtfir2.cpp:1841-1845) — for every
+    capture that is not telepathic, cmbtfir2_boarding.cpp:164-168) — for every
     unit, monsters too (`Draw_Ship_`'s four quadrants,
     cmbtdrw1.cpp:2563-2610)."""
     return bool(int(u.get("combat_status_flags", 0)) & DONE_BIT) or \

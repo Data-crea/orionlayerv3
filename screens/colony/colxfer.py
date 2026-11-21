@@ -85,7 +85,7 @@ CONFIG_BOUND = ("only_one_pop_left", "max_settlers_in_transit")
 #: `Room_For_Another_`'s ceiling (settler.cpp:98).
 MAX_POPS = colonyfacts.POP_LIMIT_CAP
 #: The pop strings `Colony_Pop_String_` builds the notice's noun from
-#: (colmove.cpp:577-602; colony.cpp:878-961): E 0x4C over the conquered
+#: (colmove.cpp:545-570; colony.cpp:878-961): E 0x4C over the conquered
 #: word, the race, the state word and the job.
 E_POP_FORMAT, E_CONQUERED, E_EXPERT = 0x4C, 598, 286
 E_JOBS = (291, 557, 455)              # farmer, worker, scientist

@@ -209,7 +209,7 @@ def production_name(production_id, buildings=None, strings=None,
 #: building band, so the band still sits where the source puts it.
 BUILDING_TIER_UNSOURCED = 10
 
-#: colsum.cpp:1218-1239, literal for literal.
+#: colsum_details.cpp:329-350, literal for literal.
 TIER_FREIGHTERS = 9999
 _TIER_MINUS_ONE = (-4, -5, -6, -7, -1)      # FARMER WORKER SCIENTIST SPY NONE
 _TIER_MINUS_TWO = (-3, -2, -10)             # HOUSING TRADE_GOODS REPEAT

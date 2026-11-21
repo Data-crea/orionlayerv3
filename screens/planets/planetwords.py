@@ -35,7 +35,7 @@ H_PENALTY = 0x142        # "-%d%% prod",     plntsum.cpp:176
 H_MAX_POP = 0x143        # "%d max pop",     plntsum.cpp:193
 H_PROD_WORKER = 0x152    # "%d prod/worker", plntsum.cpp:185
 H_BLACK_HOLE = 325       # plntsum.cpp:1880
-H_UNEXPLORED = 148       # plntsum.cpp:1895
+H_UNEXPLORED = 148       # plntsum.cpp:890
 
 SPECIAL_SPACE_MONSTER, SPECIAL_ANCIENT_ARTIFACTS, SPECIAL_ORION_STAR = 9, 10, 11
 #: `HACCESS::Special_Is_Planet_Special_` (haccess.cpp:639): gold, gems,

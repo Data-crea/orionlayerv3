@@ -302,7 +302,7 @@ def sys_row_rect(i):
 def sys_planet_orbit(field):
     """The orbit of a live field that is a system-display PLANET's
     (`_sys_disp_planet_fields[i]`), else None. `Add_Col_Sys_Disp_Fields_`
-    (colsysdi.cpp:178-224) centres orbit i's planet field on (x + 15,
+    (colsysdi.cpp:170-216) centres orbit i's planet field on (x + 15,
     y + 14 + 24 i) and starts its summary field right of the picture;
     the colonists in hand land on the planet's field (colony.cpp:1794-1800),
     the summary opens the planet's description (TRANSCRIPTION

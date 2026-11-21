@@ -72,7 +72,7 @@ special's popup, titled "Star System %s" (sys.cpp:736-776).
   holds: the generator gives a black hole no special (mapgen.cpp:1625-1627)
   and the game's start turns every special-9 star into a monster ship and
   puts the star's own special back (`Make_System_Monsters_Into_Ships_`,
-  initgame.cpp:241, :541-562). Kept for a save edited by hand or a mod.
+  initgame.cpp:241, :397-418). Kept for a save edited by hand or a mod.
 """
 import pygame
 

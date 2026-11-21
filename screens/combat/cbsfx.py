@@ -51,7 +51,7 @@ TRANSPORTER_TICKS = 8        # `Draw_Transporter_Bomb_Beam_`'s loop
 SPIN_TURNS = 2               # HD STATE `gyro_spin`
 BHG = {0: 46, 1: 45, 2: 45, 3: 44, 4: 44, 5: 43}
 #: The plasma web and the caustic slime: one routine, `Plasma_Web_`
-#: (cmbtfire.cpp:1566-1570).
+#: (combat_firing.cpp:460-464).
 CAUSTIC_SLIME = 45
 WEBS = (WEB, CAUSTIC_SLIME)
 BIO = (25, 26)                       # death spore, bio terminator

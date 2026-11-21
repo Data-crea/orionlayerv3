@@ -39,7 +39,7 @@ What it draws:
 
 DEVIATION `target_missile_picture`: the missile in the box is the one
 picture HD draws on the map for a group (`cbdraw.draw_ordnance`), not the
-original's group of pictures (`Draw_Missile_`, cmbtmis.cpp:1130-1180) — the
+original's group of pictures (`Draw_Missile_`, cmbtmis.cpp:615-665) — the
 quantity is in the line under it, as there.
 """
 import pygame
@@ -51,7 +51,7 @@ from . import cbdraw, cbstatus
 #: status box under it (401..488, 379..467), cmbtdrw1.cpp:714-750.
 NAME_W = 89
 MISSILE_BOX = pygame.Rect(401, 379, 88, 89)
-#: `Draw_Missile_Status_`'s rows, from the box's top (cmbtmis.cpp:1401, 1436)
+#: `Draw_Missile_Status_`'s rows, from the box's top (cmbtmis.cpp:886, 1436)
 TARGET_ROW, QUANTITY_ROW = 2, 81
 #: TECHDATA weapon types (`cbpanel.WEAPON_TYPE`): missile, fighter
 MISSILE, FIGHTER = 1, 4
@@ -86,7 +86,7 @@ def squeezed(style, text, size, width, colour):
 
 def missile_lines(m, combat, missiles, names, ken, weapon_type):
     """(the top line, the bottom line) of `Draw_Missile_Status_`
-    (cmbtmis.cpp:1395-1436)."""
+    (cmbtmis.cpp:1114-1155)."""
     def word(what, fallback):
         return cbstatus.word(ken, what, fallback)
     units = combat["units"]

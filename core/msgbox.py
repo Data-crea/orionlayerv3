@@ -33,7 +33,7 @@ TRANSCRIPTION `box_columns` (work order 213): a row whose runs sit at \\aX
 columns is laid out at those columns, as shares of the paragraph width the
 box formats at (339 px, textbox.cpp:200-208) — a left run from its column, a
 right- or centre-justified one up to the column the next X names: the
-boarding result's two sides side by side (cmbtfir2.cpp:1650-1666). The words on the buttons are artwork in the original
+boarding result's two sides side by side (cmbtfir2_boarding.cpp:504-520). The words on the buttons are artwork in the original
 and typed in `assets/shared/msgbox/labels.json` (decision 15).
 """
 import re

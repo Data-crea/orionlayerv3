@@ -83,8 +83,8 @@ def _hud_colours():
 
 
 #: The original steps `red_color_pulse_value` once per pass of the main loop
-#: (mainscr_main.cpp:1071-1074): 0..8 and back, a cycle of 16 steps, from 0
-#: and +1 (harold.cpp:1396-1397). Its pass rate is the DOS timer's 18.2 Hz
+#: (mainscr_main.cpp:792-795): 0..8 and back, a cycle of 16 steps, from 0
+#: and +1 (harold.cpp:1328-1329). Its pass rate is the DOS timer's 18.2 Hz
 #: at most (timer.cpp:14-24; UNVERIFIED `red_pulse_live`). DEVIATION `red_pulse_rate`:
 #: HD steps by ELAPSED time (decision 78), one step per PULSE_STEP_MS.
 PULSE_STEP_MS = 55
@@ -108,7 +108,7 @@ PULSE_TARGET = (255, 170, 160)
 
 def pulse_value(ticks_ms):
     """`MOX::red_color_pulse_value` at `ticks_ms`: the triangle 0..8..0
-    (TRANSCRIPTION mainscr_main.cpp:1071-1074, harold.cpp:1396-1397)."""
+    (TRANSCRIPTION mainscr_main.cpp:792-795, harold.cpp:1328-1329)."""
     step = int(ticks_ms // PULSE_STEP_MS) % (2 * PULSE_TOP)
     return step if step <= PULSE_TOP else 2 * PULSE_TOP - step
 

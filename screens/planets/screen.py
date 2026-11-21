@@ -18,7 +18,7 @@ What drives the game from here, and how (decision 20):
                 game's window by its star icon first
 
   star click    with PLSM and more than eight rows in the game's list, the
-                star's own icon field (plntsum.cpp:2052-2064, v2
+                star's own icon field (plntsum.cpp:1049-1061, v2
                 :2044-2058) — the game's warning box (H 0x14F) when the
                 star has no planet in its list, HD's message box (work
                 order 322 A1)
@@ -328,7 +328,7 @@ class PlanetsScreen(ScreenBase):
             self._star_click(star)
             return None
         # A row click sends the nearest ship while a send is armed
-        # (Scan_Summary_Box_Fields_, plntsum.cpp:1284-1289); without one
+        # (Scan_Summary_Box_Fields_, plntsum.cpp:354-359); without one
         # the original does nothing with it.
         area = planetdraw.window(self, "rows")
         if planetsend.armed(planetsend.block(self._state)) and area and \
@@ -341,7 +341,7 @@ class PlanetsScreen(ScreenBase):
 
     def _star_click(self, star):
         """A click on a star of the inset: the original's `planet_icons[i]`
-        field (plntsum.cpp:2052-2064, v2 :2044-2058), which acts only with
+        field (plntsum.cpp:1049-1061, v2 :2044-2058), which acts only with
         more than eight rows in the GAME's list — it scrolls the game's
         list to the star's first planet, or, when the star has none, opens
         `GENDRAW::Warning_Box_` with H 0x14F formatted with the star
@@ -377,7 +377,7 @@ class PlanetsScreen(ScreenBase):
 
     def _scroll(self, step):
         """The up/down buttons move one row when there are more than eight
-        (plntsum.cpp:2030-2038), clamped at both ends."""
+        (plntsum.cpp:1013-1021), clamped at both ends."""
         total = len(self._list.rows)
         if total > self.visible:
             self._first = max(0, min(total - self.visible, self._first + step))

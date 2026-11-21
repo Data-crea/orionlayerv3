@@ -38,7 +38,7 @@ PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
                   # 393): one boarding a turn (combat1.cpp:670-680, v2
                   # :798-807), no boarding of one's own ship or a captured
                   # one
-                  # (`Initiate_Boarding_Action`, v2 combat1.cpp:2541)
+                  # (`Initiate_Boarding_Action`, v2 combat1_boarding.cpp:46)
                   "boarded": 60, "own_ship": 0x40, "own_captured": 0x41,
                   # the systems box (`Draw_Internals_Display_`,
                   # cmbtdrw1.cpp:360-425), work order 258
@@ -46,7 +46,7 @@ PANEL_MESSAGES = {"officer": 86, "immobile": 0x47,
                   "no_shields": 38, "computer": 21, "structure": 16,
                   "armor": 18, "max_speed": 40, "remaining": 90,
                   # the hovered missile's box (`Draw_Missile_Status_`,
-                  # cmbtmis.cpp:1395-1436), work order 259: "Target:" run
+                  # cmbtmis.cpp:1114-1155), work order 259: "Target:" run
                   # into the name, the quantity's words with their space
                   "target": 52, "missile": 53, "torpedo": 54,
                   "missiles": 107, "torpedoes": 108,

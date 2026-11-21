@@ -227,7 +227,7 @@ def ftl_speed(unit, traits_of):
 def weapon_hp(hits, per_unit):
     """A slot's hits as its weapons hold them: `Apply_Internal_Damage`
     takes a hit from ONE weapon at a time — the partial one,
-    `hits % per_unit`, else a whole one (cmbtfir2.cpp:1300-1315) — so the
+    `hits % per_unit`, else a whole one (cmbtfir2.cpp:596-611) — so the
     slot is `hits // per_unit` whole weapons and at most one partial.
     (whole, partial or None, per_unit)."""
     hits, per = max(0, int(hits)), int(per_unit)
@@ -309,7 +309,7 @@ def crew_word(words, quality):
     w = w.split("(")[0].rstrip()
     # DEVIATION `scan_crew_word_compound` (work order 400, Data, 16 Nov 2026): original =
     # the word as the player's file gives it (`Crew_Quality_String_`,
-    # `Crew_Quality_String`, cmbtdrw1.cpp:3985-4021); HD = a one-word compound that ends in "crew"
+    # `Crew_Quality_String`, cmbtdrw1.cpp:3435-3471); HD = a one-word compound that ends in "crew"
     # ("Rekrutencrew", "Berufssoldatencrew") loses that ending, the card has
     # no room and the stars already say it; "Green Crew" and any word of
     # four letters or fewer stay.

@@ -268,7 +268,7 @@ class CombatInput:
         move pointer shows (TRANSCRIPTION `move_pointer`, `cbcursor`;
         TRANSCRIPTION `move_target`): the frame's cell (`_frame_cell`), in
         the player's orders (the original's arrows are only there,
-        v2 combat1.cpp:2213-2296), outside BOARD (v2 :2275-2283, and its
+        v2 combat1.cpp:1274-1357), outside BOARD (v2 :2275-2283, and its
         click moves nothing, v2 :872), no missile under the pointer — any
         owner's, its field comes first (`missile_field`) — and no command
         in flight. The footprint of a legal cell is free but for the ship
@@ -515,7 +515,7 @@ class CombatInput:
         the acting ship itself: the original boards whatever unit is
         clicked (v2 combat1.cpp:954-955) and `Initiate_Boarding_Action`
         refuses a ship of the actor's own owner with KENTEXT 0x40, or 0x41
-        for a captured one (v2 combat1.cpp:2540-2541); BOARD stays lit
+        for a captured one (v2 combat1_boarding.cpp:45-46); BOARD stays lit
         (`board_mode_kept`). The engine refuses that BOARD (4), so HD shows
         the box and sends nothing.
         UNVERIFIED: `Filter_Boarding` (v2 boarding.cpp:31-73) is asked first

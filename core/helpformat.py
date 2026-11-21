@@ -159,7 +159,7 @@ def parse(body, items=None):
         runs = []
         # a new line starts at the left margin: a column named at the end
         # of the line before is not this line's (the boarding result's
-        # "\aX255.\x1a0\n", cmbtfir2.cpp:1660)
+        # "\aX255.\x1a0\n", cmbtfir2_boarding.cpp:514)
         pending_x = None
 
     while i < n:

@@ -3,7 +3,7 @@
 **TRANSCRIPTION, and a copy — so it has a checker.** `SKILLS` is
 `MOX::_skill_data[54]` (mox.cpp:667-722), a literal in the engine that
 is on no wire, and `SKILL_NAME_ESTRINGS` / `LEVEL_NAME_ESTRINGS` are the
-ESTRINGS ids `Load_E_Strings_` hangs on it (estrings.cpp:215-294).
+ESTRINGS ids `Load_E_Strings_` hangs on it (estrings.cpp:205-284).
 `dev:tools/leader_skill_check.py` reads both files and the level steps in
 officer.cpp and fails on any difference; the smoke test runs it. A hand
 copy without that is the nebula sizes again.
@@ -93,7 +93,7 @@ SKILL_NAME_ESTRINGS = (
     + tuple(range(0x2FB, 0x307 + 1)))
 
 #: `_officer_level_names` (ship officers) and `_star_officer_level_names`
-#: (colony leaders), estrings.cpp:280-294, level 0..5.
+#: (colony leaders), estrings.cpp:270-284, level 0..5.
 LEVEL_NAME_ESTRINGS = {
     leader_struct.TYPE_SHIP: tuple(range(0x308, 0x30D + 1)),
     leader_struct.TYPE_COLONY: tuple(range(0x30E, 0x313 + 1)),
@@ -222,7 +222,7 @@ def c_format(fmt, value):
 def displayed_skills(rec):
     """The skill ids a row lists, in the original's order.
 
-    `Print_Officer_Data_` walks all 54 ids twice (officer.cpp:3760-3837):
+    `Print_Officer_Data_` walks all 54 ids twice (officer.cpp:3576-3653):
     first the SPECIAL skills of the leader's own type (ship officer ->
     type 1, colony leader -> type 2), then the GENERAL skills (type 0).
     The same order `Add_Skill_Description_Help_Fields_` builds the help

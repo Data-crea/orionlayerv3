@@ -4,7 +4,7 @@ P1 of 302).
 TRANSCRIPTION `move_pointer`: over a cell the acting ship may move to, the
 original's pointer is an arrow in the move's direction — `icon =
 Get_Facing(ship, cell) / 2 + 4`, icons 4-11 counter-clockwise from east
-(`Assign_Mouse_Images`, combat1.cpp:2289-2296; `Get_Facing`,
+(`Assign_Mouse_Images`, combat1.cpp:1330-1337; `Get_Facing`,
 cmbtmov1.cpp:573-592), its shapes the battle palette's entry's (FONTS.LBX
 4, `cbart.cursor_shape`), its point the picture's middle, frame 12
 (`Check_Mouse_Shape`, mouse.cpp:80-101). Elsewhere HD keeps its own
@@ -18,7 +18,7 @@ match (combat1.cpp:850-862, :2321-2373); the red frame stands on the same
 cell (`cbdraw.draw_footprint`).
 
 TRANSCRIPTION `pointer_pictures` (work order 398, gap 6 of 397): the other
-pictures of `Assign_Mouse_Images` (combat1.cpp:2213-2330), chosen by `pick`
+pictures of `Assign_Mouse_Images` (combat1.cpp:1254-1371), chosen by `pick`
 from the same facts as the C++, each with the list entry's `frame` as its
 point (`Get_Pointer_Offset`, mouse.cpp:80-101, :112-124):
   12  an enemy not held in stasis under the pointer (:2316-2322), frame 12;
@@ -56,7 +56,7 @@ SIDE, HOTSPOT = 24, 12
 
 
 def get_facing(x1, y1, x2, y2):
-    """`Get_Facing` (cmbtmov1.cpp:573-592): 16 facings, 0 east, counter-
+    """`Get_Facing` (cmbtmov1_cost.cpp:74-93): 16 facings, 0 east, counter-
     clockwise on the screen, rounded half up."""
     a = (-get_angle(x2 - x1, y2 - y1)) % 360
     return ((a * 4 + 45) // 90) & 15
@@ -73,7 +73,7 @@ GRID_FRAME, CORNER_FRAME = 12, 0
 
 def pick(tick=None, missile=False, scan=False, board=False, move=None,
          target=None):
-    """`Assign_Mouse_Images`' choice (combat1.cpp:2213-2330) as (icon,
+    """`Assign_Mouse_Images`' choice (combat1.cpp:1254-1371) as (icon,
     frame), or None where the original's picture is its arrow (icon 1: HD's
     own pointer, DEVIATION `arrow_is_hd_pointer`). `tick` is not None while
     the acting unit is not the player's (the clock); `missile` a missile

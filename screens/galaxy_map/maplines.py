@@ -334,7 +334,7 @@ def render_relocation_lines(surface, ctx, state, stars, ms):
     drawn.
 
     TRANSCRIPTION `MAINSCR::Draw_Relocation_Links` (mainscr.cpp:845-866,
-    called from `Draw_Main_Screen` mainscr_main.cpp:948): inside
+    called from `Draw_Main_Screen` mainscr_main.cpp:673): inside
     `settings.show_relocation_lines != 0` — game option [7] of the
     options screen (loadsave.cpp:1039/1076), default 1 (initgame.cpp:78),
     toggled by Alt+F8 (mainscr.cpp:3496-3500); the byte is offset 8 of

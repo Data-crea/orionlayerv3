@@ -126,7 +126,7 @@ def _warlord_of(state, player):
 
 
 def leader_card(state, index, app=None):
-    """The hire popup's card (officer.cpp:449-461, :3747-3837): the title
+    """The hire popup's card (officer.cpp:449-461, :3563-3653): the title
     `Leader_Name_` prints, the skill rows as `Print_Officer_Data_` does,
     the portrait, and the question — HESTRNGS 0x124 / 0x125 formatted with
     the name and the ENGINE'S cost and upkeep (TPOP args 1 and 8)."""
@@ -408,7 +408,7 @@ def _leader_hire(popup, state, words, app, anywhere):
     # a skill line: its help field (`Add_Skill_Description_Help_
     # Fields_`, officer.cpp:3893-3968 — 0xBE wide, one per skill in the
     # order the card lists them), answered by `Print_Officer_Skill_
-    # Help_`'s box (mainpups.cpp:914, officer.cpp:3977-4003)
+    # Help_`'s box (mainpups.cpp:914, officer.cpp:3787-3813)
     line_right = sorted(
         (f for f in (getattr(state, "fields", None) or [])
          if f.field_type == 7 and f.x_end - f.x == 0xBE),
@@ -622,7 +622,7 @@ def _diplomacy_reply(popup, state, words, app, anywhere):
     # TRANSCRIPTION `diplomacy_reply_colour` (work order 409): the original
     # prints the message in the requester's colour (`player_color =
     # main_palette_player_colors[player.color]`, `Get_Mox_Font_Colors(4,
-    # player_color, player_color + 3)`, mainscr.cpp:4770-4788); the engine
+    # player_color, player_color + 3)`, mainscr.cpp:3941-3959); the engine
     # sends that colour as args[4] (`MOX::player[requester].color`, -1 when
     # the requester is out of range, mainscr.cpp:2542-2544), and HD inks the
     # message in the same owner colour as the map's (`renderer.OWNER_COLORS`,

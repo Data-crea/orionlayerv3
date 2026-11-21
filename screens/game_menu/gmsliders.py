@@ -49,7 +49,7 @@ def level_to_value(level, cfg):
 
 
 def value_to_level(value, cfg):
-    """`value * 100 / 0x9B`, and 5 or less is off (loadsave.cpp:1686-1717)."""
+    """`value * 100 / 0x9B`, and 5 or less is off (loadsave.cpp:1577-1605)."""
     level = int(value) * 100 // cfg["width"]
     return 0 if level <= 5 else level
 

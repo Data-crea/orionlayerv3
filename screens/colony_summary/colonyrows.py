@@ -602,7 +602,7 @@ SORT_UNAVAILABLE = {
     # The NAME table is no longer missing — `core.prodname` resolves
     # both of `Selection_Name_`'s answerable branches. What is still
     # missing is `TECHDATA::_buildings[].cost`, which
-    # `Prod_To_Sort_Type_` (colsum.cpp:1224) adds 10 to, and
+    # `Prod_To_Sort_Type_` (colsum_details.cpp:335) adds 10 to, and
     # `Calculate_Current_Production_Turn_Count_`, `cmp_Prod_`'s third
     # level. The key is therefore RIGHT on any set where no colony is
     # building a building — the reference save is one, every row

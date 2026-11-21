@@ -3,11 +3,11 @@ under the pointer says — work order 228 B (the combat target window), and
 since work order 231 C the galaxy map's window too: ONE drawing for both,
 as the original builds and draws the bar with the same functions in both
 (`Add_System_Display_Popup_Fields_` -> `Build_System_Popup_Ships_`,
-`Draw_System_Display_Popup_`; mainpups.cpp:2107-2136, mainscr.cpp:4391-4406).
+`Draw_System_Display_Popup_`; mainpups.cpp:2107-2136, mainscr.cpp:3832-3847).
 Only what a click does differs, and that is the engine's.
 
 TRANSCRIPTION of the original's bar (`SYS::Build_System_Popup_Ships_`,
-sys.cpp:2160-2190, and `Draw_System_Ship_Icons_`, :1018-1049): one icon per
+sys.cpp:2098-2128, and `Draw_System_Ship_Icons_`, :1018-1049): one icon per
 owner with ships at the star (`location` the star, `status` below 3), in
 slot = owner (:2172-2173), laid out left to right in the order the engine
 met them (`Get_System_Display_Ship_Icon_XY_`, :2130-2158) — HD reads that

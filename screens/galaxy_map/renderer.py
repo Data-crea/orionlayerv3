@@ -701,7 +701,7 @@ def render_stars(surface, ctx, stars, cache, black_holes=None):
     rest, None both. TRANSCRIPTION `black_hole_order`: the original
     draws its black holes in their own pass (Draw_Black_Holes_), after
     the star names and before the destination lines, the ETA line and
-    the stars (mainscr_main.cpp:947-980), so `_render_map` calls this
+    the stars (mainscr_main.cpp:672-701), so `_render_map` calls this
     twice around the lines."""
     view = ctx.view
     heights = {}
@@ -747,7 +747,7 @@ def render_stars(surface, ctx, stars, cache, black_holes=None):
 # TRANSCRIPTION end_of_turn_stardate: nothing to draw. With the setting
 # `end_of_turn_wait` on (on the wire, `core/structs/settings.py`),
 # Draw_Main_Screen_ prints HESTR 0xDA with the stardate right-aligned at
-# (639, 0) in font 1 (mainscr_main.cpp:955-965) — but inside the map's
+# (639, 0) in font 1 (mainscr_main.cpp:680-690) — but inside the map's
 # clip window 22,22-527,421 set just before it (:952-953), and the
 # clipped printer returns at once when the text ends above the window's
 # top (y + height < y1, fonts.cpp:190-197; font 1 is 9 px high, FONTS.LBX

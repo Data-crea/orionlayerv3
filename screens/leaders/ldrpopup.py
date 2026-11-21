@@ -16,7 +16,7 @@ the art's header size (306 x 266) is the source here, the argument
 same at `g_x + 0xAF` with 0x3B and "h" (0x13C); a button field stores
 its hotkey upper-cased (fields.cpp:378-381). Up to five hidden help
 fields follow, one per skill line, from `(g_x + 0x61, g_y + 0x36)`
-(`Wrapper_To_Add_Officer_Popup_Help_Fields_`, officer.cpp:3875-3887).
+(`Wrapper_To_Add_Officer_Popup_Help_Fields_`, officer.cpp:3691-3703).
 
 WHO IS OFFERED. Only a leader of the player's who is FOR HIRE reaches
 the popup: `Do_Hire_Officer_` answers anyone else with a message
@@ -65,7 +65,7 @@ PORTRAIT_AT = (ORIGIN[0] + 0x0D, ORIGIN[1] + 0x37)
 #: paragraphs (mainpups.cpp:1841-1846, :1909-1914):
 TITLE_RECT = (ORIGIN[0] + 0x0B, ORIGIN[1] + 0x0C, 0x11D, 0x21)
 MESSAGE_RECT = (ORIGIN[0] + 0x0E, ORIGIN[1] + 0x95, 0x119, 0x3E)
-#: The skill help fields' column (officer.cpp:3881-3886, :3928-3937).
+#: The skill help fields' column (officer.cpp:3697-3702, :3928-3937).
 SKILL_HELP_X = ORIGIN[0] + 0x61
 SKILL_HELP_TOP = ORIGIN[1] + 0x35 + 1
 SKILL_HELP_W = 0xBE

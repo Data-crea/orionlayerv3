@@ -1,6 +1,6 @@
 """Sending colony and outpost ships from the Planets screen — work order 271.
 
-The original (`Planet_Summary_Screen`, plntsum.cpp:1929-2136): SEND COLONY
+The original (`Planet_Summary_Screen`, plntsum.cpp:928-1094): SEND COLONY
 SHIP and SEND OUTPOST SHIP arm a send (`send_choice` 0 or 1, the button
 drawn on; a second click disarms, :2075-2110); with a send armed, a click on
 a row sends the nearest such ship there (`Scan_Summary_Box_Fields`,
