@@ -64,6 +64,16 @@ class NewGameScreen(ScreenBase):
     FRAME_TITLE = "New Game"
     FRAME_BTN_LEFT = ("Cancel", 14)
     FRAME_BTN_RIGHT = ("Accept", 15)
+    #: THE FRAME BUTTONS' FIELDS ARE FOUND BY THEIR HOTKEYS, not by the
+    #: numbers above: a network game (`Show_Net_Game_Name`, newgame.cpp)
+    #: puts the game name's input in front of the two buttons, so their
+    #: numbers are 15 and 16 there and CANCEL sent 14 — the input — while
+    #: ACCEPT's 15 was the game's CANCEL (Data, 21 November 2026: the
+    #: setup's START NEW GAME, then CANCEL). The hot keys stay put: ESC is
+    #: CANCEL's second field and SPACE ACCEPT's (newgame.cpp, the two
+    #: `Add_Hot_Key`s). The numbers stay as the answer for a list that has
+    #: neither (no game, a stand-in).
+    FRAME_HOTKEYS = {"left": 27, "right": 32}
     #: THE SCREEN SHELL (work order 225): six panels, three by two, fill
     #: the content rectangle above the button row — the five settings
     #: (title, picture, value) and the three switches; the title on the
@@ -317,6 +327,18 @@ class NewGameScreen(ScreenBase):
                 return
         # Accept/Cancel via frame button bars + boxes
         super().handle_click(screen_x, screen_y)
+
+    def _frame_button_hit(self, screen_x, screen_y):
+        """The frame button's field, resolved in the live list by hotkey."""
+        side = self._frame_button_side(screen_x, screen_y)
+        if side is None:
+            return None
+        state = getattr(self.app.client, "state", None)
+        want = self.FRAME_HOTKEYS[side]
+        for f in getattr(state, "fields", None) or []:
+            if getattr(f, "hotkey", None) == want and f.index > 0:
+                return f.index
+        return super()._frame_button_hit(screen_x, screen_y)
 
     def _toggle_click_pos(self, name, field_id):
         """Get 640x480 click position for a toggle button.

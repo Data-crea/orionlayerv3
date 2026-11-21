@@ -159,6 +159,16 @@ def active_preset():
     return _ACTIVE_PRESET
 
 
+def recoloured():
+    """True when the player colours are not the skin's own: a preset, or the
+    settings file's own base table on `original` (the table `apply` then
+    derives from). A module that keeps the shipped drawing for the original
+    colours asks this and not `active_preset() == "original"`, which a
+    custom table does not change."""
+    from core import playercolors
+    return _ACTIVE_PRESET != playercolors.ORIGINAL or _BASE is not None
+
+
 def col(section, key, default):
     """Color from skin section, falling back to the code default.
 

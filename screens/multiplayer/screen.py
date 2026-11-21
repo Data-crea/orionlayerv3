@@ -168,12 +168,15 @@ class MultiplayerScreen(ScreenBase):
         L = self.ref_layout
         s = L.scale
         panel = self.box_screen_rect("setup_panel") or shell.panels(L, True)
-        hud.panel(surface, panel, s)
+        # no fill: the screen's own picture stands in the panel (Data's
+        # mockup of 21 November 2026), the edge and glow are the panel's
+        hud.panel(surface, panel, s, filled=False)
         btns = mpsetup.buttons(fields)
         chosen = mpsetup.selected(fields,
                                   getattr(self._state, "settings_raw", None))
         bw, bh = int(REF_BUTTON[0] * s), int(REF_BUTTON[1] * s)
         gap = int(REF_GAP * s)
+        foot = self._caption(surface, panel, s)
         halves = shell.split(shell.inner(panel, L), L, [1.0, 1.0])
         y = panel.y + int(50 * s)
         for half, keys, kind in ((halves[0], ("network", "online", "hotseat"),
@@ -185,6 +188,28 @@ class MultiplayerScreen(ScreenBase):
                 r = pygame.Rect(x, y + i * (bh + gap), bw, bh)
                 self._button(surface, key, r, btns.get(key),
                              lit=key == chosen, kind=kind)
+
+    def _caption(self, surface, panel, s):
+        """HD EXTENSION `setup_caption` (Data's mockup, 21 November 2026): a
+        band along the panel's foot, a line above it and, centred, what the
+        screen is and does. The panel's top y of the band is returned."""
+        title, hint = self.words("setup_caption"), self.words("setup_hint")
+        if not title or title == "SETUP_CAPTION":
+            return panel.bottom
+        band = pygame.Rect(panel.x, panel.bottom - int(104 * s), panel.w,
+                           int(104 * s))
+        x0, x1 = hud.separator_span(panel, s)
+        hud.separator(surface, x0, x1, band.y, s)
+        mid = band.centerx
+        t = hudtext.render(self.style, title, "title", int(40 * s))
+        h = hudtext.render(self.style, hint, "button", int(46 * s),
+                           colour_=hudtext.colour("sub"))
+        gap = int(6 * s)
+        top = band.y + (band.h - t.get_height() - gap - h.get_height()) // 2
+        surface.blit(t, (mid - t.get_width() // 2, top))
+        surface.blit(h, (mid - h.get_width() // 2,
+                         top + t.get_height() + gap))
+        return band.y
 
     def _draw_comm(self, surface, fields):
         panel, s = self._panel(surface, self.words("comm_title"), 900, 330)
@@ -325,8 +350,14 @@ class MultiplayerScreen(ScreenBase):
         if self._endpoint is not None:
             return self._endpoint.handle_key_event(event)
         if event.key == pygame.K_ESCAPE:
-            f = next((f for k, (r, f) in self._rects.items()
-                      if k == "cancel"), None)
+            # ESC is CANCEL's hotkey in the original (multplay_fields.cpp,
+            # the "\x1B" button): in the setup CANCEL is the shell's button
+            # and not in `_rects` (work order 225), so the setup's own field
+            # answers; the dialogs' CANCEL is in `_rects`
+            f = (self._setup_field("cancel") if self._setup_up() else None)
+            if f is None:
+                f = next((f for k, (r, f) in self._rects.items()
+                          if k == "cancel"), None)
             self._send(f, "ESC")
         else:
             from core import keyfwd     # work order 230 E: the shared rule

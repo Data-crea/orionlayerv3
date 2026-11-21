@@ -498,6 +498,28 @@ def slant_button(surface, rect, scale, state="normal", label="",
                icon, scale, text_h)
 
 
+def slant_strip(surface, rect, scale):
+    """**HD EXTENSION `sort_strip`** (Data's Futuristic colony mockup, 20
+    Nov 2026): the OUTLINE of one slanted strip — the slanted button's
+    shape and slope, edge and glow, no fill — for a row of keys that stand
+    on one band. The caller draws what is in it."""
+    rect = pygame.Rect(rect)
+    if rect.w < 6 or rect.h < 6:
+        return
+    st = hudstyle.get()
+    key = ("slant_strip", rect.w, rect.h, round(scale, 4))
+
+    def build():
+        fill, edge = _button_colours("normal")
+        return raster.shape(
+            lambda w, h: raster.slanted(w, h, st.get("button.slant")),
+            rect.w, rect.h, fill=fill, edge=edge, fill_alpha=0.0,
+            edge_w=_px(st.get("button.edge_width"), scale),
+            glow=edge, glow_w=_px(st.get("panel.glow_width"), scale) * 0.6,
+            ss=int(st.get("supersample")))
+    _blit_shape(surface, rect, _cached(key, build))
+
+
 def _underline(surf, pad, w, h, scale, bright=False):
     """The glowing bar centred on the bottom edge (measured: 6 found,
     each `button.underline_width` wide and `underline_height` tall)."""

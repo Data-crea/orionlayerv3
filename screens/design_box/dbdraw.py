@@ -35,6 +35,11 @@ and where it comes from:
                  the HUD font (their text in `layout.json`, German in
                  `de.json`), where the original draws DESIGN.LBX's pictures
                  of them (Data, 2 November 2026)
+  HD EXTENSION   `picker_rows` — one text size for every word of a table
+                 row (the notes were smaller than the names), each centred
+                 between its row's edges, the chosen row's frame as wide as
+                 the table's words and the two lower boxes ending on one line
+                 (Data, 21 November 2026)
   HD EXTENSION   `solid_panel` — the picker's box is opaque: the designer's
                  page under it showed through the glass (Data, 2 November
                  2026)
@@ -71,6 +76,35 @@ def _t(surface, screen, words, x, y, w, key="value", role="value",
 
 def _rect(f):
     return (f.x, f.y, f.x_end, f.y_end)
+
+
+def _row_h(screen, field):
+    """A row's height in window px: its field's, else the original's 14."""
+    if field is not None:
+        return nd.rect(screen.layout, _rect(field)).h
+    return int(round(geom.WEAPON_STEP * nd.native_scale(screen.layout)))
+
+
+def _row(surface, screen, words, x, y, w, role="value", align="left",
+         row_h=0):
+    """One line of a table row at a native anchor, ONE SIZE for every row
+    word (Data, 21 November 2026: the notes were smaller than the names and
+    the words sat on the top edge of their row, under the chosen row's
+    frame), centred between the row's top and bottom (HD EXTENSION
+    `picker_rows`). `x` is the anchor, `w` the native width the word is
+    fitted to, as `_t`'s."""
+    if not words:
+        return None
+    layout = screen.layout
+    size = coldraw.font(layout, "value")
+    px, py = nd.point(layout, x, y)
+    x0 = x - (w if align == "right" else w // 2 if align == "center" else 0)
+    wpx = nd.rect(layout, (x0, y, x0 + w - 1, y)).w
+    colour = hudtext.colour(role)
+    h = screen.style.render_text("Wg", size, colour[:3]).get_height()
+    return nd.blit_text(surface, screen.style, words, px,
+                        py + max(0, (row_h - h) // 2), wpx, size, colour,
+                        align=align)
 
 
 def draw(surface, screen, box, names):
@@ -132,26 +166,46 @@ def _weapon(surface, screen, box, names):
     chosen = box.box["chosen"]
     first = max(0, box.box["first_row"])
     cols = geom.WEAPON_COLS
+    # THE CHOSEN ROW'S FRAME ends where the table's words end (the widest
+    # note drawn), not at the row field's far edge
+    size = coldraw.font(screen.layout, "value")
+    note_end = 0
+    for y, row, field in rows:
+        if row["extra"] > 0:
+            note = names.weapon_note(row["extra"])
+            if note:
+                nx, ny = nd.point(screen.layout, x0 + cols["note"], y)
+                wpx = nd.rect(screen.layout, (x0 + cols["note"], y,
+                                              x0 + cols["note"] + 0x11F,
+                                              y)).w
+                fitted = nd.fit(screen.style, note, wpx, size)
+                note_end = max(note_end, nx + screen.style.render_text(
+                    note, fitted, (255, 255, 255)).get_width())
     for k, (y, row, field) in enumerate(rows):
         weapon = row["extra"]
         role = "value" if row["unlocked"] or weapon <= 0 else "sub"
-        if first + k == chosen and chosen > 0:
-            hud.panel(surface, nd.rect(screen.layout, _rect(field)),
-                      screen.layout.scale, lit=True, dense=True)
+        rh = _row_h(screen, field)
+        if first + k == chosen and chosen > 0 and field is not None:
+            fr = nd.rect(screen.layout, _rect(field))
+            pad = max(4, fr.h // 4)
+            if note_end:
+                fr.w = max(8, min(fr.w, note_end + pad - fr.x))
+            hud.panel(surface, fr, screen.layout.scale, lit=True, dense=True)
         if weapon <= 0:
             name = names.h(geom.NO_WEAPON)
         else:
             n = 1 if row["space"] > 0 and row["unlocked"] else 0
             name = f"{names.part('weapons', weapon) or ''} ({n})"
-        _t(surface, screen, name, x0 + cols["name"], y, 0xA8, role=role)
-        _t(surface, screen, row["text"], x0 + cols["damage"], y, 0x30,
-           role=role, align="right")
+        _row(surface, screen, name, x0 + cols["name"], y, 0xA8, role,
+             row_h=rh)
+        _row(surface, screen, row["text"], x0 + cols["damage"], y, 0x30,
+             role, "right", rh)
         for col in ("cost", "space"):
-            _t(surface, screen, str(row[col]), x0 + cols[col], y, 0x20,
-               role=role, align="right")
+            _row(surface, screen, str(row[col]), x0 + cols[col], y, 0x20,
+                 role, "right", rh)
         if weapon > 0:
-            _t(surface, screen, names.weapon_note(weapon),
-               x0 + cols["note"], y, 0x120, "line", "sub")
+            _row(surface, screen, names.weapon_note(weapon),
+                 x0 + cols["note"], y, 0x120, "sub", row_h=rh)
     _arc_box(surface, screen, box, art)
     _mods(surface, screen, box, names)
     for i, (f, status) in enumerate(zip(box.filter_fields(),
@@ -236,6 +290,9 @@ def _mods(surface, screen, box, names):
     bx = box.base.x
     b = field.y - geom.ARC_BOX_DY
     x1, y1, x2, y2 = geom.MOD_BOX
+    # the two lower boxes end on one line: the arc box's own bottom (the
+    # modification box was 3 px longer, `MOD_BOX`'s extent of the sprite)
+    y2 = min(y2, field.y_end - b) if field.y_end > b + y1 else y2
     nd.draw_box(surface, screen, (bx + x1, b + y1, bx + x2, b + y2))
     for i, f, on in box.mods():
         if on:
@@ -257,13 +314,14 @@ def _special(surface, screen, box, names):
         item = row["item"]
         name = names.part("specials", item) if item else \
             names.h(geom.NO_SPECIAL)
-        _t(surface, screen, name, bx + cols["name"], y, 0xA0)
+        rh = _row_h(screen, _field)
+        _row(surface, screen, name, bx + cols["name"], y, 0xA0, row_h=rh)
         for col in ("space", "cost"):
-            _t(surface, screen, str(row[col]), bx + cols[col], y, 0x28,
-               align="right")
+            _row(surface, screen, str(row[col]), bx + cols[col], y, 0x28,
+                 align="right", row_h=rh)
         if item:
-            _t(surface, screen, names.description(item),
-               bx + cols["description"], y, 0x130, "line", "sub")
+            _row(surface, screen, names.description(item),
+                 bx + cols["description"], y, 0x130, "sub", row_h=rh)
 
 
 def _buttons(surface, screen, box):

@@ -500,6 +500,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_move(surface)
         self._render_buttons(surface)
         self._render_header(surface)
+        colonyplates.render_edges(self, surface)
         self.render_shell(surface)
         # LAST, OVER THE FRAME. `COLMOVE::Draw_Cluster_(
         # mouse::Pointer_X_(), mouse::Pointer_Y_())` is the final

@@ -67,6 +67,17 @@ DEFAULTS = {
     # `colors.json`'s `_panel_paragraph_note` for why and where it is
     # parked.
     "panel_paragraph": (72, 144, 56),
+    # THE SHIP CARD'S LOOK (Data's mockup of 21 November 2026, HD
+    # EXTENSION `panel_look`): not the original's palette — it is ours,
+    # in the skin (`colors.json`, decision 14): the words white, the name
+    # light blue on its tab, the two headings gold, a rule under the head
+    # and a gold line between the columns.
+    "panel_text": (236, 242, 250),
+    "panel_title": (150, 224, 250),
+    "panel_heading": (232, 176, 40),
+    "panel_rule": (70, 104, 140),
+    "panel_divider": (170, 128, 40),
+    "panel_tab_fill": (8, 22, 44),
 }
 
 

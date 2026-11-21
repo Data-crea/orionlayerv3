@@ -194,8 +194,8 @@ ships/masters/<kind>.png      a WHOLE master
   cut fills the rest. A master under a name that is not a kind is skipped
   with one line in the log.
 
-**A stack shows its strongest ship** (setting *Map ship pictures*, on by
-default): your own stack the Avenger first, then the largest hull, then
+**A stack shows its strongest ship** (always, since 19 November 2026 the
+setting *Map ship pictures* is gone): your own stack the Avenger first, then the largest hull, then
 the dearest design; another empire's the ship the game puts at its head.
 It is the battle's picture, facing right, fitted into the icon's box.
 The map's own slot comes first, by the ship's picture number (45 colony

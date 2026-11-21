@@ -73,6 +73,14 @@ def draw(surface, screen, view, names):
     _weapons(surface, screen, view, names)
     _specials(surface, screen, view, names)
     _bottom(surface, screen, view, names)
+    # THE FRAMES' EDGES ONCE MORE, over every fill, list and field drawn in
+    # the panels (Data, 21 November 2026: the corners of the frames were cut
+    # on the whole screen, as on the Colonies screen): the panel block without
+    # its fill, so no fill drawn after a panel can lie over its corner
+    for k, native in enumerate(geom.PANELS):
+        if k != geom.NAME_PANEL:
+            hud.panel(surface, nd.rect(layout, native), layout.scale,
+                      filled=False)
 
 
 #: share of a native row pitch a line of text may fill above factor 1.0,
@@ -97,9 +105,24 @@ def _t(surface, screen, words, x, y, w, key="value", role="value",
                         align=align, size=size)
 
 
+def _name(surface, screen, name):
+    """The design's name in its box: the title size, centred between the
+    box's top and bottom (HD EXTENSION `name_box`)."""
+    if not name:
+        return
+    layout = screen.layout
+    nb = nd.rect(layout, geom.NAME_BOX)
+    pad = max(6, nb.h // 4)
+    colour = hudtext.colour("title")
+    size = nd.fit(screen.style, name, max(1, nb.w - 2 * pad),
+                  coldraw.font(layout, "title"))
+    surf = screen.style.render_text(name, size, colour[:3])
+    surface.blit(surf, (nb.x + pad, nb.centery - surf.get_height() // 2))
+
+
 def _ship(surface, screen, view, names):
     d = view.design
-    _t(surface, screen, d["name"], 0x14, 0x19, 0x84, "value", "title")
+    _name(surface, screen, d["name"])
     art = sdart.load()
     pic = art.ship(d["picture"], view.colour) \
         if view.colour is not None else None

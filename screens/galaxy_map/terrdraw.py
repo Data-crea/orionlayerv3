@@ -31,6 +31,9 @@ from screens.galaxy_map import maplines
 #: same values; a tool with no settings gets these).
 SHOW, BORDERS, NEBULAE, OPACITY = ("territory_show", "territory_borders",
                                    "territory_nebulae", "territory_opacity")
+#: One hard border between two empires instead of the blended zone (off:
+#: blended, the default; `terrfield` says what it changes).
+HARD = "territory_hard"
 DEFAULT_OPACITY = 40
 
 #: How much of a nebula's own colour a full territory replaces.
@@ -49,13 +52,14 @@ PATTERNS = (None, (22, 9), (3, 8), (16, 7, 3, 7), (8, 8),
 def setting(app, key):
     us = getattr(app, "user_settings", None)
     if us is None:
-        return {SHOW: "on", BORDERS: "on", NEBULAE: "on",
+        return {SHOW: "on", BORDERS: "on", NEBULAE: "on", HARD: "off",
                 OPACITY: DEFAULT_OPACITY}[key]
     return us.get(key)
 
 
-def is_on(app, key):
-    return setting(app, key) != "off"
+def is_on(app, key, default="on"):
+    v = setting(app, key)
+    return (default if v is None else v) != "off"
 
 
 def opacity(app):

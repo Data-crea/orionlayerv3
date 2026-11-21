@@ -86,9 +86,6 @@ DEFAULTS = {
     "floor_lift": "off",
     "player_colors": "original",
     "monster_values": "on",
-    # The galaxy map's stacks as their strongest ship's picture (work order
-    # 311, `screens/galaxy_map/shippics`), on or off; applied at once.
-    "map_ship_pictures": "on",
     # How a player's ship is drawn on the galaxy map (Data, 19 November 2026;
     # the marking is in `screens/galaxy_map/ships`): original, lighter, vivid
     # or distinct; applied at once. "lighter" is a step away from the
@@ -164,6 +161,9 @@ DEFAULTS = {
     "territory_borders": "on",
     "territory_nebulae": "on",
     "territory_opacity": 40,
+    # One hard border between two empires, no blended zone (a viewer's
+    # wish, 20 November 2026, `terrfield`): on or off; off is the blend.
+    "territory_hard": "off",
     # The panel itself: shown or hidden (a key on the map), and where the
     # player dragged it, [x, y] in reference px; None is its box's place.
     "territory_panel_shown": "on",
@@ -179,6 +179,9 @@ DEFAULTS = {
 #: (those are kept for a newer build): an older build reading the file
 #: without one takes its own default, which is what the key said.
 RETIRED = {
+    # the galaxy map's stacks as ship pictures on or off (work order 311),
+    # removed on 19 November 2026: the pictures are always drawn
+    "map_ship_pictures": 0,
     # the scan's Normal / Detailed switch (work order 290), gone with
     # Normal in work order 298; its default was "detailed", the one view
     "scan_view": 298,

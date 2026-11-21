@@ -84,7 +84,14 @@ AVAIL_LABEL_X, AVAIL_RIGHT = 0xA3, 0x160
 #: frames these areas; DEVIATION `hud_frameless`): the name + picture box,
 #: the hull column, drive / armour, shield / computer, the two tables, the
 #: bottom line.
-PANELS = ((0x0E, 0x14, 0x9A, 0x2A), (0x0E, 0x2E, 0x72, 0x96),
+#: The name's box: wider and a little taller than the original's field (Data,
+#: 21 November 2026: "too small"). It stays inside the shell's rectangle
+#: (check 006n: no panel above it) and below it the page's panels start at
+#: 0x2E, so it grows to the right and by two native pixels downward; its
+#: words are the title size. It holds the field's rect (`NAME_RECT`, the
+#: engine's) so a click on the field is a click in it. HD EXTENSION `name_box`.
+NAME_BOX = (0x0E, 0x14, 0xB6, 0x2C)
+PANELS = (NAME_BOX, (0x0E, 0x2E, 0x72, 0x96),
           (0x74, 0x2E, 0xE6, 0x96), (0xE8, 0x2E, 0x1B0, 0x96),
           (0x1B2, 0x2E, 0x274, 0x96), (0x0E, 0x99, 0x274, 0x11E),
           (0x0E, 0x12F, 0x274, 0x1B2), (0x0E, 0x1B8, 0x164, 0x1D8))

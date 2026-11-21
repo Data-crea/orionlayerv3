@@ -357,12 +357,13 @@ def _restyle(sprite, colour_idx, look):
     if look == "original":
         return sprite
     out = sprite.copy()
-    if look == "lighter" or colour_idx not in SHIP_LOOK:
+    if look == "lighter" or (colour_idx is not None
+                             and colour_idx not in SHIP_LOOK):
         return _lighten(out)
     px = pygame.surfarray.pixels3d(out)
     rgb = px.astype(np.float32) / 255
-    if look == "distinct" and \
-            palette.active_preset() == playercolors.ORIGINAL:
+    if look == "distinct" and colour_idx is not None and \
+            not palette.recoloured():
         target = SHIP_LOOK[colour_idx]
         if max(target) - min(target) < 40:       # a silver: no chroma to paint
             del px
@@ -847,7 +848,9 @@ def render(surface, ctx, icons, players, cache, tints,
                 if marks:
                     ownermark.draw(surface, left, top, box_w, box_h,
                                    _player_color(players, owner))
-                continue
+            # a stack with no picture draws nothing: the tinted unit icon
+            # is gone (Data, 19 November 2026)
+            continue
 
         key = _resolve_sprite(
             cache, kind or PLAYER_KIND,
@@ -865,14 +868,7 @@ def render(surface, ctx, icons, players, cache, tints,
         if h != sprite.get_height():
             h = sprite.get_height()
 
-        if kind == PLAYER_KIND:
-            color_idx = _player_color(players, owner)
-            if color_idx is not None:
-                sprite = tints.get(sprite, key, color_idx, look)
-
         iconhalo.blit_haloed(surface, sprite, cx, cy)
-        if marks and kind == PLAYER_KIND:
-            ownermark.draw(surface, left, top, box_w, box_h, color_idx)
 
 
 def _stack_picture(icon, owner, players, tints, ships, nodes, me,

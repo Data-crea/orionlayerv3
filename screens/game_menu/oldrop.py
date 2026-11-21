@@ -31,7 +31,6 @@ CHOICES = {
     "floor": ("floor_lift", "floor_steps"),
     "map_black": ("map_black_floor", "map_black_steps"),
     "monsters": ("monster_values", "monster_steps"),
-    "map_ships": ("map_ship_pictures", "map_ships_steps"),
     "ship_look": ("map_ship_look", "ship_look_steps"),
     "frame_rate": ("frame_rate", "frame_rate_steps"),
     "idle_rate": ("idle_frame_rate", "idle_rate_steps"),
@@ -52,7 +51,6 @@ def values(screen, name):
         # in `galaxy_map/floorlift`), off by default
         "map_black": lambda: ("off", "on"),
         "monsters": lambda: gmorion.MONSTER_STEPS,
-        "map_ships": lambda: gmorion.MAP_SHIP_STEPS,
         "ship_look": lambda: gmorion.SHIP_LOOK_STEPS,
         "frame_rate": lambda: tuple(framerate.STEPS),
         "idle_rate": lambda: tuple(framerate.IDLE_STEPS),

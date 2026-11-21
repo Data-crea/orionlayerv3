@@ -47,7 +47,7 @@ NODE = "orionlayer"
 #: (work order 220, decision 2).
 TABS = (("appearance", ("colours", "frame", "tone", "glass", "fill",
                         "fill_tone", "text_size")),
-        ("gameplay", ("floor", "map_black", "monsters", "map_ships",
+        ("gameplay", ("floor", "map_black", "monsters",
                       "ship_look")),
         ("graphics", ("frame_rate", "idle_rate", "painted", "livery")),
         ("system", ("mods", "mod_files", "mod_open", "hotkeys", "language")),
@@ -307,7 +307,7 @@ def render(screen, surface):
     if plate is not None:
         surface.blit(plate, geo["plate"].topleft)
     title = hudtext.render(screen.style, say(screen, "title",
-                                             "ORIONLAYER SETTINGS"),
+                                             "SETTINGS"),
                            "title", geo["title"].h)
     while title.get_width() > geo["title"].w and title.get_height() > 8:
         title = pygame.transform.smoothscale(

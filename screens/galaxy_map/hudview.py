@@ -133,9 +133,18 @@ def render_status(screen, surface):
     and the version. Right-aligned to the picture's `top_right.right`,
     centred on `top_right.cy`."""
     geo = geometry()["top_right"]
+    draw_status(surface, screen.style, screen.layout.scale,
+                picture_rect(screen, (geo["right"], geo["cy"], 0, 0)).x,
+                picture_rect(screen, (0, geo["cy"], 0, 0)).y)
+
+
+def draw_status(surface, style, scale, right_px, cy_px):
+    """The status block right-aligned at `right_px`, centred on `cy_px`
+    (device px): the galaxy map's own, and the colony summary's since 20
+    Nov 2026 (Data's Futuristic mockup)."""
+    from core.hud import style as hudstyle
     name, version, clock = status_words()
-    k = PICTURE_REF * screen.layout.scale
-    right, cy = geo["right"], geo["cy"]
+    k = PICTURE_REF * scale
     big = hudtext.colour("value")[:3]
     dim = hudtext.colour("label")[:3]
     # (text, role, capital height in picture px, colour, gap to the next)
@@ -147,18 +156,18 @@ def render_status(screen, surface):
     # gleich groß aus" at 23 / 19 (19 November).
     parts = [(clock, "value", 19, big, 24), (version, "label", 15, dim, 11),
              (None, None, 0, None, 11), (name, "label", 15, big, 0)]
-    x = picture_rect(screen, (right, cy, 0, 0)).x
-    cy_px = picture_rect(screen, (0, cy, 0, 0)).y
+    x = right_px
     for text, role, cap, col, gap in parts:
         if text is None:
             # the bar between the name and the version: the HUD's own
             # separator block (screens draw no lines of their own)
             h = int(21 * k)
             hud.separator(surface, cy_px - h // 2, cy_px + h // 2,
-                          x - int(2 * k), screen.layout.scale, vertical=True)
+                          x - int(2 * k), scale, vertical=True)
             x -= int(4 * k) + int(gap * k)
             continue
-        img = _word(screen, text, role, cap, col)
+        ratio = float(hudstyle.get().get(f"text.{role}.cap"))
+        img = hudtext.render(style, text, role, cap * 4 / 3 * k / ratio, col)
         ink = img.get_bounding_rect()
         surface.blit(img, (x - ink.right, cy_px - ink.y - ink.h // 2))
         x -= ink.w + int(gap * k)

@@ -19,6 +19,7 @@
     "rack_4": "Shot x20"
   },
   "marks": {
+    "hd_extension_picker_rows": "One text size for every word of a picker row (the notes were smaller than the names), each centred between its row's edges, the chosen row's frame as wide as the table's words, the two lower boxes on one bottom line (Data, 21 November 2026). The positions of every field are the engine's and unchanged.",
     "deviation_hud_frameless": "The boxes are HUD glass panels where the original draws DESIGN.LBX's box sprites; every position is the original's, from the box's base the wire gives.",
     "deviation_button_words": "Cancel, Accept and the scroll arrows are HUD buttons with their words in code; the original paints them into DESIGN.LBX's button art.",
     "deviation_filter_art": "The four filter buttons keep DESIGN.LBX's own button art (entries 22-25, the status as the frame) among HUD blocks: their words exist in no string table. The arc and rack words are DESIGN.LBX's too (38-47).",

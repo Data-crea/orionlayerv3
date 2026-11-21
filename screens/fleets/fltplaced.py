@@ -67,7 +67,12 @@ NAMES = ("ship_panel_text", "icon_area", "button_band", "status_text",
 #: pixels at x 532..838, y 727..870 — a second read of the same picture
 #: (`research-B.md`, x 526..847, y 742..866) agrees within 1 % of the
 #: width. The mockup binds the ARRANGEMENT here (Data, WO 326).
-SHIP_PICTURE = (0.567, 0.105, 0.329, 0.500)
+#:
+#: CENTRED (Data, 21 November 2026, on the new card look): the box's
+#: middle is the middle of the panel top to bottom, and left to right the
+#: middle of the room the words leave (the words run to about 0.57 of the
+#: panel's width). The mockup's high place sat above the middle.
+SHIP_PICTURE = (0.615, 0.150, 0.340, 0.700)
 
 #: The seven controls `button_band` is the union of — the union the
 #: original's own help table bounds (evanhelp.cpp:159-165) and which

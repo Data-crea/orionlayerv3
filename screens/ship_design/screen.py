@@ -182,7 +182,7 @@ class ShipDesignScreen(ScreenBase):
             sddraw.draw(surface, self, view, self.names())
             if self.name_edit.input is not None:
                 self.name_edit.input.render(
-                    surface, nd.rect(self.layout, geom.NAME_RECT),
+                    surface, nd.rect(self.layout, geom.NAME_BOX),
                     self.style, self.layout)
         self.render_shell(surface)
         self.render_help(surface)
@@ -286,7 +286,7 @@ class ShipDesignScreen(ScreenBase):
             return None
         if self.name_edit.busy:
             return None               # the name's keys are going out
-        name_hit = nd.rect(self.layout, geom.NAME_RECT).collidepoint(
+        name_hit = nd.rect(self.layout, geom.NAME_BOX).collidepoint(
             screen_x, screen_y)
         if self.name_edit.editing:
             # As in the original, a click away from the open field commits

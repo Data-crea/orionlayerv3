@@ -56,12 +56,13 @@ OWN ship, `Get_Ship_Id_Picture_Seg_(ship)` — SHIPS.LBX picture_num + colour *
 50, the builder's colour (fleetpop.cpp:723-746, ken.cpp:451-468). HD draws
 each cell's own ship by the map's picture rule (`ships.ship_picture`,
 `shippics`: the map slot, else the battle picture, the builder's shape in
-the owner's colour, the setting `map_ship_pictures`), so a cell shows what
+the owner's colour), so a cell shows what
 the map shows for that ship, fitted into 8/10 of the cell. Until then every
-cell drew the owner's tinted map master, one picture for every ship. A ship
-with no picture there (setting off, no extraction, a colony, outpost or
-transport ship without its slot file) keeps the tinted master (DEVIATION
-`fleet_icon_drawn`, `sysfleets.icon`), as on the map.
+cell drew the owner's tinted map master, one picture for every ship. A
+player's ship with no picture there (no extraction, a colony, outpost or
+transport ship without its slot file) draws nothing, as on the map: the
+tinted master is gone (Data, 19 Nov 2026); a monster keeps its map icon
+(DEVIATION `fleet_icon_drawn`, `sysfleets.icon`).
 
 TRANSCRIPTION `box_scanned_name` and TRANSCRIPTION `box_damage_bars` (work
 order 313, `boxcells`): the cell under the pointer puts its ship's text in
@@ -391,8 +392,9 @@ WIDE_SHIP_SHARE = 92
 def cell_picture(screen, ship, owner, cell):
     """A fleet box cell's picture: its own ship's (HD EXTENSION
     `box_ship_picture`) fitted into 8/10 of the cell (a colony, outpost or
-    transport ship into `WIDE_SHIP_SHARE` % of its width), else the owner's
-    tinted map master at 7/10, as before (`sysfleets.icon`)."""
+    transport ship into `WIDE_SHIP_SHARE` % of its width); None for a player
+    ship with no picture, the monster's map icon at 7/10 otherwise
+    (`sysfleets.icon`)."""
     side = min(cell.w, cell.h)
     if ship is not None and \
             ship_icons.kind_for_owner(owner) == ship_icons.PLAYER_KIND:
@@ -417,18 +419,16 @@ _SAID = set()
 
 def _say_no_slot(screen, ship, owner):
     """Once per ship picture, type and owner: a colony, outpost or transport
-    ship drew the owner's tinted master, not a slot picture — with what the
+    ship drew nothing, not a slot picture — with what the
     lookup had (Data, 26 October 2026: the colony ship stayed small on a
     black ground in his game, not in the checks)."""
     key = (int(ship.picture_num), int(ship.ship_type), int(owner))
     if key in _SAID:
         return
     _SAID.add(key)
-    settings = getattr(getattr(screen, "app", None), "user_settings", None)
     log.info("fleet box: no slot picture for ship picture %d (type %d, owner "
-             "%d, builder %d, map_ship_pictures %r, pictures %s)",
+             "%d, builder %d, pictures %s)",
              key[0], key[1], key[2], int(ship.previous_owner),
-             None if settings is None else settings.get("map_ship_pictures"),
              "present" if getattr(getattr(screen, "_tints", None),
                                   "pictures", None) is not None else "absent")
 

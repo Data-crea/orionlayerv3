@@ -216,45 +216,8 @@ def render(surface, header_box, cols, labels, style, font_size,
     rect, which was `draw_thin_border`'s arithmetic in a second home.
     """
     from core import listgrid
-    from core.hud import plate as gold_plate
-    if gold_plate.plate_available():
-        return _band(surface, header_box, cols, labels, style, font_size,
-                     outline, text_color, scale)
     listgrid.draw_headings(surface, header_box, cols, labels, style,
                            font_size, outline, text_color, scale)
-
-
-def _band(surface, header_box, cols, labels, style, font_size, outline,
-          text_color, scale):
-    """**HD EXTENSION `header_band`** (Data's colony mockup, 20 Nov): the
-    headings stand on ONE band, a thin line over and under it, the columns
-    parted by slanted strokes, instead of one plate per column. The column
-    rects, the words and the hit are the same ones."""
-    from core import listgrid
-    plates = listgrid.plate_rects(header_box, cols, scale)
-    if not plates:
-        return
-    x0 = min(r.x for _k, r in plates)
-    x1 = max(r.right for _k, r in plates)
-    top = min(r.y for _k, r in plates)
-    bottom = max(r.bottom for _k, r in plates)
-    line = tuple(outline[:3])
-    dim = tuple(int(c * .55) for c in line)
-    pygame.draw.line(surface, line, (x0, top), (x1, top), 1)
-    pygame.draw.line(surface, line, (x0, bottom - 1), (x1, bottom - 1), 1)
-    lean = max(3, (bottom - top) // 6)
-    for _key, rect in plates[:-1]:
-        pygame.draw.line(surface, dim, (rect.right + lean, top + 4),
-                         (rect.right - lean, bottom - 5), 1)
-    for key, rect in plates:
-        word = labels.get(key)
-        if not word:
-            continue
-        text = style.render_text(word.upper(), font_size, text_color[:3])
-        if text.get_width() > rect.width - 8:
-            continue
-        surface.blit(text, (rect.x + (rect.width - text.get_width()) // 2,
-                            rect.y + (rect.height - text.get_height()) // 2))
 
 
 def editor_note(screen, box):

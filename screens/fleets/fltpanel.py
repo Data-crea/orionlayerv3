@@ -231,55 +231,101 @@ def _head_row(screen, slot, size, colour, stops):
     return [(screen.style.render_text(slot, size, colour), stops["label"])]
 
 
+#: HD EXTENSION `panel_look` (Data's mockup of 21 November 2026): the
+#: ship's name is drawn this much larger than the lines under it, on a tab;
+#: the gap between the head and the two headings, in lines, holds a rule.
+TITLE_SCALE = 1.35
+HEAD_GAP = 0.45
+
+
+def _tab(surface, screen, rect, title_rect, panel_text_rect_):
+    """The name's tab and the rule under it: a tab from the panel's left
+    edge to just past the name, its right end slanted, and a thin line from
+    its foot to the right edge of the words."""
+    import pygame
+    if not isinstance(surface, pygame.Surface):
+        return                      # a recording stand-in takes blits only
+    scale = screen.layout.scale
+    pad = max(2, int(round(6 * scale)))
+    slant = max(3, int(title_rect.height * 0.3))
+    left = panel_text_rect_.x - pad
+    top = title_rect.y - pad
+    bottom = title_rect.bottom + pad
+    right = title_rect.right + int(1.5 * pad)
+    # LOOK EXCEPTION marking: the name's tab (HD EXTENSION panel_look), its colours the skin's fleets.panel_*
+    pygame.draw.polygon(surface, col("panel_tab_fill"),
+                        [(left, top), (right + slant, top),
+                         (right, bottom), (left, bottom)])
+    w = max(1, int(round(1.5 * scale)))
+    pygame.draw.line(surface, col("panel_rule"), (left, bottom),
+                     (rect.right, bottom), w)
+    pygame.draw.line(surface, col("panel_title"), (left, bottom),
+                     (right, bottom), w)
+
+
 def draw_columns(surface, screen, panel, rect):
     """The head block, the two headings, then the two columns.
 
-    **THE LINE GRID IS THE ORIGINAL'S, LESS ONE LINE** (work order 154,
-    and Data's decision of 20 September 2026). The head is four slots and an empty one is a BLANK
-    LINE, because the original advances its cursor by a line per slot
-    whether or not it printed in it (flt2.cpp:596-645) — that is the
-    empty line above Weapons/Specials, and it is there only because a
-    parked ship has no destination. The headings sit at the left and
-    right LABEL stops; the entries are INDENTED under them, to their
-    own stops.
+    **THE COLUMNS' STOPS ARE THE ORIGINAL'S, LESS ONE LINE** (work order
+    154, and Data's decision of 20 September 2026). The head is four slots
+    and an empty one is a BLANK LINE, because the original advances its
+    cursor by a line per slot whether or not it printed in it
+    (flt2.cpp:596-645). The headings sit at the left and right LABEL
+    stops; the entries are INDENTED under them, to their own stops.
 
     The line HD does not have is the original's fifth head slot, Beam
     OCV / Beam DCV: neither number is computable and Data's answer to
     drawing the labels with nothing after them was no, so the line is
-    not there at all (`omission_panel_beam_bonuses`). Its two value
-    stops stay transcribed below against the day it comes back.
+    not there at all (`omission_panel_beam_bonuses`).
 
-    ONE SIZE FOR ALL OF IT, and one line height. The original uses
-    three font styles — 3 for the name, 2 for the head, 1 for the
-    entries (`Set_Font_Style_`, :578, :580, :688) — and adds 2 px of
-    leading in the head against 1 in the columns. HD has one font at
-    one size, so it draws one pitch throughout; marked in
-    `layout.json` as `deviation_panel_one_font`. The size that wins is
-    the largest at which everything fits together, measured by
-    rendering (decision 30).
+    **THE LOOK IS DATA'S MOCKUP OF 21 NOVEMBER 2026** (HD EXTENSION
+    `panel_look`): the name is the first head slot at `TITLE_SCALE` times
+    the size, light blue on a tab with a rule under it; the lines are
+    white; the two headings are gold with a thin rule above them and a gold
+    line between the columns. The line grid of the head and the columns is
+    the original's, plus the name's extra height and one `HEAD_GAP`.
+
+    ONE FONT, and one line height for everything but the name (the original
+    uses three font styles, :578, :580, :688; marked in `layout.json` as
+    `deviation_panel_one_font`). The size that wins is the largest at which
+    everything fits together, measured by rendering (decision 30).
     """
+    import pygame
     px = panel_font_px(screen)
     floor = max(1, screen.layout.font_size(PANEL_MIN_FONT))
-    colour, dim = col("label"), col("label_dim")
+    colour, title, heading = (col("panel_text"), col("panel_title"),
+                              col("panel_heading"))
     stops = _stops(rect)
     # The left column runs from its own stop to where the right
     # column's HEADING starts, so a long weapon cannot run into
     # "Specials:"; the right one runs to the edge.
-    widths = (max(8, stops["right_label"] - stops["entry"]),
-              max(8, rect.x + rect.width - stops["right_entry"]))
+    scale = screen.layout.scale
     for size in range(px, floor - 1, -1):
         with lang.verbatim():   # every word of the panel is the game's (408)
             line_h = screen.style.render_text("Wg", size,
                                               colour).get_height()
-            head = [_head_row(screen, slot, size, colour, stops)
-                    for slot in panel.head]
+            # THE LINE BETWEEN THE COLUMNS has room on both sides: the left
+            # column ends one gap before it, "Specials:" starts one gap
+            # after it (Data, 21 November 2026: a weapon's "(360)" touched it)
+            div_gap = max(3, int(line_h * 0.7))
+            widths = (max(8, stops["right_label"] - div_gap * 2
+                          - stops["entry"]),
+                      max(8, rect.x + rect.width - stops["right_entry"]))
+            head = []
+            for i, slot in enumerate(panel.head):
+                if i == 0 and slot:
+                    head.append([(screen.style.render_text(
+                        slot, max(1, int(round(size * TITLE_SCALE))),
+                        title), stops["label"])])
+                else:
+                    head.append(_head_row(screen, slot, size, colour, stops))
             headings = []
             if panel.weapons_heading:
                 headings.append((screen.style.render_text(
-                    panel.weapons_heading, size, dim), stops["label"]))
+                    panel.weapons_heading, size, heading), stops["label"]))
             if panel.specials_heading:
                 headings.append((screen.style.render_text(
-                    panel.specials_heading, size, dim),
+                    panel.specials_heading, size, heading),
                     stops["right_label"]))
             cols = []
             for i, items in enumerate((panel.weapons, panel.specials)):
@@ -290,8 +336,13 @@ def draw_columns(surface, screen, panel, rect):
                         DAMAGED_RED if isinstance(text, fltrows.Damaged)
                         else colour))
                 cols.append(block)
-        rows = len(head) + bool(headings) + max(len(c) for c in cols)
-        if rows * line_h > rect.height:
+        title_h = (head[0][0][0].get_height() if head and head[0]
+                   else line_h)
+        tab_pad = max(2, int(round(6 * scale)))
+        name_h = title_h + 3 * tab_pad       # the tab, and a pad below its rule
+        gap = int(line_h * HEAD_GAP)
+        rows = (len(head) - 1) + bool(headings) + max(len(c) for c in cols)
+        if name_h + gap + rows * line_h > rect.height:
             continue
         if any(s.get_width() + x - rect.x > rect.width
                for row in head for s, x in row):
@@ -300,20 +351,42 @@ def draw_columns(surface, screen, panel, rect):
                for i, c in enumerate(cols) for s in c):
             continue
         y = rect.y
-        for row in head:
+        if head and head[0]:
+            surf, x = head[0][0]
+            _tab(surface, screen, rect,
+                 pygame.Rect(x, y + tab_pad, surf.get_width(), title_h),
+                 rect)
+            surface.blit(surf, (x, y + tab_pad))
+        y += name_h
+        for row in head[1:]:
             for surf, x in row:
                 surface.blit(surf, (x, y))
             y += line_h
+        y += gap
+        real = isinstance(surface, pygame.Surface)
         if headings:
+            # the rule above the headings, in the gap
+            if real:
+                pygame.draw.line(surface, col("panel_rule"),
+                                 (rect.x, y - gap // 2),
+                                 (rect.right, y - gap // 2),
+                                 max(1, int(round(scale))))
             for surf, x in headings:
                 surface.blit(surf, (x, y))
             y += line_h
+        bottom = y
         for i, block in enumerate(cols):
             cy = y
             cx = stops["entry" if i == 0 else "right_entry"]
             for surf in block:
                 surface.blit(surf, (cx, cy))
                 cy += line_h
+            bottom = max(bottom, cy)
+        if real and headings and len(headings) > 1:
+            dx = stops["right_label"] - div_gap
+            pygame.draw.line(surface, col("panel_divider"),
+                             (dx, y - line_h), (dx, bottom),
+                             max(1, int(round(1.5 * scale))))
         return True
     return False
 

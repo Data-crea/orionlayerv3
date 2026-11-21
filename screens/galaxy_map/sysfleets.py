@@ -27,7 +27,7 @@ Stack_` (:859-895).
 HD EXTENSION `fleet_bar_hd_ship` (Data, 30 October 2026): a player's icon in
 the bar is HIS strongest ship at the star, drawn by the map's own picture
 rule (`hd_picture`); the original's bar picture below is what stays where
-that gives none (a monster, the setting `map_ship_pictures` off).
+that gives none (a monster).
 
 TRANSCRIPTION `fleet_bar_picture` (work order 326 C, `sysshipart`): each
 icon is the original's own bar picture, BUFFER0.LBX 273 + the player's
@@ -35,9 +35,10 @@ colour for a player, 281 for owner 8, (owner - 9) + 282 for a monster
 (`Buffer_Reload_System_Ships`, sys.cpp:1032-1052), drawn at the native size
 times the window's scale (`animate::Draw`, :1062-1094), extracted by
 `tools/sysship_art_extract.py`.
-DEVIATION `fleet_icon_drawn`, now only the fallback: while those pictures
-are not extracted the bar draws the owner's tinted map icon, as the fleet
-box does for a ship with no picture of its own (since work order 312 a cell
+DEVIATION `fleet_icon_drawn`, now only the fallback and only for a
+monster or neutral owner: a player's stack with no picture draws nothing
+(the tinted unit icon is gone, Data, 19 Nov 2026), in the bar as in the
+fleet box and on the map (since work order 312 a cell
 shows its own ship, `boxdraw.cell_picture`, HD EXTENSION
 `box_ship_picture`; the fleet popup's cell is a SHIPS.LBX picture in the
 original, fleetpop.cpp:723-746, so the bar's picture is not its fallback).
@@ -134,10 +135,13 @@ def player_colour_index(state, owner):
 
 
 def icon(screen, owner, side):
-    """The owner's map icon at `side` device px, tinted for a player — the
-    bar's picture, and the fleet box cell's for a ship with no picture of
-    its own (DEVIATION `fleet_icon_drawn`)."""
+    """The owner's map icon at `side` device px for a monster or neutral
+    owner, None for a player: the HD pictures are the player's icon and
+    the tinted unit icon is gone (Data, 19 Nov 2026; DEVIATION
+    `fleet_icon_drawn`)."""
     kind = ship_icons.kind_for_owner(owner) or ship_icons.PLAYER_KIND
+    if kind == ship_icons.PLAYER_KIND:
+        return None         # no unit icon for a player (Data, 19 Nov 2026)
     key = ship_icons._resolve_sprite(screen._cache, kind, 0)
     if key is None:
         return None
@@ -145,10 +149,6 @@ def icon(screen, owner, side):
     img = screen._cache.scaled(key, max(1, side * base.get_width()
                                         // max(base.get_width(),
                                                base.get_height())))
-    if img is not None and kind == ship_icons.PLAYER_KIND:
-        colour = ship_icons._player_color(screen._players, owner)
-        if colour is not None:
-            img = screen._tints.get(img, key, colour)
     return img
 
 
@@ -206,7 +206,7 @@ def hd_picture(screen, state, star, owner, cell):
     showed the original's ships): the owner's strongest ship at the star,
     drawn by the map's own picture rule (`ships.ship_picture`, as the fleet
     box's cells and the map's stacks are), or None — a monster, no snapshot,
-    the setting `map_ship_pictures` off, no pictures extracted."""
+    no pictures extracted."""
     if state is None or star is None or ship_icons.kind_for_owner(owner) != \
             ship_icons.PLAYER_KIND:
         return None
@@ -227,8 +227,8 @@ def hd_picture(screen, state, star, owner, cell):
 def bar_picture(screen, owner, cell, s, state=None, star=None):
     """The bar's picture for `owner` in `cell`: the strongest ship's HD
     picture (`fleet_bar_hd_ship`), else the original's own (`fleet_bar_
-    picture`), else the tinted map icon while that is not extracted
-    (`fleet_icon_drawn`)."""
+    picture`), else the map icon of a monster or neutral owner
+    (`fleet_icon_drawn`); None for a player."""
     img = hd_picture(screen, state, star, owner, cell)
     if img is not None:
         return img

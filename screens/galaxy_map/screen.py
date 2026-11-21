@@ -622,8 +622,9 @@ class GalaxyMapScreen(ScreenBase):
 
         # Gate icons and the visited dots go with the stars, under the names
         # (work order 402; `gateicons`).
+        self._gate_fields = []      # rebuilt every map frame, never stale
         gateicons.render_gates(surface, ctx, self._stars, heights,
-                               player_num)
+                               player_num, self._gate_fields)
         gateicons.render_dots(surface, ctx, self._stars, heights,
                               player_num, self._players)
         # `clamp`: the name pushed inside the window at the widest zoom
@@ -660,6 +661,13 @@ class GalaxyMapScreen(ScreenBase):
             pygame.draw.circle(surface, HOVER_COLOR[:3],
                                (int(sx), int(sy)), r, 2)
             self._render_hover_name(surface, view)
+        # HD EXTENSION `gate_icon_hover`: a gate icon named under the pointer
+        if not boxdraw.system_open(self):
+            from core import mouse as _mouse
+            surface.set_clip(clip)      # the note stands outside the map
+            gateicons.hover(self, surface, ctx,
+                            getattr(self, "_gate_fields", None),
+                            _mouse.pos())
         # The movable boxes, above everything on the map (boxdraw); they
         # are HD's and may stand in the side bands.
         surface.set_clip(pygame.Rect(*view.box))

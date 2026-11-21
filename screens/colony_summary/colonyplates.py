@@ -388,23 +388,6 @@ def _ordered():
     return collections.OrderedDict
 
 
-def _rim(screen):
-    """The gold plate's corner size on this screen: a thin rim, because the
-    table's content runs within a few px of its panel's edge."""
-    return max(12, round(15 * screen.layout.scale))
-
-
-def _rim_over(screen, surface, rect):
-    """**HD EXTENSION `plate_from_galaxy_frame`**: the galaxy frame's rim
-    over a window's own panel (fill, glass and tint stay the panel's)."""
-    from core.hud import plate
-    c = _rim(screen)
-    # the rim stands OUTSIDE the panel's rect, so nothing the panel holds is
-    # touched (the planet picture, the text, the clear margins)
-    plate.plate(surface, pygame.Rect(rect).inflate(2 * c, 2 * c), fill=None,
-                size=c, mode="hud")
-
-
 def render_fills(screen, surface):
     """Every cutout that shows content gets its panel fill.
 
@@ -462,7 +445,6 @@ def render_fills(screen, surface):
             # LOOK EXCEPTION picture: the galaxy inset's measured black inside its panel (movebox.cpp:36-38)
             surface.fill(tuple(_pal.require("colony_summary", colour))[:3],
                          hud.panel_inner(outer, screen.layout.scale))
-        _rim_over(screen, surface, outer)
         holed.add(name)
     # SINCE DECISION 71 (work order 169) A WINDOW IS A HUD PANEL. The
     # frame that used to cover the fill's bleed is not drawn, so each
@@ -487,4 +469,45 @@ def render_fills(screen, surface):
         hud.panel(surface, rect, scale, dense=(name == "table"))
         if isinstance(panels.get(name), str):
             _fill(name, box)
-        _rim_over(screen, surface, rect)
+
+
+#: The windows whose edges are redrawn: the two Data saw cut (the galaxy
+#: inset and the panel beside it). The table's rows and the planet's picture
+#: run to within a few px of THEIR edges, and the soft inner band over them
+#: would change what the colony checks measure there.
+EDGE_LAST = ("colony_panel", "galaxy_inset")
+
+
+def render_edges(screen, surface):
+    """The edges of `EDGE_LAST` once more, over everything (Data, 21
+    November 2026: the bottom edge of the galaxy inset and of the panel
+    beside it did not show; "the frame must be in front, the backgrounds cut
+    the edges"). The panel block without its fill — edge, glow and the soft
+    inner band — at the rect `render_fills` drew it at, as the last thing
+    the screen draws before the shell, so no fill, row or button drawn after
+    the panel can lie over its line."""
+    from core.hud import blocks as hud
+    scale = screen.layout.scale
+    holes = getattr(screen, "_hole_fills", {})
+    for name in EDGE_LAST:
+        if name in holes:
+            rect = pygame.Rect(*screen.layout.rect(bled(holes[name])))
+        else:
+            box = screen.box_rect(name)
+            if not box:
+                continue
+            rect = pygame.Rect(*screen.layout.rect(box))
+        # the planet's picture runs to within 2 px of the panel's edge and is
+        # core/imagebox's drawing to the pixel (check 034): it goes back
+        # over the soft inner band, the edge itself lies outside it
+        keep = []
+        if name == "colony_panel":
+            pic = screen.box_rect("planet_surface")
+            if pic:
+                pr = pygame.Rect(*screen.layout.rect(pic)).clip(
+                    surface.get_rect())
+                if pr.w > 0 and pr.h > 0:     # a smaller surface: nothing
+                    keep.append((pr, surface.subsurface(pr).copy()))
+        hud.panel(surface, rect, scale, filled=False)
+        for pr, saved in keep:
+            surface.blit(saved, pr.topleft)

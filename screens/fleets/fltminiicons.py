@@ -14,7 +14,7 @@ and fitted into that box, aspect kept, never over it — so every stack keeps
 the size the original gives it there, and a stack stays as easy to hit.
 
 Nothing HD to draw (the mod folder and masters absent, the map's
-`map_ship_pictures` setting off, a monster without a master — the Antaran,
+a monster without a master — the Antaran,
 the amoeba — or no original sprite to measure) answers None and the
 caller draws the original's sprite, as before. Sends nothing.
 """
@@ -93,9 +93,8 @@ def picture(app, game_state, icon, sprite, at):
     after magnifying by `step`; its drawn pixels are the box."""
     if sprite is None or app is None:
         return None
+    # the player's own livery follows the settings (shippics.map_livery)
     settings = getattr(app, "user_settings", None)
-    if settings is not None and settings.get(shippics.SETTING) == "off":
-        return None
     box = shippicture.footprint(sprite, at, 1)
     owner = int(icon.owner)
     kind = map_ships.kind_for_owner(owner)

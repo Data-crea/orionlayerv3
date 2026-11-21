@@ -2,6 +2,8 @@
   "_comment": "Multiplayer (work order 188 Part 7). Every word here is ARTWORK in the original \u2014 MULTIGM.LBX's buttons and panels (multplay.cpp:206-231, :656-675, :828-861; hotpop.cpp:32-38) \u2014 typed from the native frames of work order 188 (evidence P7_explore), per decision 15; a mod replaces this file. Two are named by what orion2re does rather than by the art: ONLINE (the art says MODEM) and ENDPOINT (the one live box of the art's MODEM CONNECT panel) \u2014 DEVIATION online_word.",
   "words": {
     "setup_title": "MULTI-PLAYER GAME SET UP",
+    "setup_caption": "Multiplayer Setup",
+    "setup_hint": "Hot seat and network game options.",
     "network": "NETWORK",
     "online": "ONLINE",
     "hotseat": "HOTSEAT",
@@ -36,6 +38,7 @@
     "generating": "Generating the galaxy"
   },
   "marks": {
+    "hd_extension_setup_caption": "The foot band of the setup panel, its title and one line of what the screen is for: Data's Multiplayer mockup of 21 November 2026. MULTIGM.LBX's art has no such text; the words are ours.",
     "deviation_hud_panels": "HUD panels on the universal background, where the original draws MULTIGM.LBX's pictures and animations (the setup's frame, the waiting animations).",
     "deviation_online_word": "The radio the art calls MODEM and the dialog it calls MODEM CONNECT are ONLINE and its ENDPOINT: orion2re replaced the modem with a direct TCP endpoint (netcode.cpp:266-275, docs/networking.md), and the MODEM CONNECT panel's other boxes (COM port, baud rate, phone number, modem strings) take no input."
   }

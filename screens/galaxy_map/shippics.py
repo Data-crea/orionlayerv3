@@ -57,10 +57,11 @@ owner's (as the Fleets screen draws a captured ship, flt1.cpp:561):
    set with its ship ramp replaced by the owner's, under a colour preset
    that ramp moved to the preset's colour, so a stored drawing matches the
    painted ones and the tinted master.
-3. none: `ships.render` draws the tinted master as before — no extraction,
-   no painted file, a non-combat ship without its slot file, or the
-   setting `map_ship_pictures` off (the OrionLayer window's GAMEPLAY tab,
-   applied at once).
+3. none: `ships.render` draws nothing (the tinted unit icon was removed on
+   19 November 2026) — no extraction,
+   no painted file, or a non-combat ship without its slot file. (The
+   setting `map_ship_pictures`, the OrionLayer window's GAMEPLAY row, was
+   removed on 19 November 2026: the pictures are always drawn.)
 
 HELD ONCE, SCALED PER BOX: a picture is made once per (ship, colours,
 detail, preset, map livery) — the detail the smallest whole factor at which
@@ -80,9 +81,6 @@ from core.structs import ship as ship_struct
 
 log = logging.getLogger("galaxy_map.shippics")
 
-#: The user setting and its values (`core.usersettings.DEFAULTS`).
-SETTING = "map_ship_pictures"
-STEPS = ("on", "off")
 #: The map's own picture slot, a tree path the mod folder's `files/` and the
 #: base pack fill (`core.usermod.SLOTS`).
 SLOT = "screens/galaxy_map/assets/ship_pictures"
@@ -137,17 +135,20 @@ KEEP_PICTURES = 64
 KEEP_FITTED = 256
 
 
-def map_livery():
-    """The livery every map picture is coloured in: the owner's colour at
-    full strength over the whole plating (Full), the colour as it is — the
-    battle's strength and zones make every owner the metal's grey at map
-    size (HD EXTENSION `strongest_ship_icon`). Always, for every owner and
-    whatever the player's own livery: since 13 Nov 2026 (Data) the map no
-    longer follows it, so a dim strength or a muted tone cannot blur the
-    owners (WO 358's "vivid"/"muted" switch is gone). The nearest two
-    owners are still close under Okabe-Ito (colours 4 and 6, 8 apart of 255
-    on a battleship), which is the palette's, not the livery's."""
+def map_livery(settings=None, colour=None, own=None):
+    """The livery a map picture is coloured in. Every other owner's: the
+    owner's colour at full strength over the whole plating (Full), the
+    colour as it is — the battle's strength and zones make every owner the
+    metal's grey at map size (HD EXTENSION `strongest_ship_icon`; since 13
+    Nov 2026 the map no longer follows a livery, so a dim strength or a
+    muted tone cannot blur the owners). The player's OWN stacks (`colour` is
+    `own`) follow the livery he composed in the livery window, pattern,
+    second colour and strength, as its preview and the battle show it (Data,
+    19 November 2026, HD EXTENSION `map_livery_colour`)."""
     from core import livery
+    if settings is not None and own is not None and colour is not None \
+            and int(colour) == int(own):
+        return livery.from_settings(settings, own=int(own))
     return livery.Livery("full", None, 1.0)
 
 
@@ -198,14 +199,13 @@ class ShipPictures:
              own=None):
         """`ship`'s picture in the owner colour `colour` (0-7), drawn in the
         builder colour `shape`'s set, fitted into box_w x box_h; None for
-        the tinted master. `own` is the player's colour."""
+        None where there is no picture. `own` is the player's colour."""
         if ship is None or colour is None:
             return None
-        if settings is not None and settings.get(SETTING) == "off":
-            return None
-        liv = map_livery()
+        liv = map_livery(settings, colour, own)
         key = (int(colour), int(shape), int(ship.picture_num),
-               int(ship.ship_type), palette.active_preset(), liv.key())
+               int(ship.ship_type), palette.active_preset(),
+               palette.generation(), liv.key())
         pic, painted = self._unscaled(ship, key, liv, 1)
         cap = 1
         if pic is not None and painted:
@@ -326,8 +326,7 @@ def ramp(art, colour):
     (the battle's own blend, `cbpaint.color_blend`), the grey half as it
     is."""
     base = art.ramp(colour)
-    from core import playercolors
-    if palette.active_preset() == playercolors.ORIGINAL or not base:
+    if not palette.recoloured() or not base:
         return base
     from screens.combat import cbpaint
     keys = [k for k, rgb in base.items()

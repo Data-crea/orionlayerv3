@@ -1,7 +1,7 @@
 """The territory panel on the galaxy map's left edge, and its input.
 
-the territory view (`terrfield`) (Data's mockups): TERRITORY VIEW with three
-switches — Show Territories, Show Borders, Show Nebulae — the opacity
+the territory view (`terrfield`) (Data's mockups): TERRITORY VIEW with four
+switches — Show Territories, Show Borders, Show Nebulae, Hard Borders — the opacity
 slider, and a legend of the empires the map shows. Every shape is a
 `core.hud` block (the panel, the checkboxes, the separators); the slider is
 the one thing drawn here, in the HUD style's own colours.
@@ -44,7 +44,10 @@ SWATCH = 20
 POS, SHOWN = "territory_panel_pos", "territory_panel_shown"
 DEFAULT_KEY = "h"
 KEYS = (("Show Territories", terrdraw.SHOW), ("Show Borders", terrdraw.BORDERS),
-        ("Show Nebulae", terrdraw.NEBULAE))
+        ("Show Nebulae", terrdraw.NEBULAE),
+        ("Hard Borders", terrdraw.HARD))
+_DEFAULT = {terrdraw.SHOW: "on", terrdraw.BORDERS: "on",
+            terrdraw.NEBULAE: "on", terrdraw.HARD: "off"}
 
 
 def _origin(screen):
@@ -173,7 +176,8 @@ def click(screen, x, y):
     for row, _label, key_ in r["checks"]:
         if row.collidepoint(x, y):
             _set(screen, key_,
-                 "off" if terrdraw.is_on(screen.app, key_) else "on")
+                 "off" if terrdraw.is_on(screen.app, key_, _DEFAULT[key_])
+                 else "on")
             return True
     grab = r["track"].inflate(0, int(14 * screen.layout.scale))
     if grab.collidepoint(x, y):
@@ -232,7 +236,8 @@ def render(screen, surface):
     for row, label, key in r["checks"]:
         sq = pygame.Rect(row.x, row.y + (row.h - int(BOX_SIDE * s)) // 2,
                          int(BOX_SIDE * s), int(BOX_SIDE * s))
-        hud.checkbox(surface, sq, s, terrdraw.is_on(screen.app, key),
+        hud.checkbox(surface, sq, s,
+                     terrdraw.is_on(screen.app, key, _DEFAULT[key]),
                      row.collidepoint(mx, my))
         text = _word(style, lang.tr(label), s)
         hudtext.blit(surface, text, pygame.Rect(

@@ -47,6 +47,10 @@ log = logging.getLogger("ship_design")
 #: the game's own rule, a font metric HD does not mirror.
 NAME_MAX = 14
 
+#: The typed name's size in 1080p reference px: the title size of the page's
+#: other words (the name's box, `sdgeom.NAME_BOX`), where the widget's own is 20.
+NAME_FONT_REF = 26
+
 #: Snapshots after the chain ends that HD waits for the committed name
 #: (the effect needs one pre-effect pair, `wire_protocol.EFFECT_PAIRS`).
 SETTLE_SNAPSHOTS = 6
@@ -110,7 +114,7 @@ class NameEditor:
         initial = "".join(c for c in (current or "") if game_accepts(c))
         self.input = TextInput(value=initial[:NAME_MAX], max_len=NAME_MAX,
                                allowed=game_accepts, on_submit=self.commit,
-                               on_cancel=self.cancel)
+                               on_cancel=self.cancel, font_ref=NAME_FONT_REF)
         log.info("ship design: name entry started (%r)", initial)
 
     def commit(self, value=None):

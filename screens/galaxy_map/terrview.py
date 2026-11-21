@@ -30,15 +30,19 @@ def territory(screen):
     # the colonies decide who is in contact (work order 402,
     # `starnames`), as the names do
     facts = starnames.facts_of(screen)
+    local = players[player_num] if 0 <= player_num < len(players) else None
+    known = lambda o: omni or starnames._in_contact(local, player_num, o)
     emps = terrfield.empires(
         screen._stars, players, player_num, omni,
-        lambda s: starnames.owner_known(s, player_num, players, omni, facts))
+        lambda s: starnames.owner_known(s, player_num, players, omni, facts),
+        facts, known)
     cols = colours()
-    key = terrfield.state_key(emps, cols)
+    hard = terrdraw.is_on(screen.app, terrdraw.HARD, default="off")
+    key = terrfield.state_key(emps, cols, hard)
     cur = getattr(screen, "_territory", None)
     if cur is not None and cur[0] == key:
         return cur[1]
-    terr = terrfield.build(emps, cols)
+    terr = terrfield.build(emps, cols, hard=hard)
     screen._territory = (key, terr)
     return terr
 

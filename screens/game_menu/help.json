@@ -577,11 +577,6 @@
       "orionlayer_band": "monsters"
     },
     {
-      "help_id": "orionlayer.map_ships",
-      "node": "orionlayer",
-      "orionlayer_band": "map_ships"
-    },
-    {
       "help_id": "orionlayer.ship_look",
       "node": "orionlayer",
       "orionlayer_band": "ship_look"

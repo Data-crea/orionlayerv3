@@ -107,9 +107,10 @@ def places(star_icons, sx, sy, ih, px):
     return out
 
 
-def render_gates(surface, ctx, stars, heights, player_num):
+def render_gates(surface, ctx, stars, heights, player_num, fields=None):
     """Every visited star's gate icons, over the stars and under the
-    names."""
+    names. `fields`, when given, collects (rect, kind, star) of every icon
+    drawn, for `hover`."""
     view = ctx.view
     for s in stars:
         if not star_struct.visited_by(s, player_num):
@@ -125,6 +126,101 @@ def render_gates(surface, ctx, stars, heights, player_num):
                 surface.blit(img, rect.topleft)
             else:
                 sysextras._drawn(surface, rect, kind)
+            if fields is not None:
+                fields.append((rect, kind, s))
+
+
+def hover(screen, surface, ctx, fields, pointer):
+    """HD EXTENSION `gate_icon_hover`: the gate icon under the pointer, or
+    a black hole under it, is named in a note under the sidebar panel
+    (`note`). A gate icon is named in the game's words as the system window
+    has them, without the owners ("Dimensional Portal"); a black hole by its
+    kind (it has no name of its own). Only a pointer inside the map's view
+    counts: an icon of a star scrolled out of it is clipped, not visible.
+    True if a note was drawn."""
+    over = None
+    if pygame.Rect(*ctx.view.box).collidepoint(pointer):
+        over = next((f for f in fields or () if f[0].inflate(
+            2, 2).collidepoint(pointer)), None)
+    if over is not None and state_of(screen) is not None:
+        from core import hestrings
+        _rect, kind, star = over
+        text = hestrings.for_app(screen.app)
+        text = text if text.state == "ok" else None
+        number = next((g for g in sysextras.GATES if g[0] == kind), None)
+        label = (text.message(number[2])
+                 if text is not None and number is not None else None) or ""
+        # the game's label without its owner list (Data, 19 Nov 2026: the
+        # player's name is not needed): "Dimensional Portal ("
+        words = label.rstrip(" (")
+        if words:
+            return note(screen, surface, words, verbatim=True)
+        return note(screen, surface, GATE_WORDS.get(kind, ""))
+    hov = getattr(screen, "_hover_star", None)
+    if hov is not None and star_struct.is_black_hole(hov):
+        return note(screen, surface, BLACK_HOLE_WORDS)
+    return False
+
+
+#: A gate's words when the game's texts are not there (HD's, translated).
+GATE_WORDS = {"portal": "Dimensional Portal", "artemis": "Artemis Net"}
+
+#: A black hole's words (HD's: the original names none); in the language
+#: table.
+BLACK_HOLE_WORDS = "Black Hole"
+
+
+def note(screen, surface, words, verbatim=False):
+    """`words` centred under the sidebar panel, in the free strip between
+    the panel and the frame below it, in a darkened box. False when the
+    screen has no sidebar box."""
+    from core import lang, textfit
+    panel = screen.box_screen_rect("sidebar")
+    if panel is None:
+        return False
+    size = screen.layout.font_size(16)
+    if verbatim:
+        with lang.verbatim():       # the game's words
+            img_of = lambda t: screen.style.render_text(t, size,
+                                                        (255, 255, 255))
+            lines = textfit.wrap_text(screen.style, words, size,
+                                      panel.w - 8)
+            imgs = [img_of(t) for t in lines]
+    else:
+        words = lang.tr(words)
+        lines = textfit.wrap_text(screen.style, words, size, panel.w - 8)
+        imgs = [screen.style.render_text(t, size, (255, 255, 255))
+                for t in lines]
+    if not imgs:
+        return False
+    pad = max(3, size // 4)
+    w = max(i.get_width() for i in imgs) + 2 * pad
+    h = sum(i.get_height() for i in imgs) + 2 * pad
+    box = pygame.Rect(0, 0, w, h)
+    # Data's mark (19 Nov 2026, measured on his 2560 screenshot): over the
+    # straight top of the frame piece left of the raised piece above TURN;
+    # a third of the panel's width in from its left edge, 37 % of the way
+    # from the panel's foot down to the INFO row
+    info = screen.box_screen_rect("nav_info")
+    if info is not None and info.top > panel.bottom + h:
+        box.center = (int(panel.x + 0.33 * panel.w),
+                      int(panel.bottom + 0.37 * (info.top - panel.bottom)))
+    else:
+        box.midtop = (panel.centerx, panel.bottom + pad * 2)
+    shade = pygame.Surface(box.size, pygame.SRCALPHA)
+    # LOOK EXCEPTION marking: a darkened box under the words, as the
+    # system window's gate text has
+    shade.fill((0, 0, 0, 170))
+    surface.blit(shade, box.topleft)
+    y = box.y + pad
+    for img in imgs:
+        surface.blit(img, (box.centerx - img.get_width() // 2, y))
+        y += img.get_height()
+    return True
+
+
+def state_of(screen):
+    return getattr(screen, "_state", None)
 
 
 def dot_wanted(ctx, s, player_num):

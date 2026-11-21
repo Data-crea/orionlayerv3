@@ -3,8 +3,8 @@ corners and edge strips and stretched to any rectangle.
 
 **HD EXTENSION `plate_from_galaxy_frame`** (Data, 20 November 2026; the
 audience first, then the colony summary). The picture is
-`assets/shared/hud/galaxy_frame.png` (through `core.hud.art`, the mod folder's own wins); the pieces are cut from its panel at (2078, 118)-(2540,
-1090) of the 2560 x 1440 file, scaled with the file's width, turned to gold
+`assets/shared/hud/galaxy_frame.png` (through `core.hud.art`, the mod folder's own wins); the pieces are cut from its panel at (2078, 132)-(2540,
+1104) of the 2560 x 1440 file, scaled with the file's width, turned to gold
 (luminance -> brown..gold, the alpha kept) and then turned with the player's
 frame colour (`core.hud.tint`, Game Settings) like every part of the HUD.
 Without the picture `plate` returns False and the caller draws what it drew
@@ -13,7 +13,7 @@ before. Only the LOOK; no rectangle, hit or text moves.
 import pygame
 
 #: the panel in the 2560-wide file: left, top, right, bottom, corner size
-SRC = (2078, 118, 2540, 1090, 72)
+SRC = (2078, 132, 2540, 1104, 72)
 #: the hue the pieces are drawn in (degrees); the tint turns from here
 GOLD_HUE = 41
 FILL = (10, 8, 8)

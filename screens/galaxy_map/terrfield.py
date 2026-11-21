@@ -25,10 +25,20 @@ case of its own for any of them:
 **OVERLAP IS ALLOWED AND SHOWN.** Two empires' fields may both pass the
 threshold in the same place — a contested zone. The fill there is the mix
 of both colours (weighted by each field's strength) and both borders are
-drawn, so a war front reads as two edges crossing. The alternative, a
-hard partition at the line where the fields are equal, hides that two
-empires reach a system; the mockup with the overlapping nebula shows the
-mixed zone Data wants.
+drawn, so a war front reads as two edges crossing; the mockup with the
+overlapping nebula shows the mixed zone Data wants.
+
+**OR ONE HARD BORDER** (`hard`, the panel's "Hard Borders", a YouTube
+viewer's wish of 20 November 2026): a spot goes to the empire whose field
+is the stronger there, and the two share one border line where the fields
+are equal, with no mixed colour. The area two or more empires both reach
+(where their fields each pass the threshold: a shared system's surroundings
+as much as a war front) is not mixed but STRIPED, diagonal stripes one
+after another in each of those empires' colours, as many colours as
+empires (Data, 21 November 2026) — so the view still says that more than
+one empire reaches there. The price of the partition: a lone colony deep
+inside another empire's space gets no island of its own, only the stripes
+of its reach.
 
 **WHAT IT KNOWS.** Only owners the player knows (`starnames.owner_known`,
 the rule the star names' colours follow): an unvisited system of an empire not
@@ -77,7 +87,8 @@ class Empire:
         self.points = points            # [(x, y)] in world units
 
 
-def empires(stars, players, player_num, omniscient, label_of):
+def empires(stars, players, player_num, omniscient, label_of,
+            facts=None, owner_known=None):
     """The empires with at least one star the player knows the owner of,
     in player order. `label_of(star)` is true for a star whose OWNER is
     known (`starnames.owner_known` bound to the player). A name shown is
@@ -91,6 +102,21 @@ def empires(stars, players, player_num, omniscient, label_of):
         if not label_of(s):
             continue
         by_player.setdefault(owner, []).append((float(s.x), float(s.y)))
+    # a system several empires hold a colony in is in EACH of their
+    # territories (`facts`, the colonies the star names split by); only an
+    # owner the player knows (`owner_known(owner)`), as the names do
+    for s in (stars if facts else ()):
+        fact = facts.get(int(s.index))
+        if fact is None:
+            continue
+        for owner in fact.owners:
+            if not (0 <= owner < len(players)):
+                continue
+            if owner_known is not None and not owner_known(owner):
+                continue
+            pt = (float(s.x), float(s.y))
+            if pt not in by_player.setdefault(owner, []):
+                by_player[owner].append(pt)
     out = []
     for owner in sorted(by_player):
         p = players[owner]
@@ -100,6 +126,14 @@ def empires(stars, players, player_num, omniscient, label_of):
         name = (getattr(p, "race_name", "") or "").strip()
         out.append(Empire(owner, int(colour), name, by_player[owner]))
     return out
+
+
+#: The stripes of an area held by two or more empires (hard borders): a
+#: stripe's width in grid cells, how much of the colour's own brightness
+#: it keeps and how solid it stands against the glass round it.
+STRIPE_W = 3
+STRIPE_SHADE = 0.85
+STRIPE_ALPHA = 0.75
 
 
 def smoothstep(lo, hi, v):
@@ -150,14 +184,17 @@ class Territory:
         self.h, self.w = cover.shape
 
 
-def state_key(emps, colours):
+def state_key(emps, colours, hard=False):
     return (tuple((e.player, e.colour, tuple(e.points)) for e in emps),
-            tuple(tuple(c[:3]) for c in colours))
+            tuple(tuple(c[:3]) for c in colours), bool(hard))
 
 
-def build(emps, colours, cell=CELL):
+def build(emps, colours, cell=CELL, hard=False):
     """The territories of `emps`, `colours[i]` the RGB of colour index i.
-    None when nobody holds a known star."""
+    `hard`: one colour per spot and one shared border, the area two or
+    more empires reach striped (see the module text), not the blend. None
+    when nobody holds a known star.
+    """
     if not emps:
         return None
     radius = radius_world()
@@ -173,14 +210,25 @@ def build(emps, colours, cell=CELL):
     alpha_rest = np.ones((h, w), np.float64)    # product of (1 - a_o)
     cover_rest = np.ones((h, w), np.float64)
     loops = {}
-    for e in emps:
-        f = field(e.points, x0, y0, w, h, cell, radius)
+    fields = [field(e.points, x0, y0, w, h, cell, radius) for e in emps]
+    hard = bool(hard) and len(emps) > 1
+    for n, e in enumerate(emps):
+        f = fields[n]
+        if hard:
+            # inside only where this empire's field is the strongest: the
+            # smooth min keeps the edge a clean contour at THRESHOLD, and
+            # the line where two fields are equal is that contour for both
+            other = np.max([g for m, g in enumerate(fields) if m != n],
+                           axis=0)
+            f = np.minimum(f, f - other + THRESHOLD)
         cover = smoothstep(THRESHOLD - RAMP, THRESHOLD + RAMP, f)
         # strongest at the border, a third of it deep inside
         edge = np.exp(-np.maximum(f - THRESHOLD, 0.0) / EDGE_FALL)
         a = cover * (INNER + (1.0 - INNER) * edge)
         col = np.asarray(colours[e.colour % len(colours)][:3], np.float64)
         weight = f.astype(np.float64) ** 2          # defined past the edge
+        if hard:
+            weight = np.where(cover > 0.0, weight, 0.0) + 1e-9
         # the inside is also DARKER, not only fainter: a bright colour
         # laid over the picture lifts what a star name stands on, and the
         # names must keep their contrast (006d, 3.4:1 on the background)
@@ -196,10 +244,37 @@ def build(emps, colours, cell=CELL):
     fill[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
     fill[..., 3] = np.clip((1.0 - alpha_rest) * 255.0 + 0.5, 0, 255
                            ).astype(np.uint8)
+    if hard:
+        _stripes(fill, emps, fields, colours)
     names = {e.colour: e.name for e in emps}
-    return Territory(state_key(emps, colours), x0, y0, fill,
+    return Territory(state_key(emps, colours, hard), x0, y0, fill,
                      rgb.astype(np.float32),
                      (1.0 - cover_rest).astype(np.float32), loops, names)
+
+
+def _stripes(fill, emps, fields, colours):
+    """Diagonal stripes over every cell that two or more empires reach (each
+    one's own field past the threshold), the stripes in turn the colours of
+    the empires that reach it — in player order, so the order is the same
+    everywhere and a third owner only adds a third stripe colour. The
+    stripe grid is one for the whole map: a stripe runs on across a
+    change of owners instead of restarting."""
+    h, w = fill.shape[:2]
+    present = [f > THRESHOLD for f in fields]
+    count = np.sum(present, axis=0)
+    area = count >= 2
+    if not area.any():
+        return
+    jj, ii = np.mgrid[0:h, 0:w]
+    stripe = (ii + jj) // STRIPE_W
+    pick = stripe % np.maximum(count, 1)
+    rank = np.zeros((h, w), np.int64)
+    for e, here in zip(emps, present):
+        col = np.asarray(colours[e.colour % len(colours)][:3], np.float64)
+        m = area & here & (pick == rank)
+        fill[m, :3] = np.clip(col * STRIPE_SHADE, 0, 255).astype(np.uint8)
+        rank += here
+    fill[area, 3] = np.maximum(fill[area, 3], int(255 * STRIPE_ALPHA))
 
 
 # ── Marching squares ─────────────────────────────────────

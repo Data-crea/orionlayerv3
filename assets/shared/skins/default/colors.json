@@ -1267,6 +1267,37 @@
   },
   "fleets": {
     "_note": "The Fleets screen's colours, THE ORIGINAL'S OWN, resolved from the game's palette (FONTS.LBX entry 9, which fonts::Load_Palette_(8, 0, 255) installs at flt1.cpp:557) at the indices the engine names. `_source` gives the index and the engine line for each. They are still read through palette.col, so a skin or a colour-blind palette overrides them exactly as before; what changed is that the DEFAULT is no longer this project's guess at the original.",
+    "_panel_look_note": "HD EXTENSION panel_look (Data's mockup, 21 November 2026): the colours of the ship card's new look, OURS and not the original's palette - the words white, the name light blue on its tab, the headings gold, a rule under the head and a gold line between the columns.",
+    "panel_text": [
+      236,
+      242,
+      250
+    ],
+    "panel_title": [
+      150,
+      224,
+      250
+    ],
+    "panel_heading": [
+      232,
+      176,
+      40
+    ],
+    "panel_rule": [
+      70,
+      104,
+      140
+    ],
+    "panel_divider": [
+      170,
+      128,
+      40
+    ],
+    "panel_tab_fill": [
+      8,
+      22,
+      44
+    ],
     "slot_fill": [
       0,
       0,

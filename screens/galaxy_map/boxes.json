@@ -16,9 +16,9 @@
       "name": "sidebar",
       "rect": [
         1556,
-        87,
+        98,
         350,
-        729
+        728
       ],
       "style": {
         "font_scale": 1.3
@@ -112,7 +112,7 @@
       "name": "sb_stardate_text",
       "rect": [
         1596,
-        116,
+        126,
         153,
         84
       ],
@@ -125,7 +125,7 @@
       "name": "sb_treasury_text",
       "rect": [
         1596,
-        227,
+        238,
         153,
         74
       ],
@@ -138,7 +138,7 @@
       "name": "sb_treasury_icon",
       "rect": [
         1755,
-        227,
+        238,
         120,
         74
       ]
@@ -147,9 +147,9 @@
       "name": "sb_command_text",
       "rect": [
         1596,
-        317,
+        328,
         153,
-        69
+        68
       ],
       "style": {
         "font_scale": 1.2,
@@ -160,16 +160,16 @@
       "name": "sb_command_icon",
       "rect": [
         1755,
-        317,
+        328,
         120,
-        69
+        68
       ]
     },
     {
       "name": "sb_food_text",
       "rect": [
         1596,
-        402,
+        412,
         153,
         65
       ],
@@ -182,7 +182,7 @@
       "name": "sb_food_icon",
       "rect": [
         1755,
-        402,
+        412,
         120,
         65
       ]
@@ -191,9 +191,9 @@
       "name": "sb_freighters_text",
       "rect": [
         1596,
-        483,
+        493,
         153,
-        66
+        67
       ],
       "style": {
         "font_scale": 1.2,
@@ -204,18 +204,18 @@
       "name": "sb_freighters_icon",
       "rect": [
         1755,
-        483,
+        493,
         120,
-        66
+        67
       ]
     },
     {
       "name": "sb_research_text",
       "rect": [
         1596,
-        565,
+        576,
         153,
-        85
+        84
       ],
       "style": {
         "font_scale": 1.2,
@@ -226,9 +226,9 @@
       "name": "sb_research_icon",
       "rect": [
         1755,
-        565,
+        576,
         120,
-        85
+        84
       ]
     },
     {
@@ -524,9 +524,9 @@
       "name": "sidebar",
       "rect": [
         1556,
-        87,
+        98,
         350,
-        729
+        728
       ],
       "style": {
         "font_scale": 1.3
@@ -620,7 +620,7 @@
       "name": "sb_stardate_text",
       "rect": [
         1596,
-        116,
+        126,
         153,
         84
       ],
@@ -633,7 +633,7 @@
       "name": "sb_treasury_text",
       "rect": [
         1596,
-        227,
+        238,
         153,
         74
       ],
@@ -646,7 +646,7 @@
       "name": "sb_treasury_icon",
       "rect": [
         1755,
-        227,
+        238,
         120,
         74
       ]
@@ -655,9 +655,9 @@
       "name": "sb_command_text",
       "rect": [
         1596,
-        317,
+        328,
         153,
-        69
+        68
       ],
       "style": {
         "font_scale": 1.2,
@@ -668,16 +668,16 @@
       "name": "sb_command_icon",
       "rect": [
         1755,
-        317,
+        328,
         120,
-        69
+        68
       ]
     },
     {
       "name": "sb_food_text",
       "rect": [
         1596,
-        402,
+        412,
         153,
         65
       ],
@@ -690,7 +690,7 @@
       "name": "sb_food_icon",
       "rect": [
         1755,
-        402,
+        412,
         120,
         65
       ]
@@ -699,9 +699,9 @@
       "name": "sb_freighters_text",
       "rect": [
         1596,
-        483,
+        493,
         153,
-        66
+        67
       ],
       "style": {
         "font_scale": 1.2,
@@ -712,18 +712,18 @@
       "name": "sb_freighters_icon",
       "rect": [
         1755,
-        483,
+        493,
         120,
-        66
+        67
       ]
     },
     {
       "name": "sb_research_text",
       "rect": [
         1596,
-        565,
+        576,
         153,
-        85
+        84
       ],
       "style": {
         "font_scale": 1.2,
@@ -734,9 +734,9 @@
       "name": "sb_research_icon",
       "rect": [
         1755,
-        565,
+        576,
         120,
-        85
+        84
       ]
     },
     {

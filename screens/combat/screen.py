@@ -31,6 +31,8 @@ and nothing of the camera: zoom and pan are HD's (`cbview`).
 import logging
 import time
 
+import types
+
 import pygame
 
 from core import combatblocks as cb
@@ -362,6 +364,17 @@ class CombatScreen(CombatInput, ScreenBase):
         unit = cb.acting_unit(c)
         cbdraw.draw_background(surface, cam, art,
                                bool(c and c.get("in_nebula")), self._cache)
+        # DEVIATION `band_space` (Data, 21 Nov 2026): the screen's planet
+        # picture showed between the panels of the lower band and met the
+        # field in a hard edge; the same space, the same layers and the
+        # same offset, runs under the band too
+        if win_h > band.y:
+            band_cam = types.SimpleNamespace(
+                area=(0, band.y, win_w, win_h - band.y),
+                ox=cam.ox, oy=cam.oy, scale=cam.scale)
+            cbdraw.draw_background(surface, band_cam, art,
+                                   bool(c and c.get("in_nebula")),
+                                   self._cache)
         if c is None:
             self._move_ptr.clear()
             return
