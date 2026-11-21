@@ -276,7 +276,7 @@ class PlanetSet:
                 break
         if not self.planets and not self.spheres:
             log.info("planets: none of %d found under %s — run "
-                     "`python tools/planet_extract.py`",
+                     "`python tools/setup.py`",
                      len(NAMES), PLANET_DIR)
             return
         self.state = "ok" if len(self.planets) + len(self.spheres) \

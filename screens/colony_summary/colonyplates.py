@@ -14,8 +14,8 @@ artwork in the middle purely to turn a rectangle into a hole so the
 hole could be measured back into a rectangle. The artwork is fixed and
 was drawn first; the rectangles were measured off it. So the chain is
 `layout_reference.json` -> `boxes.json`,
-`tools/boxes_from_reference.py` writes it, and `reseat` below rebuilds
-it in memory at every load.
+it was written once from the reference by a tool since removed, and
+`reseat` below rebuilds it in memory at every load.
 
 **`boxes.json` IS A CACHE AND NEVER THE AUTHORITY.** Edit the
 reference, forget the tool, and the screen used to draw yesterday's
@@ -37,11 +37,10 @@ import pygame
 #: Reference-pixel bleed, so content covers what overlaps a box's own
 #: edge — once the frame's rim, drawn over the content; since decision
 #: 71 the HUD panel drawn at the bled rect.
-#: **ONE NUMBER, AND `tools/boxes_from_reference.py` IMPORTS IT FROM
-#: HERE** rather than keeping its own: the tool writes `boxes.json` and
-#: `box_rects` rebuilds the same rects at startup, so a second copy
-#: would let a file on disk and a screen in memory disagree by two
-#: pixels with nothing to report it.
+#: **ONE NUMBER**: `boxes.json` was written with it and `box_rects`
+#: rebuilds the same rects at startup, so a second copy would let a file
+#: on disk and a screen in memory disagree by two pixels with nothing to
+#: report it.
 BLEED = 2
 
 #: Keys of `layout_reference.json` that are not a window.
