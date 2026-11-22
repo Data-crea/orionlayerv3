@@ -32,6 +32,10 @@ GAME_ART = ("assets/shared/background_cockpit.png",
             "screens/galaxy_map/assets/gas_giant.png",      # work order 236
             "screens/galaxy_map/assets/nebula/*.png",
             "screens/galaxy_map/assets/ships/*/*.png",
+            # Data's map pictures of the colony, outpost and transport
+            # ships, per colour (`<colour>_<45-48>.png`, `shippics`), in the
+            # base pack since 22 Nov 2026
+            "screens/galaxy_map/assets/ship_pictures/*.png",
             "screens/galaxy_map/assets/stars/*/*.png",
             "screens/main_menu/assets/logo.png",
             # Data's easter egg panel (work order 327, `easteregg.py`)

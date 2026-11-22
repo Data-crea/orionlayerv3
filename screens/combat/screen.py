@@ -368,7 +368,10 @@ class CombatScreen(CombatInput, ScreenBase):
         # picture showed between the panels of the lower band and met the
         # field in a hard edge; the same space, the same layers and the
         # same offset, runs under the band too
-        if win_h > band.y:
+        # without the battle art there is no space to continue: the band
+        # keeps the screen's picture (`draw_background` would fill it black,
+        # joined with the field into one black screen)
+        if win_h > band.y and art.available:
             band_cam = types.SimpleNamespace(
                 area=(0, band.y, win_w, win_h - band.y),
                 ox=cam.ox, oy=cam.oy, scale=cam.scale)
