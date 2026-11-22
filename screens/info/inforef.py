@@ -1,0 +1,124 @@
+"""The Reference page's row icons — work order 423.
+
+**HD EXTENSION `reference_icons`** (Data's mockup "Futuristic Space
+Reference Interface", 22 Nov 2026). The original's Reference index is two
+lists of words (info.cpp:997-1116). HD puts a gold symbol in front of every
+row: the fourteen categories and the how-to topics. The symbols are the
+player's own pictures — cut from his two icon sheets by
+`tools/reference_icons_install.py` into the mod folder
+(`files/screens/info/assets/icons/<name>.png`) — so OrionLayer ships none; a
+row whose picture is missing is drawn as before, words only.
+
+**HD EXTENSION `reference_pictures`** (the same mockup): two wide pictures cut
+from it — a planet system and a ship's wireframe — stand under the two lists
+of the index and at the foot of a category's or a how-to's text
+(`infodraw.art_below`, `art_in`); missing, they are not drawn.
+
+**INVENTION `icons_by_row`.** Which symbol stands before which row is HD's:
+the original has none. A row is found by what it IS, not by its words (the
+words differ per language): a category by its index in HELP.LBX's category
+labels (`pages.categories`, 1..14), a how-to topic by its HELP.LBX record
+number (212..227) and the planet chart by its payload. A topic this table
+does not know has no symbol.
+"""
+import os
+
+import pygame
+
+from . import infochart
+
+ICON_REL = "screens/info/assets/icons"
+
+#: category index (`_help_category_labels`, ESTRINGS 0x294..) -> icon name
+CATEGORY_ICONS = {
+    1: "building",        # Governmental
+    2: "planet",          # Planetary Systems
+    3: "ringed_planet",   # Space Systems
+    4: "spaceship",       # Ship Systems/Crew
+    5: "gear",            # Ship Drives
+    6: "shield",          # Ship Defenses
+    7: "crosshair",       # Ship Weapons
+    8: "rocket",          # Missiles/Bombs
+    9: "burst",           # Ground Combat
+    10: "people",         # Population
+    11: "factory",        # Production
+    12: "plant",          # Ecology
+    13: "lock",           # Security
+    14: "laurel",         # Achievements
+}
+#: how-to record number (HELP.LBX 212..227, in the original's order) -> icon
+HOWTO_ICONS = {
+    212: "plus",          # Create New Colonies
+    213: "move",          # Move Ships
+    214: "people",        # Move Colonists
+    215: "crown",         # Assign Leaders
+    216: "star",          # Go to Antares
+    217: "swords",        # Invade Planets
+    218: "ring_target",   # Capture Ships
+    219: "coins",         # Change Tax Rates
+    220: "explosion",     # Prevent Supernovas
+    221: "flask",         # Cure a Plague
+    222: "skull",         # End Pirate Activity
+    223: "comet",         # Destroy a Comet
+    224: "wrench",        # Refit Ships
+    225: "document",      # Design Ships
+    226: "question",      # Get More Help
+    227: "flag",          # Pick New Colonies
+    infochart.CHART: "galaxy",   # Planet Transformation (HD's own row)
+}
+#: the group rows of the how-to list (HD EXTENSION `reference_groups`)
+GROUP_ICONS = {"hazards": "meteor"}
+#: the how-to records folded into the group "hazards", in their order
+HAZARDS = (220, 223)       # Prevent Supernovas, Destroy a Comet
+#: every icon the tables name, once (the install tool cuts exactly these)
+ICON_NAMES = tuple(sorted(set(CATEGORY_ICONS.values())
+                          | set(HOWTO_ICONS.values())
+                          | set(GROUP_ICONS.values())))
+ICON_FILES = tuple(f"{n}.png" for n in ICON_NAMES)
+#: the two wide pictures under the lists (the mockup's planet system under
+#: the technology list, the ship's wireframe under the how-to list): name ->
+#: the file beside the icons. HD EXTENSION `reference_pictures`.
+ART_FILES = {"technology": "art_technology.png", "guide": "art_guide.png"}
+
+_cache = {}
+
+
+def _find(name):
+    from core import basepack, usermod
+    from core.config import BASE_DIR
+    rel = f"{ICON_REL}/{name}.png".split("/")
+    for root in (os.path.join(usermod.mod_dir(), usermod.FILES), BASE_DIR,
+                 basepack.base_dir()):
+        if root:
+            path = os.path.join(root, *rel)
+            if os.path.isfile(path):
+                return path
+    return None
+
+
+def picture(name):
+    """The icon's convert_alpha surface, or None (cached)."""
+    if name not in _cache:
+        path = _find(name)
+        try:
+            _cache[name] = pygame.image.load(path).convert_alpha() \
+                if path else None
+        except (pygame.error, OSError):
+            _cache[name] = None
+    return _cache[name]
+
+
+def art(name):
+    """A wide picture of the Reference page (`ART_FILES`), or None."""
+    return picture(ART_FILES[name][:-4]) if name in ART_FILES else None
+
+
+def icon_for(payload):
+    """The picture for a row payload — `("cat", index)` or
+    `("howto", record)` — or None."""
+    if not isinstance(payload, tuple) or len(payload) != 2:
+        return None
+    table = {"cat": CATEGORY_ICONS, "howto": HOWTO_ICONS,
+             "group": GROUP_ICONS}.get(payload[0])
+    name = table.get(payload[1]) if table else None
+    return picture(name) if name else None

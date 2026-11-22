@@ -210,6 +210,7 @@ TEMPLATES = "templates"
 READ_BY_THE_SCREEN = ("files/screens/audience/assets/video/",
                       "files/assets/shared/films/",
                       "files/screens/audience/assets/icons/",
+                      "files/screens/info/assets/icons/",
                       "files/screens/research_select/assets/science_room/")
 
 #: What `files/` lists for the template, and every other picture in the

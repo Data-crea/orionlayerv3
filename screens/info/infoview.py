@@ -10,7 +10,8 @@ import pygame
 from core import lang
 from core import modtexts
 
-from . import infochart, infodraw, infofacts, infogeom as geom, infopages as pages
+from . import (infochart, infodraw, infofacts, infogeom as geom, inforef,
+               infopages as pages)
 
 T = modtexts.text
 
@@ -226,24 +227,50 @@ def turns(screen, surface, me):
                       geom.TURNS_BOX, f"{head}\n\n{body}".strip())
 
 
+def _fill(key, n):
+    return (T(key, "") or "").replace("{n}", str(n)).upper()
+
+
 def reference(screen, surface, me):
     if screen.ref_mode == "index":
+        with lang.verbatim():      # the game's words (200 C)
+            # HD EXTENSION `reference_groups`: the planet chart's row stands
+            # with the categories (it is a table to look things up in, not a
+            # how-to), and two how-to rows are folded under one group row
+            # (`inforef.HAZARDS`), so the lists are of one length. Nothing
+            # of this is sent to the engine: the page is HD's own state.
+            cats = [(label, ("cat", i), False)
+                    for i, label in pages.categories()]
+            cats.append((infochart.words(), ("howto", infochart.CHART),
+                         False))
+            how = []
+            opened = "hazards" in screen.ref_open
+            for t, i in pages.topics(screen._info, 15, sort=False):
+                if i == inforef.HAZARDS[0]:
+                    how.append((T("info.reference.group.hazards", "") or "",
+                                ("group", "hazards"), True, None, opened))
+                if i in inforef.HAZARDS:
+                    if opened:
+                        how.append((t, ("howto", i), False, None, None, 1))
+                    continue
+                how.append((t, ("howto", i), False))
         for k, head in enumerate(("info.reference.categories",
                                   "info.reference.howto")):
-            infodraw.text(surface, screen, f"ref.head.{k}",
-                          geom.REFERENCE_HEADS[k], T(head, "") or "",
-                          "name", infodraw.HIGH)
-        with lang.verbatim():      # the game's words (200 C)
+            infodraw.head(surface, screen, geom.REFERENCE_HEADS[k],
+                          T(head, "") or "",
+                          _fill("info.reference.entries" if k == 0
+                                else "info.reference.topics",
+                                len(cats) if k == 0 else len(how)))
+        with lang.verbatim():
             infodraw.rows(surface, screen, "ref.categories",
-                          geom.REFERENCE_LISTS[0],
-                          [(label, ("cat", i), False)
-                           for i, label in pages.categories()])
+                          geom.REFERENCE_LISTS[0], cats,
+                          icons=inforef.icon_for, reserve=infodraw.ART_H)
             infodraw.rows(surface, screen, "ref.howto",
-                          geom.REFERENCE_LISTS[1],
-                          [(t, ("howto", i), False) for t, i in
-                           pages.topics(screen._info, 15, sort=False)]
-                          + [(infochart.words(), ("howto", infochart.CHART),
-                              False)])
+                          geom.REFERENCE_LISTS[1], how,
+                          icons=inforef.icon_for, reserve=infodraw.ART_H)
+        infodraw.art_below(surface, screen, "ref.categories",
+                           inforef.art("technology"))
+        infodraw.art_below(surface, screen, "ref.howto", inforef.art("guide"))
         return
     back = geom.BACK_BUTTON
     if screen.ref_mode == "category":
@@ -262,6 +289,8 @@ def reference(screen, surface, me):
                           [(t, i, False) for t, i in items], screen.topic)
             infodraw.text(surface, screen, f"ref.cat.text.{screen.topic}",
                           geom.CATEGORY_TEXT, f"{title}\n\n{body}".strip())
+            infodraw.art_in(surface, screen, geom.CATEGORY_TEXT,
+                            inforef.art("technology"))
     elif screen.ref_ix == infochart.CHART:
         infodraw.text(surface, screen, "ref.howto.head", geom.HOWTO_HEAD,
                       (T("info.reference.howto_prefix", "") or "")
@@ -275,4 +304,6 @@ def reference(screen, surface, me):
         with lang.verbatim():      # the game's words (200 C)
             infodraw.text(surface, screen, f"ref.howto.text.{screen.ref_ix}",
                           geom.HOWTO_TEXT, body)
+            infodraw.art_in(surface, screen, geom.HOWTO_TEXT,
+                            inforef.art("guide"))
     infodraw.button(surface, screen, back, T("info.reference.back", "BACK"))

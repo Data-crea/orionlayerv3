@@ -178,15 +178,34 @@ def draw_chart(surface, screen, player):
                      size, tone, "left")
 
 
-def rows(surface, screen, key, native, items, selected=None, lit=None):
+#: HD EXTENSION `reference_pictures`: the wide pictures' height as a share of
+#: their box — the BOX's, not the text's: the player's text size moves the
+#: rows, never the picture (Data, 22 Nov). 0.25 of a list's 790 px at 1080 is
+#: 197 px, the mockup's own proportion (its pictures are a quarter of the box).
+ART_H = 0.25
+
+
+def rows(surface, screen, key, native, items, selected=None, lit=None,
+         icons=None, reserve=0.0):
     """A scrolling list of one-line rows — `(text, payload, header)` — each
     shrunk to its width. Returns nothing; its hit rects go to
-    `screen._hits[key]` as (rect, payload)."""
+    `screen._hits[key]` as (rect, payload). `icons`, when given, maps a
+    row's payload to the picture drawn in front of its words (HD EXTENSION
+    `reference_icons`, `inforef`); a row it gives None for has the words
+    only, and a list with no picture at all keeps the pitch it always had.
+    `reserve` is the share of the box's height kept free at its foot for a
+    picture (`ART_H`): the symbols' taller pitch never eats into it."""
     box = field(surface, screen, native)
     inner = hud.panel_inner(box, screen.layout.scale).inflate(-4, -4)
     # HD EXTENSION `font_scale` (WO 356): the pitch follows the text size
     # (the factor is 1.0 by default, so the product is unchanged).
     step = int(px(screen, "skill") * fontscale.factor() * 1.35)
+    pics = [icons(item[1]) if icons else None for item in items]
+    if any(p is not None for p in pics):
+        # room for a symbol: taller rows (a third more), never so tall that
+        # a scrollbar is needed, never shorter than the words' own pitch
+        free = inner.h - int(inner.h * reserve) - 12
+        step = max(step, min(int(step * 1.3), free // max(1, len(items))))
     total = step * len(items)
     overflow = max(0, total - inner.h)
     if overflow:
@@ -197,12 +216,13 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
     y = inner.y - offset
     previous = surface.get_clip()
     surface.set_clip(inner)
-    for item in items:
+    for n, item in enumerate(items):
         text, payload, header = item[:3]
         # HD EXTENSION `tech_review_groups`: a group row may carry a count
         # on its right and a fold mark (`opened` True / False) on its left.
         count = item[3] if len(item) > 3 else None
         opened = item[4] if len(item) > 4 else None
+        indent = item[5] if len(item) > 5 else 0      # `reference_groups`
         r = pygame.Rect(inner.x, y, inner.w, step)
         if inner.contains(r):
             colour = HIGH if header or payload in (selected, lit) else NORMAL
@@ -211,12 +231,26 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
                 hud.field(surface, r, screen.layout.scale, on=True)
             if header and opened is not None:
                 text = ("v  " if opened else ">  ") + text
-            line = r.inflate(-4, 0) if header else r.inflate(-16, 0) \
-                .move(8, 0)
+            line = r.inflate(-4, 0) if header and pics[n] is None \
+                else r.inflate(-16, 0).move(8, 0)
             if count:
                 infobox.line(surface, screen, count, line,
                              px(screen, "skill"), colour, "right")
                 line.w -= px(screen, "skill") * 4
+            if indent:
+                line = line.move(indent * max(12, step - 6), 0)
+                line.w -= indent * max(12, step - 6)
+            if pics[n] is not None:
+                side = max(12, step - 6)
+                k = min(side / pics[n].get_width(),
+                        side / pics[n].get_height())
+                pic = pygame.transform.smoothscale(
+                    pics[n], (max(1, round(pics[n].get_width() * k)),
+                              max(1, round(pics[n].get_height() * k))))
+                surface.blit(pic, (line.x + (side - pic.get_width()) // 2,
+                                   r.centery - pic.get_height() // 2))
+                line = line.move(side + 8, 0)
+                line.w -= side + 8
             infobox.line(surface, screen, text, line, px(screen, "skill"),
                          colour)
             if payload is not None:
@@ -228,12 +262,69 @@ def rows(surface, screen, key, native, items, selected=None, lit=None):
                                            max(6, step // 3), inner.h),
                       screen.layout.scale, offset, inner.h, total)
     screen._hits[key] = hits
-    screen._boxes[key] = _ListBox(box, overflow, step)
+    screen._boxes[key] = _ListBox(box, overflow, step, inner,
+                                  inner.y - offset + total)
 
 
 class _ListBox:
-    def __init__(self, rect, overflow, step):
+    def __init__(self, rect, overflow, step, inner=None, rows_end=0):
         self.rect, self.overflow, self.step = rect, overflow, step
+        #: the rows' area and the y under the last row (a picture's room)
+        self.inner, self.rows_end = inner, rows_end
+
+
+def head(surface, screen, native, title, count=None):
+    """HD EXTENSION `reference_heads`: a list's head — its title vertically
+    centred in the field and, when given, a count at the right in the dim
+    tone (Data's mockup: "TECHNOLOGY DATABASE  14 ENTRIES")."""
+    box = field(surface, screen, native)
+    inner = box.inflate(-24, -8)
+    key = px(screen, "name")
+    if count:
+        infobox.line(surface, screen, count, inner, px(screen, "skill"),
+                     NORMAL, "right")
+        inner.w -= px(screen, "skill") * 8
+    infobox.line(surface, screen, title, inner, key, HIGH)
+
+
+def _art_size(picture, room_w, box_h):
+    """The picture at `ART_H` of the box's height (width from its
+    proportion), narrowed to `room_w` when that is wider."""
+    k = box_h * ART_H / picture.get_height()
+    k = min(k, room_w / picture.get_width())
+    return (max(1, round(picture.get_width() * k)),
+            max(1, round(picture.get_height() * k)))
+
+
+def art_below(surface, screen, key, picture):
+    """HD EXTENSION `reference_pictures`: `picture` at the foot of the list
+    `key`, centred, at a size that follows the box and never the text
+    (`ART_H`); nothing when the rows reach into its room or the list
+    scrolls."""
+    box = screen._boxes.get(key)
+    if picture is None or box is None or box.inner is None or box.overflow:
+        return
+    size = _art_size(picture, box.inner.w - 12, box.inner.h)
+    top = box.inner.bottom - 6 - size[1]
+    if top < box.rows_end + 6:
+        return
+    surface.blit(pygame.transform.smoothscale(picture, size),
+                 (box.inner.centerx - size[0] // 2, top))
+
+
+def art_in(surface, screen, native, picture):
+    """HD EXTENSION `reference_pictures`: `picture` at the foot of a text
+    box, at the same share of the box as under the lists (`ART_H`); a box
+    under 300 px high gets none."""
+    if picture is None:
+        return
+    box = R(screen, native)
+    if box.h < 300:
+        return
+    room = box.inflate(-24, -16)
+    size = _art_size(picture, room.w, room.h)
+    surface.blit(pygame.transform.smoothscale(picture, size),
+                 (room.centerx - size[0] // 2, room.bottom - size[1]))
 
 
 def text(surface, screen, key, native, body, size_key="skill", colour=NORMAL,

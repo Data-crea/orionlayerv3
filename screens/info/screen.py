@@ -91,6 +91,9 @@ class InfoScreen(ScreenBase):
         # HD EXTENSION `tech_review_groups` / `tech_review_search`: the groups
         # the player folded, and the search row above the list.
         self.tech_closed = set()
+        #: HD EXTENSION `reference_groups`: the how-to groups opened; the
+        #: page's own state, never sent (a visit starts with all folded)
+        self.ref_open = set()
         self.search = SearchField(max_len=24)
         self.hist_bits = 0xF
         self._scroll, self._boxes, self._hits, self._drawn = {}, {}, {}, []
@@ -125,6 +128,7 @@ class InfoScreen(ScreenBase):
                        self._info, TechNames(lang))
         self._waited, self._scroll = 0, {}
         self.ref_mode, self.topic, self.tech_app = "index", None, None
+        self.ref_open = set()
         self.search.value, self.search.focused = "", False
         self._entered = False
         self.update(game_state)
@@ -270,6 +274,9 @@ class InfoScreen(ScreenBase):
         elif self.page == REFERENCE:
             if self.ref_mode != "index" and self._in(p, geom.BACK_BUTTON):
                 self.ref_mode, self.topic = "index", None
+            elif self.ref_mode == "index" and isinstance(hit, tuple) \
+                    and hit[0] == "group":
+                self.ref_open ^= {hit[1]}
             elif self.ref_mode == "index" and hit is not None:
                 self.ref_mode, self.ref_ix = {"cat": "category",
                                               "howto": "howto"}[hit[0]], hit[1]
