@@ -380,7 +380,7 @@
     {
       "name": "monster_box",
       "rect": [
-        35,
+        65,
         164,
         854,
         600
@@ -392,7 +392,7 @@
     {
       "name": "monster_title",
       "rect": [
-        46,
+        76,
         173,
         831,
         46
@@ -406,7 +406,7 @@
     {
       "name": "monster_close",
       "rect": [
-        752,
+        782,
         175,
         126,
         42
@@ -420,7 +420,7 @@
     {
       "name": "monster_picture",
       "rect": [
-        50,
+        80,
         240,
         368,
         395
@@ -432,7 +432,7 @@
     {
       "name": "monster_class",
       "rect": [
-        431,
+        461,
         237,
         208,
         139
@@ -445,7 +445,7 @@
     {
       "name": "monster_hitpoints",
       "rect": [
-        641,
+        671,
         237,
         243,
         139
@@ -458,7 +458,7 @@
     {
       "name": "monster_weapons",
       "rect": [
-        431,
+        461,
         381,
         225,
         256
@@ -471,7 +471,7 @@
     {
       "name": "monster_specials",
       "rect": [
-        656,
+        686,
         381,
         227,
         256
@@ -484,7 +484,7 @@
     {
       "name": "monster_text",
       "rect": [
-        46,
+        76,
         647,
         831,
         104
@@ -888,7 +888,7 @@
     {
       "name": "monster_box",
       "rect": [
-        35,
+        65,
         164,
         854,
         600
@@ -900,7 +900,7 @@
     {
       "name": "monster_title",
       "rect": [
-        46,
+        76,
         173,
         831,
         46
@@ -914,7 +914,7 @@
     {
       "name": "monster_close",
       "rect": [
-        752,
+        782,
         175,
         126,
         42
@@ -928,7 +928,7 @@
     {
       "name": "monster_picture",
       "rect": [
-        50,
+        80,
         240,
         368,
         395
@@ -940,7 +940,7 @@
     {
       "name": "monster_class",
       "rect": [
-        431,
+        461,
         237,
         208,
         139
@@ -953,7 +953,7 @@
     {
       "name": "monster_hitpoints",
       "rect": [
-        641,
+        671,
         237,
         243,
         139
@@ -966,7 +966,7 @@
     {
       "name": "monster_weapons",
       "rect": [
-        431,
+        461,
         381,
         225,
         256
@@ -979,7 +979,7 @@
     {
       "name": "monster_specials",
       "rect": [
-        656,
+        686,
         381,
         227,
         256
@@ -992,7 +992,7 @@
     {
       "name": "monster_text",
       "rect": [
-        46,
+        76,
         647,
         831,
         104
