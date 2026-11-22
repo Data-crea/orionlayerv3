@@ -107,7 +107,9 @@ TREATY_Y = ((48, 93), (153, 200), (259, 305), (366, 411),
             (47, 93), (154, 200), (259, 306))
 SPY_Y = ((98, 123), (205, 230), (311, 335), (416, 442),
          (98, 123), (205, 230), (311, 335))
-AGENT_BOX = (331, 390, 620, 415)
+# Drawn 3 px inside the measured (331, 390, 620, 415): the panel's border
+# round the bonuses stays in front of the field (Data, 22 Nov 2026).
+AGENT_BOX = (334, 390, 617, 413)
 CATCHER = (0, 0, 639, 479)          # (:815)
 
 

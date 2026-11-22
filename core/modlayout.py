@@ -49,6 +49,8 @@ FOLDERS = (
     ("leaders/skill_icons/", "screens/leaders/assets/gamedata/officer/"),
     ("leaders/screen/", "screens/leaders/assets/pictures/"),
     ("races/leaders/", "screens/races/assets/leaders/"),
+    ("races/no_contact/", "screens/races/assets/nocontact/"),
+    ("races/treaty/", "screens/races/assets/treaty/"),
     ("research/", "assets/shared/research/"),
     ("popups/", "assets/shared/turnpopup/"),
     # the look: a screen's own background and the HUD pieces

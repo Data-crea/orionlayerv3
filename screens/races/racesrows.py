@@ -50,6 +50,9 @@ class Slot:
     contact: bool = True
     eliminated: bool = False
     lines: list = field(default_factory=list)    # the treaty paragraph
+    treaty: int = 0               # 0-5 (the game's 6 is shown as 5)
+    title: str = ""               # the treaty's label, as the game says it
+    extras: list = field(default_factory=list)   # [(kind, text)] agreements
     relation: int = 0
     relation_word: str = ""
     ignored: bool = False
@@ -61,30 +64,47 @@ def _stat(text, value):
     return (text or "").replace(STAT_MARK, str(value))
 
 
-def treaty_lines(me, other, index, words):
-    """The paragraph `Draw_Race_Text_` builds (racescrn.cpp:148-213), as
-    lines — its `\\r` separators."""
-    lines = []
+def shown_treaty(value):
+    """The treaty as the screen shows it: 0-5 (the game's 6, total war,
+    shows as label 5, racescrn.cpp:151-155; a negative never happens)."""
+    return max(0, min(int(value), TREATY_LABELS - 1))
+
+
+def treaty_parts(me, other, index, words):
+    """`Draw_Race_Text_`'s paragraph (racescrn.cpp:148-213) as parts: the
+    treaty's label (None while the treaty is 0) and the agreements under it
+    as (kind, text) — kind "research", "trade", "give" or "get"."""
     t = int(me.treaty[index])
+    label = None
     if t > 0:
         label = words.estring(E_TREATY_FIRST + min(t, TREATY_LABELS - 1))
-        if label:
-            lines.append(label.upper())
+        label = label.upper() if label else None
+    extras = []
     if me.research_treaty[index]:
         level = int(me.current_research_agreement_level[index])
         unit = "RP" if level >= 0 else "BC"    # language 0 (:164-186)
-        lines.append(f"{words.billtext(B_RESEARCH) or ''}{level}{unit}")
+        extras.append(("research",
+                       f"{words.billtext(B_RESEARCH) or ''}{level}{unit}"))
     if me.trade_treaty[index]:
         level = int(me.current_trade_agreement_level[index])
-        lines.append(f"{words.billtext(B_TRADE) or ''}{level}BC")
+        extras.append(("trade", f"{words.billtext(B_TRADE) or ''}{level}BC"))
     mine = int(me.tribute_treaty[index])
     theirs = int(other.tribute_treaty[words.me])
     if mine:
-        lines.append(_stat(words.billtext(B_GIVING), 5 if mine == 1 else 10))
+        extras.append(("give", _stat(words.billtext(B_GIVING),
+                                     5 if mine == 1 else 10)))
     elif theirs:
-        lines.append(_stat(words.billtext(B_RECEIVING),
-                           5 if theirs == 1 else 10))
-    lines = [clean(x) for x in lines if x]
+        extras.append(("get", _stat(words.billtext(B_RECEIVING),
+                                    5 if theirs == 1 else 10)))
+    return label, [(k, clean(x)) for k, x in extras if clean(x)]
+
+
+def treaty_lines(me, other, index, words):
+    """The paragraph `Draw_Race_Text_` builds (racescrn.cpp:148-213), as
+    lines — its `\\r` separators."""
+    label, extras = treaty_parts(me, other, index, words)
+    lines = ([clean(label)] if label else []) + [x for _k, x in extras]
+    lines = [x for x in lines if x]
     if not lines:
         # `_treaty_labels[0]` as it is: only a treaty > 0 is upper-cased
         # (`strupr`, racescrn.cpp:156-157); the fallback is copied plain
@@ -116,6 +136,9 @@ def slots(view, words):
         s.mission = int(mine.spies[p]) >> 6
         if s.contact and not s.eliminated:
             s.lines = treaty_lines(mine, other, p, words)
+            s.treaty = shown_treaty(mine.treaty[p])
+            label, s.extras = treaty_parts(mine, other, p, words)
+            s.title = clean(label or words.estring(E_TREATY_FIRST) or "")
         out.append(s)
     return out
 

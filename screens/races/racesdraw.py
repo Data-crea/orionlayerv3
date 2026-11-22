@@ -57,6 +57,10 @@ from core import nativedraw as nd
 from . import racesband
 from . import racesgeom as geom
 from . import racesleaders
+from . import racesnocontact
+from . import racesrows
+from . import racesstyle
+from . import racestreaty
 
 #: `_race_normal_color` / `_race_high_color` body indices (racescrn.cpp:
 #: 48-49) and what they are in RACES.LBX 0's palette when it is absent.
@@ -95,7 +99,13 @@ def draw_frame(surface, screen):
     layout = screen.layout
     # The agents' strip: where the pool's spies stand and are dropped
     # back — a field, as RACES.LBX 0 paints it (work order 223).
-    hud.field(surface, nd.rect(layout, geom.AGENT_BOX), layout.scale)
+    racesstyle.info_field(surface, nd.rect(layout, geom.AGENT_BOX),
+                          layout.scale)
+    # HD EXTENSION `races_polish`: the BONUSES header band over the box's
+    # top rows (the title and SPY / AGENT stand on it)
+    bx0, _by0, bx1, _by1 = geom.BONUS_BOX
+    racesstyle.header(surface, nd.rect(layout, (bx0 + 5, 367, bx1 - 5, 384)),
+                      layout.scale)
     # The title stands on the shell's plate (work order 225; the words
     # are baked into RACES.LBX 0 in the original — `button_words`).
     x, y = nd.point(layout, geom.BONUS_BOX[0] + 8, geom.BONUS_BOX[1] + 3)
@@ -110,8 +120,12 @@ def draw_fields(surface, screen, i):
     dropped — and the portrait cell, each the shared field (work order
     223: "I cannot even see where to place the spies")."""
     layout = screen.layout
-    for box in (geom.treaty_box(i), geom.spy_box(i), geom.portrait_box(i)):
+    for box in (geom.treaty_box(i), geom.portrait_box(i)):
         hud.field(surface, nd.rect(layout, box), layout.scale)
+    # HD EXTENSION `races_polish` (`racesstyle`): the spy strip as a quiet
+    # information field
+    racesstyle.info_field(surface, nd.rect(layout, geom.spy_box(i)),
+                          layout.scale)
 
 
 def draw_slot(surface, screen, slot, art, lit=False, carried=0,
@@ -121,6 +135,8 @@ def draw_slot(surface, screen, slot, art, lit=False, carried=0,
     and the mission row."""
     layout, style = screen.layout, screen.style
     i = slot.index
+    if not slot.contact and _cover_box(surface, screen, i):
+        return
     draw_fields(surface, screen, i)
     px, py = geom.PICTURE[i]
     cell = nd.rect(layout, (px, py, px + geom.PORTRAIT[0] - 1,
@@ -249,10 +265,26 @@ def draw_empty(surface, screen, i, art):
     """An unused slot: its fields, NO CONTACT, the empty bar track with
     the slider parked (:121-125, :247) and the mission words greyed — the
     words RACES.LBX 0 has baked in where no mission button is drawn."""
+    if _cover_box(surface, screen, i):
+        return
     draw_fields(surface, screen, i)
     _no_contact(surface, screen, i, art)
     _draw_bar(surface, screen, i, None, art)
     _draw_missions(surface, screen, i, None)
+
+
+def _cover_box(surface, screen, i):
+    """HD EXTENSION `no_contact_panel` (`racesnocontact`): Data's panel over
+    the WHOLE slot box while no leader is known — NO CONTACT to the mission
+    row. False where he has no picture: the slot is drawn as before."""
+    rect = nd.rect(screen.layout, geom.slot_box(i))
+    if i >= 4:
+        # the right column's rows stand where the left column's do: the
+        # panel map gives its slots other heights, the pictures must match
+        # the left frames (Data, 22 Nov 2026)
+        left = nd.rect(screen.layout, geom.slot_box(i - 4))
+        rect = pygame.Rect(rect.x, left.y, rect.w, left.h)
+    return racesnocontact.draw(surface, screen, rect)
 
 
 def _no_contact(surface, screen, i, art):
@@ -276,6 +308,8 @@ def _draw_text(surface, screen, slot, art):
     tx, ty = geom.TEXT[slot.index]
     box = nd.rect(screen.layout, (tx, ty, tx + geom.TEXT_BOX[0] - 1,
                                   ty + geom.TEXT_BOX[1] - 1))
+    if _draw_treaty(surface, screen, slot, box, art):
+        return
     size = nd.font_px(screen.layout, "skill")
     step = box.h // max(3, len(slot.lines))
     size = min(size, max(nd.MIN_FONT, int(step * 0.85)))
@@ -285,6 +319,60 @@ def _draw_text(surface, screen, slot, art):
             nd.blit_text(surface, screen.style, line, box.centerx, y, box.w,
                          size, ink(art, "normal"), "center")
         y += step
+
+
+def _draw_treaty(surface, screen, slot, box, art):
+    """HD EXTENSION `treaty_emblems` (`racestreaty`): in the treaty's field
+    the emblem at the left, the label in its colour, our sentence under it
+    and the agreements as chips with a round icon, the block centred in the
+    field both ways. False without Data's emblem: the paragraph is drawn
+    as text."""
+    layout, style = screen.layout, screen.style
+    field = nd.rect(layout, geom.treaty_box(slot.index))
+    pad = max(2, int(round(2 * nd.native_scale(layout))))
+    inner = field.inflate(-2 * pad, -2 * pad)
+    pic = racestreaty.emblem(slot.treaty, (int(inner.h * 1.5), inner.h))
+    if pic is None:
+        return False
+    surface.blit(pic, pic.get_rect(midleft=(inner.x, inner.centery)))
+    x0 = inner.x + pic.get_width() + 2 * pad
+    width = inner.right - x0
+    colour = racestreaty.COLOURS[slot.treaty]
+    big = nd.font_px(layout, "name")
+    small = nd.font_px(layout, "note")
+    # sizes fitted to the field's height (3 rows with chips, else 2)
+    rows = 3 if slot.extras else 2
+    cap = int(inner.h / (rows * 1.25))
+    big, small = min(big, cap), min(small, cap)
+    with lang.verbatim():               # the engine's treaty label (WO 408)
+        title = style.render_text(slot.title, nd.fit(
+            style, slot.title, width, big), colour)
+    sub = style.render_text(racestreaty.SUBTITLE[slot.treaty], nd.fit(
+        style, racestreaty.SUBTITLE[slot.treaty], width, small),
+        ink(art, "normal"))
+    gap = max(1, pad // 2)
+    chip_h = max(small, int(inner.h * 0.3)) if slot.extras else 0
+    block = title.get_height() + gap + sub.get_height() + \
+        ((gap + chip_h) if slot.extras else 0)
+    y = inner.centery - block // 2
+    surface.blit(title, (x0, y))
+    y += title.get_height() + gap
+    surface.blit(sub, (x0, y))
+    y += sub.get_height() + gap
+    if slot.extras:
+        cell = width // len(slot.extras)
+        for n, (kind, text) in enumerate(slot.extras):
+            cx = x0 + n * cell
+            icon = racestreaty.icon(kind, (chip_h, chip_h))
+            used = 0
+            if icon is not None:
+                surface.blit(icon, (cx, y))
+                used = icon.get_width() + gap * 2
+            with lang.verbatim():       # the engine's agreement text
+                nd.blit_text(surface, style, text, cx + used,
+                             y + (chip_h - small) // 2, cell - used - gap,
+                             small, ink(art, "normal"), "left")
+    return True
 
 
 def _draw_bar(surface, screen, i, relation, art):
@@ -333,21 +421,57 @@ def relation_word(surface, screen, slot, art):
     sx = geom.SLIDER_X[i]
     knob = nd.rect(layout, (sx, y, sx + geom.SLIDER_SIZE[0] - 1,
                             y + geom.SLIDER_SIZE[1] - 1))
-    size = nd.font_px(layout, "status")
+    size = relation_size(screen, knob)
     text = slot.relation_word
     with lang.verbatim():               # the engine's word (WO 408)
         return _relation_word(surface, style, layout, knob, text, size, art)
 
 
-def _relation_word(surface, style, layout, knob, text, size, art):
+_word_sizes = {}
+
+
+def relation_size(screen, knob):
+    """One size for every relation word on every knob: the largest at which
+    the LONGEST of the seventeen words (BILLTEXT 0x21..0x31) fits the knob
+    — not each word fitted alone, which showed them at different sizes
+    (Data, 22 Nov 2026). Solved once per knob width and base size."""
+    layout, style = screen.layout, screen.style
+    base = nd.font_px(layout, "status")
+    key = (id(style), knob.w, base, id(screen._words))
+    hit = _word_sizes.get(key)
+    if hit is None:
+        hit = base
+        words = screen._words
+        with lang.verbatim():
+            for k in range(len(geom.RELATION_NAMES)):
+                text = racesrows.clean(words.billtext(0x21 + k)) \
+                    if words is not None else ""
+                if text:
+                    hit = min(hit, _word_fit(style, layout, knob, text,
+                                             base)[0])
+        if len(_word_sizes) > 16:
+            _word_sizes.clear()
+        _word_sizes[key] = hit
+    return hit
+
+
+def _word_fit(style, layout, knob, text, size):
+    """(size, max_w) of `text` on `knob`: the width less the band's ends
+    and the knob's edge, shrunk by the screen's one rule (`nd.fit`)."""
     first = racesband.line_rect(style, text, knob.centerx, knob.y, knob.w,
                                 size, "center")
     if first is None:
-        return None
+        return size, 0
     edge = max(1, int(nd.native_scale(layout)))
     pad = max(1, round(first.h * racesband.SIDE))
     max_w = max(1, knob.w - 2 * (pad + edge))
-    size = nd.fit(style, text, max_w, size)
+    return nd.fit(style, text, max_w, size), max_w
+
+
+def _relation_word(surface, style, layout, knob, text, size, art):
+    size, max_w = _word_fit(style, layout, knob, text, size)
+    if not max_w:
+        return None
     ink_box = style.render_text(text, size, (255, 255, 255)) \
         .get_bounding_rect()
     top = knob.centery - ink_box.centery
@@ -355,6 +479,11 @@ def _relation_word(surface, style, layout, knob, text, size, art):
     # glass, in place of the original's outlined font (`racesband.free`).
     return racesband.free(surface, style, text, knob.centerx, top, max_w,
                           size, ink(art, "high"), "center")
+
+
+#: HD EXTENSION `races_polish`: the agents' strip's sprites, larger by this
+#: where the strip has the room.
+AGENT_GROW = 1.25
 
 
 def draw_icons(surface, screen, box, count, race, art):
@@ -370,10 +499,43 @@ def draw_icons(surface, screen, box, count, race, art):
                      nd.rect(layout, (0, 0, 60, 0)).w,
                      nd.font_px(layout, "name"), ink(art, "normal"))
         return
-    step = geom.icon_spacing(count, box, icon.get_width())
     big = nd.magnified(icon, layout)
+    # HD EXTENSION `races_polish`: the sprites stand CENTRED in the field
+    # that holds them (a slot's spy strip, the agents' strip), a little in
+    # from its left edge, never touching its border; a sprite taller than
+    # the field's room is scaled down to it, the agents' ones are drawn
+    # AGENT_GROW times larger where they fit. The icons' step stays the
+    # original's (`Calculate_Icon_Group_Data_`).
+    if tuple(box) == geom.AGENT_GROUP:
+        field, grow = geom.AGENT_BOX, AGENT_GROW
+    else:
+        field = next((geom.spy_box(i) for i, g in enumerate(geom.SPY_GROUP)
+                      if tuple(box) == g), None)
+        grow = 1.0
+    pad = max(2, int(round(2 * nd.native_scale(layout))))
+    rim = max(2, int(nd.native_scale(layout)))      # the field's border rows
+    lift = 0
+    icon_w = icon.get_width()
+    if field is not None:
+        fr = nd.rect(layout, field)
+        # the room is the INK's: the sprite's own transparent rows (8 of 56
+        # at 1920 x 1080) do not count, and the sprite STANDS on the field's
+        # lower edge, one pixel above the border (Data, 22 Nov 2026)
+        ink_h = big.get_bounding_rect().h
+        room = fr.h - rim - 1 - pad
+        h = min(round(big.get_height() * min(grow, room / max(1, ink_h))),
+                round(big.get_height() * room / max(1, ink_h)))
+        if h != big.get_height() and h > 0:
+            k = h / big.get_height()
+            big = pygame.transform.smoothscale(
+                big, (max(1, round(big.get_width() * k)), h))
+            icon_w = max(1, round(icon_w * k))
+        lift = fr.bottom - rim - 1 - big.get_bounding_rect().bottom
+    step = geom.icon_spacing(count, box, icon_w)
     for k in range(count):
-        surface.blit(big, nd.point(layout, box[0] + k * step, box[1]))
+        at = nd.point(layout, box[0] + k * step, box[1])
+        surface.blit(big, (at[0] + pad, lift if field is not None
+                           else at[1]))
 
 
 def draw_spy_hand(surface, screen, hand, pointer, art=None):
@@ -429,6 +591,11 @@ def draw_buttons(surface, screen, live, armed):
             shell.draw_button(surface, screen.exit_rect(), screen.ref_layout,
                               WORDS[name], screen.style,
                               "disabled" if name not in live else "normal")
+            er = screen.exit_rect()
+            g = max(6, er.h // 3)
+            racesstyle.glyph(surface, "back", (er.x + er.h // 2,
+                                               er.centery - g // 2, g, g),
+                             name not in live)
             continue
         r = nd.rect(layout, geom.button_rect(name))
         state = hover.pointer_state(r, "disabled" if name not in live else
@@ -441,6 +608,10 @@ def draw_buttons(surface, screen, live, armed):
         nd.blit_text(surface, screen.style, WORDS[name], r.centerx,
                      r.y + (r.h - size) // 2, r.w - 4, size, colour,
                      "center")
+        g = max(4, r.h - 2 * max(2, r.h // 5))
+        racesstyle.glyph(surface, name if name != "exit" else "back",
+                         (r.x + max(3, r.h // 3), r.y + (r.h - g) // 2, g, g),
+                         state == "disabled")
 
 
 def draw_bonuses(surface, screen, bonuses, art):

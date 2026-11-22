@@ -161,7 +161,6 @@ class RacesScreen(ScreenBase):
         racesdraw.draw_frame(surface, self)
         who = view is not None and view.state == raceswire.WHO
         lit = self._slot_at(self._hover) if who else None
-        bar = None if who else self._bar_at(self._hover)
         hand = self.carry.hand
         # WHAT IS SHOWN (work order 228 C): from the drop on, the groups the
         # send expects, not the wire's, until the wire shows them or the
@@ -177,8 +176,10 @@ class RacesScreen(ScreenBase):
                                 mission=missions.get(slot.index))
         for i in range(len(self._slots), racesgeom.SLOTS):
             racesdraw.draw_empty(surface, self, i, art)
-        if bar is not None:
-            racesdraw.relation_word(surface, self, self._slots[bar], art)
+        # always shown, on every knob in one size (Data, 22 Nov 2026)
+        for slot in self._slots:
+            if slot.active and slot.contact and not slot.eliminated:
+                racesdraw.relation_word(surface, self, slot, art)
         if view is not None and view.players:
             racesdraw.draw_icons(surface, self, racesgeom.AGENT_GROUP,
                                  shown[racesspies.AGENTS], self.my_race, art)
@@ -217,7 +218,7 @@ class RacesScreen(ScreenBase):
                      if self._inside(p, racesgeom.who_field(i))), None)
 
     def _bar_at(self, p):
-        return next((s.index for s in self._slots if s.active
+        return next((s.index for s in self._slots if s.active and s.contact
                      and self._inside(p, racesgeom.bar_field(s.index))), None)
 
     def _send(self, field, why):
