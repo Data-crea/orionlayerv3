@@ -31,14 +31,16 @@ overlapping nebula shows the mixed zone Data wants.
 **OR ONE HARD BORDER** (`hard`, the panel's "Hard Borders", a YouTube
 viewer's wish of 20 November 2026): a spot goes to the empire whose field
 is the stronger there, and the two share one border line where the fields
-are equal, with no mixed colour. The area two or more empires both reach
-(where their fields each pass the threshold: a shared system's surroundings
-as much as a war front) is not mixed but STRIPED, diagonal stripes one
-after another in each of those empires' colours, as many colours as
-empires (Data, 21 November 2026) — so the view still says that more than
-one empire reaches there. The price of the partition: a lone colony deep
-inside another empire's space gets no island of its own, only the stripes
-of its reach.
+are equal, with no mixed colour. Only round a MIXED system — one where
+two or more empires each own a planet — is the area STRIPED, diagonal
+stripes one after another in each of those empires' colours, as many
+colours as owners (Data, 21 and 23 November 2026): the stripes say that more
+than one empire holds that system. Where two empires merely meet, with no
+system in common, there is no stripe at all, only the one shared border: a
+war front reads as a line (before 23 November the whole area both reached was
+striped, and a galaxy with many touching empires looked blended). The price
+of the partition: a lone colony deep inside another empire's space gets no
+island of its own, only its system's stripes if it shares one.
 
 **WHAT IT KNOWS.** Only owners the player knows (`starnames.owner_known`,
 the rule the star names' colours follow): an unvisited system of an empire not
@@ -128,7 +130,7 @@ def empires(stars, players, player_num, omniscient, label_of,
     return out
 
 
-#: The stripes of an area held by two or more empires (hard borders): a
+#: The stripes round a system two or more empires own (hard borders): a
 #: stripe's width in grid cells, how much of the colour's own brightness
 #: it keeps and how solid it stands against the glass round it.
 STRIPE_W = 3
@@ -245,24 +247,52 @@ def build(emps, colours, cell=CELL, hard=False):
     fill[..., 3] = np.clip((1.0 - alpha_rest) * 255.0 + 0.5, 0, 255
                            ).astype(np.uint8)
     if hard:
-        _stripes(fill, emps, fields, colours)
+        _stripes(fill, emps, colours, x0, y0, cell, radius)
     names = {e.colour: e.name for e in emps}
     return Territory(state_key(emps, colours, hard), x0, y0, fill,
                      rgb.astype(np.float32),
                      (1.0 - cover_rest).astype(np.float32), loops, names)
 
 
-def _stripes(fill, emps, fields, colours):
-    """Diagonal stripes over every cell that two or more empires reach (each
-    one's own field past the threshold), the stripes in turn the colours of
-    the empires that reach it — in player order, so the order is the same
-    everywhere and a third owner only adds a third stripe colour. The
-    stripe grid is one for the whole map: a stripe runs on across a
-    change of owners instead of restarting."""
-    h, w = fill.shape[:2]
-    present = [f > THRESHOLD for f in fields]
+def mixed_points(emps):
+    """The star points more than one empire holds a planet at: a MIXED
+    system. Every owner of a colony in a system puts the system's own point
+    into his empire (`empires`), so such a point turns up in two or more
+    empires' lists at the same place."""
+    seen = {}
+    for e in emps:
+        for p in e.points:
+            seen.setdefault((p[0], p[1]), set()).add(e.player)
+    return {pt for pt, who in seen.items() if len(who) >= 2}
+
+
+def striped_area(emps, x0, y0, w, h, cell=CELL, radius=None):
+    """(area, present, count): the cells striped in hard borders, per empire
+    the cells its reach round the MIXED systems covers, and how many
+    empires cover each cell. Striped only round
+    a system where two or more empires own planets (Data, 23 November
+    2026); a front between two empires that do not share a system is one
+    hard border, never stripes."""
+    mixed = mixed_points(emps)
+    present = []
+    for e in emps:
+        pts = [p for p in e.points if (p[0], p[1]) in mixed]
+        present.append(field(pts, x0, y0, w, h, cell, radius) > THRESHOLD
+                       if pts else np.zeros((h, w), bool))
     count = np.sum(present, axis=0)
-    area = count >= 2
+    return count >= 2, present, count
+
+
+def _stripes(fill, emps, colours, x0, y0, cell, radius):
+    """Diagonal stripes over every cell round a mixed system that two or
+    more empires reach (each one's own field of that system's point past
+    the threshold), the stripes in turn the colours of the empires that
+    reach it — in player order, so the order is the same everywhere and a
+    third owner only adds a third stripe colour. The stripe grid is one
+    for the whole map: a stripe runs on across a change of owners instead
+    of restarting."""
+    h, w = fill.shape[:2]
+    area, present, count = striped_area(emps, x0, y0, w, h, cell, radius)
     if not area.any():
         return
     jj, ii = np.mgrid[0:h, 0:w]
