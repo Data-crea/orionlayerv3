@@ -235,7 +235,15 @@ def beam_pixels(x1, y1, x2, y2, colour, rng=random):
         fade = 3 // tip
         idx = range(1, 7) if up else (range(n - 6, n) if n > 5 else ())
         for i in idx:
-            buf[i] = (buf[i] + fade) & 0xFF
+            # A rising line adds the fade to buf[1..6] whatever its length
+            # (`Bolt_Segment`, bolt.cpp tip_highlight); the original's buffer
+            # is far longer than the run, so for a line of 4 pixels or fewer
+            # those bytes lie past the drawn run and nothing reads them.
+            # This list is only as long as the run: the same writes are
+            # dropped (work order 424: an IndexError killed the client on a
+            # short rising beam).
+            if i < len(buf):
+                buf[i] = (buf[i] + fade) & 0xFF
     buf = [min(c, base + 15) for c in buf]
     # `line::Plasma_Line_` (line.cpp:568-…): drawn from the UPPER end down,
     # the colour run taken from its start — which is why the run above is
