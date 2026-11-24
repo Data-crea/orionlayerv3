@@ -3,14 +3,13 @@ the surface and the local player's record (`screen.py` routes by page).
 Every text by its key through `core/modtexts`; see `screen.py` for what
 each page may send (nothing but RETURN) and `infotexts` for the keys.
 """
-import contextlib
 
 import pygame
 
 from core import lang
 from core import modtexts
 
-from . import (infochart, infodraw, infofacts, infogeom as geom, inforef,
+from . import (infochart, infodraw, infofacts, infogeom as geom, inforace, inforef, infoprose,
                infopages as pages)
 
 T = modtexts.text
@@ -173,36 +172,38 @@ def races(screen, surface, me):
                             previously=True)
     first = 4 * screen.race_page
     screen._race_shown = {}
+    screen._race_rows = {}
+    most = max([len(pages.trait_rows(screen._players[order[first + k]]))
+                for k in range(4) if first + k < len(order)] or [0])
     for k in range(4):
         box = geom.RACE_PANELS[k]
         j = first + k
-        if j < len(order):
-            p = screen._players[order[j]]
-            head = p.race_name.upper()
-            # the trait lines and the eliminated word are HD's mod texts:
-            # translated here, because the block is drawn verbatim for the
-            # race's name (WO 408)
-            lines = [lang.tr(t) for t in pages.trait_lines(p)]
-            if p.eliminated:
-                lines = [lang.tr(T("info.races.eliminated", "") or "")] \
-                    + lines
-            body = "\n".join([head, ""] + lines)
-            if not p.eliminated:         # info.cpp:1719-1723
-                screen._race_shown[k] = (2, pages.trait_help(p))
-        else:
-            body = T("info.races.none", "") or ""
-        # Each race in its own colour: the original prints the name and the
-        # specials in `_hist_graph_palettes[player]` (info.cpp:1683-1690) —
-        # the History legend's stand-in, `infodraw.player_colour`, whose
-        # marking covers it (196 E3).
-        colour = infodraw.player_colour(p) if j < len(order) else \
-            infodraw.NORMAL
-        # the race's name is the game's own word (WO 408); the panel of no
-        # race is HD's word and keeps the translation
-        with (lang.verbatim() if j < len(order)
-              else contextlib.nullcontext()):
+        if j >= len(order):
             infodraw.text(surface, screen, f"races.{k}", box,
-                          body.replace("^", ""), colour=colour)
+                          (T("info.races.none", "") or "").replace("^", ""),
+                          colour=infodraw.NORMAL)
+            continue
+        p = screen._players[order[j]]
+        # HD EXTENSION `race_cards`: a card, not a box of words. Each race
+        # in its own colour, as the original prints name and specials in
+        # `_hist_graph_palettes[player]` (info.cpp:1683-1690) — the History
+        # legend's stand-in, `infodraw.player_colour` (196 E3).
+        colour = infodraw.player_colour(p)
+        # the trait names are HD's mod texts, translated here; the race's
+        # name is the game's own word (WO 408)
+        words = [(f, ik, lang.tr(nm), val)
+                 for f, ik, nm, val in pages.trait_rows(p)]
+        tag = lang.tr(T("info.races.eliminated_tag", "ELIMINATED") or "")
+        helps = [] if p.eliminated else pages.trait_help(p)    # :1719-1723
+        helps = helps if helps else pages.trait_help(p)
+        with lang.verbatim():
+            screen._race_rows[k] = inforace.card(
+                surface, screen, f"races.{k}", infodraw.field(
+                    surface, screen, box), p, colour, bool(p.eliminated),
+                words, tag, infodraw.px(screen, "skill"),
+                int(infodraw.px(screen, "name") * 1.5), helps, most)
+        if p.eliminated:
+            screen._race_rows[k] = []
     if len(order) > 4:
         infodraw.button(surface, screen, geom.RACE_PAGE_BUTTON,
                         f"{screen.race_page + 1}/2")
@@ -264,10 +265,12 @@ def reference(screen, surface, me):
         with lang.verbatim():
             infodraw.rows(surface, screen, "ref.categories",
                           geom.REFERENCE_LISTS[0], cats,
-                          icons=inforef.icon_for, reserve=infodraw.ART_H)
+                          icons=inforef.icon_for, reserve=infodraw.ART_H,
+                          back=True)
             infodraw.rows(surface, screen, "ref.howto",
                           geom.REFERENCE_LISTS[1], how,
-                          icons=inforef.icon_for, reserve=infodraw.ART_H)
+                          icons=inforef.icon_for, reserve=infodraw.ART_H,
+                          back=True)
         infodraw.art_below(surface, screen, "ref.categories",
                            inforef.art("technology"))
         infodraw.art_below(surface, screen, "ref.howto", inforef.art("guide"))
@@ -277,7 +280,8 @@ def reference(screen, surface, me):
         label = T(f"info.reference.category.{screen.ref_ix}", "") or ""
         infodraw.text(surface, screen, "ref.cat.head", geom.CATEGORY_HEAD,
                       (T("info.reference.category_prefix", "") or "")
-                      + label, "name", infodraw.HIGH, "center")
+                      + label, "name", infodraw.HIGH, "center",
+                      size_mul=1.25)
         items = pages.topics(screen._info, screen.ref_ix)
         if screen.topic is None and items:
             screen.topic = items[0][1]
@@ -286,11 +290,17 @@ def reference(screen, surface, me):
         with lang.verbatim():      # the game's words (200 C)
             infodraw.rows(surface, screen, "ref.cat.list",
                           geom.CATEGORY_LIST,
-                          [(t, i, False) for t, i in items], screen.topic)
-            infodraw.text(surface, screen, f"ref.cat.text.{screen.topic}",
-                          geom.CATEGORY_TEXT, f"{title}\n\n{body}".strip())
+                          [(t, i, False) for t, i in items], screen.topic,
+                          back=True, marks=True, anchor=(0.0, 1.0))
+            end = infodraw.prose(
+                surface, screen, f"ref.cat.text.{screen.topic}",
+                geom.CATEGORY_TEXT, "",
+                given=infoprose.article_items(
+                    title, body, inforef.CATEGORY_ICONS.get(screen.ref_ix)),
+                picture=inforef.art("technology"), anchor=(1.0, 1.0),
+                inset=0.7)
             infodraw.art_in(surface, screen, geom.CATEGORY_TEXT,
-                            inforef.art("technology"))
+                            inforef.art("technology"), infodraw.HOWTO_ART_H)
     elif screen.ref_ix == infochart.CHART:
         infodraw.text(surface, screen, "ref.howto.head", geom.HOWTO_HEAD,
                       (T("info.reference.howto_prefix", "") or "")
@@ -298,12 +308,15 @@ def reference(screen, surface, me):
         infochart.draw(surface, screen, geom.HOWTO_TEXT)
     else:
         title, body = pages.record(screen.ref_ix)
+        struct = infoprose.structure(screen.ref_ix, T)   # HD's own words
         infodraw.text(surface, screen, "ref.howto.head", geom.HOWTO_HEAD,
                       (T("info.reference.howto_prefix", "") or "") + title,
-                      "name", infodraw.HIGH, "center")
+                      "name", infodraw.HIGH, "center", size_mul=1.25)
         with lang.verbatim():      # the game's words (200 C)
-            infodraw.text(surface, screen, f"ref.howto.text.{screen.ref_ix}",
-                          geom.HOWTO_TEXT, body)
+            end = infodraw.prose(surface, screen,
+                                 f"ref.howto.text.{screen.ref_ix}",
+                                 geom.HOWTO_TEXT, body, struct,
+                                 picture=inforef.art("guide"))
             infodraw.art_in(surface, screen, geom.HOWTO_TEXT,
-                            inforef.art("guide"))
+                            inforef.art("guide"), infodraw.HOWTO_ART_H)
     infodraw.button(surface, screen, back, T("info.reference.back", "BACK"))

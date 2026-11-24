@@ -739,7 +739,17 @@ def render_stars(surface, ctx, stars, cache, black_holes=None):
             surface.blit(img, (int(sx - o - (iw - width) / 2),
                                int(sy - o - (ih - width) / 2)))
         else:
+            # HD EXTENSION `star_edge_whole`: a star whose sprite reaches
+            # into the map's clip is drawn whole, running over the clip's
+            # edge; the original's window cuts it where it stands on the
+            # edge (a sprite is dropped only past x2 / y2, animate.cpp:
+            # 105-107), and at HD the cut shows as a flat top or side. A
+            # star clear of the clip is not drawn.
+            keep = surface.get_clip()
+            if keep.colliderect(int(sx - iw / 2), int(sy - ih / 2), iw, ih):
+                surface.set_clip(keep.inflate(2 * iw, 2 * ih))
             surface.blit(img, (int(sx - iw / 2), int(sy - ih / 2)))
+            surface.set_clip(keep)
         heights[s.index] = ih
     return heights
 

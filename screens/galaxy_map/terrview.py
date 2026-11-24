@@ -61,9 +61,18 @@ def render_gas(screen, surface, ctx):
     """The nebulas (switchable, tinted by their territory), then the
     glass and the borders over them — what `_render_map` draws first."""
     if terrdraw.is_on(screen.app, terrdraw.NEBULAE):
+        # HD EXTENSION `nebula_paint_area` (Data, 24 November 2026: the
+        # nebula near Zin cut flat at the map's foot while the territory
+        # went on below): the gas is clipped to the territory's paint
+        # area (`paint_area`, the frame picture's free window), not to
+        # the original's map window; the picture's art, drawn after the
+        # map, covers what lies under it.
+        keep = surface.get_clip()
+        surface.set_clip(paint_area(screen, ctx.view))
         rnd.render_nebulas(surface, ctx, screen._nebulas, screen._cache,
                            screen._data.get("nebula_forms", []),
                            tint=nebula_tint(screen, ctx))
+        surface.set_clip(keep)
     render_under(screen, surface, ctx)
 
 

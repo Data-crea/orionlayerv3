@@ -217,19 +217,10 @@ class InfoScreen(ScreenBase):
         page's own list puts them first (info.cpp:1719-1751). HD wraps the
         panel's text, so the line under the point is found among the
         wrapped lines of each paragraph (`infobox.wrap`)."""
-        for k, (skip, ids) in getattr(self, "_race_shown", {}).items():
-            box = self._boxes.get(f"races.{k}")
-            if box is None or not box.inner.collidepoint(x, y):
-                continue
-            row = (y - box.inner.y + self._scroll.get(box.key, 0)) // \
-                box.step
-            n = 0
-            for i, para in enumerate(box.text.split("\n")):
-                n += max(1, len(infobox.wrap(self.style, para, box.size,
-                                             box.inner.w)))
-                if row < n:
-                    return ids[i - skip] if 0 <= i - skip < len(ids) \
-                        else None
+        for rows in getattr(self, "_race_rows", {}).values():
+            for r, ident in rows:
+                if r.collidepoint(x, y):
+                    return ident
         return None
 
     # ── Input ─────────────────────────────────────────────

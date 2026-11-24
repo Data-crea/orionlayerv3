@@ -110,6 +110,17 @@ def field(surface, screen, native):
     return r
 
 
+def backdrop(surface, screen, box, anchor=(0.5, 0.5)):
+    """HD EXTENSION `howto_background`: the player's background picture
+    inside the field `box` (the Reference's boxes; nothing without the
+    picture)."""
+    from . import inforef
+    inner = hud.panel_inner(box, screen.layout.scale).inflate(-4, -4)
+    back = inforef.background(inner.size, anchor)
+    if back is not None:
+        surface.blit(back, inner.topleft)
+
+
 def pages_names():
     from .infotexts import PAGES
     return PAGES
@@ -183,10 +194,13 @@ def draw_chart(surface, screen, player):
 #: rows, never the picture (Data, 22 Nov). 0.25 of a list's 790 px at 1080 is
 #: 197 px, the mockup's own proportion (its pictures are a quarter of the box).
 ART_H = 0.25
+#: the how-to's ship picture is larger (Data's mockup, 24 Nov)
+HOWTO_ART_H = 0.32
 
 
 def rows(surface, screen, key, native, items, selected=None, lit=None,
-         icons=None, reserve=0.0):
+         icons=None, reserve=0.0, back=False, marks=False,
+         anchor=(0.5, 0.5)):
     """A scrolling list of one-line rows — `(text, payload, header)` — each
     shrunk to its width. Returns nothing; its hit rects go to
     `screen._hits[key]` as (rect, payload). `icons`, when given, maps a
@@ -196,10 +210,17 @@ def rows(surface, screen, key, native, items, selected=None, lit=None,
     `reserve` is the share of the box's height kept free at its foot for a
     picture (`ART_H`): the symbols' taller pitch never eats into it."""
     box = field(surface, screen, native)
+    if back:
+        backdrop(surface, screen, box, anchor)
     inner = hud.panel_inner(box, screen.layout.scale).inflate(-4, -4)
     # HD EXTENSION `font_scale` (WO 356): the pitch follows the text size
     # (the factor is 1.0 by default, so the product is unchanged).
     step = int(px(screen, "skill") * fontscale.factor() * 1.35)
+    if marks:
+        inner = inner.inflate(-10, -12)       # clear of the box's edge
+        # HD EXTENSION `howto_prose` for a topic list: looser rows, as many
+        # as fit (a longer list keeps the old pitch and scrolls)
+        step = max(step, min(int(step * 1.45), inner.h // max(1, len(items))))
     pics = [icons(item[1]) if icons else None for item in items]
     if any(p is not None for p in pics):
         # room for a symbol: taller rows (a third more), never so tall that
@@ -226,13 +247,28 @@ def rows(surface, screen, key, native, items, selected=None, lit=None,
         r = pygame.Rect(inner.x, y, inner.w, step)
         if inner.contains(r):
             colour = HIGH if header or payload in (selected, lit) else NORMAL
-            if payload is not None and payload == selected:
+            if payload is not None and payload == selected and marks:
+                from . import infoprose
+                infoprose.paint_band(surface, r)       # the gold band
+            elif payload is not None and payload == selected:
                 # The chosen entry is 'on' (work order 223, proposal C).
                 hud.field(surface, r, screen.layout.scale, on=True)
+            if marks:
+                from . import infoprose
+                sq = max(4, step // 4)
+                # LOOK EXCEPTION marking: a topic's gold square and the rows' faint rule, Data's mockup (24 Nov)
+                pygame.draw.rect(surface, infoprose.GOLD, (
+                    r.x + 10, r.centery - sq // 2, sq, sq))
+                # LOOK EXCEPTION marking: a topic's gold square and the rows' faint rule, Data's mockup (24 Nov)
+                pygame.draw.line(surface, (70, 52, 22), (r.x + 4, r.bottom - 1),
+                                 (r.right - 4, r.bottom - 1))
             if header and opened is not None:
                 text = ("v  " if opened else ">  ") + text
             line = r.inflate(-4, 0) if header and pics[n] is None \
                 else r.inflate(-16, 0).move(8, 0)
+            if marks:
+                line = line.move(max(4, step // 4) + 10, 0)
+                line.w -= max(4, step // 4) + 10
             if count:
                 infobox.line(surface, screen, count, line,
                              px(screen, "skill"), colour, "right")
@@ -287,10 +323,10 @@ def head(surface, screen, native, title, count=None):
     infobox.line(surface, screen, title, inner, key, HIGH)
 
 
-def _art_size(picture, room_w, box_h):
+def _art_size(picture, room_w, box_h, share=None):
     """The picture at `ART_H` of the box's height (width from its
     proportion), narrowed to `room_w` when that is wider."""
-    k = box_h * ART_H / picture.get_height()
+    k = box_h * (share or ART_H) / picture.get_height()
     k = min(k, room_w / picture.get_width())
     return (max(1, round(picture.get_width() * k)),
             max(1, round(picture.get_height() * k)))
@@ -312,7 +348,7 @@ def art_below(surface, screen, key, picture):
                  (box.inner.centerx - size[0] // 2, top))
 
 
-def art_in(surface, screen, native, picture):
+def art_in(surface, screen, native, picture, share=None):
     """HD EXTENSION `reference_pictures`: `picture` at the foot of a text
     box, at the same share of the box as under the lists (`ART_H`); a box
     under 300 px high gets none."""
@@ -322,20 +358,53 @@ def art_in(surface, screen, native, picture):
     if box.h < 300:
         return
     room = box.inflate(-24, -16)
-    size = _art_size(picture, room.w, room.h)
+    size = _art_size(picture, room.w, room.h, share)
     surface.blit(pygame.transform.smoothscale(picture, size),
                  (room.centerx - size[0] // 2, room.bottom - size[1]))
 
 
 def text(surface, screen, key, native, body, size_key="skill", colour=NORMAL,
-         align="left", panel=True):
+         align="left", panel=True, size_mul=1.0, back=False):
     rect = R(screen, native)
     if panel:
         field(surface, screen, native)
+        if back:
+            backdrop(surface, screen, rect)
         # Clear of the field's outline (`blocks.panel_inner`).
         rect = hud.panel_inner(rect, screen.layout.scale).inflate(-4, -4)
-    infobox.Box(key, rect, body or "", px(screen, size_key),
+    infobox.Box(key, rect, body or "", int(px(screen, size_key) * size_mul),
                 colour, align).draw(surface, screen)
+
+
+def prose(surface, screen, key, native, body, struct=None, given=None,
+          picture=None, anchor=(0.5, 0.5), inset=0.0):
+    """HD EXTENSION `howto_prose`: a how-to's body set as a reading text
+    (`infoprose`) in the page's panel, in a little larger type than `text`;
+    `struct` is the topic's resolved bands and note, if it has any."""
+    from . import infoprose
+    rect = R(screen, native)
+    field(surface, screen, native)
+    backdrop(surface, screen, rect, anchor)
+    rect = hud.panel_inner(rect, screen.layout.scale).inflate(-4, -4)
+    from . import inforef
+    base = px(screen, "skill")
+    if inset:           # an article stands clear of its box's edge
+        rect = rect.inflate(-int(2 * base * inset), -int(base * inset))
+    if picture is not None and rect.h >= 300:
+        # the picture's room is the text's no more: the picture stands where
+        # it always did, whatever the size or the text
+        rect.h -= int(rect.h * HOWTO_ART_H) + 16
+    from . import inforef
+    box = infoprose.ProseBox(key, rect, body or "",
+                             int(base * infoprose.SIZE_UP), NORMAL, base,
+                             struct, inforef.picture, given)
+    box.draw(surface, screen)
+    return box.text_end
+
+
+def _guide_art():
+    from . import inforef
+    return inforef.art("guide")
 
 
 def button(surface, screen, native, words, active=False):

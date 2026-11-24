@@ -146,32 +146,45 @@ TRAIT_LOW_G, TRAIT_RICH_HOME, TRAIT_COUNT = 10, 15, 31
 POOR_HOME_NAME = 31
 
 
-def trait_lines(player):
-    """`Print_Player_Specials_To_Bitmap_`: "^ name" and its value, one
-    line per trait that is set, the government always."""
+def trait_rows(player):
+    """`Print_Player_Specials_To_Bitmap_`'s lines as (icon folder, icon key,
+    name, value): one row per trait that is set, the government always;
+    `value` is "+1", "-10", "+1 BC" or "" (a trait that has none). The
+    icon keys are Select Race's (`racepanel.TRAIT_KEYS`, `GOV_KEYS`)."""
+    from screens.select_race import racepanel
     traits = player_struct.traits(player)
-    lines = []
+    rows = []
     for k in range(TRAIT_COUNT):
         v = traits[k]
         if v == 0 and k != TRAIT_GOVERNMENT:
             continue
         if k == TRAIT_GOVERNMENT:
             name = T(f"info.races.gov.{max(0, min(7, v))}", "")
+            icon = ("govs", racepanel.GOV_KEYS.get(max(0, min(7, v))))
         elif k == TRAIT_RICH_HOME:
-            name = T(f"info.races.trait.{POOR_HOME_NAME if v < 0 else 15}", "")
+            idx = POOR_HOME_NAME if v < 0 else 15
+            name = T(f"info.races.trait.{idx}", "")
+            icon = ("traits", racepanel.TRAIT_KEYS.get(idx))
         else:
             name = T(f"info.races.trait.{k}", "")
-        text = name or ""
+            icon = ("traits", racepanel.TRAIT_KEYS.get(k))
+        value = ""
         if TRAIT_GOVERNMENT < k < TRAIT_LOW_G:
             if k == TRAIT_FOOD:
-                text += "-0.5" if v < 0 else "+1" if v == 2 else "+2"
+                value = "-0.5" if v < 0 else "+1" if v == 2 else "+2"
             elif k == TRAIT_TAX:
-                text += ("-" if v < 0 else "+") + ("1 BC" if v == 2
+                value = ("-" if v < 0 else "+") + ("1 BC" if v == 2
                                                    else "0.5 BC")
             else:
-                text += f"{v:+d}"
-        lines.append(text)
-    return lines
+                value = f"{v:+d}"
+        rows.append((icon[0], icon[1], name or "", value))
+    return rows
+
+
+def trait_lines(player):
+    """`Print_Player_Specials_To_Bitmap_`: "^ name" and its value, one
+    line per trait that is set, the government always."""
+    return [name + value for _f, _k, name, value in trait_rows(player)]
 
 
 def trait_help(player):

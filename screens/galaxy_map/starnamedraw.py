@@ -90,6 +90,22 @@ def render_star_names(surface, ctx, stars, heights, render_label,
                 x = clamp.left
             elif x + w > clamp.right:
                 x = clamp.right - w
+        # A name whose text lies wholly outside the clip is not drawn at all:
+        # the original's clipped printer returns at once for it, and at HD
+        # the halo and the outline round it would leave a dark dash or a
+        # tick on the clip's edge (a name above the window while its star
+        # is scrolled out; Data, 24 November 2026).
+        if not surface.get_clip().colliderect(
+                x, y, w, text.get_height()):
+            continue
+        # HD EXTENSION `name_edge_whole`: a name that reaches over the clip's
+        # top or bottom is drawn whole, as the stars are (`renderer.
+        # render_stars`): the original's window cuts it through its letters
+        # (Data, 24 November 2026: Incredius at the foot of the map); the
+        # picture's art, drawn after the map, covers what lies under it.
+        edge_clip = surface.get_clip()
+        surface.set_clip(edge_clip.inflate(
+            0, 2 * (text.get_height() + 2 * pad)))
         surface.blit(halo, (x - pad, y - pad))
         # HD EXTENSION `star_name_halo`: a two pixel outline and the name
         # drawn twice, one pixel apart, so the thin face reads heavier
@@ -118,6 +134,7 @@ def render_star_names(surface, ctx, stars, heights, render_label,
         if not sp.split:
             _surrender_line(surface, ctx, s, player_num, players, sx,
                             y + text.get_height(), w)
+        surface.set_clip(edge_clip)
 
 
 def _surrender_line(surface, ctx, s, player_num, players, sx, y, w):

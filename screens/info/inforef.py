@@ -9,6 +9,12 @@ player's own pictures — cut from his two icon sheets by
 (`files/screens/info/assets/icons/<name>.png`) — so OrionLayer ships none; a
 row whose picture is missing is drawn as before, words only.
 
+**HD EXTENSION `howto_background`**: a picture the player puts at
+`howto_background.png` beside the icons is drawn over the whole how-to text
+box, cut to the box from its middle (`background`) and drawn as painted — how bright
+and how coloured it is the picture's own business, the code changes nothing; OrionLayer ships none and
+a missing file leaves the box as before.
+
 **HD EXTENSION `reference_pictures`** (the same mockup): two wide pictures cut
 from it — a planet system and a ship's wireframe — stand under the two lists
 of the index and at the foot of a category's or a how-to's text
@@ -80,6 +86,10 @@ ICON_FILES = tuple(f"{n}.png" for n in ICON_NAMES)
 #: the file beside the icons. HD EXTENSION `reference_pictures`.
 ART_FILES = {"technology": "art_technology.png", "guide": "art_guide.png"}
 
+#: the how-to text's background (Data's "Cinematic Blue Nebula Starfield",
+#: 24 Nov): the file beside the icons. HD EXTENSION `howto_background`.
+BACKGROUND = "howto_background"
+
 _cache = {}
 
 
@@ -122,3 +132,30 @@ def icon_for(payload):
              "group": GROUP_ICONS}.get(payload[0])
     name = table.get(payload[1]) if table else None
     return picture(name) if name else None
+
+
+def background(size, anchor=(0.5, 0.5)):
+    """HD EXTENSION `howto_background`: the player's background picture
+    scaled to cover `size` and cut to it round `anchor` (0..1 across, down;
+    the middle by default: a narrow box can be cut from a corner where the
+    picture has more to show), or None when the
+    file is missing. Up to eight sizes are kept (the Reference's boxes)."""
+    back = picture(BACKGROUND)
+    if back is None:
+        return None
+    key = ("cover", tuple(size), tuple(anchor))
+    if key not in _cache:
+        sized = [k for k in _cache if isinstance(k, tuple)]
+        if len(sized) >= 8:        # a drag-resize makes a size per step
+            for old in sized:
+                del _cache[old]
+        k = max(size[0] / back.get_width(), size[1] / back.get_height())
+        big = pygame.transform.smoothscale(
+            back.convert(), (max(size[0], round(back.get_width() * k)),
+                             max(size[1], round(back.get_height() * k))))
+        cut = pygame.Surface(size)
+        cut.blit(big, (0, 0), pygame.Rect(
+            round((big.get_width() - size[0]) * anchor[0]),
+            round((big.get_height() - size[1]) * anchor[1]), *size))
+        _cache[key] = cut
+    return _cache[key]
