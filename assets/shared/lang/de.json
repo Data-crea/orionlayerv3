@@ -377,8 +377,8 @@
     "Players": "Spieler",
     "Planet Transformation": "Planetenverwandlung",
     "Space Hazards": "Kosmische Gefahren",
-    "Method 1 \u2013 Transfer Colonists": "Methode 1 \u2013 Kolonisten transferieren",
-    "Method 2 \u2013 Via Galaxy Map": "Methode 2 \u2013 \u00dcber die Galaxiekarte",
+    "Method 1 – Transfer Colonists": "Methode 1 – Kolonisten transferieren",
+    "Method 2 – Via Galaxy Map": "Methode 2 – Über die Galaxiekarte",
     "Note:": "Hinweis:",
     "ELIMINATED": "AUSGELÖSCHT",
     "{n} entries": "{n} Einträge",
@@ -453,7 +453,7 @@
     "Forward": "Vorn",
     "Fwd Ext": "Vorn erw.",
     "Back Ext": "Hinten erw.",
-    "Rear": "Heck",
+    "Rear": "Hinten",
     "360 Degree": "360 Grad",
     "Shot x2": "Schuss x2",
     "Shot x5": "Schuss x5",
@@ -566,8 +566,7 @@
     "1 colony affected": "1 Kolonie betroffen",
     "{n} events": "{n} Ereignisse",
     "1 event": "1 Ereignis",
-    "+{n} more": "+{n} weitere",
-    "\u2212{n} food": "\u2212{n} Nahrung",
+    "−{n} food": "−{n} Nahrung",
     "Tutor": "Tutor",
     "Ultra Poor": "Extrem arm",
     "Ultra Rich": "Extrem reich",
@@ -827,7 +826,6 @@
     "No officer": "Kein Offizier",
     "OFFICER": "OFFIZIER",
     "Operational": "Intakt",
-    "Rear": "Hinten",
     "Right": "Rechts",
     "Radiation Shield": "Strahlungsschild",
     "SHIELDS": "SCHILDE",
@@ -839,6 +837,9 @@
     "Weakest arc": "Schwächster Bogen",
     "no skill that acts in battle": "keine Fähigkeit, die im Gefecht wirkt",
     "Unlike the established civilizations of the galaxy, this race has no predetermined destiny. Its origins, strengths, weaknesses, and unique abilities are yours to define. Shape a civilization according to your own vision, choosing the traits that will determine its place among the stars.\nWill your people become brilliant scientists, powerful conquerors, or masters of diplomacy? The choices are yours, and the future remains unwritten.": "Im Gegensatz zu den etablierten Zivilisationen der Galaxis hat dieses Volk keine vorbestimmte Zukunft. Seine Herkunft, Stärken, Schwächen und besonderen Fähigkeiten legst du selbst fest. Forme eine Zivilisation nach deiner eigenen Vision und wähle die Eigenschaften, die ihren Platz unter den Sternen bestimmen.\nWird dein Volk zu brillanten Wissenschaftlern, mächtigen Eroberern oder Meistern der Diplomatie? Die Entscheidungen liegen bei dir, und die Zukunft bleibt ungeschrieben.",
-    "Your civilization. Your rules. Your destiny.": "Deine Zivilisation. Deine Regeln. Dein Schicksal."
+    "Your civilization. Your rules. Your destiny.": "Deine Zivilisation. Deine Regeln. Dein Schicksal.",
+    "Ships": "Schiffe",
+    "Designs": "Entwürfe",
+    "CONSTRUCTION QUEUE": "BAUWARTESCHLANGE"
   }
 }

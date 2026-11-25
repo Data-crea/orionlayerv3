@@ -7,7 +7,11 @@
     "refit": "REFIT",
     "design": "DESIGN",
     "repeat": "REPEAT BUILD",
-    "auto": "AUTO BUILD"
+    "auto": "AUTO BUILD",
+    "group_ships": "Ships",
+    "group_designs": "Designs",
+    "group_androids": "Androids",
+    "queue": "CONSTRUCTION QUEUE"
   },
   "marks": {
     "deviation_ship_row_dim": "NARROWED, work order 208 B8. A design LARGE or bigger is dimmed while the colony has no star base, star fortress or battlestation (colbldg.cpp:625-633, bqdraw.design_needs_base), as in the original. Still not dimmed: what Colony_Can_Build_Product_ refuses (:637-640) and a special ship whose Auto_Design_Type_ is 0 (:642-652).",
@@ -16,6 +20,8 @@
     "hd_extension_summary_follows_hd_pointer": "The summary shows the item under HD's pointer, where the original's follows its own (_scanned_prod, colbldg.cpp:825); hovering sends nothing.",
     "deviation_one_edge": "Work order 226 D: a list column is its shell panel, the original's inner box round the list is not drawn again inside it; the picture, summary and description boxes are cells of the middle panel (the shell's field); the lists' words stand at the shell's inset from the panel's inner line (Data's screenshot of 9 October 2026: no inset, two edges).",
     "hd_extension_build_colours": "Data's mockup of 1 November 2026: the product's name and the row of the chosen product (the one under the pointer, else the queue's first) in orange, the summary's lines gold, a design's table labels and heads orange over white values, its weapons and specials light grey two to a line, the other list rows grey (bqcolour.py, measured off the mockup).",
-    "hd_extension_build_grid_room": "Data's grid picture (mod folder popups/build_grid.png) fills the picture box instead of the original's room (COLBLDG.LBX 0); the product stands in it by its own pixels (colroom.product_only). Without the file the original's room is drawn."
+    "hd_extension_build_grid_room": "Data's grid picture (mod folder popups/build_grid.png) fills the picture box instead of the original's room (COLBLDG.LBX 0); the product stands in it by its own pixels (colroom.product_only). Without the file the original's room is drawn.",
+    "hd_extension_build_lists_mockup": "Data's mockup of 25 November 2026 (work order 432): the two lists as rows with a picture in front, the chosen row on a bar, a scroll bar and the wheel, the right list's three groups as boxes with a head (bqlist). A row stands for the game's field of the same place in the list; the click activates that field. INVENTION group_heads: the words Ships, Designs, Androids are ours.",
+    "hd_extension_build_summary_mockup": "Data's mockup of 25 November 2026 (work order 432): the summary's name in a large type over a rule, its numbers behind HUD glyphs in the frame colour, the glyphs in front of the buttons' words, the heading CONSTRUCTION QUEUE (INVENTION queue_heading), and the painted scene under a help text (HD EXTENSION build_list_scene, the player's popups/build_art.png) (bqmiddle)."
   }
 }

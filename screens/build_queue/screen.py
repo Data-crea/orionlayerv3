@@ -34,7 +34,7 @@ from core.screen_base import ScreenBase
 from core import colonyfacts
 from core import nativedraw as nd
 
-from . import bqdraw, bqscene, bqwire as w
+from . import bqdraw, bqlist, bqscene, bqwire as w
 
 log = logging.getLogger("build_queue")
 
@@ -102,6 +102,8 @@ class BuildQueueScreen(ScreenBase):
         super().__init__(app)
         self._state = self._view = None
         self._hover = None
+        self._scroll = {"building": 0, "other": 0}
+        self._height = 0
         lang = (getattr(app, "settings", None) or {}).get("language", "en")
         self._strings = EStrings(lang)
         self._buildings = BuildingNames(lang)
@@ -217,19 +219,45 @@ class BuildQueueScreen(ScreenBase):
         self.app.client.activate_field(field.index)
         return True
 
+    def remember_height(self, height):
+        self._height = int(height)
+
+    def list_geometry(self):
+        """Both lists' rows, as the last frame drew them (`bqlist`)."""
+        if self._view is None or not self._view.draws or not self._height:
+            return {}
+        return bqlist.geometries(self, self._view, self._height)
+
     def _row_under(self, x, y):
-        """(kind, index, field, product) of the row under an HD point."""
+        """(kind, index, field, product) of the row under an HD point. A
+        list row is HD's own (`bqlist`) and stands for the game's field of
+        the same place in the list (HD EXTENSION `build_lists_mockup`)."""
         v = self._view
-        for kind, entries, rows in (("building", v.buildings,
-                                     v.building_rows),
-                                    ("other", v.others, v.other_rows)):
-            for i, (e, f) in enumerate(zip(entries, rows)):
-                if nd.field_hit(self.layout, f, x, y):
-                    return kind, i, f, e["id"]
+        got = bqlist.hit(self.list_geometry(), x, y)
+        if got is not None and got[0] == "item":
+            _t, kind, i, product = got
+            rows = v.building_rows if kind == "building" else v.other_rows
+            if 0 <= i < len(rows):
+                return kind, i, rows[i], product
         for i, f in enumerate(v.queue):
             if nd.field_hit(self.layout, f, x, y):
                 return "queue", i, f, v.items[i] if i < len(v.items) else -1
         return None
+
+    def handle_mousewheel(self, direction, mx, my):
+        """The wheel scrolls the list under the pointer — HD EXTENSION
+        `build_lists_mockup`; MOO2 squeezes the list instead."""
+        if super().handle_mousewheel(direction, mx, my):
+            return True
+        geoms = self.list_geometry()
+        for kind, g in geoms.items():
+            if g.vp is not None and g.vp.collidepoint(mx, my):
+                pb, po, _h, _g = bqlist.pitches(self._height)
+                bqlist.scroll_by(self, geoms, kind,
+                                 -direction * 3 * (pb if kind == "building"
+                                                   else po))
+                return True
+        return False
 
     def help_extra_rect(self, spec):
         """help.json's regions are the original's native rectangles, and
@@ -270,6 +298,17 @@ class BuildQueueScreen(ScreenBase):
             x, y = (radio.x + radio.x_end) // 2, (radio.y + radio.y_end) // 2
             log.info("build queue: Auto Build -> INJECT_CLICK (%d, %d)", x, y)
             self.app.client.inject_click(x, y)
+            return None
+        geoms = self.list_geometry()
+        got = bqlist.hit(geoms, screen_x, screen_y)
+        if got is not None and got[0] == "bar":
+            _t, kind, part = got
+            g = geoms[kind]
+            step = {"building": bqlist.pitches(self._height)[0],
+                    "other": bqlist.pitches(self._height)[1]}[kind]
+            amount = {"up": -2 * step, "down": 2 * step,
+                      "page_up": -g.vp.h, "page_down": g.vp.h}.get(part, 0)
+            bqlist.scroll_by(self, geoms, kind, amount)
             return None
         hit = self._row_under(screen_x, screen_y)
         if hit is None:

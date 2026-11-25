@@ -48,6 +48,8 @@ from core import nativedraw as nd
 
 from . import bqcolour as col
 from . import bqgrid
+from . import bqlist
+from . import bqmiddle
 from . import bqwire as w
 
 E_TITLE, E_COST, E_MAINT, E_TIME, E_TURNS = 210, 242, 367, 211, 544
@@ -69,6 +71,7 @@ def draw(surface, screen, view, state, names, hover):
     _picture(surface, screen, view, state, names, product)
     _lists(surface, screen, view, state, names, hover)
     _queue(surface, screen, view, state, names)
+    bqmiddle.queue_heading(surface, screen, view, queue_row)
     _summary(surface, screen, view, state, names, hover)
     _description(surface, screen, view, state, product)
     _buttons(surface, screen, state, view)
@@ -136,40 +139,25 @@ def row_bright(view, state, product, building, hover, ticks):
 
 
 def _lists(surface, screen, view, state, names, hover=None):
-    """The two lists, each word at the shell's inset from its panel's inner
-    line (DEVIATION `one_edge`: the original's x 13 and 485 are its boxes'
-    own edges, which in the shell ARE the panel's inner line)."""
-    import pygame
-    from core.hud import shell
-    dim = hudtext.colour("sub")
+    """The two lists as the mockup draws them (`bqlist`, HD EXTENSION
+    `build_lists_mockup`, work order 432)."""
     ticks = pygame.time.get_ticks()
-    pad = shell.inset(screen.ref_layout)
-    chosen = hover if hover is not None else view.items[0]
-    for entries, rows, x, width, building, panel in (
-            (view.buildings, view.building_rows, 13, 171, True, "left_panel"),
-            (view.others, view.other_rows, 485, 138, False, "right_panel")):
-        r = screen.box_screen_rect(panel)
-        inner = shell.inner(r, screen.ref_layout) if r is not None else None
-        for e, f in zip(entries, rows):
-            if e["id"] == w.SEPARATOR:
-                continue
-            bright = row_bright(view, state, e["id"], building, hover,
-                                ticks)
-            name, _st = names.product(e["id"], state)
-            px, py = nd.point(screen.layout, x, f.y + 1)
-            pw = nd.rect(screen.layout, (0, 0, width, 1)).w
-            if inner is not None:
-                px = max(px, inner.x + pad)
-                pw = min(pw, inner.right - pad - px)
-            # HD EXTENSION `build_colours`: the row of the product the
-            # middle shows in orange, the others grey (Data's mockup)
-            ink = col.SELECTED if e["id"] == chosen else col.ROW
-            # a building the colony is not queueing stays white too (Data,
-            # 1 November 2026: the left list is white as the right is);
-            # only a design that needs a base is dimmed
-            nd.blit_text(surface, screen.style, name, px, py, pw,
-                         font(screen.layout, "value"),
-                         ink if bright or building else dim)
+    screen.remember_height(surface.get_height())
+    from screens.colony import colroom
+    from . import bqproduct
+    climate, bg, race = _world(view, state)
+
+    def spec_of(product):
+        pic, ship = _ship_parts(view, state, product)
+        return bqproduct.picture(product, race, pic, ship)
+    bqlist.draw(surface, screen, view, state, names, hover,
+                screen.list_geometry(),
+                lambda product, building: row_bright(
+                    view, state, product, building, hover, ticks),
+                bqlist.Context(spec_of, (climate, bg),
+                               colroom.owner_colour(
+                                   state, getattr(state, "player_num", 0)
+                                   or 0), screen.app, state))
 
 
 def _world(view, state):
@@ -267,6 +255,7 @@ def _description(surface, screen, view, state, product):
         _design_table(surface, screen, inner, size, pitch,
                       refwords.design_lines(ship, screen.e, screen.parts()))
         return
+    bqmiddle.scene(surface, screen, box)
     lines = []
     got = bqproduct.text(product, getattr(screen, "helptext", None),
                          screen.maintext())
@@ -363,35 +352,12 @@ def _queue(surface, screen, view, state, names):
 
 def _summary(surface, screen, view, state, names, hover):
     """`Draw_Current_Selection_` (colbldg.cpp:822-986): the item under HD's
-    pointer, else the queue's first; its name, then the numbers."""
+    pointer, else the queue's first; its name, then the numbers
+    (`bqmiddle`)."""
     product = hover if hover is not None else view.items[0]
     if product in (w.NONE, w.SEPARATOR, None):
         return
-    name, _st = names.product(product, state)
-    text(surface, screen, name, w.SUMMARY_X, w.SUMMARY_Y, w.SUMMARY_W,
-         "value", "title", colour=col.TITLE)
-    # the thin rule under the name (Data's mockup)
-    rule = nd.rect(screen.layout, (w.SUMMARY_X, w.SUMMARY_Y + w.SUMMARY_PITCH
-                                   + 3, w.SUMMARY_X + w.SUMMARY_W,
-                                   w.SUMMARY_Y + w.SUMMARY_PITCH + 3))
-    pygame.draw.line(surface, col.RULE, (rule.x, rule.y),
-                     (rule.right, rule.y))
-    e = view.entry(product)
-    if e is None:
-        return
-    lines = [(E_COST, e["cost"])]
-    if e["maintenance"] >= 0:
-        lines.append((E_MAINT, e["maintenance"]))
-    lines.append((E_TIME, e["time"]))
-    turns = screen.turns_left(state, view, product)
-    if turns is not None:
-        lines.append((E_TURNS, turns))
-    for n, (eid, value) in enumerate(lines, start=2):
-        fmt = screen.e(eid)
-        if fmt:
-            text(surface, screen, printf(fmt, value), w.SUMMARY_X,
-                 w.SUMMARY_Y + n * w.SUMMARY_PITCH, w.SUMMARY_W, "line",
-                 "label", colour=col.INFO)
+    bqmiddle.summary(surface, screen, view, state, names, product)
 
 
 #: The buttons that set a mode, and the `field_mode` each sets.
@@ -415,6 +381,7 @@ def _buttons(surface, screen, state, view):
                              hud_hover.pointer_state(
                                  r, "active" if lit else "normal"),
                              screen.word(key).upper(),
+                             icon=bqmiddle.BUTTONS.get(key),
                              style_renderer=screen.style)
             continue
         # A mode's button is "selected" while its mode is on (work order
@@ -425,4 +392,5 @@ def _buttons(surface, screen, state, view):
         hud.slant_button(surface, r, screen.layout.scale,
                          hud_hover.pointer_state(r,
                                                  "active" if on else "normal"),
-                         screen.word(key), style_renderer=screen.style)
+                         screen.word(key), icon=bqmiddle.BUTTONS.get(key),
+                         style_renderer=screen.style)
