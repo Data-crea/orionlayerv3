@@ -33,6 +33,7 @@ picture is left out and named too (the manifest names pictures only).
 """
 import argparse
 import hashlib
+import http.client
 import json
 import os
 import sys
@@ -120,11 +121,17 @@ def fetch(folder, url=None, log=print, timeout=600):
                 if got > FETCH_LIMIT:
                     raise OSError(f"larger than {FETCH_LIMIT} bytes")
                 out.write(block)
-    except (OSError, ValueError) as err:
+    except (OSError, ValueError, http.client.HTTPException) as err:
         log(f"The base pack could not be downloaded ({err}).")
         return 1
     try:
         return install(path, folder)
+    except zipfile.BadZipFile as err:
+        # a captive portal or proxy answering 200 with a page, or a release
+        # asset that is an error page: a message, not a traceback that ends
+        # `setup.py` for a new player (WO 427)
+        log(f"What was downloaded is not a zip file ({err}).")
+        return 1
     finally:
         try:
             os.remove(path)

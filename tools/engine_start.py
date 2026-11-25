@@ -427,8 +427,7 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
                     if is_hang(last, samples):
                         out(f"HANG: PID {pid} waits in its first present "
                             f"(open fix 31); stopping it (ours)")
-                        os.kill(pid, 15)
-                        time.sleep(2)
+                        _terminate(pid)
                         return "hang"
                     if not intro_named:
                         out(f"INTRO: the original's logos and intro are playing "
@@ -439,14 +438,38 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         out(f"TIMEOUT after {timeout} s: last line {last[0]!r}, state "
             f"{_state(pid) if pid else 'unknown'}; stopping PID {pid} (ours)")
         if pid:
-            os.kill(pid, 15)
+            _terminate(pid)
         return None
     except BaseException:
         try:
-            os.kill(pid or proc.pid, 15)
+            _terminate(pid or proc.pid)
         except OSError:
             pass
         raise
+
+
+def _terminate(pid, wait=5.0):
+    """SIGTERM the engine this run started, SIGKILL it when it is still
+    there after `wait` seconds. A hang is a main thread stuck in a GL or
+    DRM swap; SDL's SIGTERM handler only posts a quit event, which that
+    thread never reads, so the old engine kept the port and the retry was
+    refused by its own half-dead engine (WO 427; `engine_close` and
+    `play.stop_engine` escalate the same way)."""
+    try:
+        os.kill(pid, 15)
+    except ProcessLookupError:
+        return
+    end = time.time() + wait
+    while time.time() < end:
+        state = _state(pid)             # "S 0.0 ..." or "gone"
+        if state == "gone" or state.startswith("Z"):
+            return
+        time.sleep(0.2)
+    try:
+        os.kill(pid, 9)
+    except ProcessLookupError:
+        return
+    time.sleep(1)
 
 
 def main():

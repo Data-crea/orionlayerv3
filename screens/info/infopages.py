@@ -49,7 +49,11 @@ def chart(player):
     maint = [int(v) for v in player.maintenance]
     sources = [income] + maint
     top = max(max(sources), 0)
-    pct = [((v * 1000) // top + 5) // 10 if top > 0 else 0 for v in sources]
+    # C's `/` truncates toward zero, Python's `//` floors: a negative source
+    # (none is expected) rounded away (WO 427, info.cpp:496-499)
+    def _c(a, b):
+        return a // b if a >= 0 else -((-a) // b)
+    pct = [_c(_c(v * 1000, top) + 5, 10) if top > 0 else 0 for v in sources]
     return income, maint, pct, income - int(player.total_maintenance)
 
 

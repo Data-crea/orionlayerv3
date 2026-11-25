@@ -354,7 +354,7 @@ def panel_lines(ship_idx, game_state, parts, strings=None, arcs=None):
 
     specials = []
     flags = getattr(view, "special_device_damage_flags", None) or [0] * 5
-    for bit in ship_struct.special_bits(view):
+    for bit in ship_struct.special_bits(view, ship_struct.LISTED_SPECIALS):
         label = parts.name("specials", bit) if parts else None
         if label:
             # TRANSCRIBED (work order 208 B4, Data's decision 2): a special

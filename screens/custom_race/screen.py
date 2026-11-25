@@ -139,7 +139,8 @@ class CustomRaceScreen(ScreenBase):
 
     def _load_traits(self):
         """Trait data, mod-overridable (screens/custom_race/traits.json)."""
-        data = self.app.res.load_json("screens/custom_race/traits.json")
+        data = self.app.res.load_json("screens/custom_race/traits.json",
+                                      shape=dict)   # a mod's list is refused (WO 427)
         if not data:
             return
         self._traits_data = data

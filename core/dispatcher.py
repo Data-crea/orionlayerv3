@@ -164,14 +164,28 @@ class Dispatcher:
             self.overlay = screen
             self.overlay_name = name
             self._glass_key = None      # a fresh picture under it
-            screen.enter(game_state)
+            try:
+                screen.enter(game_state)
+            except BaseException:
+                # as `switch_to`: an overlay that never finished entering
+                # must not stay registered, or `name == overlay_name`
+                # above never lets `enter` run again and its update and
+                # render run on a half-entered screen (audit TD-01; WO 427)
+                self.overlay, self.overlay_name = None, ""
+                raise
 
     def close_overlay(self):
         """Close the overlay, if any. Parent screen is untouched."""
-        if self.overlay:
-            self.overlay.exit()
-        self.overlay = None
-        self.overlay_name = ""
+        try:
+            if self.overlay:
+                self.overlay.exit()
+        except Exception:
+            # a faulty exit must not leave the overlay up and raise again
+            # on every frame (audit TD-01; WO 427)
+            log.exception("overlay %s: exit failed", self.overlay_name)
+        finally:
+            self.overlay = None
+            self.overlay_name = ""
 
     @property
     def top(self):
@@ -350,7 +364,10 @@ class Dispatcher:
         # No HD screen for this ID -> original framebuffer
         self.close_overlay()
         if self.active and not self.use_original:
-            self.active.exit()
+            try:
+                self.active.exit()
+            except Exception:
+                log.exception("screen %s: exit failed", self.active_name)
             self.active = None
             self.active_name = ""
         self.use_original = True

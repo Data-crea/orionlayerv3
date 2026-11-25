@@ -62,14 +62,14 @@ def design_lines(view, e, names):
            _pair(e(geom.E_ARMOR), names.name("armor", int(view.armor_type)) or ""),
            _pair(e(geom.E_FTL), names.name("drives", int(view.ftl_type)) or "")]
     weapons = []
-    for w in ship_struct.weapons(view):
+    for w in ship_struct.design_weapons(view):    # every slot, colbldg.cpp:1282-1300
         table = "weapon_plurals" if int(w.count) > 1 else "weapons"
         name = names.name(table, int(w.type)) or names.name("weapons", int(w.type)) or ""
         weapons.append(f"{int(w.count)} {name}")
     out.append((_fmt(e(geom.E_WEAPONS), "").strip(),))
     out += _items(weapons)
     specials = [names.name("specials", b) or "" for b in
-                ship_struct.special_bits(view)]
+                ship_struct.special_bits(view, ship_struct.LISTED_SPECIALS)]
     if specials:
         out.append((_fmt(e(geom.E_SPECIALS), "").strip(),))
         out += _items(specials)
@@ -79,7 +79,10 @@ def design_lines(view, e, names):
 def ship_lines(view, ship_index, state, e, h, names):
     """The ship's paragraph: its name and crew (and officer), then its
     design (colbldg.cpp:1309-1336)."""
-    crew = h(geom.H_CREW + int(getattr(view, "crew_quality", 0) or 0)) or ""
+    quality = int(getattr(view, "crew_quality", 0) or 0)
+    # five words, 0..4; the original's `default:` prints nothing for another
+    # value (flt2.cpp:749-773), and 0x8A + q would read an unrelated string
+    crew = (h(geom.H_CREW + quality) or "") if 0 <= quality <= 4 else ""
     officer = int(getattr(view, "officer_index", -1))
     leaders = getattr(state, "leaders_raw", None) or []
     if 0 <= officer < len(leaders):

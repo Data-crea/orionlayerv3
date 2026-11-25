@@ -147,11 +147,20 @@ def configure(argv, out=print):
     argv = list(argv or [])
     want = {}
     for flag in ("--engine", "--game"):
-        if flag in argv:
+        # `--engine=PATH` too: it was ignored without a word, and the next
+        # message said the engine was not at its default place (WO 427)
+        joined = next((a for a in argv if a.startswith(flag + "=")), None)
+        if joined is not None:
+            want[flag] = joined[len(flag) + 1:]
+        elif flag in argv:
             i = argv.index(flag)
             if i + 1 >= len(argv):
                 return [f"{flag} needs a path after it"]
             want[flag] = argv[i + 1]
+    unknown = [a for a in argv if a.startswith("--") and not any(
+        a == f or a.startswith(f + "=") for f in ("--engine", "--game"))]
+    if unknown:
+        return [f"unknown argument {unknown[0]} — see the usage"]
     if want:
         where = paths.remember(want.get("--engine"), want.get("--game"))
         out(f"Saved in {where}: " + ", ".join(

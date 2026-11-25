@@ -227,12 +227,21 @@ def apply_settings(user_settings):
     box fill — the glass switch and the fill colour (227) — applied at
     start."""
     from core.hud import fill, glass
-    glass.set_value(user_settings.get("hud_glass"))
+    glass.set_value(_number(user_settings.get("hud_glass")))
     fontscale.apply_settings(user_settings)
     fill.apply_settings(user_settings)
-    return set_tone(user_settings.get("hud_hue"),
-                    user_settings.get("hud_sat"),
-                    user_settings.get("hud_bright"))
+    return set_tone(_number(user_settings.get("hud_hue")),
+                    _number(user_settings.get("hud_sat")),
+                    _number(user_settings.get("hud_bright")))
+
+
+def _number(value):
+    """`value` if it is a finite number, else None (the default): a damaged
+    `user_settings.json` ("hud_hue": "red", NaN) must not end the start with
+    a ValueError out of `float()` (WO 427; `fontscale` repairs its own)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return value if value == value and abs(value) != float("inf") else None
 
 
 def set_hue(value):

@@ -46,18 +46,25 @@ MAP_RIGHT, MAP_BOTTOM = 0x20F, 0x1A5  # 527, 421
 SCALE_UNIT = 10
 
 
+def _trunc_div(a, b):
+    """C's integer division: toward zero (Python's `//` floors, one pixel
+    off for a negative offset left of or above the map, WO 427;
+    harold.cpp:172-178)."""
+    return a // b if a >= 0 else -((-a) // b)
+
+
 def scaled(value, map_scale):
     """HAROLD::Get_Scaled_Value_ — integer division, as in C."""
     if not map_scale:
         map_scale = SCALE_UNIT
-    return int(value) * SCALE_UNIT // int(map_scale)
+    return _trunc_div(int(value) * SCALE_UNIT, int(map_scale))
 
 
 def up_scaled(value, map_scale):
     """HAROLD::Get_Up_Scaled_Value_ — the inverse of scaled()."""
     if not map_scale:
         map_scale = SCALE_UNIT
-    return int(value) * int(map_scale) // SCALE_UNIT
+    return _trunc_div(int(value) * int(map_scale), SCALE_UNIT)
 
 
 def _view_params(state):

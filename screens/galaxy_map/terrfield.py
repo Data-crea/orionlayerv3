@@ -220,9 +220,25 @@ def build(emps, colours, cell=CELL, hard=False):
             # inside only where this empire's field is the strongest: the
             # smooth min keeps the edge a clean contour at THRESHOLD, and
             # the line where two fields are equal is that contour for both
-            other = np.max([g for m, g in enumerate(fields) if m != n],
+            # A TIE goes to the empire listed first (WO 427): where two
+            # empires' fields are equal everywhere (the same stars) the
+            # test below was `f - other + THRESHOLD <= THRESHOLD` for both,
+            # so neither had an inside, no border and a half-covered blob.
+            # Each field carries a bias of one millionth by its place, the
+            # sum of which decides an exact tie and moves nothing else.
+            bias = [1e-6 * (len(fields) - m) for m in range(len(fields))]
+            other = np.max([g + bias[m] for m, g in enumerate(fields)
+                            if m != n], axis=0)
+            plain = np.max([g for m, g in enumerate(fields) if m != n],
                            axis=0)
-            f = np.minimum(f, f - other + THRESHOLD)
+            hard_f = np.minimum(f, f + bias[n] - other + THRESHOLD)
+            # where the fields are EQUAL the min above leaves both at the
+            # threshold, a half-covered blob of float noise: the winner
+            # takes its field whole, the others none
+            tie = np.abs(f - plain) < 1e-9
+            first = f + bias[n] > other
+            f = np.where(tie, np.where(first, f, THRESHOLD - 2 * RAMP),
+                         hard_f)
         cover = smoothstep(THRESHOLD - RAMP, THRESHOLD + RAMP, f)
         # strongest at the border, a third of it deep inside
         edge = np.exp(-np.maximum(f - THRESHOLD, 0.0) / EDGE_FALL)

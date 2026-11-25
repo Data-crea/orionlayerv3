@@ -82,9 +82,13 @@ def parsecs(a, b):
 def blocked(star, other_index):
     """The FROM star's `black_hole_blocks` bit for `other_index`
     (`struct_::Test_Bit_Field_`, struct.cpp:20-25)."""
-    raw = getattr(star, "raw", b"") or b""
-    at = BLACK_HOLE_BLOCKS_AT + (other_index >> 3)
-    return at < len(raw) and bool((raw[at] >> (other_index & 7)) & 1)
+    # through the struct module, which takes the member's place and size
+    # from the engine's LAYOUT when there is one (decision 97) and bounds the
+    # index; a hard-coded 31 read another field on another layout (WO 427)
+    from core.structs import star as star_struct
+    if not getattr(star, "raw", None):
+        return False                      # a star with no record: no block
+    return star_struct.black_hole_blocks(star, other_index)
 
 
 def full_screen_field(fields):

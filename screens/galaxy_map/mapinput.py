@@ -49,6 +49,15 @@ def mouse_motion(screen, screen_x, screen_y):
     if boxdraw.system_open(screen):
         screen._hover_star = None        # the window covers the map (226 F)
         return
+    # The hover is the MAP's: not under a panel drawn over it. The click is
+    # already refused there (`boxdraw.handle_click`, `terrpanel.click`), so
+    # hover and click agree (WO 427: a star under the fleet box or the
+    # territory panel was named, its line drawn and its ring lit).
+    if terrpanel.over(screen, screen_x, screen_y) or any(
+            rect.collidepoint(screen_x, screen_y)
+            for rect, _a in getattr(screen, "_box_hits", None) or []):
+        screen._hover_star = None
+        return
     screen._hover_star = screen._star_at(screen_x, screen_y)
 
 
@@ -375,6 +384,10 @@ def right_button(screen, down, mx, my):
     if not down:
         screen._pan_from = None
         return False
+    if terrpanel.over(screen, mx, my):
+        # the HD panel is no map: a right click on it sent CANCEL_FIELD and
+        # started a pan (WO 427)
+        return True
     # The fleet box's help (work order 200 B) and a planet in the system
     # window: the game's colony info (`core/rightinfo`) — its field, not a
     # point on the map.
@@ -474,6 +487,8 @@ def mousewheel(screen, direction, mx, my):
         return
     if boxdraw.wheel(screen, mx, my, direction):
         return                           # the fleet box's own bar
+    if terrpanel.over(screen, mx, my):
+        return                           # the panel is no map (WO 427)
     if not pygame.Rect(*view.box).collidepoint(mx, my):
         return
     if boxdraw.system_open(screen):

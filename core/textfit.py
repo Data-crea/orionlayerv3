@@ -88,8 +88,11 @@ def squeeze_lines(style, text, width, max_h, sizes, color):
     for size in sizes:
         lines = wrap_text(style, text, size, width)
         rendered = [style.render_text(line, size, rgb) for line in lines]
+        # `default=0`: whitespace only in a box narrower than a space wraps to
+        # no line at all, and max() of nothing raises (WO 427)
         if (sum(s.get_height() for s in rendered) <= max_h
-                and max(s.get_width() for s in rendered) <= width):
+                and max((s.get_width() for s in rendered), default=0)
+                <= width):
             return rendered, size
     return wrap_rendered(style, text, size, width, rgb), size
 

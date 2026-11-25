@@ -9,9 +9,28 @@ grew to 1.7 GB (work order 255, Part D). Measured offline at 3840x2160
 so the two budgets below (256 MB together) keep several screens' worth.
 The least recently used picture goes first; the newest always stays.
 """
+import itertools
 from collections import OrderedDict
 
 import pygame
+
+
+_TOKENS = itertools.count(1)
+
+
+def style_token(style):
+    """A number that stands for `style` for as long as it lives and is never
+    handed to another: `id(style)` is reused once a style is freed, so a
+    cache keyed by it could answer a new style with the old one's pictures
+    (WO 427; `core/hud/text` documents the same fault for its own cache)."""
+    token = getattr(style, "_lru_token", None)
+    if token is None:
+        token = next(_TOKENS)
+        try:
+            style._lru_token = token
+        except AttributeError:          # a style that takes no attribute
+            return id(style)
+    return token
 
 
 def nbytes(value):
@@ -90,7 +109,7 @@ class TextCache:
 
     def render(self, style, text, size, rgb):
         from core import lang
-        return self.fetch((id(style), lang.state_key(), text, size,
+        return self.fetch((style_token(style), lang.state_key(), text, size,
                            tuple(rgb)),
                           lambda: style.render_text(text, size, tuple(rgb)))
 

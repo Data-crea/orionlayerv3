@@ -146,6 +146,8 @@ class Modal:
             self.fresh = True
             log.info("galaxy map: the home star name dialog (prefilled %r)",
                      self.text)
+        if kind != self.kind:
+            self._rects = {}        # another dialog: its buttons are not these
         self.kind = kind
         self.fallback = self.net.check(
             state, 0, getattr(self.screen.app, "client", None))

@@ -137,8 +137,14 @@ class MainMenuScreen(ScreenBase):
         path = self.asset_path("assets", "credits.txt")
         if not path:
             return
-        with open(path, encoding="utf-8") as f:
-            self._credits = parse_credits(f.read())
+        try:
+            with open(path, encoding="utf-8-sig") as f:
+                self._credits = parse_credits(f.read())
+        except (OSError, ValueError) as err:
+            # a directory named credits.txt or text that is not UTF-8 in a
+            # mod ended the main menu's entry (WO 427)
+            log.warning("main menu: credits.txt unreadable (%s)", err)
+            return
         self._credits += [("blank", ""), ("blank", "")]
         self._total_h = len(self._credits) * self.LINE_H
 

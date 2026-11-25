@@ -209,6 +209,24 @@ def is_monster(owner):
     return owner is not None and int(owner) in MONSTER_OWNERS
 
 
+def design_weapons(view):
+    """The weapons of a DESIGN as the Refit paragraph lists them: every one
+    of the eight slots whose `type` is not 0, a gap skipped and not a stop
+    (`Append_Ship_Design_Info_Formatted_Paragraph_Details`, colbldg.cpp:
+    1282-1300 — a slot with a type and a count of 0 is listed too). The
+    Fleets panel's list is `weapons` below, which stops at the first empty
+    slot (flt2.cpp:693-701). WO 427."""
+    out = []
+    base = _layout.offset("s_ship_data", "ship_weapon", WEAPONS_OFFSET)
+    size = _layout.size("s_ship_weapons", WEAPON_SIZE)
+    for slot in range(WEAPON_SLOTS):
+        start = base + slot * size
+        weapon = WEAPON_SPEC.parse(view.raw[start:start + size])
+        if weapon.type != 0:
+            out.append(weapon)
+    return out
+
+
 def weapons(view):
     """The mounted weapon slots, in slot order, up to the FIRST empty one.
 
@@ -240,10 +258,19 @@ def from_design(raw):
     return parse(bytes(raw) + bytes(max(0, size - len(raw))))
 
 
-def special_bits(view):
-    """Indices of the set special-device bits, `Test_Bit_Field_` order."""
+#: The specials the original LISTS: its loops stop at bit 38 (flt2.cpp:719,
+#: colbldg.cpp:1352), so bit 39, Regeneration, has no line in the Fleets
+#: panel or the Refit paragraph (WO 427). `SPECIAL_BITS` is what the record
+#: holds.
+LISTED_SPECIALS = 39
+
+
+def special_bits(view, limit=SPECIAL_BITS):
+    """Indices of the set special-device bits, `Test_Bit_Field_` order, below
+    `limit` (the 40 the record holds, or `LISTED_SPECIALS` for a printed
+    list)."""
     flags = view.special_device_flags
-    return [i for i in range(SPECIAL_BITS)
+    return [i for i in range(limit)
             if (flags[i >> 3] >> (i & 7)) & 1]
 
 

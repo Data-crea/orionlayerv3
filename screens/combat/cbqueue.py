@@ -163,17 +163,30 @@ def take_converter(queue, special):
     pair, so its numbers rise after its line (work order 266). An engine
     without the fix sends no totals: no numbers, as before."""
     charges = take_charges(queue)
+    note_taken(special, charges)
     for i, e in enumerate(queue):
         if e["kind"] == "converter_hit":
             if e.get("source") == special.get("source") and \
                     e.get("target") == special.get("target"):
                 special["past_shields"] = e.get("past_shields", 0)
                 special["absorbed"] = e.get("absorbed", 0)
+                note_taken(special, [e])
                 del queue[i]
             break
         if e["kind"] not in cbsound.KINDS and e["kind"] not in INSTANT:
             break
     return charges
+
+
+def note_taken(ev, taken):
+    """Events a `take_*` helper removed from the queue still count as PLAYED
+    with the event they belong to: `_tail` is the last seq an event covers,
+    and a snapshot's state is adopted when the batch's last seq has played.
+    A batch that ended with an aim, a spin or a charge was never adopted
+    otherwise (WO 427)."""
+    for e in taken:
+        if "seq" in e and "seq" in ev:      # recorded events carry one
+            ev["_tail"] = max(ev.get("_tail", ev["seq"]), e["seq"])
 
 
 def aims_for(first, aim):
@@ -229,6 +242,7 @@ def take_aims(queue, ev):
             done = True
         keep.append(e)
     queue[:] = keep
+    note_taken(ev, out)
     return out
 
 
@@ -238,6 +252,7 @@ def take_spin(queue, ev):
     for i, e in enumerate(queue):
         if e["kind"] == "gyro_spin" and aims_for(ev, e):
             ev["spin_turns"] = int(e.get("turns", 0) or 0)
+            note_taken(ev, [e])
             del queue[i]
             return
         if e["kind"] not in cbsound.KINDS and e["kind"] not in INSTANT:

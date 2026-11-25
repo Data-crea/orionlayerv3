@@ -267,6 +267,17 @@ def save(settings):
     return True
 
 
+def try_save(settings):
+    """`save`, but a refused write (a read-only or full settings folder) is
+    said once and answered False, never raised: the value stays applied in
+    memory and the screen is not suspended by the frame guard (WO 427)."""
+    try:
+        return save(settings)
+    except (OSError, ValueError, TypeError) as err:
+        log.warning("user settings: not saved (%s)", err)
+        return False
+
+
 def save_at_exit(settings):
     """Write the player's settings at the end of the run, normal or not
     (work order 387). Most rows save at a click or when their window

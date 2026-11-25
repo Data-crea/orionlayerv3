@@ -172,6 +172,11 @@ def _scene(surface, f, fm):
     if pic is None:
         return
     s = fm.scale
+    if not 0 <= fm.top < geom.NATIVE_H:
+        # a field panel with no height (a window far below the minimum, or a
+        # mod's layout): there is no picture to cut, and a negative
+        # subsurface raises (WO 427)
+        return
     part = pic.subsurface(pygame.Rect(0, fm.top, geom.NATIVE_W,
                                       geom.NATIVE_H - fm.top))
     surface.blit(pygame.transform.scale(part, (part.get_width() * s,

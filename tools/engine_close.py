@@ -14,6 +14,27 @@ import subprocess
 import time
 
 
+def _runs_main_py(args):
+    """True for `python main.py ...`: a python interpreter whose script is
+    `main.py`. It was any process with "main.py" anywhere in its command
+    line (`vim main.py`, `git log main.py`, `domain.py`) that was then
+    closed as a foreign client (WO 427)."""
+    words = args.split() if isinstance(args, str) else list(args)
+    if not words or not os.path.basename(words[0]).startswith(
+            ("python", "pypy")):
+        return False
+    script, skip = "", False
+    for w in words[1:]:
+        if skip:                    # the value of `-X dev`, `-W ignore`
+            skip = False
+        elif w in ("-X", "-W", "-Q"):
+            skip = True
+        elif not w.startswith("-"):
+            script = w
+            break
+    return os.path.basename(script) == "main.py"
+
+
 def foreign_clients(root=None):
     """[(pid, command line, started)] of OrionLayer clients (`python
     main.py` run in this tree) — found by their working directory."""
@@ -23,8 +44,17 @@ def foreign_clients(root=None):
     rows = []
     for line in out.splitlines():
         parts = line.split(None, 6)
-        if len(parts) < 7 or "main.py" not in parts[6] or \
-                int(parts[0]) == os.getpid():
+        if len(parts) < 7 or int(parts[0]) == os.getpid():
+            continue
+        # the exact argv (a path with a space is one word there); the ps
+        # text only where /proc cannot be read
+        try:
+            with open(f"/proc/{parts[0]}/cmdline", "rb") as fh:
+                argv = [a.decode("utf-8", "replace")
+                        for a in fh.read().split(b"\0") if a]
+        except OSError:
+            argv = parts[6]
+        if not _runs_main_py(argv):
             continue
         try:
             cwd = os.readlink(f"/proc/{parts[0]}/cwd")

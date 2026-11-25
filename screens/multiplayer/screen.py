@@ -29,7 +29,7 @@ import pygame
 from core.hud import blocks as hud
 from core.hud import shell
 from core.hud import text as hudtext
-from core.injection import InjectionChain, name_keys, paced_keys
+from core.injection import InjectionChain, game_accepts, name_keys, paced_keys
 from core.screen_base import ScreenBase
 from core.widgets.text_input import TextInput
 
@@ -306,7 +306,7 @@ class MultiplayerScreen(ScreenBase):
         # what `name_keys` sends and no more: a character outside it was
         # shown in the field and then dropped on the way to the game
         self._endpoint = TextInput(value="", max_len=59,
-                                   allowed=lambda c: 0x20 <= ord(c) <= 0x7E,
+                                   allowed=game_accepts,
                                    on_submit=send,
                                    on_cancel=self._cancel_endpoint)
 

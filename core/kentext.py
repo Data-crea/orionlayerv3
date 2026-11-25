@@ -110,9 +110,11 @@ class ArcWords:
         except (OSError, ValueError) as exc:
             self.absent = f"{path}: {exc}"
             return
-        if doc.get("format") != FORMAT_VERSION:
-            self.absent = (f"{path}: format {doc.get('format')!r}, this "
-                           f"build reads {FORMAT_VERSION} — re-extract")
+        if not isinstance(doc, dict) or doc.get("format") != FORMAT_VERSION:
+            self.absent = (f"{path}: format "
+                           f"{doc.get('format') if isinstance(doc, dict) else type(doc).__name__!r}"
+                           f", this build reads {FORMAT_VERSION} — "
+                           f"re-extract")
             return
         self.arcs = {int(k): v for k, v in
                      lang.decode(doc.get("arcs") or {}, language).items()}

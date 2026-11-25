@@ -196,15 +196,24 @@ def card(surface, screen, key, rect, player, colour, out, words, tag, unit,
         surface.blit(sym, (x, rect.y + pad // 2 + (head_h - sym.get_height()) // 2))
         x += sym.get_width() + pad // 2
     shade = tuple(int(c * (0.82 if out else 1.0)) for c in colour)
-    name = style.render_text(player.race_name.upper().replace("^", ""),
-                             name_size, shade)
-    surface.blit(name, (x, rect.y + pad // 2 + (head_h - name.get_height()) // 2))
+    tr = None
     if out and tag:
         ts = max(10, int(unit * 0.95))
         timg = style.render_text(tag, ts, RED)
         tr = pygame.Rect(0, 0, timg.get_width() + 2 * ts, int(ts * 2.0))
         tr.topright = (rect.right - pad, rect.y + pad // 2
                        + (head_h - tr.h) // 2)
+    label = player.race_name.upper().replace("^", "")
+    name = style.render_text(label, name_size, shade)
+    if tr is not None and x + name.get_width() > tr.left - pad // 2:
+        # a long name on an eliminated card stands left of the tag, not
+        # under it (WO 427: 72 px of overlap at 15 wide letters)
+        room_w = max(1, tr.left - pad // 2 - x)
+        name = style.render_text(
+            label, max(8, int(name_size * room_w / max(1, name.get_width()))),
+            shade)
+    surface.blit(name, (x, rect.y + pad // 2 + (head_h - name.get_height()) // 2))
+    if tr is not None:
         _tag(surface, style, tr, tag, ts)
     _rule(surface, rect.x + pad, rect.y + pad // 2 + head_h, rect.w // 2 + pad,
           GOLD)

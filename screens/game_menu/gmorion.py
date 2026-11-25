@@ -326,7 +326,7 @@ def open_mod_folder():
 def save(screen):
     """Write the file if anything changed; idempotent."""
     settings = _settings(screen)
-    return usersettings.save(settings) if settings is not None else False
+    return usersettings.try_save(settings) if settings is not None else False
 
 
 def _text(screen, surface, text, size, color, x, rect, width=None,

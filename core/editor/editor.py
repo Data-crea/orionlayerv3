@@ -295,8 +295,13 @@ class Editor:
             # so Revert brings back what was saved and not the base
             self.app.res.mod_dirs.insert(0, root)
         if hasattr(scr, "save_races"):
-            scr.save_races(folder)
-            log.info("Saved races.json (portrait crops)")
+            try:
+                scr.save_races(folder)
+                log.info("Saved races.json (portrait crops)")
+            except (OSError, TypeError, ValueError) as err:
+                # boxes.json is written and said SAVED; a refused second file
+                # is said, not raised into the frame guard (WO 427)
+                log.warning("races.json not saved (%s)", err)
         # A SCREEN MAY OWN GEOMETRY boxes.json CANNOT HOLD. The colony
         # summary derives every rect from `layout_reference.json` at
         # load, so a box the editor is allowed to move has to be

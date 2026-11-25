@@ -91,7 +91,8 @@ class SelectRaceScreen(ScreenBase):
 
     def _load_races(self):
         """Race data, mod-overridable (screens/select_race/races.json)."""
-        data = self.app.res.load_json("screens/select_race/races.json")
+        data = self.app.res.load_json("screens/select_race/races.json",
+                                      shape=list)   # a mod's dict is refused (WO 427)
         if data:
             self._races = data
 
@@ -514,6 +515,18 @@ class SelectRaceScreen(ScreenBase):
         # `folder`: a mod's screen folder (a player's save, work order 334)
         path = os.path.join(folder or self._screen_dir, "races.json")
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(self._races, f, indent=2)
-            f.write("\n")      # the tree's JSON convention, as save_boxes
+        # written beside it and moved into place: a kill or a full disk in
+        # the middle left a truncated races.json that the next start read
+        # as damaged (WO 427)
+        tmp = path + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(self._races, f, indent=2)
+                f.write("\n")      # the tree's JSON convention, as save_boxes
+            os.replace(tmp, path)
+        except BaseException:
+            try:
+                os.remove(tmp)          # no half-written file is left beside
+            except OSError:
+                pass
+            raise

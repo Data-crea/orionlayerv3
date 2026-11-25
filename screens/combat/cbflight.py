@@ -206,6 +206,8 @@ def beams_plan(ev, odd_stardate=False):
     f = cbbeam.fx(int(ev.get("beam", 0) or 0), 0)
     if f is None:
         f = dict(cbbeam.fx(3), style=0, length=20, step=40)
+    # a fighter's beam runs at least 2 frames, not 3 (beams.cpp:2184, :725)
+    f = dict(f, min_frames=2)
     bolts = []
     for ox, oy in stack_coords(count, int(ev.get("facing", 0) or 0),
                                odd_stardate)[:count]:

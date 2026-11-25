@@ -162,6 +162,25 @@ REQUIRED_INPUTS = [
     (basepack.source(os.path.join(_GM, "stars"), ROOT), "star sprites"),
 ]
 
+def effective_language(settings):
+    """The language the game runs in: the player's own switch in
+    `user_settings.json` (the OrionLayer window), else settings.json's —
+    `main.py` reads them in that order, and a player who switched to German
+    in the window was told here about the English files (WO 427). Read-only:
+    nothing is migrated or written."""
+    lang = (settings or {}).get("language", "en")
+    try:
+        import json
+        from core import usersettings
+        with open(usersettings.default_path(), encoding="utf-8-sig") as fh:
+            own = json.load(fh).get("language")
+        if isinstance(own, str) and own:
+            lang = own
+    except (OSError, ValueError, AttributeError, ImportError):
+        pass
+    return lang
+
+
 def from_game(settings=None):
     """Files derived from the user's own MOO2 — reported, never run.
 
@@ -174,8 +193,10 @@ def from_game(settings=None):
     game. Both directions were wrong, and neither is visible from
     the report alone.
     """
-    lang = (settings if settings is not None else load_settings()
-            ).get("language", "en")
+    # settings passed in are taken as they are (a check, a tool); the
+    # default case reads what the player runs with
+    lang = (settings.get("language", "en") if settings is not None
+            else effective_language(load_settings()))
     cmd = "python tools/help_extract.py"
     if lang != "en":
         cmd += f" --lang {lang}"

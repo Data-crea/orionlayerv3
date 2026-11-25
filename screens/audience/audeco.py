@@ -256,6 +256,8 @@ def menu(surface, screen, view, lay, text_at, hovered):
         surface.blit(d, (lay.panel.centerx - d.get_width() // 2,
                          lay.divider_y - d.get_height() // 2))
     px = int(lay.h * ITEM_H)
+    if lay.rows:                      # a squeezed list: no taller than its row
+        px = max(8, min(px, int(lay.rows[0].h * 0.8)))
     p = pal()
     for n, (item, f) in enumerate(items):
         r = lay.rows[n]

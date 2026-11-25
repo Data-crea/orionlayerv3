@@ -262,6 +262,8 @@ def decode_packed(blob, offset, width, height, into=None):
     caller walking all of them will meet data that is not a sprite.
     """
     out = into if into is not None else bytearray(width * height)
+    if offset < 0 or offset + 4 > len(blob):        # out of bounds: a state
+        return None
     _unknown, start_y = struct.unpack_from("<HH", blob, offset)
     pos = offset + 4
     y = start_y
@@ -279,7 +281,12 @@ def decode_packed(blob, offset, width, height, into=None):
         else:
             x += skip_count
             run = blob[pos:pos + pixel_count]
-            if len(run) < pixel_count or y >= height or x + pixel_count > width:
+            # a negative count, skip or row passes the length test below and
+            # a slice assignment would then RESIZE the buffer (WO 427); only
+            # a corrupt file has one, the original never writes one
+            if pixel_count < 0 or x < 0 or y < 0 or \
+                    len(run) < pixel_count or y >= height or \
+                    x + pixel_count > width:
                 return None
             out[y * width + x: y * width + x + pixel_count] = run
             x += pixel_count

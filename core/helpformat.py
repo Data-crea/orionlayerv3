@@ -226,7 +226,10 @@ def parse(body, items=None):
             # ordinal endings are not transcribed), F an "s" unless it is
             # 1. Without the value (an engine without open fix 67) the
             # code prints nothing rather than its own letters.
-            letter = body[i + 1:i + 2].upper()
+            letter = body[i + 1:i + 2]
+            # `ß`.upper() is two characters and ord() of two raises; such a
+            # letter is no item code, and is read as itself (WO 427)
+            letter = letter.upper() if len(letter.upper()) == 1 else letter
             i += 2
             arg = None
             if letter and ITEM_KIND[ord(letter) - 65:ord(letter) - 64] not in \

@@ -165,7 +165,10 @@ def name_keys(text, clear=CLEAR_KEYS):
     run cannot come to disagree about what a name is made of.
     """
     keys = [pygame.K_BACKSPACE] * clear
-    keys += [ord(ch) for ch in text if 32 <= ord(ch) < 127]
+    # what the game's input takes (`game_accepts`: not the underscore, which
+    # is its cursor): the chat showed "snake_case" typed and it arrived as
+    # "snakecase" (WO 427)
+    keys += [ord(ch) for ch in text if game_accepts(ch)]
     keys.append(pygame.K_RETURN)
     return keys
 

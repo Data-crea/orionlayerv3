@@ -161,6 +161,15 @@ def _slider_value(r, x):
     return int(round(min(1.0, max(0.0, t)) * 100))
 
 
+def over(screen, x, y):
+    """True when the territory panel is drawn under (x, y): what a right
+    click, the wheel and the hover must not pass through (WO 427)."""
+    if not shown(screen.app):
+        return False
+    r = rects(screen, len(terrview.legend(screen)))
+    return r is not None and r["panel"].collidepoint(x, y)
+
+
 def click(screen, x, y):
     """True when the click was the panel's (any click on it is)."""
     if not shown(screen.app):

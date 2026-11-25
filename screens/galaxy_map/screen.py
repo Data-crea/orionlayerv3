@@ -491,6 +491,11 @@ class GalaxyMapScreen(ScreenBase):
         if ctx is None:
             return None
         view = ctx.view
+        # the pointer must be over the MAP, decoupled or not: the sidebar and
+        # the HUD are not (WO 427: a star scrolled out of the map was hovered
+        # from the sidebar and its name drawn at the map's foot)
+        if not pygame.Rect(*view.box).collidepoint(screen_x, screen_y):
+            return None
         window = None if self._viewctl.active else pygame.Rect(
             *view.native_window())
         if window is not None and not window.collidepoint(screen_x, screen_y):

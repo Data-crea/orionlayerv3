@@ -46,9 +46,16 @@ def load(path, log, label, how, rerun, format_version):
     except (ValueError, OSError) as err:
         log.warning(f"{label}: %s will not load (%s)", path, err)
         return None, False
-    if int(data.get("format", 0)) < format_version:
+    # Valid JSON of another shape (a list, null, "format": "two") is a stale
+    # or damaged file, never an exception out of a constructor (WO 427).
+    try:
+        found = int(data.get("format", 0))
+    except (AttributeError, TypeError, ValueError):
+        found = None
+    if found is None or found < format_version:
         log.warning(f"{label}: %s is format %s, this build reads %s — "
-                    f"re-run {rerun}", path, data.get("format"),
-                    format_version)
+                    f"re-run {rerun}", path,
+                    data.get("format") if isinstance(data, dict)
+                    else type(data).__name__, format_version)
         return None, True
     return lang.decode(data, language), False

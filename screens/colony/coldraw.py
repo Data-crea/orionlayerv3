@@ -692,7 +692,10 @@ def unit_layout(counts):
     at x = (slot + 1) * step beside it (or None, :1248). Eight units or
     fewer are drawn one figure each; more, and each kind is one figure and
     its count (`E 0x7C`), the next kind three slots on. Returns (figures,
-    step)."""
+    step).
+
+    The step is 30 in both cases (WO 427): the squished branch sets
+    `step_squish = 0` before the count and the click field (:1233)."""
     total = max(1, sum(counts))
     step = max(1, 260 // total)
     squish = 30 - step if step < 30 else 0
@@ -707,7 +710,7 @@ def unit_layout(counts):
         else:
             out.append((kind, start, n))
             start += 3
-    return out, (30 - squish)
+    return out, 30
 
 
 def _units(surface, screen, view, words, state=None):

@@ -191,8 +191,13 @@ def engine_env(reason=None, base=None, out=print):
     env["ORION2RE_HIDE_WINDOW"] = "1"
     if reason:
         out(f"REAL DESKTOP (engine): {reason}")
-        env["DISPLAY"] = ":0"
-        auth = session_auth(":0")
+        # the player's own display first: a session on `:1`, a second login
+        # or a remote one has no `:0`, and the engine could not open its
+        # window ("the game did not start"); `:0` only when none is set
+        # (WO 427)
+        display = env.get("DISPLAY") or ":0"
+        env["DISPLAY"] = display
+        auth = env.get("XAUTHORITY") or session_auth(display)
         if auth:
             env["XAUTHORITY"] = auth
         return env

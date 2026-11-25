@@ -260,7 +260,9 @@ class Player:
             s = self._queue.pop(0)
             if s["kind"] in cbsound.KINDS:
                 self.sounds.at(t0 + cbsound.offset(ev, s, dur), s)
-            ev["_tail"] = s["seq"]
+            # the largest seq the event covers: a take_* helper may already
+            # have recorded a later one (an aim past this sound), WO 427
+            ev["_tail"] = max(ev.get("_tail", ev["seq"]), s["seq"])
 
     def _adopt(self):
         """Show the newest state whose events have all been played."""

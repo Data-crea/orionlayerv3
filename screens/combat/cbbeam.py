@@ -73,14 +73,18 @@ def interpolate(x, y, tx, ty, step):
 
 
 def max_frames(src, dst, f):
-    """`_max_frames` of the shot (beams.cpp:2272-2292)."""
+    """`_max_frames` of the shot (beams.cpp:2272-2292). The least it runs
+    is 3 frames, 2 for a fighter's beam (`attacker_size_class == -1`,
+    beams.cpp:2184; `Draw_Fighter_Beam` fires with -1, :725): that weapon
+    description carries `min_frames` (WO 427)."""
     rng = ship_range(*src, *dst)
     eff = min(max(f["length"], 60), rng)
     step = f["step"]
-    frames = max(3, (rng + eff) // step)
+    least = f.get("min_frames", 3)
+    frames = max(least, (rng + eff) // step)
     if frames > 6:
         step *= 2
-    return max(3, (rng + eff) // step), step
+    return max(least, (rng + eff) // step), step
 
 
 def segment(src, dst, f, frame, stop_size=None, skip=0):
@@ -185,18 +189,21 @@ class Canvas:
         buf = [0] * max(ln + 2, 7)
         up = y2 < y1
         for i in range(ln + 1):
-            c = (acc >> 16) + r + base
+            # `uint8_t c = (uint8_t)(...)` (bolt.cpp:526, :542): a negative
+            # sum wraps to the top of the byte, so the clamp below sets it
+            # to `hi` and not to `lo` (WO 427; ground combat's copy had it)
+            c = ((acc >> 16) + r + base) & 0xFF
             buf[(ln - i + 1) if up else (i + 1)] = c
             acc += step
             r = (rnd.randint(1, 2 * jitter + 1) - jitter) \
                 if rnd.randint(1, 100) < chance else 0
         if up:
-            buf[ln], buf[0] = base, base + span - 1
+            buf[ln], buf[0] = base & 0xFF, (base + span - 1) & 0xFF
         else:
-            buf[0], buf[ln] = base, base + span - 1
+            buf[0], buf[ln] = base & 0xFF, (base + span - 1) & 0xFF
         if sparkles:
             for i in range(phase % 8, ln + 2, 8):
-                buf[i] += 3
+                buf[i] = (buf[i] + 3) & 0xFF
         buf = [min(hi, max(lo, c)) for c in buf]
         if tip:
             fade = 3 // tip

@@ -63,6 +63,6 @@ def wheel(app, event):
         app.user_settings.set(
             "font_scale", None if fontscale.factor() == fontscale.DEFAULT
             else fontscale.factor())
-        usersettings.save(app.user_settings)
+        usersettings.try_save(app.user_settings)   # a refused write is said
     _toast(app).show()
     return True

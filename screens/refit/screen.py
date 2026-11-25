@@ -362,8 +362,16 @@ class RefitScreen(ScreenBase):
             self._hover = next((i for i in range(geom.CELLS)
                                 if self._in(p, geom.cell(i))), None)
         elif self.kind == "designs":
+            me = self._me()
+            # a slot with no design has no field in the original
+            # (colrefit.cpp:488-492, :543-548: -1000), so it is not hovered
+            # and shows no paragraph (WO 427: it showed an all-zero design)
             self._hover = next((k for k in list(range(player_struct.DESIGN_SLOTS)) + [geom.GOTO_ROW]
-                                if self._in(p, geom.design_row(k))), None)
+                                if self._in(p, geom.design_row(k))
+                                and (k == geom.GOTO_ROW or (
+                                    me is not None and
+                                    player_struct.design_name(me, k)))),
+                               None)
         return super().handle_mouse_motion(screen_x, screen_y)
 
     def _page(self, step):

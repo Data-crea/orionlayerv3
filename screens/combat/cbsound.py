@@ -47,6 +47,9 @@ SOUND_LBX = "sound"
 KINDS = ("sound", "sound_change")
 
 
+#: Sounds kept, by (entry, pitch); a pitched one is a resampled copy.
+SOUND_KEEP = 96
+
 class PygameBackend:
     """pygame's mixer, opened on first use. Every call is safe when there is
     no sound device: the battle is then silent, once logged."""
@@ -242,6 +245,11 @@ class Sounds:
             rate = _wav_rate(blob) or 22050
             ratio = max(1.0, rate + pitch) / rate
             snd = self.backend.pitched(snd, ratio)
+        # each distinct pitch is a whole resampled copy of the sound: a long
+        # battle with many `sound_change` values kept every one (WO 427);
+        # the oldest go first, the unpitched ones are cheap to load again
+        while len(self._loaded) >= SOUND_KEEP:
+            self._loaded.pop(next(iter(self._loaded)))
         self._loaded[key] = snd
         return snd
 

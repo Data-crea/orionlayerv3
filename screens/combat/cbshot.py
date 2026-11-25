@@ -277,10 +277,27 @@ def draw(surface, cam, art, ev, b, t, cache, palettes, look=None):
         _flare(surface, cam, art, b, tick, states[tick][1], look, cache)
 
 
+def _hashable(value):
+    """`value` as a cache-key part: the nested dicts and lists of a weapon's
+    effect description as tuples."""
+    if isinstance(value, dict):
+        return tuple(sorted((k, _hashable(v)) for k, v in value.items()))
+    if isinstance(value, (list, tuple)):
+        return tuple(_hashable(v) for v in value)
+    return value
+
+
 def _bolt(surface, cam, art, ev, b, frame, cache, palettes):
     n = b["frames"]
+    # EVERYTHING the picture depends on is in the key (WO 427): a reflected
+    # bolt is built with the `seq` of the shot it answers, and a fighter's
+    # beams with `seq * 16 + i`, a number that is also a real event's, so
+    # the event's numbers alone gave two different beams one key and the
+    # second drew the first's picture.
     key = ("beam", ev.get("seq"), ev.get("serial"), frame,
-           round(cam.scale, 3))
+           round(cam.scale, 3), tuple(b["src"]), tuple(b["dst"]),
+           b.get("skip", 0), b.get("stop"), _hashable(b["fx"]),
+           _hashable(b.get("fragment")))
     if key not in cache:
         px = cbbeam.shot(b["src"], b["dst"], b["fx"], frame, b["stop"],
                          ev.get("seq", 0) or 0, b.get("skip", 0))
@@ -315,7 +332,15 @@ def _bolt(surface, cam, art, ev, b, frame, cache, palettes):
         seg = cbbeam.segment(b["src"], b["dst"], b["fx"], frame, b["stop"],
                              b["skip"])   # its tail every frame (:2445)
         at = seg[:2] if seg else None
-    if at is not None and (frame < 3 or b.get("skip")):  # Draw_Ship_Burst_
+    burst = at is not None and (frame < 3 or b.get("skip"))
+    if at is not None and not burst and b["fx"].get("min_frames", 3) >= 3:
+        # beams.cpp:2335 `frame_index < 3 || (attacker == bx1/by1)`: the burst
+        # is drawn too while the bolt's tail still stands at the muzzle, which
+        # is every frame of a continuous beam and the early frames of a long
+        # one (WO 427: HD drew it on frames 0-2 only)
+        tail = cbbeam.segment(b["src"], b["dst"], b["fx"], frame, b["stop"])
+        burst = tail is not None and (tail[0], tail[1]) == tuple(b["src"])
+    if burst:                                              # Draw_Ship_Burst_
         pic = art.surface("beams", cbbeam.muzzle_entry(
             b["src"], b["dst"], stream, b.get("variant", 0)), frame % 3, pal)
         if pic is not None:

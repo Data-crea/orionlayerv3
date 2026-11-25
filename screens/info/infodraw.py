@@ -138,11 +138,13 @@ def draw_chart(surface, screen, player):
     nd.draw_box(surface, screen, geom.CHART_BOX)
     income, maint, pct, net = pages.chart(player)
     h = geom.BAR_BOTTOM - geom.BAR_TOP
-    visible = [k for k in range(1, 7) if pct[k]]
+    # a bar is skipped when its value is below 1 (info.cpp:688); a negative
+    # value counted as visible and shifted the others (WO 427)
+    visible = [k for k in range(1, 7) if pct[k] >= 1]
     x_of = {0: geom.INCOME_BAR_X}
     x = (len(visible) * 18 - 42) // 2 + 120
     for k in range(6, 0, -1):
-        if pct[k]:
+        if pct[k] >= 1:
             x_of[k] = x
             x -= 18
     for k, bx in x_of.items():
