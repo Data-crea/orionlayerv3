@@ -232,14 +232,17 @@ def _product_icon(spec, ctx, h):
     return got
 
 
-def _icon(product, pitch, ctx):
+def _icon(product, pitch, ctx, compact=False):
     """The picture in front of a row, or None."""
     special = {prod.TRADE_GOODS: buildingart.TRADE_GOODS,
                prod.HOUSING: buildingart.HOUSING}
     if product in special or prodname.kind(product) == \
             prodname.KIND_BUILDING:
         bid = special.get(product, product)
-        return buildingart.fit(int(bid), int(pitch * 1.9), pitch - 1)
+        # a building in the ships' list (Colony Base) stands as tall as the
+        # ships beside it, not as a row of the buildings' list
+        h = int(pitch * 0.8) if compact else pitch - 1
+        return buildingart.fit(int(bid), int(pitch * 1.9), h)
     spec = ctx.spec_of(product)
     if spec is None:
         return None
@@ -326,7 +329,7 @@ def draw(surface, screen, view, state, names, hover, geoms, row_bright,
             if e["id"] == chosen:
                 _bar(surface, rect.inflate(-4, -2), accent)
             name, _st = names.product(e["id"], state)
-            icon = _icon(e["id"], pitch, ctx)
+            icon = _icon(e["id"], pitch, ctx, compact=not building)
             x = rect.x + max(6, pitch // 3)
             if icon is not None:
                 surface.blit(icon, (x, rect.centery - icon.get_height() // 2))
