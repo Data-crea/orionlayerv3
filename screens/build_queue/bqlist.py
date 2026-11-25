@@ -314,6 +314,11 @@ def draw(surface, screen, view, state, names, hover, geoms, row_bright,
                 continue
             e = view.buildings[r.index] if building else view.others[r.index]
             bright = row_bright(e["id"], building)
+            if e["id"] != chosen:
+                # LOOK EXCEPTION marking: the faint rule between two rows, the frame colour's accent at a quarter of its light (Data's mockup)
+                pygame.draw.line(surface, tuple(int(c * 0.28) for c in accent),
+                                 (rect.x + 6, rect.bottom - 1),
+                                 (rect.right - 6, rect.bottom - 1))
             if e["id"] == chosen:
                 _bar(surface, rect.inflate(-4, -2), accent)
             name, _st = names.product(e["id"], state)
