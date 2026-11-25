@@ -201,10 +201,14 @@ def _product_icon(spec, ctx, h):
     where neither exists."""
     from core import shippicture
     from screens.colony import colroom
-    from core import palette, usermod
-    # what `shippicture.fitted` keys on too: the mod folder and the palette
-    key = (spec, ctx.world, ctx.colour, h, id(ctx.app), shippicture.
-           usermod_generation(), palette.generation(),
+    from core import livery, palette, usermod
+    # what `shippicture.fitted` keys on too: the livery (its second colour,
+    # pattern, strength), the painted detail, the mod folder and the palette
+    us = getattr(ctx.app, "user_settings", None)
+    key = (spec, ctx.world, ctx.colour, h, id(ctx.app),
+           livery.from_settings(us, ctx.colour).key(),
+           us.get("painted_detail") if us is not None else None,
+           shippicture.usermod_generation(), palette.generation(),
            id(usermod._state["index"]))
     if key in _made:
         return _made[key]
