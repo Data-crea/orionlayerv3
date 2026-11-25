@@ -5,8 +5,9 @@ the words NO CONTACT, an empty bar and greyed missions. HD covers the
 WHOLE slot box (`racesgeom.slot_box`, the outer frame: portrait, text, bar,
 spies and the mission row) with one picture, 20 % darker, clipped to the
 HUD panel's outline with the panel's own edge over it, and writes the words
-itself: NO CONTACT (the engine's word, cyan) and one sentence (INVENTION
-`no_contact_line`, light grey), right of the picture's emblem.
+itself: NO CONTACT (the engine's word) and one sentence (INVENTION
+`no_contact_line`), both in the Leaders empty-row caption's colours, right of
+the picture's emblem.
 
 WHICH PICTURE: the player's mod folder `races/no_contact/<any name>.png`
 (`screens/races/assets/nocontact/`), else the Leaders screen's empty-slot
@@ -33,8 +34,12 @@ FOLDER = "screens/races/assets/nocontact"
 FALLBACK = "screens/leaders/assets/pictures/slot_empty_background.png"
 #: INVENTION `no_contact_line`: the sentence under NO CONTACT.
 LINE = "No diplomatic contact established."
-TITLE_INK = (40, 228, 236)
-LINE_INK = (205, 215, 225)
+#: The words wear the Leaders screen's empty-row caption roles (`label`,
+#: `sub`; `screens/leaders/ldrdraw.CAPTION`), so a slot without a leader
+#: reads the same on both screens and follows the frame colour as that
+#: caption does (Data's choice, work order 431; before: cyan and light grey).
+TITLE_ROLE = "label"
+LINE_ROLE = "sub"
 #: The words stand between these shares of the box's width (right of the
 #: emblem and the figure), centred between them.
 TEXT_SPAN = (0.47, 0.97)
@@ -119,6 +124,7 @@ def draw(surface, screen, rect):
     from core import lang
     from core import nativedraw as nd
     from core.hud import blocks as hud
+    from core.hud import text as hudtext
     pic = picture(rect.size, screen.layout.scale)
     if pic is None:
         return False
@@ -131,10 +137,11 @@ def draw(surface, screen, rect):
     small = int(nd.font_px(layout, "skill") * 1.15)
     with lang.verbatim():               # the engine's word (WO 408)
         title = style.render_text(screen.words_no_contact, nd.fit(
-            style, screen.words_no_contact, x1 - x0, big), TITLE_INK) \
+            style, screen.words_no_contact, x1 - x0, big),
+            hudtext.colour(TITLE_ROLE)) \
             if screen.words_no_contact else None
     line = style.render_text(LINE, nd.fit(style, LINE, x1 - x0, small),
-                             LINE_INK)
+                             hudtext.colour(LINE_ROLE))
     gap = max(2, small // 4)
     block = (title.get_height() + gap if title else 0) + line.get_height()
     y = rect.centery - block // 2
