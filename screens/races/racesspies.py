@@ -124,9 +124,11 @@ def races_list(slots, counts, missions=None):
 def movable(slot):
     """A race whose group the original lets the player use: in contact
     (`active`), not eliminated (`Setup_Race_Screen_Data_`, racescrn.cpp:
-    314-327). A NO CONTACT slot (an omniscient player's) has none: its icon
-    group is built (:310-322) and `Draw_Race_Screen` calls for it (:546), but
-    the engine's own frame shows no icon in that strip although the wire has
-    spies in it — measured live on `races_spies_unseen` (WO 429,
-    evidence/work_order_429/races_spies_unseen.md)."""
+    314-327). A NO CONTACT slot (an omniscient player's) has none: the
+    omniscient list is built for the setup and the one-time draws (:775-798),
+    then `Race_Screen` resets it to the contacted players
+    (`Get_Active_Players(0, 0)`, :801) before the display fields are made
+    (:822) and the per-frame loop draws the strips (:535-546), so those slots
+    get no icons, no mission buttons and no fields; measured live (WO 429
+    frame, WO 430 field count, evidence/work_order_429/)."""
     return slot.active and not slot.eliminated

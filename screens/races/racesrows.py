@@ -152,7 +152,10 @@ def slots(view, words):
         s.relation = int(mine.relations[p])
         s.relation_word = clean(words.billtext(
             geom.relation_word_id(s.relation)))
-        s.ignored = bool(int(mine.ignoring) & (1 << p))
+        # the engine prints IGNORED in the per-frame loop over the CONTACTED
+        # displays only (racescrn.cpp:578-581; the list is reset to them at
+        # :801), so an eliminated or NO CONTACT slot never shows it (WO 430)
+        s.ignored = s.active and bool(int(mine.ignoring) & (1 << p))
         s.spies = int(mine.spies[p]) & 0x3F
         s.mission = int(mine.spies[p]) >> 6
         if s.contact and not s.eliminated:
