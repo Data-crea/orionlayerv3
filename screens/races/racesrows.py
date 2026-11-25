@@ -70,6 +70,26 @@ def shown_treaty(value):
     return max(0, min(int(value), TREATY_LABELS - 1))
 
 
+#: The research agreement's unit by the engine's language: (gain, cost)
+#: (racescrn.cpp:164-186; German reads FP / MC, Italian PR; the rest RP / BC).
+RESEARCH_UNITS = {0: ("RP", "BC"), 1: ("FP", "MC"), 2: ("RP", "BC"),
+                  3: ("RP", "BC"), 4: ("PR", "BC")}
+
+
+def _language():
+    from core import lang
+    # `number()`: the engine's language once a snapshot named it, else the
+    # session's (a German session without the game prints German units)
+    return lang.number()
+
+
+def research_unit(level):
+    """`RP` or `BC` in the engine's language: the first for a level of 0 or
+    more (WO 428; it was language 0's for every player)."""
+    gain, cost = RESEARCH_UNITS.get(_language(), ("RP", "BC"))
+    return gain if level >= 0 else cost
+
+
 def treaty_parts(me, other, index, words):
     """`Draw_Race_Text_`'s paragraph (racescrn.cpp:148-213) as parts: the
     treaty's label (None while the treaty is 0) and the agreements under it
@@ -82,12 +102,13 @@ def treaty_parts(me, other, index, words):
     extras = []
     if me.research_treaty[index]:
         level = int(me.current_research_agreement_level[index])
-        unit = "RP" if level >= 0 else "BC"    # language 0 (:164-186)
+        unit = research_unit(level)
         extras.append(("research",
                        f"{words.billtext(B_RESEARCH) or ''}{level}{unit}"))
     if me.trade_treaty[index]:
         level = int(me.current_trade_agreement_level[index])
-        extras.append(("trade", f"{words.billtext(B_TRADE) or ''}{level}BC"))
+        extras.append(("trade", f"{words.billtext(B_TRADE) or ''}{level}"
+                                f"{'MC' if _language() == 1 else 'BC'}"))
     mine = int(me.tribute_treaty[index])
     theirs = int(other.tribute_treaty[words.me])
     if mine:

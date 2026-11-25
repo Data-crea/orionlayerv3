@@ -55,6 +55,15 @@ MORALE = (310, 32, 510, 61)
 #: The job rows, `_job_fields[0..2]` (coldraw.cpp:409): farmers, workers,
 #: scientists at y 62 + 30i; icons from x 310 to 510.
 JOB_ROWS = [(310, 62, 518, 92), (310, 92, 518, 122), (310, 122, 518, 152)]
+#: OMISSION `farm_shadows` (WO 428): the colony screen's farmers' row draws
+#: no placeholder for a free farm slot and takes its pitch from the farmers
+#: drawn; the original calls `Do_Colony_Info_Pop_Stuff_For_Pop` with
+#: `show_farm_shadows = 1` (colony.cpp:1250-1262), which shadows every free
+#: slot while `max_farms != 0xFF` and squishes by `max_farms`
+#: (coldraw.cpp:214-237). The fixtures carry `max_farms == 255` only, so it
+#: was never measured; marked here, in state/colony-scene.md and check
+#: 090zzzzzzzzzzzzzx.
+
 #: The job rows as HD draws and hits them (work order 226 G, DEVIATION
 #: `row_cells`): the fields clipped at the population box's edge, 512, where
 #: the original's band art rules its cells — the fields reach 518, into the

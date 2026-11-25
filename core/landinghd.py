@@ -120,7 +120,8 @@ def _world(popup, state):
 
 def _cover(pic, size):
     """`pic` scaled to cover `size` and cut to it from the middle."""
-    key = (id(pic), size)
+    from screens.colony import colsurface
+    key = (colsurface.stamp_of(pic), size)       # a replaced file is a new key
     got = _ground.get(key)
     if got is None:
         w, h = pic.get_size()

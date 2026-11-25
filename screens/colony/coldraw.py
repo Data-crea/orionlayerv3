@@ -292,10 +292,11 @@ def _scene(surface, screen, view):
         return
     # One scale per world, source and panel size, not one a frame: a
     # picture made in the format can be a 4K one (work order 232). A format
-    # picture is named by its object, which `colsurface` keeps for the
-    # session (so its id is never reused, P828); the other two are fixed
-    # per world.
-    key = (source, id(pic) if source == "format" else None, climate,
+    # picture is named by its stamp (`colsurface.stamp_of`: path and
+    # modification time, so a replaced file is a new key); the other two are
+    # fixed per world.
+    key = (source, colsurface.stamp_of(pic) if source == "format" else None,
+           climate,
            ground, r.size, COVER_ANCHOR)
     got = _COVERED.get(key)
     if got is None:

@@ -16,9 +16,10 @@ file for every language.
 
 **WHAT IT PRINTS** (`Draw_Race_Selection_Screen_`, race_display.cpp:81-140):
 first every bonus trait (1..9) whose byte is not 0, as its name and
-`_special_bonus[trait - 1][level - 1]` with a "+" when positive — Food
-halved, "1/2" for a Food or Tax bonus of 1, "1" for any other Tax bonus;
-then every trait from Low-G World on whose byte is 1, as its name; last
+`_special_bonus[trait - 1][level - 1]` as `Format_Numeric_Trait` prints it
+(raceopt_display.cpp:4-21, WO 428: a sign, Food and Tax halved with ".5"
+when odd, " BC" after the Tax);
+then every trait from Low-G World on whose byte is not 0, as its name; last
 the government, `_government_labels[byte 0]` (ESTRINGS 0x27C + n,
 estrings.cpp:99-106). The original joins them into one sentence with
 ", " and KEN 0x68 before the last; HD lists them one per row in its own
@@ -43,6 +44,7 @@ NAME_COUNT = 32
 
 #: Trait indices (orion2_consts.h:949-980).
 TRAIT_GOVERNMENT, TRAIT_FOOD, TRAIT_TAX, TRAIT_LOW_G = 0, 2, 5, 10
+TRAIT_RICH_HOME = 15            # a negative byte is Poor Home World
 
 #: `MOX::_special_bonus[9][3]` (mox.cpp:759-769) — a table in the engine,
 #: not in the LBX, so it is transcribed: row = trait - 1, column =
@@ -71,13 +73,16 @@ def bonus_text(trait, level):
     if not (1 <= trait <= len(SPECIAL_BONUS) and 1 <= level <= 3):
         return None
     bonus = SPECIAL_BONUS[trait - 1][level - 1]
-    if trait == TRAIT_TAX:
-        text = "1/2" if bonus == 1 else "1"
-    elif trait == TRAIT_FOOD:
-        text = "1/2" if bonus == 1 else str(int(bonus / 2))
-    else:
-        text = str(bonus)
-    return ("+" if bonus > 0 else "") + text
+    # `raceopt::Format_Numeric_Trait` (raceopt_display.cpp:4-21, the v2 text
+    # the engine prints now): a sign, the magnitude, for Food and Tax the
+    # magnitude / 2 with ".5" when odd, " BC" after the Tax; WO 428 (this
+    # followed the 1.60 text: -1 Food read "0", a negative Tax had no sign)
+    sign = "-" if bonus < 0 else "+"
+    magnitude = abs(bonus)
+    if trait in (TRAIT_FOOD, TRAIT_TAX):
+        text = f"{magnitude // 2}{'.5' if magnitude % 2 else ''}"
+        return sign + text + (" BC" if trait == TRAIT_TAX else "")
+    return sign + str(magnitude)
 
 
 class RaceTraits:
@@ -140,9 +145,20 @@ class RaceTraits:
                          "good": bonus > 0 if bonus else None,
                          "trait": trait})
         for trait in range(TRAIT_LOW_G, TRAIT_COUNT):
-            if record[trait] == 1:
-                rows.append({"name": self.names[trait], "value": "",
-                             "good": None, "trait": trait})
+            # any non-zero byte is listed (race_display.cpp:~120-127, not
+            # only 1), and a Rich Home World byte below zero is named by the
+            # 32nd name, Poor Home World (WO 428)
+            if record[trait] != 0:
+                name = (self.names[TRAIT_COUNT]
+                        if trait == TRAIT_RICH_HOME and record[trait] < 0
+                        and len(self.names) > TRAIT_COUNT
+                        else self.names[trait])
+                # a Poor Home World has an id of its own (31): the icon and
+                # the tip are looked up by it (`racepanel`, `traittip`)
+                poor = trait == TRAIT_RICH_HOME and record[trait] < 0 and \
+                    len(self.names) > TRAIT_COUNT
+                rows.append({"name": name, "value": "", "good": None,
+                             "trait": TRAIT_COUNT if poor else trait})
         government = None
         if estrings is not None:
             government = estrings.string(GOVERNMENT_ESTRING + record[0])

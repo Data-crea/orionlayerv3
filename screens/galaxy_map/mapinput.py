@@ -345,7 +345,9 @@ def key_down(screen, key):
     if key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS,
                pygame.K_MINUS, pygame.K_KP_MINUS):
         view = screen._map_view()
-        if view is not None:
+        # the window covers the map: the wheel and the clicks are refused
+        # there (decision 5 of WO 226 F), and so are the keys (WO 428)
+        if view is not None and not boxdraw.system_open(screen):
             bx, by, bw, bh = view.box
             direction = (1 if key in (pygame.K_PLUS, pygame.K_EQUALS,
                                       pygame.K_KP_PLUS) else -1)
@@ -354,8 +356,10 @@ def key_down(screen, key):
                                     direction)
         return True
     if key in (pygame.K_0, pygame.K_KP0):
-        # Back to the full-galaxy view (mirror the parked game).
-        screen._viewctl.reset()
+        # Back to the full-galaxy view (mirror the parked game); not under
+        # the system window (WO 428)
+        if not boxdraw.system_open(screen):
+            screen._viewctl.reset()
         return True
     for spec in screen._data.get("buttons", []):
         hotkey = spec.get("hotkey")

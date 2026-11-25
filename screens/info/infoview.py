@@ -249,8 +249,12 @@ def reference(screen, surface, me):
                          False))
             how = []
             opened = "hazards" in screen.ref_open
+            headed = False
             for t, i in pages.topics(screen._info, 15, sort=False):
-                if i == inforef.HAZARDS[0]:
+                # the group row stands before the FIRST hazard topic there
+                # is: a file with 223 and no 220 lost its topic (WO 428)
+                if i in inforef.HAZARDS and not headed:
+                    headed = True
                     how.append((T("info.reference.group.hazards", "") or "",
                                 ("group", "hazards"), True, None, opened))
                 if i in inforef.HAZARDS:

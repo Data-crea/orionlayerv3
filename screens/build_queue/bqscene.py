@@ -38,7 +38,7 @@ def picture(view, res):
     ground = int(getattr(view.planet, "climate_bg_type", 0) or 0)
     pic = colsurface.picture(climate, ground, res)
     if pic is not None:
-        return pic, ("format", id(pic))
+        return pic, ("format", colsurface.stamp_of(pic))
     art = colart.load()
     if art.available:
         pic = art.scene(climate, ground)

@@ -215,7 +215,13 @@ class View:
         self.scroll_info = c.get("scroll_info")
         self.scroll = min(self.scroll, self.scroll_info["max"]) \
             if self.scroll_info else 0
-        self.right = list(zip([r for r, _a in self.rects], c["right"])) + \
+        # `c["right"]` is one field per OPTION then one per button; an option
+        # the panel had no room to draw has no rect, so its field must not
+        # be paired with a button (WO 428)
+        n_opts = len(c["options"])
+        right = c["right"][:c.get("drawn_options", n_opts)] + \
+            c["right"][n_opts:]
+        self.right = list(zip([r for r, _a in self.rects], right)) + \
             [(r, ("field", f)) for r, f in zip(c.get("table_rects", []),
                                                c.get("line_right", []))]
         self.right_help = c["right_help"]
@@ -577,6 +583,7 @@ def draw(surface, style, c):
             ty += step
         out.append((r, action))
         y += oh
+    c["drawn_options"] = len(out)          # the right-click fields follow it
     out += _buttons(surface, style, c, panel, s, pad)[0]
     return out, [a for _l, a in c["buttons"]]
 

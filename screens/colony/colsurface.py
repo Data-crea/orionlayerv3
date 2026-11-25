@@ -36,6 +36,7 @@ here, and the original's picture is drawn as before. A file that will not
 load is said once in the log and skipped.
 """
 import logging
+import os
 
 import pygame
 
@@ -48,8 +49,9 @@ FOLDER = "screens/colony/assets/surfaces"
 #: The original's grounds per climate (`colart.BG_TYPES`).
 GROUNDS = 3
 
-_cache = {}
-_refused = set()
+_cache = {}        # path -> (stamp, surface); stamp = (path, mtime)
+_refused = set()   # stamps: a file that was replaced is tried again (WO 428)
+_stamps = {}       # id(surface) -> stamp, for as long as the surface is cached
 
 
 def format_size(layout):
@@ -79,23 +81,43 @@ def names(climate, ground):
 
 def picture(climate, ground, resources=None):
     """The surface picture for a world in the screen's format, or None.
-    Kept per resolved path: a mod that replaces a picture is a new path."""
+    Kept per resolved path AND its modification time: a mod that replaces a
+    picture is a new path, and one saved over the old file (a modder at work,
+    or a file caught half written) is read again, never refused for good."""
     if resources is None:
         from core import resources as res_mod
         resources = res_mod.res
     for fname in names(climate, ground):
         path = resources.resolve(f"{FOLDER}/{fname}")
-        if path is None or path in _refused:
+        if path is None:
             continue
-        if path not in _cache:
+        try:
+            stamp = (path, os.path.getmtime(path))
+        except OSError:
+            continue
+        if stamp in _refused:
+            continue
+        hit = _cache.get(path)
+        if hit is None or hit[0] != stamp:
             try:
                 img = pygame.image.load(path)
             except (pygame.error, OSError) as err:
                 log.warning("colony surface %s will not load (%s) — the "
                             "original's picture is drawn", path, err)
-                _refused.add(path)
+                _refused.add(stamp)
                 continue
-            _cache[path] = (img.convert() if pygame.display.get_init()
-                            and pygame.display.get_surface() else img)
-        return _cache[path]
+            if hit is not None:
+                _stamps.pop(id(hit[1]), None)      # the replaced picture
+            img = (img.convert() if pygame.display.get_init()
+                   and pygame.display.get_surface() else img)
+            hit = _cache[path] = (stamp, img)
+            _stamps[id(img)] = stamp
+        return hit[1]
     return None
+
+
+def stamp_of(pic):
+    """What stands for a cached picture in a derived cache's key: its path
+    and modification time while it is cached, so a replaced file is a new
+    key (and a freed picture's `id` is never mistaken for another's)."""
+    return _stamps.get(id(pic), id(pic))
