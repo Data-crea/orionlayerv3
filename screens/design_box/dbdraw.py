@@ -43,16 +43,25 @@ and where it comes from:
   HD EXTENSION   `solid_panel` — the picker's box is opaque: the designer's
                  page under it showed through the glass (Data, 2 November
                  2026)
+  HD EXTENSION   `picker_mockup` — the special picker's faint row rules,
+                 hover bar and scroll track in the frame colour (`dbmock`,
+                 Data's mockup, 25 November 2026)
   INVENTION      `chosen_fill` — the chosen weapon row lit by a HUD fill
                  where the original draws an arrow sprite, and a
                  modification that is on, where it draws the lit frame
+  TRANSCRIPTION  `fit_colour` — a special that does not fit the hull, or
+                 that a special in the design excludes, is dim as in the
+                 original (desbox.cpp:2800-2835; the space of the replaced
+                 special read from its own row, UNVERIFIED
+                 `fit_replaced_space`; the exclusions from techdata.cpp's
+                 table, `dbfit`); the dim colour is 55 % of the row's own,
+                 HD EXTENSION `fit_dim`: the original's dull palette index
+                 has no RGB value
   OMISSION       `no_weapon_damage` — "No Weapon"'s damage "0" is
                  `_weapons[0]`'s, which DSBX does not carry (the writer
-                 formats a damage string only for a weapon); `fit_colour`
-                 — a special that does not fit is dimmed by the original
-                 (desbox.cpp:2825-2846) from its slot's space and the
-                 exclusions, neither on the wire: HD draws every special
-                 row alike; `flashing_hover`. The right clicks are
+                 formats a damage string only for a weapon);
+                 `flashing_hover`: the cycling colour of a hovered row (a
+                 still bar stands in for it). The right clicks are
                  `dbright` (work order 200)
 """
 from core.hud import blocks as hud
@@ -62,7 +71,7 @@ from screens.colony import coldraw
 from core import nativedraw as nd
 from screens.ship_design import sdart
 
-from . import dbpics, dbgeom as geom
+from . import dbfit, dbmock, dbpics, dbgeom as geom
 
 
 def _t(surface, screen, words, x, y, w, key="value", role="value",
@@ -100,7 +109,8 @@ def _row(surface, screen, words, x, y, w, role="value", align="left",
     px, py = nd.point(layout, x, y)
     x0 = x - (w if align == "right" else w // 2 if align == "center" else 0)
     wpx = nd.rect(layout, (x0, y, x0 + w - 1, y)).w
-    colour = hudtext.colour(role)
+    colour = tuple(role) if isinstance(role, tuple) else \
+        hudtext.colour(role)
     h = screen.style.render_text("Wg", size, colour[:3]).get_height()
     return nd.blit_text(surface, screen.style, words, px,
                         py + max(0, (row_h - h) // 2), wpx, size, colour,
@@ -310,18 +320,36 @@ def _special(surface, screen, box, names):
         _t(surface, screen, names.h(sid), bx + dx, by + geom.SPECIAL_HEAD_DY,
            0x70, "value", "label")
     cols = geom.SPECIAL_COLS
+    rows = box.box["rows"]
+    slot = box.box["slot"]
     for y, row, _field in box.rows():
         item = row["item"]
         name = names.part("specials", item) if item else \
             names.h(geom.NO_SPECIAL)
         rh = _row_h(screen, _field)
-        _row(surface, screen, name, bx + cols["name"], y, 0xA0, row_h=rh)
+        # TRANSCRIPTION `fit_colour` (desbox.cpp:2800-2835): a row that does
+        # not fit, or that a special in the design excludes, is dim
+        fit = dbfit.fits(row, rows, box.design, slot)
+        # the original's dull colour (`Font_Colors2(2, 'U', 'W')`) as 55 %
+        # of the row's own
+        role = "value" if fit else tuple(
+            int(c * 0.55) for c in hudtext.colour("value")[:3])
+        if _field is not None:
+            fr = nd.rect(screen.layout, _rect(_field))
+            if fit and dbmock.hovered(fr):
+                dbmock.hover_bar(surface, fr.inflate(-2, -2))
+            dbmock.row_rule(surface, fr)
+        _row(surface, screen, name, bx + cols["name"], y, 0xA0, role,
+             row_h=rh)
         for col in ("space", "cost"):
             _row(surface, screen, str(row[col]), bx + cols[col], y, 0x28,
-                 align="right", row_h=rh)
+                 role, align="right", row_h=rh)
         if item:
             _row(surface, screen, names.description(item),
-                 bx + cols["description"], y, 0x130, "sub", row_h=rh)
+                 bx + cols["description"], y, 0x130,
+                 "sub" if fit else role, row_h=rh)
+    dbmock.track(surface, screen, box.scroll_buttons(),
+                 max(0, box.box["first_row"]), 10, len(rows))
 
 
 def _buttons(surface, screen, box):
