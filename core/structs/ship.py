@@ -168,7 +168,9 @@ SPEC = Spec("s_ship_data", SIZE, [
     # in the experience. Over the 60 ships of the acceptance save:
     # quality 0 on 56 ships with EP 0..44, quality 1 on 4 ships with EP
     # 50..56 — bands that do not overlap and that rise. Two unrelated
-    # bytes do not do that sixty times. Every value was in 0..3, and
+    # bytes do not do that sixty times. Every value of THAT sample was in 0..3;
+    # the domain is 0..4 (CREW_QUALITY_COUNT 5, orion2_consts.h:666-673) and
+    # 4, Ultra-Elite, is in the test saves on 920 ship records (WO 426). And
     # `officer_index` @116 was in -1..66 on all sixty, the leader
     # pool's own range, which is a third consistency from the same run.
     ("crew_quality", 113, "i8"),

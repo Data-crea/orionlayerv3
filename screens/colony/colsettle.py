@@ -194,9 +194,14 @@ def _room(state, dest, dest_index):
     owner = (player_struct.parse(players[dest.owner])
              if 0 <= dest.owner < len(players) else None)
     traits = player_struct.traits(owner) if owner is not None else None
-    return colonyfacts.max_population(
-        dest, planet_struct.parse(planets[dest.planet]), traits,
-        colonyfacts.city_planning(owner))     # the owner's (work order 322)
+    me = int(getattr(state, "player_num", 0) or 0)
+    local = (player_struct.parse(players[me])
+             if 0 <= me < len(players) else None)
+    # the best limit over the races present, each its own traits, the
+    # colony OWNER's city planning (colcalc.cpp:986-1025; WO 322, 427)
+    return colonyfacts.planet_maximum(
+        planet_struct.parse(planets[dest.planet]), dest, players, me,
+        player_struct.traits(local) if local is not None else traits)
 
 
 def _expected(source, source_index, dest, dest_index, held, count=None,

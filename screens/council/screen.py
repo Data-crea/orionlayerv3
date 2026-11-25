@@ -61,6 +61,12 @@ class CouncilScreen(ScreenBase):
         self._council = None
         self.menu_rects = []
 
+    def enter(self, game_state=None):
+        # a council convened again must not be drawn from the last one's
+        # block until the first fresh snapshot replaces it (WO 426)
+        self._council = None
+        super().enter(game_state)
+
     def claims(self, game_state):
         return popup_of(game_state) is not None
 

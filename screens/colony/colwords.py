@@ -120,10 +120,14 @@ class Words:
         owner = (player_struct.parse(players[col.owner])
                  if 0 <= col.owner < len(players) else None)
         traits = player_struct.traits(owner) if owner is not None else None
+        _me = int(getattr(state, "player_num", 0) or 0)
+        local_traits = (player_struct.traits(player_struct.parse(players[_me]))
+                        if 0 <= _me < len(players) else traits)
         pops = _fmt(self.e(SYS_POP), col.n_pops,
-                    colonyfacts.max_population(
-                        col, planet, traits,
-                        colonyfacts.city_planning(owner)))  # WO 322
+                    colonyfacts.planet_maximum(
+                        planet, col, players,
+                        int(getattr(state, "player_num", 0) or 0),
+                        local_traits))      # WO 322, 427: every race present
         return _fmt(self.e(SYS_OWNED),
                     owner.race_name if owner is not None else "",
                     grav, mineral, pops)

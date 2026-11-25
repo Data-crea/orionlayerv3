@@ -225,11 +225,11 @@ def load(path=None):
     if not os.path.exists(path):
         return UserSettings(path=path)
     try:
-        with open(path, encoding="utf-8") as handle:
+        with open(path, encoding="utf-8-sig") as handle:     # BOM: WO 426
             data = json.load(handle)
         if not isinstance(data, dict):
             raise ValueError(f"top level is {type(data).__name__}, not an object")
-    except (OSError, ValueError) as err:
+    except (OSError, ValueError, RecursionError) as err:
         log.error("user settings: %s is unreadable (%s) — using the "
                   "defaults; the file is kept and moved aside on the "
                   "next save", path, err)

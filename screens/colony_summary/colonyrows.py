@@ -197,6 +197,7 @@ def _player_context(game_state):
             _p = parsed.get(_pi)
             if _p is None:
                 _p = player_struct.parse(_raw)
+            parsed[_pi] = _p
             races[_pi] = int(_p.race)
         except (AttributeError, ValueError, TypeError):
             continue
@@ -243,7 +244,7 @@ def _job_cells(col, index, races, held):
     return jobs, cells, held_cells
 
 
-def _output_fields(col, planet, traits, planning):
+def _output_fields(col, planet, traits, planning, players=(), me=0):
     """The row keys from `production` on: the sort datum, the net the
     original draws, and everything the output panel reads. Contiguous
     at the end of the dict, so `build_rows` appends them in order."""
@@ -274,8 +275,12 @@ def _output_fields(col, planet, traits, planning):
         # the part that matters.
         "shortage": [colonyfacts.production_shortage(col, e)
                      for e in range(4)],
-        "max_pop": colonyfacts.max_population(col, planet, traits,
-                                              planning),
+        # The BEST limit over the races living in the colony, as the scan
+        # box prints it (`Planet_Max_Population_For_Player`, colcalc.cpp:
+        # 986-1025): an android or conquered pop counts with its own race
+        # (WO 426; it was the owner's race only).
+        "max_pop": colonyfacts.planet_maximum(planet, col, players, me,
+                                              traits),
         # ── For output_panel, and NOT drawn in the row ──
         # The original's scan box prints seven values for the
         # SELECTED colony (colsum.cpp:1196-1205) and the row
@@ -346,6 +351,8 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     planets = game_state.planets_raw
     stars = game_state.stars
     me, traits, planning, parsed, races = _player_context(game_state)
+    # the players as the views parsed ONCE above, for the maximum's walk
+    views = [parsed.get(i) for i in range(len(game_state.player_raw))]
 
     # The ship branches' names, off the wire (work order 196 C3: the
     # list never passed them, and every ship read "not on the wire").
@@ -482,7 +489,8 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             # from CSUM for the others (open fix 110, 322 B2).
             "can_buy": False,
         }
-        row.update(_output_fields(col, planet, traits, planning))
+        row.update(_output_fields(col, planet, traits, planning,
+                                    views, me))
         rows.append(row)
 
     rows.sort(key=SORT_KEYS.get(sort_key, SORT_KEYS["name"]))

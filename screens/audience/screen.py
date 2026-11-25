@@ -154,8 +154,10 @@ class AudienceScreen(ScreenBase):
         p = nat.from_hd_point(self.layout.to_ref(screen_x, screen_y),
                               self.layout)
         row = self._film_row(screen_x, screen_y)
-        if row is not None and self._view is not None:
+        if row is not None and self._view is not None and \
+                row < len(self._view.items()):
             # over a film the rows stand elsewhere: help at the field's own
+            # (the last frame's row may be gone from a smaller menu: WO 426)
             f = self._view.items()[row][1]
             p = ((f.x + f.x_end) // 2, (f.y + f.y_end) // 2)
         hid = helplist.help_at(getattr(state, "help_list", None), *p) \

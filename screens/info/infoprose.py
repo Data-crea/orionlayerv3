@@ -208,7 +208,8 @@ class ProseBox(infobox.Box):
         if _cache_style is not style:
             _widths.clear()
             _cache_style = style
-        k = (self.size, text)
+        from core import fontscale
+        k = (self.size, text, fontscale.factor())   # a text-size change (WO 426)
         if k not in _widths:
             _widths[k] = style.render_text(
                 text, self.size, (255, 255, 255)).get_width()

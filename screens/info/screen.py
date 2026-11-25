@@ -86,6 +86,7 @@ class InfoScreen(ScreenBase):
         self._state, self._players, self._waited = None, [], 0
         self._exit = None
         self.page, self.tech_tab, self.race_page = REFERENCE, 0, 0
+        self._race_total = 0        # races the page lists (set by the view)
         self.ref_mode, self.ref_ix, self.topic = "index", 0, None
         self.tech_app = None
         # HD EXTENSION `tech_review_groups` / `tech_review_search`: the groups
@@ -127,6 +128,8 @@ class InfoScreen(ScreenBase):
         infotexts.bind(BillText(lang), EStrings(lang), self.helptext,
                        self._info, TechNames(lang))
         self._waited, self._scroll = 0, {}
+        self.race_page = 0      # info.cpp:597 starts the page at 1 on every entry
+        self._race_total = 0
         self.ref_mode, self.topic, self.tech_app = "index", None, None
         self.ref_open = set()
         self.search.value, self.search.focused = "", False
@@ -260,7 +263,10 @@ class InfoScreen(ScreenBase):
             for k in range(4):
                 if self._in(p, geom.history_button_rect(k)):
                     self.hist_bits ^= 1 << k
-        elif self.page == RACES and self._in(p, geom.RACE_PAGE_BUTTON):
+        elif self.page == RACES and self._race_total > 4 and \
+                self._in(p, geom.RACE_PAGE_BUTTON):
+            # the original has the button only with more than four races
+            # (info.cpp:1760-1768), and so does HD (WO 426)
             self.race_page = 1 - self.race_page
         elif self.page == REFERENCE:
             if self.ref_mode != "index" and self._in(p, geom.BACK_BUTTON):

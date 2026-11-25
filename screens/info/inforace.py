@@ -38,14 +38,17 @@ FADE = 0.7                    # of the portrait's width: transparent -> solid
 
 _cache = {}
 _names = None
+#: Pictures kept; a portrait is a whole card, one per size the window passes
+#: through (WO 426).
+_CACHE_KEEP = 96
 
 
 def _find(rel):
-    from core import basepack, usermod
-    from core.config import BASE_DIR
+    from core import resources
     parts = rel.split("/")
-    for root in (os.path.join(usermod.mod_dir(), usermod.FILES), BASE_DIR,
-                 basepack.base_dir()):
+    # every root the resolver knows, in its order and with its switches (the
+    # mod folder off, `mods/<name>/`): decision 16, WO 426
+    for root in tuple(resources.res.roots()):
         if root:
             path = os.path.join(root, *parts)
             if os.path.isfile(path):
@@ -115,6 +118,8 @@ def portrait(race, size, out):
     key = ("portrait", race, tuple(size), bool(out))
     if key in _cache:
         return _cache[key]
+    if len(_cache) >= _CACHE_KEEP:        # a window dragged through many sizes
+        _cache.clear()
     raw = _load(f"screens/select_race/assets/portraits/{names[race][0]}.png")
     if raw is None:
         _cache[key] = None

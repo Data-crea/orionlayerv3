@@ -183,12 +183,18 @@ class RaceReportScreen(InfoScreen):
         if shell.hit(self.exit_rect(), screen_x, screen_y):
             self._send_exit("RETURN")
             return None
+        # the page draws Info's search row and its group folds, so it takes
+        # their clicks as Info's Tech Review does (WO 426)
+        if self.search.handle_click(screen_x, screen_y):
+            return None
         for k in range(4):
             if self._in(p, igeom.tech_tab_rect(k)):
                 self.tech_tab, self.tech_app = k, None
                 return None
         hit = self._hit(screen_x, screen_y)
-        if isinstance(hit, int):
+        if isinstance(hit, tuple) and hit[0] == "group":
+            self.tech_closed ^= {hit[1]}
+        elif isinstance(hit, int):
             self.tech_app = hit
         return None
 

@@ -735,12 +735,12 @@ def _read_json(name):
     if not os.path.exists(path):
         return None
     try:
-        with open(path, encoding="utf-8") as handle:
+        with open(path, encoding="utf-8-sig") as handle:     # BOM: WO 426
             data = json.load(handle)
         if not isinstance(data, dict):
             raise ValueError("not a { ... } object")
         return data
-    except (OSError, ValueError) as err:
+    except (OSError, ValueError, RecursionError) as err:
         log.warning("mod: %s cannot be read (%s) — the default is used",
                     name, err)
         return None

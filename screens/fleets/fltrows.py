@@ -202,8 +202,10 @@ class Panel:
 
 
 #: `Crew_Description_String_` (flt2.cpp:749-773): the crew word by
-#: `crew_quality`, from the player's own HESTRNGS.
-CREW_MESSAGES = {0: 0x8A, 1: 0x8B, 2: 0x8C, 3: 0x8D}
+#: `crew_quality`, from the player's own HESTRNGS. Five cases: the fifth,
+#: CREW_QUALITY_ULTRA_ELITE = 4 (orion2_consts.h:666-673), is H_Message 0x8E
+#: (flt2.cpp:765-766); 920 ship records in the test saves carry it (WO 426).
+CREW_MESSAGES = {0: 0x8A, 1: 0x8B, 2: 0x8C, 3: 0x8D, 4: 0x8E}
 
 #: **THE THREE SHIP TYPES THAT GET A PARAGRAPH INSTEAD OF A PANEL**, and
 #: the HELP.LBX record each one prints. Transcribed from

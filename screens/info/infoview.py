@@ -170,6 +170,9 @@ def races(screen, surface, me):
     n = int(getattr(screen._state, "num_players", 0) or 0) or 8
     order = pages.race_list(screen._players, screen._state.player_num, n,
                             previously=True)
+    screen._race_total = len(order)
+    if 4 * screen.race_page >= len(order):  # the list shrank: back to page 1
+        screen.race_page = 0
     first = 4 * screen.race_page
     screen._race_shown = {}
     screen._race_rows = {}

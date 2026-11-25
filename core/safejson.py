@@ -30,9 +30,13 @@ def read(path, shape=None, required=()):
     unreadable, not UTF-8, not valid JSON, not a `shape` (a type or a
     tuple of types) or lacks a key of `required` (objects only)."""
     try:
-        with open(path, encoding="utf-8") as handle:
+        # `utf-8-sig`: Windows Notepad's "UTF-8" writes a BOM, which json
+        # refuses; a BOM-less file reads as before (WO 426).
+        with open(path, encoding="utf-8-sig") as handle:
             data = json.load(handle)
-    except (OSError, ValueError) as err:     # UnicodeDecodeError is one
+    # UnicodeDecodeError is a ValueError; a deeply nested file is a
+    # RecursionError, which is neither (WO 426)
+    except (OSError, ValueError, RecursionError) as err:
         _say(path, f"will not load ({err})")
         return None
     if shape is not None and not isinstance(data, shape):

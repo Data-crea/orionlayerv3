@@ -156,6 +156,16 @@ def _clip_path(pts, w, h, pad):
     drawing call should never see). A point that is not a finite number
     ends a piece."""
     x0, y0, x1, y1 = -pad, -pad, w + pad, h + pad
+    # A polyline that lies wholly inside the box needs no cut: it is one
+    # piece, which the loop below would only rebuild point by point. Zoomed
+    # out, that is every border, and the loop was most of the frame
+    # (WO 426; measured 157 of 242 ms at 1000 owned stars).
+    if len(pts) >= 2:
+        arr = np.asarray(pts, dtype=float)
+        if (np.isfinite(arr).all() and (arr[:, 0] >= x0).all()
+                and (arr[:, 0] <= x1).all() and (arr[:, 1] >= y0).all()
+                and (arr[:, 1] <= y1).all()):
+            return [arr]
     out, cur = [], []
     for a, b in zip(pts[:-1], pts[1:]):
         ax, ay, bx, by = float(a[0]), float(a[1]), float(b[0]), float(b[1])
@@ -204,18 +214,39 @@ class BorderLayer:
 
     def __init__(self):
         self.layer = None
+        # What the layer holds: the key of the geometry and colours it was
+        # drawn for, the territory it was drawn from, and whether it drew
+        # anything. A frame that asks for the same thing blits it again.
+        self.key = None
+        self.terr = None
+        self.drawn = False
 
     def get(self, size):
         if self.layer is None or self.layer.get_size() != size:
             self.layer = pygame.Surface(size, pygame.SRCALPHA, 32)
+        # the layer is cleared: what it held is gone, so a draw that dies
+        # half way must not leave its old key to be matched (WO 426 review)
+        self.key = None
         self.layer.fill((0, 0, 0, 0))
         return self.layer
 
 
 def render_borders(surface, view, terr, colours, scale, opacity_, cache):
     box = pygame.Rect(view.box)
-    layer = cache.get(box.size)
     ox, oy, kx, ky = affine(view)
+    # THE SAME PICTURE AGAIN (WO 426). The borders are redrawn only when
+    # something they are drawn from changed; a hover, a blink or a idle frame
+    # blits the layer of the last one. Measured: 24 ms at 50 stars and 132 ms
+    # at 1000 owned stars each frame, now paid once per pan or zoom step.
+    key = (tuple(box), round(ox, 3), round(oy, 3), round(kx, 6),
+           round(ky, 6), scale, round(opacity_, 4),
+           tuple(tuple(c[:3]) for c in colours),
+           tuple(pattern_for(c) for c in terr.loops))
+    if cache.key == key and cache.terr is terr and cache.layer is not None:
+        if cache.drawn:
+            surface.blit(cache.layer, box.topleft)
+        return
+    layer = cache.get(box.size)
     strength = min(1.0, 0.60 + 0.40 * opacity_)
     core_w = max(2, int(round(1.6 * scale)))
     drawn = False
@@ -245,6 +276,7 @@ def render_borders(surface, view, terr, colours, scale, opacity_, cache):
                 maplines.stroke_path(layer, bright + (int(255 * strength),),
                                      path, core_w)
             drawn = True
+    cache.key, cache.terr, cache.drawn = key, terr, drawn
     if drawn:
         surface.blit(layer, box.topleft)
 

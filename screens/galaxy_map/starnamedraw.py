@@ -11,6 +11,9 @@ import pygame
 from screens.galaxy_map import renderer, starnames
 
 STAR_NAME_GAP = 0.40      # of icon height, below the star centre
+#: How far from the star a name can reach sideways, and how tall its picture
+#: can be, in screen pixels: the bounds `render_star_names` culls with.
+_NAME_REACH, _NAME_DROP = 1200, 300
 
 
 def star_label(s, player_num, players, omniscient, facts=None):
@@ -66,6 +69,22 @@ def render_star_names(surface, ctx, stars, heights, render_label,
     for s in stars:
         if ctx.names_hidden and int(s.index) not in pulses:
             continue
+        # A star whose name cannot reach the clip is passed over BEFORE its
+        # two label pictures are built (WO 426): the test below needs the
+        # text's width, which is what made every star in a large galaxy cost
+        # a render, on screen or not. Bounds, not guesses: a name is far
+        # narrower than `_NAME_REACH`, and its picture's height far less
+        # than `_NAME_DROP`. Not at the widest zoom, where `clamp` pulls a
+        # name that lies outside back onto the map.
+        if not (clamp is not None and widest):
+            _cx, _cy = view.to_screen(s.x, s.y)
+            _top = _cy + heights.get(s.index, 0) * STAR_NAME_GAP
+            _clip = surface.get_clip()
+            if (_cx + _NAME_REACH < _clip.left
+                    or _cx - _NAME_REACH > _clip.right
+                    or _top + _NAME_DROP < _clip.top
+                    or _top > _clip.bottom):
+                continue
         sp = starnames.spec(s, player_num, players, omniscient, facts)
         if sp is None:
             continue
@@ -172,7 +191,10 @@ _NAME_OUTLINE = ((-1, 0), (2, 0), (0, -1), (0, 1), (-1, -1), (2, -1),
 #: Halos made so far, keyed by the label picture they came from (the
 #: picture itself is held so its id cannot be reused); bounded.
 _HALOS = {}
-HALO_KEEP = 512
+#: One halo per label picture, kept by the picture. 512 was fewer than the
+#: names of a large galaxy at the widest zoom, so every frame rebuilt them
+#: all (WO 426); a halo is about 10 KB.
+HALO_KEEP = 2048
 
 
 def _name_halo(text, shadow):

@@ -42,6 +42,13 @@ MSG_PICKS_NEGATIVE = ("Picks remaining must be greater than or "
 MSG_PICKS_CAP = "Negative picks may not total more than 10."
 
 
+#: The two traits the engine ties together (racesel.cpp:523, :624-626): the
+#: Food group is `button_variable[1]` (trait 2, "Farming"), Lithovore is
+#: trait 18. `blocked_traits` dims the Farming rows; these two rules keep
+#: HD's state in step with the engine's.
+FARMING_TRAIT, LITHOVORE_TRAIT = 2, 18
+
+
 class CustomRaceScreen(ScreenBase):
     SCREEN_NAME = "custom_race"
     GAME_SCREEN_ID = 50     # Custom Race sub-screen (patched in racesel.cpp)
@@ -602,6 +609,18 @@ class CustomRaceScreen(ScreenBase):
         if hit:
             cat, opt = hit
             trait_id, value = cat["trait_id"], opt["value"]
+            if trait_id == FARMING_TRAIT and \
+                    self._trait_state.get(LITHOVORE_TRAIT, 0) == 1:
+                # racesel.cpp:523-532: with Lithovore on the engine refuses
+                # a Farming pick (its warning box 0x49) and keeps it 0, so
+                # HD keeps its own state as it is and still sends the click:
+                # the engine's box says why (WO 426; HD set the pick and
+                # went over budget).
+                fid = opt.get("field_id")
+                if fid is not None and self.app.connected:
+                    self.app.client.activate_field(fid)
+                self._set_active(cat)
+                return None
             if (self._trait_state.get(trait_id) != value
                     and pickcap.refuses_choice(opt["picks"],
                                                self._negative_picks())):
@@ -707,6 +726,10 @@ class CustomRaceScreen(ScreenBase):
                 if other.get("group") == group and other is not spec:
                     self._trait_state[other["trait_id"]] = 0
         self._trait_state[trait_id] = value
+        if trait_id == LITHOVORE_TRAIT:
+            # racesel.cpp:624-626: Lithovore on clears Cybernetic (its group
+            # `diet`, above) AND Farming (`button_variable[1] = 0`), WO 426
+            self._trait_state[FARMING_TRAIT] = 0
 
     def _set_active(self, entry):
         """Show a trait (category or special) in the description."""

@@ -60,9 +60,17 @@ class Resources:
         path = os.path.join(mod_dir, "mod.json")
         if os.path.exists(path):
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except (ValueError, OSError) as e:
+                with open(path, "r", encoding="utf-8-sig") as f:   # BOM
+                    data = json.load(f)
+                # `meta.get(...)` follows: a list, a string or null is valid
+                # JSON and would end the start with an AttributeError
+                # (WO 426)
+                if isinstance(data, dict):
+                    return data
+                log.warning("Bad mod.json in %s: the top level is %s, "
+                            "not an object", fallback_name,
+                            type(data).__name__)
+            except (ValueError, OSError, RecursionError) as e:
                 log.warning("Bad mod.json in %s: %s", fallback_name, e)
         return {"name": fallback_name}
 

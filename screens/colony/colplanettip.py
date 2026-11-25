@@ -109,9 +109,11 @@ def lines(view, state, words, i):
     who = owner if owner is not None else (
         player_struct.parse(players[me]) if 0 <= me < len(players) else None)
     traits = player_struct.traits(who) if who is not None else None
-    stand_in = colony if colony is not None else _bare(planet)
-    maximum = colonyfacts.max_population(
-        stand_in, planet, traits, colonyfacts.city_planning(who))
+    local = (player_struct.parse(players[me])
+             if 0 <= me < len(players) else None)
+    maximum = colonyfacts.planet_maximum(
+        planet, colony, players, me,
+        player_struct.traits(local) if local is not None else traits)
     if colony is None:
         out.append(_fmt(e(E_MAX_POP), "", " ", maximum))
     else:
@@ -124,9 +126,6 @@ def lines(view, state, words, i):
     return _split(*out)
 
 
-def _bare(planet):
-    from screens.galaxy_map import sysinfo
-    return sysinfo._bare_colony(planet)
 
 
 def _split(*parts):

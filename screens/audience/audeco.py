@@ -185,6 +185,8 @@ TITLE_H, ITEM_H, BAR_H = 0.042, 0.033, 0.031     # text heights / picture h
 #: 65 and keeps 25; a longer menu moves less (9 rows: 8), one that already
 #: touches the bar (10 rows) not at all.
 MENU_SHIFT, BAR_GAP = 65 / 941, 25 / 941
+#: The most rows that keep the mockup's pitch (`menu_rows_squeezed`).
+MAX_PITCH_ROWS = 10
 MAIN_TITLE = "DIPLOMACY"                          # INVENTION, see below
 
 
@@ -198,12 +200,22 @@ class Layout:
         r = lambda fx, fy, fw, fh: pygame.Rect(  # noqa: E731
             box.x + round(fx * w), box.y + round(fy * h),
             round(fw * w), round(fh * h))
-        bottom = ROW_TOP + n * ROW_PITCH + 0.014
+        # HD EXTENSION `menu_rows_squeezed` (WO 426): a list longer than the
+        # ten rows Data's layout is made for (the original pages Exchange
+        # Technology at 11 plus Prev, Next and Cancel, dip_scrn_main.cpp:
+        # 1637-1730) squeezes its rows into the height ten take, so the last
+        # row and CANCEL stay inside the picture and clickable; it ran off
+        # the picture's foot at 14 rows.
+        pitch, row_h = ROW_PITCH, ROW_H
+        if n > MAX_PITCH_ROWS:
+            pitch = MAX_PITCH_ROWS * ROW_PITCH / n
+            row_h = ROW_H * pitch / ROW_PITCH
+        bottom = ROW_TOP + n * pitch + 0.014
         d = min(MENU_SHIFT, max(0.0, BAR[1] - BAR_GAP - bottom))
         self.panel = r(PANEL_X, PANEL_Y + d, PANEL_W, bottom - PANEL_Y)
         self.title = r(PANEL_X, TITLE_Y + d - 0.03, PANEL_W, 0.06)
         self.divider_y = box.y + round((DIVIDER_Y + d) * h)
-        self.rows = [r(ROW_X, ROW_TOP + d + i * ROW_PITCH, ROW_W, ROW_H)
+        self.rows = [r(ROW_X, ROW_TOP + d + i * pitch, ROW_W, row_h)
                      for i in range(n)]
         self.bar = r(*BAR)
 

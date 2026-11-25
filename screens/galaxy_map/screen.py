@@ -122,7 +122,11 @@ class GalaxyMapScreen(ScreenBase):
         self._nebulas = []
         self._players = []
         self._ships = []
-        self._labels = lru.TextCache()  # star names, rendered once
+        # star names, rendered once: two pictures a star (text and shadow),
+        # so a large galaxy needs more than the default 768 (WO 426: a cache
+        # cycled through more keys than it holds never hits)
+        self._labels = lru.TextCache(max_items=4096,
+                                     max_bytes=64 * 1024 * 1024)
         self._parse_key = None      # update(): the snapshot last parsed
         self._tints = ship_icons.TintCache()
         self._wormholes = rnd.WormholeLayer()

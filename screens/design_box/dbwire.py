@@ -97,9 +97,21 @@ class Box:
             y0 = by + geom.GENERIC_HEAD_Y + geom.GENERIC_ROW_DY
             # `-1` rows (not researched) are neither printed nor fielded
             # (desbox.cpp:751-781, :810-864).
-            return [(y0 + i * geom.GENERIC_STEP, r,
-                     fields.get(y0 + i * geom.GENERIC_STEP))
-                    for i, r in enumerate(rows) if r["item"] >= 0]
+            # The original PACKS the list: `Add_Generic_Replacement_Fields`
+            # advances its row offset only for a row that is kept
+            # (desbox.cpp:826-841) and `Print_Shield_Data` / `Print_Computer_
+            # Data` advance their text y the same way (desbox.cpp:2395-2426,
+            # :2511-2531), so the row's place counts the kept rows, not the
+            # rows before it: a not-researched shield in the middle of the
+            # list (`-1`, desbox.cpp:767-790) must not shift the later ones
+            # off their fields (WO 426, bug analysis 25 Nov 2026).
+            out = []
+            for r in rows:
+                if r["item"] < 0:
+                    continue
+                y = y0 + len(out) * geom.GENERIC_STEP
+                out.append((y, r, fields.get(y)))
+            return out
         first = max(0, self.box["first_row"])
         if self.kind == "weapon":
             fields = self._hidden_at_x(0x1C, 0x256 - 0x1C)

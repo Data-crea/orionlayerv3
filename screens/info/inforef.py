@@ -94,11 +94,11 @@ _cache = {}
 
 
 def _find(name):
-    from core import basepack, usermod
-    from core.config import BASE_DIR
+    from core import resources
     rel = f"{ICON_REL}/{name}.png".split("/")
-    for root in (os.path.join(usermod.mod_dir(), usermod.FILES), BASE_DIR,
-                 basepack.base_dir()):
+    # every root the resolver knows, in its order and with its switches (the
+    # mod folder off, `mods/<name>/`): decision 16, WO 426
+    for root in tuple(resources.res.roots()):
         if root:
             path = os.path.join(root, *rel)
             if os.path.isfile(path):

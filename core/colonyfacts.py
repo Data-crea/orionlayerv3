@@ -125,16 +125,11 @@ def max_population(colony, planet, traits, city_planning=False):
     DEVIATION `city_planning_config`: v2's config may name another bonus
     (see `CITY_PLANNING_BONUS`).
 
-    ONE DEVIATION remains FOR THE OTHER CALLERS of this function (the
-    galaxy map's system window no longer has it: `sysinfo.planet_maximum`
-    walks the races present, colcalc.cpp:975-1060): the original returns
-    the best limit over the RACES PRESENT in the colony; this returns the
-    limit for the owner's race. The two agree for a single-race colony. The walk needs the pop
-    nibble, which is now confirmed for 0..7 — what it does not have is
-    the 8 and 9 sentinels, and a walk that mis-resolves androids and
-    natives would pick the wrong race for exactly the colonies the walk
-    exists for. It makes the bar too SHORT rather than too long, which
-    shows as a bar that cannot hold its own squares — visible, not silent.
+    This is the limit for ONE race's traits, the colony's own climate and
+    Biospheres. The number the game prints is the best of it over the
+    races living in the colony: callers that print it use
+    `planet_maximum` (below, work order 426), which walks the pop nibbles
+    (colcalc.cpp:975-1060) and calls this once per race.
     """
     climate = player_climate(colony.climate, traits)
     immune = bool(traits[TRAIT_ENVIRONMENT_IMMUNE]) if traits else False
@@ -148,6 +143,82 @@ def max_population(colony, planet, traits, city_planning=False):
     if colony.buildings[BUILDING_BIOSPHERES]:
         limit += POP_BONUS_BIOSPHERES
     return min(limit, POP_LIMIT_CAP)
+
+
+#: `TRAIT_COUNT` slots of an all-zero race (orion2_consts.h:976 is the
+#: last used index, 27) and `TRAIT_ENVIRONMENT_IMMUNE` (:972).
+_NO_TRAITS = 31
+POP_RACE_NIBBLES = 10          # `races_present[10]` (colcalc.cpp:983-1009)
+
+
+def _player_view(players, index):
+    """The player at `index` as a parsed view, whether `players` holds raw
+    records or views already: the colony rows hand in the views they parsed
+    once per snapshot (check 090zzzzzp), and a walk over every colony must
+    not parse the players again for each of them (WO 426)."""
+    if not 0 <= index < len(players) or players[index] is None:
+        return None
+    one = players[index]
+    return player_struct.parse(one) if isinstance(
+        one, (bytes, bytearray)) else one
+
+
+def race_traits(race, players):
+    """The trait array `Size_And_Climate_Race_Pop_Limit` reads for a race
+    nibble (colcalc.cpp:1028-1050): the player's own for 0-7; the nibble 8
+    is "considered immune" with no player record; 9 and up read none."""
+    view = _player_view(players, race) if race < 8 else None
+    if view is not None:
+        return player_struct.traits(view)
+    traits = [0] * _NO_TRAITS
+    if race == 8:
+        traits[TRAIT_ENVIRONMENT_IMMUNE] = 1
+    return traits
+
+
+def planet_maximum(planet, colony, players, me, traits):
+    """TRANSCRIPTION `box_max_population` of `Planet_Max_Population_For_
+    Player` for the local player (colcalc.cpp:975-1022; sys.cpp:1480-1483
+    passes `PLAYER_NUM`):
+
+      a settled colony (not an outpost) with pops: the BEST
+        `Colony_Race_Pop_Limit` over the race nibbles present
+        (:983-1009), each with its own traits, the colony's climate and
+        Biospheres, and the colony OWNER's Advanced City Planning
+        (:1104-1125); a settled colony with no pops: the local player's
+        race the same way (:991-993);
+      an outpost or an empty planet: the PLANET's climate and size with the
+        LOCAL player's traits and city planning, no Biospheres, cap 42
+        (:1012-1022).
+
+    A pop nibble past 9 is skipped (the original's `races_present` has ten
+    slots). UNVERIFIED live: nibble 8 (android) as `immune`, 9 (native) as
+    no traits — both read off the C++ only (`colony.py`: "8 is not
+    verified")."""
+    me_player = _player_view(players, me)
+    if colony is None or colony.outpost_flag:
+        return max_population(
+            bare_colony(planet), planet, traits,
+            city_planning(me_player))
+    owner = int(colony.owner)
+    planner = city_planning(_player_view(players, owner))
+    count = int(colony.n_pops)
+    races = sorted({colony_struct.pop_player_index(int(colony.pop[i]))
+                    for i in range(min(count, len(colony.pop)))
+                    if colony_struct.pop_player_index(int(colony.pop[i]))
+                    < POP_RACE_NIBBLES}) if count else [me]
+    return max([max_population(
+        colony, planet, race_traits(race, players), planner)
+        for race in races] or [0])
+
+
+def bare_colony(planet):
+    """A colony-shaped stand-in for an unsettled planet: its climate, no
+    buildings — what `max_population` reads."""
+    class _Bare:
+        climate = int(planet.climate)
+        buildings = [0] * 64
+    return _Bare()
 
 
 def colony_morale(colony, traits):

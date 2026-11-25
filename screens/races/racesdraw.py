@@ -437,7 +437,8 @@ def relation_size(screen, knob):
     (Data, 22 Nov 2026). Solved once per knob width and base size."""
     layout, style = screen.layout, screen.style
     base = nd.font_px(layout, "status")
-    key = (id(style), knob.w, base, id(screen._words))
+    from core import fontscale
+    key = (id(style), knob.w, base, id(screen._words), fontscale.factor())
     hit = _word_sizes.get(key)
     if hit is None:
         hit = base
