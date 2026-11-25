@@ -29,7 +29,7 @@ anchor, fitted to a native width). What is drawn and where it comes from:
   HD EXTENSION   `designer_mockup` — Data's mockup of 25 November 2026
                  (`sdmockup`): the hull column in the frame colour with a
                  picture of each class (replaces `hull_blue`, his choice of
-                 2 November 2026), glyphs on the table headers and the
+                 2 November 2026), glyphs on the table headers (level with their words) and CANCEL,
                  buttons, faint rules between rows, a painted scene in two
                  panels; every position as before
 """
@@ -207,7 +207,14 @@ def _systems(surface, screen, d, names):
 def _weapons(surface, screen, view, names):
     h = names.h
     head_h = max(14, int(nd.rect(screen.layout, (0, 0, 0, 12)).h))
-    for (sid, x), key in zip(geom.WEAPON_HEADS, sdmockup.WEAPON_GLYPHS):
+    for k, ((sid, x), key) in enumerate(zip(geom.WEAPON_HEADS,
+                                           sdmockup.WEAPON_GLYPHS)):
+        if k == len(geom.WEAPON_HEADS) - 1:
+            # MODIFICATIONS stands over the middle of its column (Data, 25
+            # November 2026: over "no modifications" below it), glyph and
+            # word as one group
+            x = sdmockup.group_left(screen, h(sid), key, head_h,
+                                    geom.WEAPON_COLS["mods"])
         sdmockup.blit_glyph(surface, screen, key, x, geom.WEAPON_HEAD_Y,
                             head_h)
         _t(surface, screen, h(sid), x, geom.WEAPON_HEAD_Y, 0x50, "value",

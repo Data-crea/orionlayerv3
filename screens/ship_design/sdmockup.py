@@ -15,7 +15,7 @@ clicks it saw before. The mockup's look is added over the same geometry:
     a faint rule under each row of both
   * a painted scene in the drive panel's and the description panel's right
     part (the player's `popups/design_scene_*.png`, `core.buildicons`)
-  * a glyph in front of the three buttons' words
+  * a glyph in front of CANCEL's word
 
 INVENTION `designer_glyphs`: which glyph stands for which column is ours;
 the original prints words only. The mockup's per-weapon and per-special
@@ -40,7 +40,8 @@ from . import sdart
 #: specials' two (Special System, Description).
 WEAPON_GLYPHS = (None, "swords", "range", "coin", "all", "gear")
 SPECIAL_GLYPHS = ("star", "list")
-BUTTON_GLYPHS = {"clear": "trash", "cancel": "close", "build": "hammer"}
+#: Only CANCEL keeps a glyph (Data, 25 November 2026: not on CLEAR and BUILD).
+BUTTON_GLYPHS = {"cancel": "close"}
 
 _icons = {}
 _scenes = {}
@@ -50,21 +51,45 @@ def accent():
     return hudtext.colour("label")
 
 
+def line_centre(screen, native_y, key="value"):
+    """The window y of the middle of a text line printed at `native_y`
+    (`coldraw.text`'s own size), so a glyph can stand level with its word."""
+    from screens.colony import coldraw
+    size = coldraw.font(screen.layout, key)
+    line = screen.style.render_text("Wg", size, (255, 255, 255)).get_height()
+    return nd.point(screen.layout, 0, native_y)[1] + line // 2
+
+
 def glyph(screen, key, native_x, native_y, h):
-    """A glyph `h` tall ending just left of the word at a native anchor."""
+    """A glyph `h` tall ending just left of the word at a native anchor,
+    its middle level with the word's line."""
     if key is None:
         return
     ic = hudart.icon(key, h)
     if ic is None:
         return None
-    px, py = nd.point(screen.layout, native_x, native_y)
-    return ic, (px - ic.get_width() - max(3, h // 5), py)
+    px = nd.point(screen.layout, native_x, 0)[0]
+    return ic, (px - ic.get_width() - max(3, h // 5),
+                line_centre(screen, native_y) - ic.get_height() // 2)
 
 
 def blit_glyph(surface, screen, key, native_x, native_y, h):
     got = glyph(screen, key, native_x, native_y, h)
     if got is not None:
         surface.blit(*got)
+
+
+def group_left(screen, words, key, h, centre_native):
+    """The native x at which the WORD of a glyph-and-word group starts so
+    that the whole group is centred on `centre_native`."""
+    from screens.colony import coldraw
+    size = coldraw.font(screen.layout, "value")
+    text_w = screen.style.render_text(words or "", size,
+                                      (255, 255, 255)).get_width()
+    ic = hudart.icon(key, h) if key else None
+    glyph_w = (ic.get_width() + max(3, h // 5)) if ic is not None else 0
+    scale = nd.native_scale(screen.layout)
+    return int(centre_native + (glyph_w - text_w) / 2 / scale)
 
 
 def _cut(pic, h):
