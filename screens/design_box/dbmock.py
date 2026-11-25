@@ -1,4 +1,4 @@
-"""The special-system picker as Data's mockup of the designer draws it —
+"""The designer's pickers (special, weapon, shield and computer) as Data's mockup draws them —
 HD EXTENSION `picker_mockup` (work order 434, Data, 25 November 2026).
 
 DRAWING ONLY, at the original's own positions: a faint rule under every row,

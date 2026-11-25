@@ -43,9 +43,13 @@ and where it comes from:
   HD EXTENSION   `solid_panel` — the picker's box is opaque: the designer's
                  page under it showed through the glass (Data, 2 November
                  2026)
-  HD EXTENSION   `picker_mockup` — the special picker's faint row rules,
-                 hover bar and scroll track in the frame colour (`dbmock`,
-                 Data's mockup, 25 November 2026)
+  HD EXTENSION   `picker_mockup` — every picker's faint row rules, hover
+                 bar and scroll track in the frame colour (`dbmock`, Data's
+                 mockup, 25 November 2026)
+  TRANSCRIPTION  `unlocked_colour` — the shield and computer rows the
+                 engine has not unlocked are dull, the chosen one lit
+                 (desbox.cpp:2380-2400, :2470-2490), the dull colour as
+                 `fit_dim`
   INVENTION      `chosen_fill` — the chosen weapon row lit by a HUD fill
                  where the original draws an arrow sprite, and a
                  modification that is on, where it draws the lit frame
@@ -75,12 +79,12 @@ from . import dbfit, dbmock, dbpics, dbgeom as geom
 
 
 def _t(surface, screen, words, x, y, w, key="value", role="value",
-       align="left"):
+       align="left", colour=None):
     """`x` is the anchor the original prints at; right / centre alignment
     are anchored there (`nativedraw.blit_text`), as its `Print_Right_` /
     `Print_Centered_` are; `w` is the width a word is fitted to."""
     return coldraw.text(surface, screen, words, x, y, w, key, role,
-                        align=align)
+                        align=align, colour=colour)
 
 
 def _rect(f):
@@ -140,8 +144,31 @@ def _generic(surface, screen, box, names):
                 by + geom.GENERIC_HEAD_Y, 0xC0, "value", "label")
              for sid, dx in cols]
     size = coldraw.font(screen.layout, "value")
+    allrows = box.box["rows"]
+    chosen = box.box["chosen"]
     for y, row, _field in box.rows():
         item = row["item"]
+        # TRANSCRIPTION `unlocked_colour` (desbox.cpp:2380-2400, :2470-2490):
+        # a row the engine has not unlocked is dull, the chosen one lit; the
+        # dull colour is 55 % of the row's own, HD EXTENSION `fit_dim`
+        idx = next((i for i, r in enumerate(allrows) if r is row), -1)
+        ink = hudtext.colour("title" if idx == chosen and row["unlocked"]
+                             else "value")[:3]
+        if not row["unlocked"]:
+            ink = tuple(int(c * 0.55) for c in ink)
+        if _field is not None:
+            # the row as its TEXT stands: the engine's field starts a little
+            # below the line it is for (`Add_Generic_Replacement_Fields`)
+            fr = nd.rect(screen.layout, (_field.x, y - 5, _field.x_end,
+                                         y + geom.GENERIC_STEP - 6))
+            if idx == chosen and row["unlocked"]:
+                # the lit row (the original's white one), as the weapon
+                # picker's chosen row
+                hud.panel(surface, fr.inflate(-2, -2), screen.layout.scale,
+                          lit=True, dense=True)
+            elif row["unlocked"] and dbmock.hovered(fr):
+                dbmock.hover_bar(surface, fr.inflate(-2, -2))
+            dbmock.row_rule(surface, fr)
         if shield:
             name = names.part("shields", item) if item else \
                 names.h(geom.NO_SHIELD)
@@ -150,7 +177,7 @@ def _generic(surface, screen, box, names):
             name = names.part("computers", item) if item else \
                 names.h(geom.NO_COMPUTER)
             values = (f"+{row['extra']}" if item else "0", str(row["cost"]))
-        _t(surface, screen, name, x0 + cols[0][1], y, 0xD0)
+        _t(surface, screen, name, x0 + cols[0][1], y, 0xD0, colour=ink)
         # Centred under the column's header, as `Print_Integer_Centered_`
         # centres on the header's width (less the shield table's swapped
         # widths, desbox.cpp:2387/2398 — DEVIATION `centring_swap`).
@@ -158,8 +185,9 @@ def _generic(surface, screen, box, names):
         for head, value in zip(heads[1:], values):
             if head is not None:
                 nd.blit_text(surface, screen.style, value, head.centerx, wy,
-                             head.w * 2, size, hudtext.colour("value"),
-                             align="center")
+                             head.w * 2, size, ink, align="center")
+    dbmock.track(surface, screen, box.scroll_buttons(),
+                 max(0, box.box["first_row"]), 10, len(allrows))
 
 
 def _weapon(surface, screen, box, names):
@@ -195,6 +223,12 @@ def _weapon(surface, screen, box, names):
         weapon = row["extra"]
         role = "value" if row["unlocked"] or weapon <= 0 else "sub"
         rh = _row_h(screen, field)
+        if field is not None:
+            fr0 = nd.rect(screen.layout, _rect(field))
+            if (row["unlocked"] or weapon <= 0) and first + k != chosen \
+                    and dbmock.hovered(fr0):
+                dbmock.hover_bar(surface, fr0.inflate(-2, -2))
+            dbmock.row_rule(surface, fr0)
         if first + k == chosen and chosen > 0 and field is not None:
             fr = nd.rect(screen.layout, _rect(field))
             pad = max(4, fr.h // 4)
@@ -216,6 +250,8 @@ def _weapon(surface, screen, box, names):
         if weapon > 0:
             _row(surface, screen, names.weapon_note(weapon),
                  x0 + cols["note"], y, 0x120, "sub", row_h=rh)
+    dbmock.track(surface, screen, box.scroll_buttons(), first, 10,
+                 len(box.box["rows"]))
     _arc_box(surface, screen, box, art)
     _mods(surface, screen, box, names)
     for i, (f, status) in enumerate(zip(box.filter_fields(),
