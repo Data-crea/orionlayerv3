@@ -26,13 +26,14 @@ anchor, fitted to a native width). What is drawn and where it comes from:
                  over an empty row need `Space_For_Weapon_Replacement_`,
                  which is not on the wire; `flashing_hover` — the cycling
                  palette index of a hovered row
-  HD EXTENSION   `hull_blue` — the hull column's box and the chosen hull's
-                 band in the original's blue, and its words in the
-                 original's grey and white, mixed case (Data, 2 November
-                 2026)
+  HD EXTENSION   `designer_mockup` — Data's mockup of 25 November 2026
+                 (`sdmockup`): the hull column in the frame colour with a
+                 picture of each class (replaces `hull_blue`, his choice of
+                 2 November 2026), glyphs on the table headers and the
+                 buttons, faint rules between rows, a painted scene in two
+                 panels; every position as before
 """
 
-import pygame
 
 from core.hestrings import printf
 from core.hud import blocks as hud
@@ -41,7 +42,7 @@ from core.hud import text as hudtext
 from screens.colony import coldraw
 from core import nativedraw as nd, textfit
 
-from . import sdart, sdgeom as geom, sdwire
+from . import sdart, sdgeom as geom, sdmockup, sdwire
 
 BULLET = "•"
 
@@ -61,12 +62,14 @@ def draw(surface, screen, view, names):
             hud.field(surface, r, layout.scale)
             continue
         nd.draw_box(surface, screen, native)
-        if k == geom.HULL_PANEL:
-            _hull_blue(surface, hud.panel_inner(r, layout.scale))
-        if k in geom.FIELD_PANELS:
+        if k == geom.HULL_PANEL or k in geom.FIELD_PANELS:
             hud.field(surface, hud.panel_inner(r, layout.scale),
                       layout.scale)
     hud.field(surface, nd.rect(layout, geom.PICTURE_BOX), layout.scale)
+    for panel, scene_name in ((3, "design_scene_drive"),
+                              (6, "design_scene_special")):
+        sdmockup.scene(surface, scene_name, hud.panel_inner(
+            nd.rect(layout, geom.PANELS[panel]), layout.scale))
     _ship(surface, screen, view, names)
     _hulls(surface, screen, view, names)
     _systems(surface, screen, d, names)
@@ -154,72 +157,13 @@ def _ship(surface, screen, view, names):
        geom.SPACE_LABEL[1], 0x40, align="right")
 
 
-#: THE ORIGINAL'S BLUE, measured off Data's native screenshot of the hull
-#: list (2 November 2026, a 347x319 crop): the box (4, 0, 56); the chosen
-#: row's band (12, 4, 154) on its top and bottom rows and (16, 8, 200)
-#: between — a band the width of the box.
-HULL_BOX = (4, 0, 56)
-HULL_BAND_EDGE, HULL_BAND = (12, 4, 154), (16, 8, 200)
-
-
-def _hull_blue(surface, inner):
-    """The hull column's box in the original's blue (HD EXTENSION
-    `hull_blue`, Data, 2 November 2026)."""
-    # LOOK EXCEPTION transcription: the hull list's box in the original's own blue, measured off Data's native screenshot
-    surface.fill(HULL_BOX, inner)
-
-
-def _hull_band(surface, rect, inner):
-    """The chosen row's band across the box, edge rows lighter-dimmed as the
-    original's three-step band."""
-    band = pygame.Rect(inner.x, rect.y, inner.w, rect.h)
-    edge = max(1, band.h // 8)
-    # LOOK EXCEPTION transcription: the chosen hull's band in the original's blue, measured off Data's native screenshot
-    surface.fill(HULL_BAND, band)
-    # LOOK EXCEPTION transcription: the band's dimmer top and bottom rows, measured off Data's native screenshot
-    surface.fill(HULL_BAND_EDGE, (band.x, band.y, band.w, edge))
-    surface.fill(HULL_BAND_EDGE, (band.x, band.bottom - edge, band.w, edge))
-
-
-#: The hull words as the original prints them, measured off the same
-#: screenshot (the brightest pixels of the words): the unchosen grey, the
-#: chosen one white. Mixed case ("Frigate"), one size for all six rows and
-#: about three quarters of a row (the rows differ by a pixel or two
-#: natively; the words do not).
-HULL_WORD, HULL_WORD_ON = (126, 126, 134), (240, 240, 248)
-HULL_WORD_FRAC, HULL_ROW_NATIVE = 0.78, 15
-
-
-def _hull_word(surface, screen, rect, label, colour):
-    if not label:
-        return
-    size = int(nd.rect(screen.layout, (0, 0, 0, HULL_ROW_NATIVE)).h
-               * HULL_WORD_FRAC)
-    hudtext.blit(surface, screen.style.render_text(label, size, colour),
-                 rect)
-
-
 def _hulls(surface, screen, view, names):
     d = view.design
     layout = screen.layout
-    inner = hud.panel_inner(nd.rect(layout, geom.PANELS[geom.HULL_PANEL]),
-                            layout.scale)
     for size, (y1, y2) in enumerate(geom.HULL_ROWS):
         r = nd.rect(layout, (geom.HULL_X[0], y1, geom.HULL_X[1], y2))
-        label = names.part("hulls", size) or ""
-        if size == d["size"]:
-            # the chosen hull is the blue band with a white word, and
-            # stays one under the pointer; the other rows show the HUD's
-            # hover highlight under their grey word
-            _hull_band(surface, r, inner)
-            _hull_word(surface, screen, r, label, HULL_WORD_ON)
-            continue
-        state = (hud_hover.pointer_state(r) if view.hull_offered(size)
-                 else "disabled")
-        if state != "normal":
-            hud.small_button(surface, r, layout.scale, state)
-        _hull_word(surface, screen, r, label, HULL_WORD if state != "disabled"
-                   else tuple(c // 2 for c in HULL_WORD))
+        sdmockup.hull_row(surface, screen, view, names, size, r,
+                          size == d["size"], view.hull_offered(size))
 
 
 def _systems(surface, screen, d, names):
@@ -262,7 +206,10 @@ def _systems(surface, screen, d, names):
 
 def _weapons(surface, screen, view, names):
     h = names.h
-    for sid, x in geom.WEAPON_HEADS:
+    head_h = max(14, int(nd.rect(screen.layout, (0, 0, 0, 12)).h))
+    for (sid, x), key in zip(geom.WEAPON_HEADS, sdmockup.WEAPON_GLYPHS):
+        sdmockup.blit_glyph(surface, screen, key, x, geom.WEAPON_HEAD_Y,
+                            head_h)
         _t(surface, screen, h(sid), x, geom.WEAPON_HEAD_Y, 0x50, "value",
            "label")
     cols = geom.WEAPON_COLS
@@ -287,6 +234,9 @@ def _weapons(surface, screen, view, names):
            align="center", pitch=geom.ROW_STEP)
         _t(surface, screen, w["mods_text"], cols["mods"], y, 0x90,
            align="center", pitch=geom.ROW_STEP)
+    for row in range(len(view.weapon_rows())):
+        sdmockup.rule(surface, screen, geom.WEAPON_ROW_Y0 + (row + 1)
+                      * geom.ROW_STEP - 1, geom.PANELS[5])
     # plus / minus: the live button where the list has one, and DULL where
     # a loaded row has none — `Draw_Down_Buttons_` draws the dull minus
     # and plus for every row that holds a weapon but has no active button.
@@ -307,11 +257,16 @@ def _weapons(surface, screen, view, names):
 
 
 def _specials(surface, screen, view, names):
-    for sid, x in geom.SPECIAL_HEADS:
+    head_h = max(14, int(nd.rect(screen.layout, (0, 0, 0, 12)).h))
+    for (sid, x), key in zip(geom.SPECIAL_HEADS, sdmockup.SPECIAL_GLYPHS):
+        sdmockup.blit_glyph(surface, screen, key, x, geom.SPECIAL_HEAD_Y,
+                            head_h)
         _t(surface, screen, names.h(sid), x, geom.SPECIAL_HEAD_Y, 0x90,
            "value", "label")
     for row, (_slot, sp) in enumerate(view.specials()):
         y = geom.SPECIAL_TEXT_Y0 + row * geom.ROW_STEP
+        sdmockup.rule(surface, screen, geom.SPECIAL_ROW_Y0 + (row + 1)
+                      * geom.ROW_STEP - 1, geom.PANELS[6])
         _t(surface, screen, names.part("specials", sp),
            geom.SPECIAL_COLS["name"], y, 0xE0, pitch=geom.ROW_STEP)
         _t(surface, screen, names.description(sp),
@@ -341,4 +296,6 @@ def _bottom(surface, screen, view, names):
         hud.slant_button(surface, r, screen.layout.scale,
                          "disabled" if f is None else
                          hud_hover.pointer_state(r),
-                         screen.word(key), style_renderer=screen.style)
+                         screen.word(key),
+                         icon=sdmockup.BUTTON_GLYPHS.get(key),
+                         style_renderer=screen.style)

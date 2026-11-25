@@ -1,5 +1,6 @@
-"""The painted scene under the build list's help text — HD EXTENSION
-`build_list_scene` (work order 432, Data's mockup of 25 November 2026).
+"""The painted scenes of the build list and the Ship Designer — HD EXTENSION
+`build_list_scene` (work order 432) and `designer_mockup` (work order 433),
+Data's mockups of 25 November 2026.
 
 The mockup lays a painted scene under the description. Neither tree nor base
 pack holds one: it is the player's own file in the mod folder
@@ -31,12 +32,16 @@ def tree_path(name):
 
 
 def _load(name):
+    return _load_file(f"build_{name}")
+
+
+def _load_file(stem):
     from core import resources
-    path = resources.res.resolve(tree_path(name))
+    path = resources.res.resolve(f"{FOLDER}/{stem}.png")
     if not path or not os.path.isfile(path):
         return None
     stamp = (path, os.path.getmtime(path))
-    hit = _raw.get(name)
+    hit = _raw.get(stem)
     if hit is not None and hit[0] == stamp:
         return hit[1]
     try:
@@ -44,16 +49,22 @@ def _load(name):
         surf = pygame.Surface(loaded.get_size(), pygame.SRCALPHA)
         surf.blit(loaded, (0, 0))
     except (pygame.error, OSError) as err:
-        log.warning("build list: %s cannot be read (%s) — not drawn",
-                    tree_path(name), err)
+        log.warning("scene: %s cannot be read (%s) — not drawn",
+                    f"{FOLDER}/{stem}.png", err)
         surf = None
-    _raw[name] = (stamp, surf)
+    _raw[stem] = (stamp, surf)
     return surf
 
 
 def art():
     """The scene under a help text, or None."""
     return _load(ART)
+
+
+def named(stem):
+    """The painted scene `popups/<stem>.png` — the Ship Designer's two
+    (`design_scene_drive`, `design_scene_special`, WO 433) — or None."""
+    return _load_file(stem)
 
 
 def forget():

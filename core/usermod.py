@@ -154,7 +154,10 @@ from core import buildingart  # noqa: E402
 SLOTS += buildingart.slots()
 #: HD EXTENSION `build_list_scene` (work order 432): the painted scene under
 #: the build list's help text, `popups/build_art.png` (`core.buildicons`).
-SLOTS += ("assets/shared/turnpopup/build_art.png",)
+SLOTS += ("assets/shared/turnpopup/build_art.png",
+          # HD EXTENSION `designer_mockup` (work order 433): the Ship Designer's
+          # two scenes, `popups/design_scene_drive.png` and `..._special.png`
+          "assets/shared/turnpopup/design_scene_*.png")
 #: HD EXTENSION `designer_pictures`: the weapon picker's four filter buttons
 #: and its arc dial (`screens/design_box/dbpics`), by exact name.
 SLOTS += tuple(f"screens/design_box/assets/{n}.png" for n in (
