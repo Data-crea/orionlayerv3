@@ -51,18 +51,29 @@ def accent():
     return hudtext.colour("label")
 
 
-def line_centre(screen, native_y, key="value"):
-    """The window y of the middle of a text line printed at `native_y`
-    (`coldraw.text`'s own size), so a glyph can stand level with its word."""
+def _word(screen, words, native_w):
+    """The word as `sddraw._t` draws it: the key's size shrunk to fit its
+    native width (`nativedraw.fit`), and its surface."""
     from screens.colony import coldraw
-    size = coldraw.font(screen.layout, key)
-    line = screen.style.render_text("Wg", size, (255, 255, 255)).get_height()
-    return nd.point(screen.layout, 0, native_y)[1] + line // 2
+    size = nd.fit(screen.style, words, nd.rect(
+        screen.layout, (0, 0, native_w, 0)).w,
+        coldraw.font(screen.layout, "value"))
+    return screen.style.render_text(words, size, (255, 255, 255))
 
 
-def glyph(screen, key, native_x, native_y, h):
+def line_centre(screen, words, native_y, native_w):
+    """The window y of the middle of the INK of `words` printed at
+    `native_y` and fitted to `native_w`, so a glyph stands level with the
+    letters, capitals included."""
+    top = nd.point(screen.layout, 0, native_y)[1]
+    surf = _word(screen, words, native_w)
+    ink = surf.get_bounding_rect()
+    return top + ink.y + ink.h // 2
+
+
+def glyph(screen, key, words, native_x, native_y, native_w, h):
     """A glyph `h` tall ending just left of the word at a native anchor,
-    its middle level with the word's line."""
+    its middle level with the word's letters."""
     if key is None:
         return
     ic = hudart.icon(key, h)
@@ -70,22 +81,21 @@ def glyph(screen, key, native_x, native_y, h):
         return None
     px = nd.point(screen.layout, native_x, 0)[0]
     return ic, (px - ic.get_width() - max(3, h // 5),
-                line_centre(screen, native_y) - ic.get_height() // 2)
+                line_centre(screen, words, native_y, native_w)
+                - ic.get_height() // 2)
 
 
-def blit_glyph(surface, screen, key, native_x, native_y, h):
-    got = glyph(screen, key, native_x, native_y, h)
+def blit_glyph(surface, screen, key, words, native_x, native_y, native_w, h):
+    got = glyph(screen, key, words, native_x, native_y, native_w, h)
     if got is not None:
         surface.blit(*got)
 
 
-def group_left(screen, words, key, h, centre_native):
+def group_left(screen, words, key, h, native_w, centre_native):
     """The native x at which the WORD of a glyph-and-word group starts so
-    that the whole group is centred on `centre_native`."""
-    from screens.colony import coldraw
-    size = coldraw.font(screen.layout, "value")
-    text_w = screen.style.render_text(words or "", size,
-                                      (255, 255, 255)).get_width()
+    that the whole group is centred on `centre_native` (the word as it is
+    drawn, shrunk to `native_w`)."""
+    text_w = _word(screen, words or "", native_w).get_width()
     ic = hudart.icon(key, h) if key else None
     glyph_w = (ic.get_width() + max(3, h // 5)) if ic is not None else 0
     scale = nd.native_scale(screen.layout)

@@ -29,9 +29,9 @@ anchor, fitted to a native width). What is drawn and where it comes from:
   HD EXTENSION   `designer_mockup` — Data's mockup of 25 November 2026
                  (`sdmockup`): the hull column in the frame colour with a
                  picture of each class (replaces `hull_blue`, his choice of
-                 2 November 2026), glyphs on the table headers (level with their words) and CANCEL,
-                 buttons, faint rules between rows, a painted scene in two
-                 panels; every position as before
+                 2 November 2026), glyphs on the table headers (level with
+                 their words) and CANCEL, faint rules between rows, a
+                 painted scene in two panels; every position as before
 """
 
 
@@ -213,10 +213,10 @@ def _weapons(surface, screen, view, names):
             # MODIFICATIONS stands over the middle of its column (Data, 25
             # November 2026: over "no modifications" below it), glyph and
             # word as one group
-            x = sdmockup.group_left(screen, h(sid), key, head_h,
+            x = sdmockup.group_left(screen, h(sid), key, head_h, 0x50,
                                     geom.WEAPON_COLS["mods"])
-        sdmockup.blit_glyph(surface, screen, key, x, geom.WEAPON_HEAD_Y,
-                            head_h)
+        sdmockup.blit_glyph(surface, screen, key, h(sid), x,
+                            geom.WEAPON_HEAD_Y, 0x50, head_h)
         _t(surface, screen, h(sid), x, geom.WEAPON_HEAD_Y, 0x50, "value",
            "label")
     cols = geom.WEAPON_COLS
@@ -266,8 +266,8 @@ def _weapons(surface, screen, view, names):
 def _specials(surface, screen, view, names):
     head_h = max(14, int(nd.rect(screen.layout, (0, 0, 0, 12)).h))
     for (sid, x), key in zip(geom.SPECIAL_HEADS, sdmockup.SPECIAL_GLYPHS):
-        sdmockup.blit_glyph(surface, screen, key, x, geom.SPECIAL_HEAD_Y,
-                            head_h)
+        sdmockup.blit_glyph(surface, screen, key, names.h(sid), x,
+                            geom.SPECIAL_HEAD_Y, 0x90, head_h)
         _t(surface, screen, names.h(sid), x, geom.SPECIAL_HEAD_Y, 0x90,
            "value", "label")
     for row, (_slot, sp) in enumerate(view.specials()):
