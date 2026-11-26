@@ -2,7 +2,7 @@ OrionLayer open fix 130 — an injected click is read by the call that drained i
 ================================================================================
 
 Work order 438 (live re-check of the v2.0.2 move). orion2re on the branch
-`orionlayer-v202` (v2.0.2 plus the OrionLayer fixes), after open fix 129. In
+`orionlayer` (v2.0.2 merged in), after open fix 129. In
 src/ext/ext_api.cpp, src/ext/ext_api.h, src/game/fields.cpp,
 src/game/platform.cpp and src/game/platform.h; all of it inside
 `#ifdef ORION2RE_EXT`.
