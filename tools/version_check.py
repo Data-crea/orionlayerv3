@@ -216,6 +216,7 @@ FIX_NUMBERS = {
     "doc/ext_injected_mouse_atomic.patch": (124,),
     "doc/ext_cancel_field_mouse.patch": (125,),
     "doc/ext_injected_mouse_hold.patch": (129,),
+    "doc/ext_inject_click_direct.patch": (130,),
 }
 
 

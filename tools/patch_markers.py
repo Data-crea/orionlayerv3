@@ -671,5 +671,9 @@ REPORTED_PATCHES = {
         os.path.join("src", "ext", "ext_api.cpp"),
         "OrionLayer, open fix 129.",
         "a real pointer move cannot rewrite an injected click"),
+    "doc/ext_inject_click_direct.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 130.",
+        "an injected click is read in the call that takes it"),
 }
 

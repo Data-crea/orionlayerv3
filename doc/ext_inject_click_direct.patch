@@ -1,0 +1,142 @@
+OrionLayer open fix 130 — an injected click is read by the call that drained it
+================================================================================
+
+Work order 438 (live re-check of the v2.0.2 move). orion2re on the branch
+`orionlayer-v202` (v2.0.2 plus the OrionLayer fixes), after open fix 129. In
+src/ext/ext_api.cpp, src/ext/ext_api.h, src/game/fields.cpp,
+src/game/platform.cpp and src/game/platform.h; all of it inside
+`#ifdef ORION2RE_EXT`.
+
+With the engine window SHOWN, a MSG_INJECT_CLICK was lost about 1 time in 70
+(measured: 3 of 300 on the build without this change; the same on v2.0.1).
+The click went through the SDL thread: ProcessInput pushed an SDL mouse-down
+and mouse-up, the SDL thread turned them into queue events later. The galaxy
+map calls Clear_Fields_Above() on every pass; its Mouse_Buffer() pumps the
+game's input queue and then clears the flag the pump itself just set, so a
+pump that fell between the two halves, or before them, lost the click.
+
+The change. fields::Get_Input sets ext::g_click_direct_ok around its own
+ext::Tick (the Tick whose result it reads at once through
+Interpret_Mouse_Input). An INJECT_CLICK drained there, one per Tick, is put
+into the game's input queue from the game thread: platform::Inject_Game_Click
+enqueues the DOWN and the UP (their button states differ, so they are not
+coalesced) and sets the present pointer position. Every other Tick (the input
+delay's, the screen loop's) and a film take the SDL path as before. The hold
+of open fix 129 is taken first, as before.
+
+Live proof: UNVERIFIED beyond the numbers in doc/orion2re_open_fixes.md
+entry 130 (Xvfb, no window manager, no real pointer motion).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 5dda6d9b..75053256 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -36,6 +36,10 @@ void Hold_Real_Mouse_() {
+     g_injected_mouse_hold_until = (uint32_t)SDL_GetTicks() + k_injected_mouse_hold_ms;
+ }
+ 
++// OrionLayer, open fix 130. See ext_api.h. One direct click per Tick: a second one in the same drain would share the read with the first.
++bool g_click_direct_ok = false;
++static bool g_click_direct_used = false;
++
+ bool Real_Mouse_Held() {
+     if (g_injected_mouse_pending) {
+         return true;
+@@ -3828,6 +3832,20 @@ static void ProcessInput() {
+                 // space" and until now that was a promise the code
+                 // did not keep: the point was pushed raw and read
+                 // back as a WINDOW coordinate.
++                // OrionLayer, open fix 130. In Get_Input's own Tick the click
++                // is put into the game's input queue right here, and the same
++                // call reads it. Through the SDL thread (below) the DOWN could
++                // be pumped by the game's own Clear_Fields_Above() (the
++                // galaxy map calls it every pass; its Mouse_Buffer() pumps
++                // the queue and then clears the flag the pump just set), and
++                // the click was lost, about 1 in 100 to 1 in 200 under load
++                // with the window shown (WO 438).
++                if (g_click_direct_ok && !g_click_direct_used && !g_film.active) {
++                    g_click_direct_used = true;
++                    platform::Inject_Game_Click((int16_t)cmd.param1, (int16_t)cmd.param2);
++                    break;
++                }
++
+                 float wx = 0.0f;
+                 float wy = 0.0f;
+                 Game_Point_To_Window_Point_((float)cmd.param1,
+@@ -4553,6 +4571,7 @@ void Tick(int16_t current_screen) {
+     }
+ 
+     // Process queued input commands
++    g_click_direct_used = false;
+     ProcessInput();
+ 
+     // OrionLayer, open fix 62. A pending activation is taken by the NEXT
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 8669d16d..c82bc2db 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -508,6 +508,14 @@ extern std::atomic<bool> g_injected_mouse_pending;
+ void Hold_Real_Mouse_();
+ bool Real_Mouse_Held();
+ 
++/// OrionLayer, open fix 130. True only while fields::Get_Input runs its own
++/// Tick, right before it reads the mouse (Interpret_Mouse_Input). An
++/// INJECT_CLICK drained there goes straight into the game's input queue
++/// (platform::Inject_Game_Click) and is read in the same call. Anywhere else
++/// (the input delay's Tick, the screen loop's Tick, a film) it takes the SDL
++/// path as before. The flag is set and cleared by Get_Input, game thread only.
++extern bool g_click_direct_ok;
++
+ /// OrionLayer, open fix 71. True when timer::Release_Time may return at once:
+ /// a battle is live, the engine's window is hidden (open fix 43), a client is
+ /// connected to draw it, and no input poll (Tick) came since the last wait —
+diff --git a/src/game/fields.cpp b/src/game/fields.cpp
+index c89a110a..dbc37e1a 100755
+--- a/src/game/fields.cpp
++++ b/src/game/fields.cpp
+@@ -223,7 +223,9 @@ namespace fields {
+         }
+ 
+ #ifdef ORION2RE_EXT
++        ext::g_click_direct_ok = true;  // OrionLayer, open fix 130: an injected click drained by THIS Tick is read by this call
+         ext::Tick(MOX::current_screen);
++        ext::g_click_direct_ok = false;
+         // Whatever this call returns from here on, it is the mouse's
+         // until the early return below says otherwise. Cleared per call
+         // rather than per frame, so a handler reading it can only ever
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 47a021b4..ed2d2344 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -1841,6 +1841,17 @@ namespace platform {
+ #endif
+     }
+ 
++#ifdef ORION2RE_EXT
++    // OrionLayer, open fix 130. An injected left click put straight into the game's input queue from the game thread
++    // (DOWN, then UP, as two entries: their button states differ, so Enqueue_Mouse_Input_Event does not coalesce them).
++    // The SDL thread is not involved, so no flush by the game's own Mouse_Buffer() pumps can fall between the two halves.
++    void Inject_Game_Click(int16_t x, int16_t y) {
++        Enqueue_Mouse_Input_Event(x, y, 1);
++        Enqueue_Mouse_Input_Event(x, y, 0);
++        Set_Present_Mouse_Position(x, y);
++    }
++#endif
++
+     void __cdecl Update_Cursor_Image() {
+         if (cursor_surface == nullptr || g_present_cursor_mutex == nullptr) {
+             return;
+diff --git a/src/game/platform.h b/src/game/platform.h
+index 893ee18a..91a79d76 100755
+--- a/src/game/platform.h
++++ b/src/game/platform.h
+@@ -85,6 +85,9 @@ namespace platform {
+     bool Create_Video_Buffers(int16_t video_mode);
+     void __cdecl Service_Pending_Window_Events();
+     void __cdecl Pump_Game_Input_Queue();
++#ifdef ORION2RE_EXT
++    void Inject_Game_Click(int16_t x, int16_t y);
++#endif
+     int16_t __cdecl Get_Mouse_X();
+     int16_t __cdecl Get_Mouse_Y();
+     void __cdecl Set_Logical_Mouse_Position(int16_t x, int16_t y);
