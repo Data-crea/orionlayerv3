@@ -25,7 +25,7 @@ TARGET_FPS = 60
 # The engine's own number, kept by hand because the Extension API does not
 # report it; `python tools/version_check.py` compares it with orion2re's
 # `src/version.h` and `src/game/consts.h`.
-ORION2RE_VERSION = "2.0.1"
+ORION2RE_VERSION = "2.0.2"
 
 
 def load_settings():

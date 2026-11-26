@@ -107,7 +107,7 @@ def set_wall_clock(fn):
 
 
 def status_words(now=None):
-    """The status block's three words: ("OrionRE", "v2.0.1", "18:56") —
+    """The status block's three words: ("OrionRE", "v2.0.2", "18:56") —
     the engine's version OrionLayer is built for
     (`core.config.ORION2RE_VERSION`) and the local time."""
     t = now or _wall_clock()

@@ -58,8 +58,7 @@ stops at start without one) and your own copy of Master of Orion 2.
   `libsdl2-dev`); on such a system use an older Python if you have one.
 - **The engine**: the orion2re fork
   [Data-crea/orion2re](https://github.com/Data-crea/orion2re), branch
-  `orionlayer`, based on orion2re v2.0.1 with upstream's `main` of
-  17 November 2026 merged in. That branch carries every engine
+  `orionlayer`, based on orion2re v2.0.2. That branch carries every engine
   change OrionLayer needs, and setup checks that they are all there; how
   the two talk is described in the fork's
   [docs/extension-api.md](https://github.com/Data-crea/orion2re/blob/orionlayer/docs/extension-api.md).
