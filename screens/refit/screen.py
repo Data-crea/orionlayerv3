@@ -185,18 +185,36 @@ class RefitScreen(ScreenBase):
             else None
 
     def refusal(self, view):
-        """The cell's red word (colrefit.cpp:440-462), in its order: the
-        colony cannot build it, it was captured, it is Loknar's. The first
-        is the build popup's rule (`bqdraw.design_needs_base`, DEVIATION
-        `ship_row_dim` narrowed): large or bigger needs a base."""
+        """The cell's red word (colrefit.cpp:417-445, `Draw_Ship2`), in its
+        order: the colony cannot build it (E 0x18B), it was captured, it is
+        Loknar's. The first is `Colony_Can_Build_Product` for the ship
+        (`core.shipbuildrule`, work order 437; it was the build popup's
+        narrower "large or bigger needs a base" rule). OMISSION
+        `config_minimum_orbital_base_ship_class`: the config default of
+        the size that needs a base."""
         me = int(getattr(self._state, "player_num", 0) or 0)
-        if int(view.size) >= geom.SHIP_SIZE_LARGE and not self._has_base():
+        if self._cannot_build(view):
             return self.e(geom.E_NO_BASE)
         if int(view.previous_owner) != me:
             return self.e(geom.E_CAPTURED)
         if int(view.picture_num) == geom.LOKNAR_PICTURE:
             return self.e(geom.E_LOKNAR)
         return ""
+
+    def _cannot_build(self, view):
+        """`!Colony_Can_Build_Product(colony, ship)`; False where the
+        owner's record or the colony cannot be read (nothing is claimed)."""
+        from core import shipbuildrule
+        from core.structs import colony as colony_struct
+        block = getattr(self._state, "colony_screen", None) or {}
+        raws = getattr(self._state, "colonies_raw", None) or []
+        c = block.get("colony", -1)
+        owner = self._me()
+        if owner is None or not 0 <= c < len(raws):
+            return False
+        built = list(colony_struct.parse(raws[c]).buildings)
+        return shipbuildrule.can_build(
+            owner, built, view.ship_type, view.size) is False
 
     def _has_base(self):
         from core.structs import colony as colony_struct

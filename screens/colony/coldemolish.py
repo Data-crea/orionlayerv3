@@ -9,13 +9,17 @@ own field (`Check_Satellite_Fields`, colony.cpp:1563-1589), which asks for
 each of them like any building. Every other building is clicked on its
 cell of the scene (`Check_Bldg_Fields`, colony.cpp:1932-1971), whose one
 silent case is the Capitol (its exempt list, :1942-1950, names the five
-satellites as well, which never reach it). Past one building a turn it
+satellites as well, which never reach it). Past the limit of buildings a turn it
 says so (E 0x243, `Can_Scrap_Building`); otherwise it asks (E 0x107: the
 name and half the cost, `Confirmation_Box`) and on YES turns the cell to
 rubble, removes the building, recalculates the colony and refunds the
 treasury. A building without a field — a station another supersedes, a
 building the full grid has no cell for — cannot be clicked, and the
 engine refuses it the same way.
+
+OMISSION `config_max_buildings_scrapped_per_turn`: the limit is the
+engine's config (default 1, colony_config.cpp:5, `colony_policy.cpp:5-14`);
+the engine decides, HD states no number.
 
 HD draws the buildings as a list (the list's deviation is `coldraw`'s).
 TRANSCRIPTION `building_demolish`: a left click on a row of that list

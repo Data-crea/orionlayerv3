@@ -1,7 +1,8 @@
 """The research panel's behaviour, for both of its modes.
 
-`TECH::_Tech_Select_(changing_tech)` (tech.cpp:111-395) is ONE function
-in the original, entered two ways:
+`TECH::_Tech_Select_(changing_tech)` (tech.cpp:111-395 in 1.60; on the
+branch it is `_Tech_Select`, tech.cpp:141, and `Tech_Select` :127 calls it
+with 1) is ONE function in the original, entered two ways:
 
     select (0)  at turn start when a project completes, wire id 53
                 (synthetic, open fix 24). No way out but a commit.
@@ -122,6 +123,9 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         #: from the frame that parsed them rather than re-parsed: the
         #: popup opens on a click and the wire is what it opened over.
         self._tech = ([], [])
+        #: `s_player.hyper_advanced_tech` (8 counts), None until a record
+        #: arrives; feeds the cost and the list's hyper skip (WO 437, F-01).
+        self._hyper = None
         #: `(current_research_field, current_research_application)` and
         #: `research_accumulated`, off the wire, refreshed by
         #: `_player_record` on every frame that has a record. Select
@@ -361,6 +365,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
                 view)[player_spec.TRAIT_CREATIVE] == 1
             self._tech = (list(view.tech_fields),
                           list(view.tech_applications))
+            self._hyper = list(view.hyper_advanced_tech)
             return self._tech
         except (AttributeError, IndexError, ValueError, TypeError):
             return None
@@ -476,7 +481,7 @@ class ResearchPanelScreen(ResearchPopupsMixin, ScreenBase):
         """
         if not entry.offered:
             return None
-        cost = research.cost(entry.field) - self.cost_offset()
+        cost = research.cost(entry.field, self._hyper) - self.cost_offset()
         return f"{max(0, cost)}{self._cost_suffix}"
 
     # ── Input ─────────────────────────────────────────────

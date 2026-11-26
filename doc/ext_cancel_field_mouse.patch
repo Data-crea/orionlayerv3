@@ -1,0 +1,47 @@
+OrionLayer open fix 125 — MSG_CANCEL_FIELD holds the real mouse off
+===================================================================
+
+Work order 437 (parity audit of 25 November 2026, finding g of the engine notes).
+orion2re on the fork's branch `orionlayer` (v2.0.1), after open fix 124. Not on
+`orionlayer-local`. In src/ext/ext_api.cpp.
+
+MSG_INJECT_CLICK and MSG_INJECT_RIGHT_CLICK set g_injected_mouse_pending before
+they push their events, so that Sync_Mouse_State_From_SDL stands aside until the
+queue is pumped (open fix 3). MSG_CANCEL_FIELD pushes the same pair of events
+(a right click on the field's centre) and did not: the physical mouse could
+rewrite the release through the coalescing in Enqueue_Mouse_Input_Event, which
+is the defect open fix 3 describes.
+
+The change. One line, g_injected_mouse_pending = true, before the events are
+pushed, with the same reason beside it. The flag is cleared by the next pump
+as for the other two commands.
+
+Proved: ext_api.cpp syntax-checked on the scratch clone with the build's flags;
+the branch built. Live: UNVERIFIED, see doc/orion2re_open_fixes.md entry 125.
+
+commit 0296ca0c0112ede12010d66f251e2ef72990207a
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Thu Nov 26 05:38:36 2026 +0100
+
+    OrionLayer Open Fix 125: MSG_CANCEL_FIELD holds the real mouse off like the two injected clicks (it pushed a right click without setting g_injected_mouse_pending, so the physical mouse could rewrite its release, the defect open fix 3 describes)
+    
+    OrionLayer, open fix 125.
+    
+    Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 019b6edb..1db1463e 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -3954,6 +3954,11 @@ static void ProcessInput() {
+                 // The field rect is in game space, so this centre
+                 // needs the same conversion as an injected click —
+                 // it is the same defect reached by a different door.
++                // OrionLayer, open fix 125. The same hold on the real
++                // mouse as the other two injections (INJECT_CLICK,
++                // INJECT_RIGHT_CLICK): without it the physical mouse
++                // rewrote this right click's release (open fix 3).
++                g_injected_mouse_pending = true;
+                 float cx = 0.0f;
+                 float cy = 0.0f;
+                 Game_Point_To_Window_Point_(

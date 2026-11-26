@@ -1,7 +1,7 @@
 """The main menu's easter egg — work order 327, Data's thank-you to GetDaved.
 
 INVENTION `easter_egg`: the original's main menu has no hidden field and no
-panel of its own (`MAINMENU::Add_Main_Menu_Fields_`, mainmenu.cpp:110-140,
+panel of its own (`MAINMENU::Add_Main_Menu_Fields_`, mainmenu.cpp,
 builds only the six buttons). This is OrionLayer's own and says so: one small
 four-pointed star in Data's menu background lights up under the pointer, and a
 click on it opens a thank-you panel in the middle of the screen.

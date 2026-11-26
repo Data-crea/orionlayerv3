@@ -188,12 +188,12 @@ def group_list(tech_fields, tech_applications, current_field, group,
                hyper_levels=None, apps_by_field=None):
     """The items `Get_Group_List_` would build for one category.
 
-    `hyper_levels` is `s_player.hyper_advanced_tech`, which has one
-    verified source and not two (`core/structs/unverified.py`). None
-    means "not vouched for", and then the hyper skip does not fire —
-    the field stays in the list rather than being dropped on a number
-    nobody may trust yet. Stated here because a list that is silently
-    one row short is the failure this screen already paid for once.
+    `hyper_levels` is `s_player.hyper_advanced_tech` (two sources since
+    work order 437, `core/structs/player.py`). None means the record is
+    not at hand yet, and then the hyper skip does not fire — the field
+    stays in the list rather than being dropped on a missing number.
+    Stated here because a list that is silently one row short is the
+    failure this screen already paid for once.
     """
     apps_by_field = apps_by_field or researchlist.field_applications()
     items, field = [], researchlist.FIRST_FIELD_IN_GROUP[group]

@@ -13,11 +13,14 @@ because a hand-copied table without one is the nebula sizes again
                           checked against the source by
                           dev:tools/research_cost_check.py, which the smoke
                           test runs.
-    cost()                COLCALC::Player_Research_Cost_ (colcalc.cpp:526-539)
-    chance()              COLCALC::Chance_For_Research_Breakthrough_Aux_
-                          (colcalc.cpp:469-484)
-    turns_until_complete() COLCALC::Player_N_Turns_Until_Research_Complete_
-                          (colcalc.cpp:432-458)
+    cost()                COLCALC::Player_Research_Cost (colcalc.cpp:546-558)
+    chance()              COLCALC::Chance_For_Research_Breakthrough_Aux
+                          (colcalc.cpp:489)
+    turns_until_complete() COLCALC::Player_N_Turns_Until_Research_Complete
+                          (colcalc.cpp:451)
+
+Citations re-anchored by function name on the orionlayer branch (work
+order 437); the 1.60 numbers (526-539, 469-484, 432-458) are gone.
 
 The player values these need — `tech_fields[]` (the per-field status) and
 `hyper_advanced_tech[]` (the per-field surcharge counter) — are in
@@ -43,9 +46,18 @@ FIELD_COST = (
 )
 
 #: The field from which a research field carries the hyper-advanced
-#: surcharge, and what each count costs (colcalc.cpp:533-537).
+#: surcharge, and what each count costs (colcalc.cpp:552-556).
+#: OMISSION config_hyper_advanced_cost_increment: the engine reads the
+#: step from the config (`hyper_advanced_cost_increment`, default 10000,
+#: colcalc_config.cpp:243); HD assumes the default (engine.md,
+#: `engine.config_bound_rules`).
 HYPER_ADVANCED_FIRST_FIELD = 75
 HYPER_ADVANCED_STEP = 10000
+
+#: OMISSION config_research_rules: `fixed_research_cost` and
+#: `keep_research_on_breakthrough` (colcalc_config.cpp:240-242) change when
+#: and how a project completes (research_completion.cpp:25-50); the chance
+#: and turn count below are the classic rule, which is the default.
 
 #: TECH_FIELD_COUNT (orion2_consts.h:945) — the length of both the cost
 #: table and the player's status array.
@@ -57,11 +69,15 @@ STATUS_RESEARCHED = 3
 
 
 def cost(field, hyper_advanced=None):
-    """COLCALC::Player_Research_Cost_ (colcalc.cpp:526-539).
+    """COLCALC::Player_Research_Cost (colcalc.cpp:546-558).
 
     0 for field 0; the table's cost otherwise, plus 10000 per count in
     `hyper_advanced_tech[field - 75]` from field 75 on.
-    """
+    
+    OMISSION `config_research_costs`: the engine reads the field costs and
+    the hyper-advanced increment from its config (colcalc.cpp:548-560); the
+    DEFAULT values stand here, no wire block reports the effective ones.
+    UNVERIFIED with a modded config."""
     if field is None or field <= 0 or field >= FIELD_COUNT:
         return 0
     total = FIELD_COST[field]
@@ -73,7 +89,7 @@ def cost(field, hyper_advanced=None):
 
 
 def chance(accumulated, produced, field_cost):
-    """COLCALC::Chance_For_Research_Breakthrough_Aux_ (colcalc.cpp:469-484).
+    """COLCALC::Chance_For_Research_Breakthrough_Aux (colcalc.cpp:489).
 
     The percentage for THIS turn: zero until the accumulated points pass
     the cost, then `(accumulated - cost) * 100 / cost`, clamped to 100 and
@@ -89,7 +105,7 @@ def chance(accumulated, produced, field_cost):
 
 
 def turns_until_complete(field, status, accumulated, produced, field_cost):
-    """COLCALC::Player_N_Turns_Until_Research_Complete_ (colcalc.cpp:432-458).
+    """COLCALC::Player_N_Turns_Until_Research_Complete (colcalc.cpp:451).
 
     0 when the field is already researched; -1 when nothing is produced and
     the points have not reached the cost (research stands still); otherwise

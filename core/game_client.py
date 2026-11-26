@@ -217,7 +217,14 @@ class GameClient:
         # parsed one (audit TD-05): a layout this client cannot read used
         # to count as the new connection's first snapshot.
         self.stats = {"state": 0, "state_ok": 0, "fields": 0, "visual": 0,
-                      "bytes": 0}
+                      "bytes": 0, "cmev_gaps": 0}
+        #: The number the next battle event must carry (CMEV numbers its
+        #: events once, from 1, open fix 56); None before the first one of a
+        #: connection. A batch that starts above it lost events: the ring
+        #: holds 1024 (`ext_api.cpp:47`) and the engine drops a client that
+        #: stalls a second (`ext_server.cpp:424`). Work order 437, audit
+        #: combat F2.
+        self._cmev_expect = None
         # A REQUESTED END IS NOT A LOST CONNECTION (decision 62).
         # `expect_shutdown` is called before the GAME menu's QUIT is
         # confirmed; after it, the socket closing ends the client
@@ -689,6 +696,29 @@ class GameClient:
         if batch:
             self.state.combat_events = {"first": batch[0]["seq"],
                                         "events": list(batch)}
+            lost = self._cmev_gap(batch)
+            if lost:
+                # DETECTED, NOT REPAIRED: the lost events are gone from the
+                # engine too (marked sent when serialized, ext_api.cpp:2324);
+                # the screen is told and adopts the engine's state
+                self.state.combat_events["gap"] = lost
+            self._cmev_expect = batch[-1]["seq"] + 1
+
+    def _cmev_gap(self, batch):
+        """How many events are missing before this batch (0: none, or the
+        first batch of a connection, or a restarted engine numbering from
+        1 again, which the battle's player handles itself)."""
+        expect = getattr(self, "_cmev_expect", None)
+        first = batch[0]["seq"]
+        if expect is None or first <= expect:
+            return 0
+        lost = first - expect
+        self.stats["cmev_gaps"] = self.stats.get("cmev_gaps", 0) + 1
+        log.warning("battle events: %d lost (expected number %d, got %d) - "
+                    "the engine's ring holds 1024 and drops a client that "
+                    "stalls a second; the screen adopts the engine's state",
+                    lost, expect, first)
+        return lost
 
     def _handle_message(self, msg_type, flags, payload):
         """Process a received message."""
@@ -714,6 +744,8 @@ class GameClient:
             # the bit is the one the specs were read against.
             self._layout_pending = bool(caps & CAP_LAYOUT)
             engine_layout.install(None)
+            # a new connection's numbering is unknown until its first batch
+            self._cmev_expect = None
 
         elif msg_type == MSG_LAYOUT:
             try:

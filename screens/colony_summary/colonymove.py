@@ -60,7 +60,7 @@ POP_STATE_NORMAL = 2
 POP_STATE_NATIVE = 3
 POP_STATE_ANDROID = 4
 
-#: `Sum_Colonists_ >= 42` (colmove.cpp:556). The same 42 as
+#: `Sum_Colonists_ >= 42` (colmove.cpp:525). The same 42 as
 #: `colonyfacts.POP_LIMIT_CAP`, reached from the other side — that
 #: constant carries the three sources and this is a fourth site for
 #: the same ceiling, so it is named here rather than re-derived.
@@ -124,14 +124,14 @@ def sum_colonists(pops, n_pops, job):
 
 def _can_take_job(pops, n_pops, max_farms, index, new_job,
                   inter_colony_transfer=False):
-    """`COLMOVE::Give_Colonist_New_Job_` (colmove.cpp:535-571).
+    """`COLMOVE::Give_Colonist_New_Job_` (colmove.cpp:504-542).
 
     Returns `(True, None)` or `(False, reason)`. The four rules, in
     the source's own order, each with the fields it decides from and
     what those fields rest on under decision 23:
 
     1. **Natives take neither research nor industry**
-       (colmove.cpp:542-545). Decides from the pop word's low nibble
+       (colmove.cpp:510-513). Decides from the pop word's low nibble
        via `pop_state`. The nibble is VERIFIED live for 0..7 as a
        player index, and **9 meaning native is VERIFIED too** as of
        5 September 2026 — data, picture and the game's own label,
@@ -152,7 +152,7 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
        resolve here: the code is what runs, so the code is what is
        mirrored, and which side is wrong is not ours to decide.
 
-    2. **Androids keep the job they have** (colmove.cpp:547-553).
+    2. **Androids keep the job they have** (colmove.cpp:515-521).
        Same nibble, value 8, and this one is **still UNVERIFIED**:
        no save this project holds contains an android, so the rule
        is mirrored from the source alone. Note it
@@ -160,12 +160,12 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
        dropped back on its own column is allowed — that path does
        not even reach here, see `plan_drop`.
 
-    3. **At most 42 in a job** (colmove.cpp:555-559). Decides from
+    3. **At most 42 in a job** (colmove.cpp:523-527). Decides from
        every pop's profession and assigned bit. `POP_MASK_PROF` is
        the one mask of the five with a second source; the assigned
        bit is header-only.
 
-    4. **A farmer needs `max_farms > sum`** (colmove.cpp:562-566).
+    4. **A farmer needs `max_farms > sum`** (colmove.cpp:529-537).
        The comparison is transcribed as written. What the field
        actually holds is 0 or 255 and nothing between —
        `Colony_Calculation_` writes -1 into a `uint8_t` when the
@@ -208,7 +208,7 @@ def _can_take_job(pops, n_pops, max_farms, index, new_job,
 
 
 def pops_identical(pops, a, b):
-    """`COLMOVE::Pops_Identical_` (colmove.cpp:106-126).
+    """`COLMOVE::Pops_Identical_` (colmove.cpp:91-112).
 
     Three tests, all transcribed: the profession bits must match, the
     pop states must match, and the low nibble plus the conquered bit
@@ -232,7 +232,7 @@ class Cluster:
 
     `indices` are the pops `Get_Cluster_` would unassign — every pop
     identical to the one clicked, from it to the END of the array
-    (colmove.cpp:66-71). Not the contiguous run under the cursor: a
+    (colmove.cpp:51-57). Not the contiguous run under the cursor: a
     group split by a different pop still comes along in full, which
     is why the size cannot be read off the icons.
     """
@@ -249,13 +249,20 @@ class Cluster:
 
 
 def plan_pickup(pops, n_pops, start):
-    """`COLMOVE::Get_Cluster_` (colmove.cpp:56-76), without taking it.
+    """`COLMOVE::Get_Cluster_` (colmove.cpp:41-61), without taking it.
 
     **The refusal at the FIRST click.** A native is rejected outright
-    — `pop[start] & 0x0F == 9` (colmove.cpp:59) — and no cluster is
-    formed. That is a fifth refusal on top of the four drop rules,
+    — `pop[start] & 0x0F == 9`, `Is_Native && !native_population_transfer`
+    (colmove.cpp:44-49) — and no cluster is formed. That is a fifth refusal on top of the four drop rules,
     in a different function, with a different message, and the
     fundament missed it until 4 September 2026.
+
+    OMISSION `config_native_population_transfer`: the engine refuses the
+    pick-up only while its config switch `colony.native_population_transfer`
+    is false (default false, colmove_config.cpp:6, colmove.cpp:44); no wire
+    block reports the effective value, so HD refuses unconditionally.
+    UNVERIFIED with a modded config. Wished from the engine: the switch in
+    a wire block (orion2_open_fixes).
     """
     if not (0 <= start < min(n_pops, len(pops))):
         return Cluster((), None)
@@ -267,7 +274,7 @@ def plan_pickup(pops, n_pops, start):
 
 
 def held_pops(pops, indices):
-    """`pop[]` with the held cluster unassigned — colmove.cpp:70.
+    """`pop[]` with the held cluster unassigned — colmove.cpp:54.
 
     `Get_Cluster_` does not remove anything and does not count
     anything: it clears bit `0x200` on each pop it takes

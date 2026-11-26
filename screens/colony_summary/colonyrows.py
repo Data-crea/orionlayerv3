@@ -279,11 +279,18 @@ def _output_fields(col, planet, traits, planning, players=(), me=0):
         # box prints it (`Planet_Max_Population_For_Player`, colcalc.cpp:
         # 986-1025): an android or conquered pop counts with its own race
         # (WO 426; it was the owner's race only).
+        # OMISSION `config_population_capacity`: the size and climate
+        # tables, the Tolerant, Subterranean and Biospheres bonuses and
+        # Advanced City Planning are config in v2 (colcalc_config.cpp:
+        # 48-92, :214-221); `colonyfacts` mirrors the DEFAULTS and no
+        # wire block reports the effective ones. UNVERIFIED with a
+        # modded config. Wished from the engine: the maximum itself per
+        # colony in a wire block.
         "max_pop": colonyfacts.planet_maximum(planet, col, players, me,
                                               traits),
         # ── For output_panel, and NOT drawn in the row ──
         # The original's scan box prints seven values for the
-        # SELECTED colony (colsum.cpp:1196-1205) and the row
+        # SELECTED colony (colsum_details.cpp:309-319) and the row
         # already carries three of them. These are the other
         # four plus morale, decoded here rather than in the
         # panel because all struct reading in this screen lives
@@ -296,13 +303,76 @@ def _output_fields(col, planet, traits, planning, players=(), me=0):
         "size": planet.size,                    # PLANET_SIZE
         "gravity": planet.gravity_class,        # PLANET_GRAVITY
         "mineral": planet.mineral_class,        # MINERAL_RESOURCE
-        # colsum.cpp:1179-1182 sums all ten before printing.
+        # colsum_details.cpp:276-279 sums all ten before printing.
         # See output._growth_note for why it is not scaled.
         "growth": sum(col.pop_growth),
         "morale": morale,
         "morale_applies": morale_applies,
         "morale_icon": colonyfacts.morale_icon(morale),
     }
+
+
+def _raw_turns(state, index):
+    """CSUM's `Calculate_Current_Production_Turn_Count` or None."""
+    row = colsumblock.of_colony(state, index)
+    return None if row is None else row["turns"]
+
+
+def _scan_fields(col, index, state, inbound):
+    """The scan box's values beyond the row's own (work order 437).
+
+    TRANSCRIPTION of `COLSUM::Draw_Colony_Scan_Info`
+    (colsum_details.cpp:252-319): roundoff and growth are the sums over
+    the ten `pop_roundoff[]` / `pop_growth[]` words (:276-279; offsets
+    180/200, header-verified, `pop_growth` also live, see
+    `core/structs/colony.py`; `pop_roundoff` has no live second source:
+    UNVERIFIED); `pop_change` is `(roundoff + growth) / 1000`, one less
+    when the sum is negative (:289-292, C truncation); `inbound` is the
+    number of `settlers[]` of the owner whose destination is this planet
+    (:281-287); `spent` is `production_spent + bought_outright` (:316);
+    `net_industry` is `production[IND] - maintenance[IND]` floored at 0
+    (:294-297).
+
+    OMISSION `scan_cost_no_csum`: `cost` is
+    `Colony_Producing_Product_Cost`, config-bound in v2 and so never
+    computed here; it comes from CSUM (`core.colsumblock`, open fix 110)
+    and is None without the block — the box then prints "?".
+    """
+    roundoff = sum(col.pop_roundoff)
+    growth = sum(col.pop_growth)
+    total = roundoff + growth
+    change = abs(total) // 1000 * (1 if total >= 0 else -1)
+    if total < 0:
+        change -= 1
+    csum = colsumblock.of_colony(state, index)
+    return {
+        "roundoff": roundoff,
+        "pop_change": change,
+        "inbound": inbound.get(int(col.planet), 0),
+        "spent": col.production_spent + col.bought_outright,
+        "cost": None if csum is None else csum["cost"],
+        "net_industry": max(0, col.production[ECON_INDUSTRY] -
+                            col.maintenance[ECON_INDUSTRY]),
+    }
+
+
+def csum_order_matches(rows, state):
+    """Does HD's row order equal the order the GAME's list holds?
+
+    CSUM carries `COLXPORT::g_colony_list_ptr` as it stands
+    (`core.colsumblock`). True/False when the block is on the wire, None
+    when it is not (an engine without open fix 110, or another screen).
+    The HD order is a MIRROR of the engine's sorts (`SORT_KEYS`); this is
+    what makes a divergence — a config, a new key, a tie — visible
+    instead of aiming a click at the wrong colony (work order 437, F2).
+    Compares the colonies both lists hold, in order.
+    """
+    block = getattr(state, "colony_list_numbers", None)
+    if block is None:
+        return None
+    mine = [r["index"] for r in rows]
+    game = [r["colony"] for r in block["rows"] if r["colony"] in set(mine)]
+    return mine == game
 
 
 def build_rows(game_state, sort_key="name", names=None, held=None):
@@ -333,7 +403,8 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     The dict keys ARE the interface to the two renderers: index,
     name, climate, pops, jobs, cells, held, no_farming, max_pop,
     producing,
-    producing_id, producing_state, producing_turns, can_buy, stored (the
+    producing_id, producing_state, producing_turns, producing_tier,
+    producing_turns_raw, scan (work order 437), can_buy, stored (the
     hidden `t` sort, work order 413) for
     `colonylist.render()` — `can_buy` is False here and set by
     `colonybuy.annotate` to False, "buy" or "bought" (work order 322
@@ -357,6 +428,11 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
     # The ship branches' names, off the wire (work order 196 C3: the
     # list never passed them, and every ship read "not on the wire").
     ships = prodname.ShipNames(game_state, me, player=parsed.get(me))
+    # settlers on their way, per destination planet (scan box "Enroute")
+    inbound = collections.Counter(
+        s["dest_planet"] for s in player_struct.settlers(
+            game_state.player_raw[me]
+            if 0 <= me < len(game_state.player_raw) else None))
     rows = []
     for index, raw in enumerate(game_state.colonies_raw):
         col = colony_struct.parse(raw)
@@ -483,6 +559,15 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
             "producing_state": _producing[1],
             "producing_turns": colsumblock.turn_suffix(
                 colsumblock.of_colony(game_state, index)),
+            # `cmp_Prod`'s levels 1 and 3 (work order 437): the tier is
+            # `Prod_To_Sort_Type` (a queued ship's `d.size` is read off
+            # the ship record), the turns are CSUM's raw
+            # `Calculate_Current_Production_Turn_Count`, None without it.
+            "producing_tier": prodname.sort_tier(
+                col.producing[0], ships.size(col.producing[0])),
+            "producing_turns_raw": _raw_turns(game_state, index),
+            # the scan box's other values, see `_scan_fields`
+            "scan": _scan_fields(col, index, game_state, inbound),
             # False here: the record cannot decide it. `colonybuy`
             # sets it to "buy" or "bought" — from the game's own buy
             # field for the rows the game shows (work order 322 B1),
@@ -499,7 +584,7 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
 
 # ── The seven sort keys, and the directions are transcribed ───────
 #
-# `COLSUM::Switched_cmp_` (colsum.cpp:378-401, orion2re 1.60) is a
+# `COLSUM::Switched_cmp_` (colsum_details.cpp:78-104, orion2re 1.60) is a
 # plain switch on `_g_sort_index` with the DIRECTION BAKED IN as a
 # literal minus per case. Five of the seven are descending; Name and
 # Producing are not. There is NO direction toggle anywhere — clicking
@@ -508,13 +593,13 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
 # written since 1996 does the opposite and the absence looks like an
 # omission rather than a transcription.
 #
-#   0 name        cmp_Alpha_    :1042   ascending
-#   1 population  cmp_Pops_     :1064   DESCENDING
-#   2 food        cmp_Food_     :1071   DESCENDING
-#   3 industry    cmp_Industry_ :1076   DESCENDING
-#   4 science     cmp_Research_ :1081   DESCENDING
-#   5 producing   cmp_Prod_     :1091   ascending — NOT IMPLEMENTED
-#   6 bc          cmp_BC_       :1086   DESCENDING
+#   0 name        cmp_Alpha     colsum_details.cpp:176   ascending
+#   1 population  cmp_Pops      :198   DESCENDING
+#   2 food        cmp_Food      :205   DESCENDING
+#   3 industry    cmp_Industry  :210   DESCENDING
+#   4 science     cmp_Research  :215   DESCENDING
+#   5 producing   cmp_Prod      :225   DESCENDING inside (negates twice), whole since WO 437
+#   6 bc          cmp_BC        :220   DESCENDING
 #
 # ── Ties keep the input order, and that IS the transcription ──────
 #
@@ -534,12 +619,12 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
 #                     order too — the same order, filtered the same
 #                     way, which is what makes the comparison below
 #                     legitimate rather than a coincidence.
-#   colsum.cpp:363    `Sort_Col_List_` is a bubble sort that swaps
+#   colsum_details.cpp:62-77  `Sort_Col_List` is a bubble sort that swaps
 #                     only when `Switched_cmp_` is STRICTLY greater
 #                     than zero. Equal elements are never swapped, so
 #                     the sort is stable and a tie comes out in array
 #                     order.
-#   colsum.cpp:1056   `cmp_` returns -1, 0 or 1 and returns 0 on
+#   colsum_details.cpp:190    `cmp` returns -1, 0 or 1 and returns 0 on
 #                     equality — the sign that would break that
 #                     stability cannot be produced. This is the link
 #                     that makes the one above a fact instead of a
@@ -560,7 +645,7 @@ def build_rows(game_state, sort_key="name", names=None, held=None):
 # side-by-side finds.
 
 def _alpha(row):
-    """cmp_Alpha_ — `strcasecmp` on the planet name (colsum.cpp:1053).
+    """cmp_Alpha — `strcasecmp` on the planet name (colsum_details.cpp:176-188).
 
     CASE-INSENSITIVE, and that is the transcription rather than a
     convenience: `strcasecmp` is what the original calls, so a lower-
@@ -583,12 +668,9 @@ def _by(field, econ=None):
     return lambda r: -r["production"][econ]
 
 
-#: `producing` NO LONGER FALLS BACK TO THE PLANET NAME. It is
-#: `core.prodname.sort_key` — `cmp_Prod_`'s first two levels,
-#: transcribed — and the module block there says exactly which part
-#: is still missing. It stays in SORT_UNAVAILABLE below; see that
-#: entry for why a key that is right on the reference save is still
-#: declared unavailable.
+#: `producing` is `core.prodname.sort_key` — `cmp_Prod`'s three levels,
+#: transcribed (work order 437; levels 1 and 3 had waited for a cost
+#: table and a turn count that were on hand all along).
 SORT_KEYS = {
     "name": _alpha,
     "population": _by("pops"),
@@ -606,19 +688,12 @@ SORT_KEYS = {
 #: worked — an absence that is visible is a state, an absence that is
 #: silent is a bug.
 SORT_UNAVAILABLE = {
-    # NARROWED 7 September 2026, and the old reason was half wrong.
-    # The NAME table is no longer missing — `core.prodname` resolves
-    # both of `Selection_Name_`'s answerable branches. What is still
-    # missing is `TECHDATA::_buildings[].cost`, which
-    # `Prod_To_Sort_Type_` (colsum_details.cpp:335) adds 10 to, and
-    # `Calculate_Current_Production_Turn_Count_`, `cmp_Prod_`'s third
-    # level. The key is therefore RIGHT on any set where no colony is
-    # building a building — the reference save is one, every row
-    # produces Trade Goods — and orders buildings among themselves by
-    # name where the original orders them by cost. A control that is
-    # correct on one save and wrong on the next is worse than one
-    # that says it cannot do the job, so it stays declared.
-    "producing": "orders buildings among themselves by name; the "
-                 "original orders them by cost, and the cost table "
-                 "in techname.lbx is not extracted",
+    # EMPTY since work order 437: `producing` is whole now (the building
+    # costs are `core.buildcost`, techdata.cpp:41-90; a queued ship's tier
+    # comes off its ship record; the turns off CSUM). The MECHANISM stays:
+    # `colonypick` refuses a move under a key listed here and
+    # `colonyselect` stops vouching for the game's order, and the checks
+    # drive it by listing a key. What the producing key still assumes is
+    # OMISSION `config_building_cost` (core/buildcost.py), and
+    # `csum_order_matches` compares the order with the game's own.
 }

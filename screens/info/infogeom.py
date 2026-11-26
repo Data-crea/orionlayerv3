@@ -17,6 +17,12 @@ ESC = 0x1B
 EXIT = (535, 434, 535 + 91 - 1, 434 + 30 - 1)
 #: The five tabs: `_sub_scr_field` (:174) with INFO.LBX 3-7 (164 wide,
 #: 27/25/26/26/27 high), multi-buttons bound to `current_tab` (:563-574).
+#: OMISSION config_info_menu_layout (WO 437, audit F-05): the engine's config
+#: `interface.info_menu_layout` can select a second arrangement (tab fields
+#: reordered at (21,77)(21,129)(21,103)(21,50)(21,154), `kInfoMenuFields`,
+#: info.cpp, needs a matching INFO.LBX); HD has only the classic one and
+#: hits its tabs by these rectangles. Default `classic`; UNVERIFIED whether
+#: a live list in the other layout would map a click to the wrong tab.
 TAB_AT = ((21, 50), (21, 77), (21, 102), (21, 128), (21, 154))
 TAB_SIZE = ((164, 27), (164, 25), (164, 26), (164, 26), (164, 27))
 #: The left panel: the stardate centred at (151, 27) (:578, :596).

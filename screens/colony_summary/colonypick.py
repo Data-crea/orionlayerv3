@@ -243,7 +243,7 @@ def message(words, outcome, total=0):
     see, in a panel where something else belonged: `planet_info` is
     the left half of the original's own scan box, the description
     paragraph at native (13, 354, 80, 88)
-    (`Draw_Colony_Scan_Info_`, colsum.cpp:1155), and the message
+    (`Draw_Colony_Scan_Info`, colsum_details.cpp:252), and the message
     evicted it on every move. Both of Data's 1440p screenshots of
     8 September 2026 are the pair — one with the paragraph, one with
     "1 moved" where it had been.

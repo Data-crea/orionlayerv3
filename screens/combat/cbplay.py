@@ -99,6 +99,20 @@ class Player:
     def busy(self):
         return bool(self._queue) or self._anim is not None
 
+    def event_gap(self, lost):
+        """The wire lost `lost` battle events (`GameClient._cmev_gap`).
+
+        What an event would have animated is gone for good, so playing on
+        from the queue would show a battle that never happened: drop it and
+        let `feed` adopt the engine's state as the first one of a battle is
+        adopted. The next events carry on from their own numbers.
+        Work order 437, audit combat F2."""
+        self.gaps = getattr(self, "gaps", 0) + 1
+        self.gap_events = getattr(self, "gap_events", 0) + lost
+        self._queue, self._after, self._anim = [], [], None
+        self._marks, self._fed = [], None
+        self.shown = None
+
     def feed(self, combat, events, ordnance):
         """One snapshot: its events (new ones only) and the state after.
 
@@ -373,6 +387,13 @@ class Player:
         if k == "destroy":
             return cbstart.destroy(self, ev)
         if k == "retreat":
+            # The `status` guard below is DEAD CODE on the current engine
+            # (audit combat F8, work order 437): CEV_RETREAT is sent at
+            # combat1.cpp:1201, after both `Validate_Retreating_Ship` returns
+            # (combat1_turn_order.cpp:555-571) and BEFORE `unit_status = 5`,
+            # so the value is 0 on every path that reaches the hook. The
+            # header comment `ext_api.h:224` ("5: died while turning away")
+            # describes an earlier engine; the guard stays for it.
             u = self._unit(ev.get("unit", -1))
             p = ev["_retreat"] = None if int(ev.get("status", 0) or 0) or \
                 u is None or self.shown is None else cbretreat.plan(

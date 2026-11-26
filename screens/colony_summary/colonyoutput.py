@@ -3,7 +3,7 @@
 A TRANSCRIPTION, and the marking is worth restating because it was
 briefly the opposite: decision 43 called this panel an HD EXTENSION on
 the strength of a word grep and is WITHDRAWN. The original draws all
-of it. `COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155) fills the
+of it. `COLSUM::Draw_Colony_Scan_Info` (colsum_details.cpp:252) fills the
 native box at (13, 354, 80, 88) with a formatted paragraph over
 `ESTRINGS::E_Strings_(74)` carrying seven values (colsum.cpp:1196-1205)
 and, from native x 106, a column of production rows plus morale
@@ -33,7 +33,7 @@ distinction the sidebar makes with "--" while disconnected, reached
 from the other side.
 
 **The production rows draw the original's NET, not the record.**
-`COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36) computes what it
+`COLDRAW::Draw_Colony_Prod_Both` (colony_production_display.cpp:28) computes what it
 draws before it draws anything, in four branches (coldraw.cpp:73-94),
 and only one of the four is `production[t]` itself. Until 4 September
 2026 this panel printed the stored value and the difference was
@@ -176,6 +176,7 @@ def row_values(row, words, climates):
     def word(table, index):
         return table[index] if 0 <= index < len(table) else "?"
 
+    scan = row.get("scan") or {}
     return {
         "size": word(words.get("sizes") or (), row.get("size", -1)),
         "climate": word(climates or (), row.get("climate", -1)),
@@ -202,6 +203,17 @@ def row_values(row, words, climates):
         # this. Falling back to `production` when the key is absent
         # would hide exactly the difference this exists to show, so
         # the fallback is a zero row.
+        # THE REST OF THE ORIGINAL'S 15 (work order 437), from
+        # `colonyrows._scan_fields`: Enroute, roundoff, population
+        # change, spent/cost and the net industry
+        # (colsum_details.cpp:252-319). `cost` None (no CSUM) draws "?":
+        # OMISSION `scan_cost_no_csum`.
+        "inbound": scan.get("inbound", 0),
+        "roundoff": scan.get("roundoff", 0),
+        "pop_change": scan.get("pop_change", 0),
+        "spent": scan.get("spent", 0),
+        "cost": "?" if scan.get("cost") is None else scan["cost"],
+        "net_industry": scan.get("net_industry", 0),
         "food": _drawn(row, ECON_FOOD),
         "industry": _drawn(row, ECON_INDUSTRY),
         "research": _drawn(row, ECON_RESEARCH),
@@ -270,7 +282,7 @@ def visible_rows(row, cfg, words, climates, only=None):
 def render_for(screen, surface):
     """Both halves of the scan box, into the screen's own two boxes.
 
-    `COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155) is ONE
+    `COLSUM::Draw_Colony_Scan_Info` (colsum_details.cpp:252) is ONE
     function that fills two rectangles — the description paragraph at
     native (13, 354, 80, 88) and the production rows from native
     x 106 — so this is one call too. It lives here rather than in
@@ -396,7 +408,7 @@ def render_info(surface, row, area, cfg, words, climates, layout, style,
     37) — runtime values that `Box.to_dict` never writes.
 
     `COLSUM::Draw_Colony_Scan_Info_` fills two boxes, not one
-    (colsum.cpp:1155). This is the first: one formatted paragraph at
+    (colsum_details.cpp:252). This is the first: one formatted paragraph at
     native (13, 354, 80, 88) over `ESTRINGS::E_Strings_(74)`, with
     seven values substituted (colsum.cpp:1194-1206). The second — the
     four production rows and morale from native x 106 — is `render`'s,

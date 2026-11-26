@@ -62,6 +62,10 @@ LOKNAR_PICTURE = 44
 H_CREW = 0x8A
 #: A design or ship size from which a star base is needed
 #: (`SHIP_SIZE_LARGE`, the build popup's rule, `bqdraw.design_needs_base`).
+#: OMISSION `config_minimum_orbital_base_ship_class`: the refit cell's
+#: rule is `core.shipbuildrule`, whose size is the engine's config default
+#: (colcalc_config.cpp:257); this constant is only the build popup's
+#: literal first dim.
 SHIP_SIZE_LARGE = 2
 
 

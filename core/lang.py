@@ -81,7 +81,10 @@ _state = {"language": DEFAULT, "table": {}, "upper": {}, "templates": [],
 #: count while its placeholders matched anything (the German walk).
 NUMERIC = {"n", "i", "id", "count", "pops", "max_pop", "total", "landed",
            "carried", "turns", "growth", "food", "industry", "research",
-           "bc", "morale", "shortage", "made", "hz", "k"}
+           "bc", "morale", "shortage", "made", "hz", "k",
+           # the Colonies scan box (work order 437)
+           "cost", "inbound", "net_industry", "pop_change", "roundoff",
+           "spent"}
 #: Placeholders that stand for OrionLayer's own words ("Barren", "Farmers",
 #: a screen's name): the one kind of group `_fill` translates. Every other
 #: group is carried over as it was drawn (work order 209 A3): a value the

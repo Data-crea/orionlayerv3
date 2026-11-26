@@ -27,7 +27,7 @@ exactly the kind of plausible-looking guess this file exists to
 quarantine.
 
 Still needed, still unverified:
-  s_player.hyper_advanced_tech @640 — see HYPER_ADVANCED_TECH below
+  s_player.hyper_advanced_tech @640 — PROMOTED (WO 437), see below
   (s_player.tech_applications @379 was promoted 22 September 2026 —
                   work order 165 part A; see the note further down)
 """
@@ -51,17 +51,12 @@ from core.structs import Spec  # noqa: F401
 #: The Beam line itself is still dropped; lifting it is its own work.
 
 
-#: s_player.hyper_advanced_tech[MAX_PLAYERS] — eight bytes, one per
-#: technology field from 75 on, each adding 10000 to that field's research
-#: cost (`COLCALC::Player_Research_Cost_`, colcalc.cpp:526-539). Read at 640
-#: from orion2re's own headers compiled with their packing, with
-#: `sizeof(s_player)` matching sizes.h — ONE source. The live read on SAVE4
-#: and SAVE5 is eight zeros, and **a zero confirms no offset** (the same
-#: rule the monster damage fields were left under, fundament 64), so this
-#: stays here until a game that has reached hyper-advanced research can be
-#: read. Consequence, written down rather than discovered later: the
-#: sidebar's turn count is an UNDERESTIMATE for fields 75..82 while the
-#: surcharge cannot be read (work order 129 C/D).
+#: s_player.hyper_advanced_tech[MAX_PLAYERS] — **PROMOTED, work order 437**
+#: (audit F-01): the member lives in `core/structs/player.py` now, with
+#: its two sources (1.60 header compile 640; v2.0.1 compiled layout table
+#: 8440 = 640 + 7800). Each count adds the cost step to one field from 75
+#: on (`Player_Research_Cost`, colcalc.cpp:552-556). The constants below
+#: stay as the 1.60 fall-back values the check of the plane's size names.
 HYPER_ADVANCED_TECH_OFFSET = 640
 HYPER_ADVANCED_TECH_COUNT = 8
 

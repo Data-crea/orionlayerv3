@@ -54,7 +54,7 @@ None past the end of the icon list rather than guessing, and the
 caller refuses the click — see `colonypick`.
 
 **THE GEOMETRY IS A SQUISH, NOT A CONSTANT PITCH.**
-`Calculate_Squish_Step_` (coldraw.cpp:12-33) divides the column by
+`Calculate_Squish_Step_` (colony_production_display.cpp:4-26) divides the column by
 the icon count, so a colony with twelve farmers draws them at a 9 px
 pitch where four would sit at 30. `30 / -3` is C truncation toward
 zero and is -10 exactly; it is written as such below because the
@@ -192,7 +192,7 @@ def pop_slot(pops, n_pops, job, pop_index):
 
 
 def squish_step(left_x, right_x, count, spacing=ICON_SPACING):
-    """`Calculate_Squish_Step_` (coldraw.cpp:12-33), returning the
+    """`Calculate_Squish_Step_` (colony_production_display.cpp:4-26), returning the
     PITCH — the `30 - _step_squish` every draw and every hit test
     multiplies by.
 

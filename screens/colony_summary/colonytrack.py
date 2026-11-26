@@ -419,7 +419,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
 
     **THE PITCH IS THE ORIGINAL'S OWN, SCALED.** Each job column's
     cells are laid at `colonyicons.column_pitch(job, count)`, which is
-    `COLDRAW::Calculate_Squish_Step_` (coldraw.cpp:12-33) transcribed,
+    `COLDRAW::Calculate_Squish_Step_` (colony_production_display.cpp:4-26) transcribed,
     multiplied by this column's HD width over its NATIVE width. So a
     column that squeezes in the original squeezes here, by the same
     amount, and a column that does not is drawn at the full 30-unit
@@ -467,7 +467,7 @@ def _column_boxes(cols, cfg, scale, row, y, h, track, step):
     transcribe. The original shows headroom ONLY as a number, in the
     bottom-left scan box, and only for the colony being scanned:
     `Population (13/22)` from `E_Strings_(74)`, drawn by
-    `Draw_Colony_Scan_Info_` (colsum.cpp:1155, values at :1196-1205).
+    `Draw_Colony_Scan_Info` (colsum_details.cpp:252, values :300-309).
     A row never carries it. **So a per-row display would be an HD
     EXTENSION and would have to be marked as one**, in the same family
     as the per-row detail line (`colonylist`, `list._hd_extension`).

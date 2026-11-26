@@ -97,8 +97,24 @@ ENGINE_FKEYS = {
                   "box (:3277-3284, :3237-3302) — HD's message box",
         "Alt+F8": "a game option on or off; the engine says so in its "
                   "box (:3286-3290, :3237-3302) — HD's message box",
-        "Alt+F9": "the autosave (mainscr_main.cpp:617-626) — a box",
-        "Alt+F10": "loads the last saved game (:628-630) — the player's own",
+        # WO 437 F-04: the engine's FUNCTION names are swapped against what
+        # they do. Alt+F9 (-1109) -> `Auto_Save_Last_Saved_Game` shows HESTR
+        # 0CD "Load game %d?" and calls `FILEDEF::Load_Game(active_save_slot)`;
+        # Alt+F10 (-1110) -> `Auto_Load_Last_Saved_Game` shows 0CC "Save game
+        # %d?" and calls `Save_Game(active_save_slot)` (mainscr_main.cpp,
+        # `Main_Screen` input -0x455/-0x456; loadsave.cpp same names; HESTR
+        # text from orion2_str.h's header comment only: UNVERIFIED live).
+        # Both ask first (User_Box, 1); both need active_save_slot in 0..9,
+        # Alt+F9 also game_type 0 or 1. active_save_slot is the slot last
+        # loaded or saved, so after loading a reference save Alt+F10 + YES
+        # overwrites it: never pressed by HD itself (UNVERIFIED: no live
+        # guard for the slot; the box is the only protection).
+        "Alt+F9": "LOADS the active save slot after a YES box "
+                  "(`Auto_Save_Last_Saved_Game`, mainscr_main.cpp) — the "
+                  "player's own",
+        "Alt+F10": "SAVES into the active save slot after a YES box "
+                   "(`Auto_Load_Last_Saved_Game`, mainscr_main.cpp) — the "
+                   "player's own; HD sends it nowhere itself",
     },
     "fleets": {
         "F1": "the previous fleet (flt1.cpp:761-770) — the screen follows "
@@ -110,6 +126,20 @@ ENGINE_FKEYS = {
               "(:655-664) — HD's star click sends it (`fltmove.refusal`)",
     },
 }
+#: Alt+letter sequences the multi-hotkey rule lets through on the galaxy map
+#: that this module and 230-keys.md did not name before WO 437 (audit F-06),
+#: all `MAINSCR::Add_Cheats` (mainscr_hotkeys.cpp):
+#:   RE   reload every config group (refused in a network game, game_type
+#:        2/3; box "config reloaded") — `Check_Config_Reload_Hot_Key`
+#:   RI   reload the interface config groups
+#:   X    cycle the human player (only game_type < 2): changes PLAYER_NUM
+#:   ALE  the leader cheat popup;  ALLAI  an all-AI game
+#: OMISSION config_reload: HD's cached copies of config-driven rules (the
+#: `config_*` OMISSIONs in the state files) are not refreshed by RE / RI, and
+#: `Resource_Reload_Pending` breaks the engine's map loop. They are NOT in
+#: `WITHHELD_ALT`: withholding them is a decision for Data (the player's own
+#: keys, like the cheats); HD follows `player_num` from the snapshot, so X is
+#: likely safe — UNVERIFIED live.
 #: Alt+letters HD does NOT pass on a screen, though a multi-hotkey field for
 #: them stands: (letter, why). A key that silently changes engine state HD
 #: does not draw is worse than a key that does nothing.
@@ -117,9 +147,10 @@ WITHHELD_ALT = {
     "galaxy_map": {
         # OMISSION influence_overlay (work order 310, 309's finding 6):
         # orion2re v2's influence view, Alt+V cycling `influence_view_mode`
-        # through three states (v2 mainscr.cpp:1589, :1665-1666;
-        # `Draw_Influence_Overlay`, :275-471) — not in 1.60, and HD draws no
-        # overlay and has no wire block for the mode.
+        # through three states (`Draw_Influence_Overlay` and the Alt+V case in
+        # `Check_Hot_Keys`, mainscr.cpp of orion2re v2.0.1; WO 437 re-pointed
+        # the 1.60/v2.0.0 line numbers at the function names) — not in 1.60,
+        # and HD draws no overlay and has no wire block for the mode.
         "V": "OMISSION influence_overlay: HD draws no influence view",
     },
 }

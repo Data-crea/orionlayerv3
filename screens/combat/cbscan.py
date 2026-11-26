@@ -1,6 +1,6 @@
 """What the ship scan SAYS — work order 290, before any pixel.
 
-`CMBTDRW1::Combat_Draw_View_Ship_` (cmbtdrw1.cpp:3223-4007) draws one
+`CMBTDRW1::Combat_Draw_View_Ship_` (cmbtdrw1.cpp:2699-3447) draws one
 unit's combat record. `build` turns the same record into the rows of HD's
 scan view (`cbscanview` draws them) — ONE view since work order 298 (Data:
 the Normal / Detailed switch of 290-297 is gone, Normal was a subset of
@@ -297,7 +297,7 @@ def crew_word(words, quality):
     level above the table's last row (`Calc_Ship_Level_` caps at 5 after
     the Warlord's +1, ericnet.cpp:217-236; `_crew_data` has rows 0-4,
     mox.cpp:780-786) has no word in the original — `Crew_Quality_String_`'s
-    switch falls to its default and prints nothing (cmbtdrw1.cpp:4016-4017)
+    switch falls to its default and prints nothing (cmbtdrw1.cpp:3478-3479)
     — HD names the highest known level instead of an empty word. Open fix
     100 registers the level (an observation)."""
     q = int(quality)

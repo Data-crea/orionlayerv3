@@ -175,6 +175,13 @@ class CombatScreen(CombatInput, ScreenBase):
         events = (getattr(game_state, "combat_events", None) or {}).get(
             "events", [])
         self._tail = self.finishing(game_state)
+        carried = getattr(game_state, "combat_events", None) or {}
+        # once per gap: the same dict stays on the state for every frame
+        # until the next batch replaces it
+        if carried.get("gap") and not self._tail and \
+                carried is not getattr(self, "_gap_seen", None):
+            self._gap_seen = carried
+            self._play.event_gap(carried["gap"])
         self._log.add(events, combat if combat is not None and not self._tail
                       else self._play.shown, self._weapon_name,
                       lambda i: self._names.name("specials", i)

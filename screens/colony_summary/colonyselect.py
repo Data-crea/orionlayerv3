@@ -72,6 +72,8 @@ sentence that used to stand here — *this module never imports
 pygame* — is no longer true and is not worth preserving by keeping a
 second copy of the pitch instead.
 """
+import logging
+
 from . import colonylist
 from . import colonyrows
 
@@ -113,6 +115,9 @@ class Selection:
         self.order = None
         self.order_key = None
         self.order_known = True
+        #: Does HD's order equal the game's own, as CSUM carries it?
+        #: True/False, None without the block (work order 437, F2).
+        self.csum_matches = None
 
     def reset_order(self):
         """On entry: the game rebuilds its list (colsum.cpp:109)."""
@@ -149,6 +154,16 @@ class Selection:
                 self.order_known and
                 sort_key not in colonyrows.SORT_UNAVAILABLE)
         self.order = [row["index"] for row in self.rows]
+        # THE MIRROR IS CHECKED against the game's own list whenever the
+        # engine sends it. A mismatch is logged ONCE per change, never
+        # acted on: which order is right is the engine's, and a click
+        # under a divergent order would aim at the wrong colony.
+        matches = colonyrows.csum_order_matches(self.rows, state)
+        if matches is False and self.csum_matches is not False:
+            logging.getLogger(__name__).warning(
+                "colony list order differs from the game's (CSUM), sort "
+                "key %r", sort_key)
+        self.csum_matches = matches
         self.reseat()
 
     def reseat(self):

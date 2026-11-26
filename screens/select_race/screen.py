@@ -101,7 +101,7 @@ class SelectRaceScreen(ScreenBase):
         order 209 A2, decision 38): the game's own records, names and
         government words, never a hand-written list — `core/racestuf`
         transcribes what `Draw_Race_Selection_Screen_` prints
-        (racesel.cpp:1007-1074). Without the extracted file the box says
+        (`Draw_Race_Selection_Screen`, race_display.cpp). Without the extracted file the box says
         how to get it. Read at draw time, so `save_races` never writes
         the player's game data into `races.json`."""
         traits = racestuf.for_app(self.app)
@@ -444,6 +444,10 @@ class SelectRaceScreen(ScreenBase):
         # dispatcher returns here.
         log.info("Race selected: %d (%s)",
                  rid, self._race_by_id(rid)["name"])
+        # UNVERIFIED `stock_click_unchecked` (work order 437 F4): the switch is
+        # unconditional — the engine ignores a taken race (`race_flag`) and a
+        # network game can refuse it (KEN 72), and neither is on the wire; the
+        # chain's timeout and F12 are the failure path (see the state entry).
         self._inject_race_click(rid)
         self.app.dispatcher.switch_to("empire_identity", lock_ids=(self.GAME_SCREEN_ID,))
 
@@ -461,14 +465,23 @@ class SelectRaceScreen(ScreenBase):
     def handle_key(self, key):
         if key == pygame.K_ESCAPE:
             if self.is_picture_mode:
-                # Bring the GAME back out of its picture-select
-                # state as well, then mirror in HD.
-                # NOTE: inject_key(ESC) can cascade across
-                # sub-screens (documented learning) — needs a live
-                # test here; if it also exits race selection, we
-                # need a different back mechanism.
+                # Bring the GAME back out of its picture-select state as
+                # well, by the list's own ESC field (`Add_Hot_Key_` of
+                # `Race_Selection_Screen_`, which clears `custom_flag`;
+                # work order 437 F5). A multiplayer game has no such field
+                # (hotkey_field = -1000 for game type 2 and up), so the
+                # engine offers no way out of picture mode there and HD
+                # stays in it rather than showing a grid the engine does
+                # not (TRANSCRIPTION; UNVERIFIED live in a network game).
                 if self.app.connected:
-                    self.app.client.inject_key(pygame.K_ESCAPE)
+                    f = self._escape_field()
+                    if f is None:
+                        log.info("select race: no ESC field in picture mode "
+                                 "— staying (a multiplayer game)")
+                        return
+                    log.info("select race: picture mode back -> field %d "
+                             "(ESC)", f.index)
+                    self.app.client.activate_field(f.index)
                 self.set_mode(self.MODE_SELECT_RACE)
             else:
                 # The original's ESC field (174 found HD injecting a click

@@ -375,7 +375,7 @@ class MoveController:
         **NOT IN `planet_info`, AND THAT IS THE WHOLE REASON THIS
         FUNCTION EXISTS.** That panel is the left half of the
         original's own scan box, the description paragraph at native
-        (13, 354, 80, 88) (`Draw_Colony_Scan_Info_`, colsum.cpp:1155).
+        (13, 354, 80, 88) (`Draw_Colony_Scan_Info`, colsum_details.cpp:252).
         A refusal may borrow it because a refusal is transient and
         `_render_info` draws the paragraph back on the next frame.
         This notice is not transient: it stands until the player

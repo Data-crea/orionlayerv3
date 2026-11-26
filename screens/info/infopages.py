@@ -259,7 +259,15 @@ def history_length(stardate, bill):
 
 
 def smooth(data):
-    """`Smooth_History_Data_` over every t, ten passes (:1278-1286)."""
+    """`Smooth_History_Data_` over every t, ten passes (:1278-1286).
+
+    OMISSION config_history_smoothing (WO 437, audit F-05): the engine
+    calls this only `if (history_graph_smoothing)` (info.cpp, config
+    `interface.history_graph_smoothing`, default true, info_config.cpp);
+    HD always smooths, so a config of `false` shows the engine's raw curve
+    and HD's smoothed one. The config is not on the wire; UNVERIFIED which
+    value a live game runs. The averaging line is not diffed against v2.0.1
+    (UNVERIFIED)."""
     n = len(data)
     for _ in range(10):
         for t in range(n):

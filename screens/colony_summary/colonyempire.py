@@ -1,6 +1,6 @@
 """The empire sidebar — six s_player scalars, the original's own.
 
-TRANSCRIBED from `COLSUM::Draw_Empire_Info_` (colsum.cpp:418): six
+TRANSCRIBED from `COLSUM::Draw_Empire_Info_` (colsum_details.cpp:106): six
 lines printed at native (520, 354), each one an `s_player` field, in
 the original's order, with its explicit plus and its red-if-negative.
 All six offsets were read against the original's own box on
@@ -93,7 +93,7 @@ def value_column(rect, cfg, layout, frame_inset=FRAME_INSET_DEFAULT):
     right edge, because the original right-justifies it
     (`para.x2 = x + width - 1`, fmtpara.cpp:657, over
     `Print_Formatted_Paragraph_(520, 354, 104, buffer, 3)` at
-    colsum.cpp:418). See `render` for the justification codes that
+    colsum_details.cpp:106). See `render` for the justification codes that
     establish it.
 
     **The WIDTH IS a DEVIATION, LIVE AGAIN since 13 September 2026

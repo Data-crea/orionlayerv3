@@ -448,7 +448,7 @@ def _centred(surface, screen, pic, native_x, native_y):
 def _production(surface, screen, view):
     """TRANSCRIPTION `prod_symbols` (work order 326): the BC, food,
     industry and research rows count with the original's symbols, as many
-    and grouped as `Draw_Colony_Prod_Both_` draws them (coldraw.cpp:36-181,
+    and grouped as `Draw_Colony_Prod_Both` draws them (colony_production_display.cpp:28,
     `colprod`) — centred on the ruled cell (DEVIATION `row_cells`), where
     the original stands them 0 or 2 px under its row's top — and
     HD EXTENSION `row_end_number` puts the row's value at its right end
@@ -505,7 +505,7 @@ def job_cells(screen, view):
     """Every drawn pop cell: (job, k, window rect, cell) — ONE function for
     the drawing and the click (decision 5). The figures of a job in the
     original's icon order (`row["cells"]`, decision 48), squeezed into the
-    row as `Calculate_Squish_Step_` squeezes (coldraw.cpp:12-34): the full
+    row as `Calculate_Squish_Step` squeezes (colony_production_display.cpp:4): the full
     pitch while they fit, the room divided evenly when they do not."""
     row = view.row
     if row is None:

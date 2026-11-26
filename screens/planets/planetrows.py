@@ -42,6 +42,9 @@ from . import planetrange
 
 PLANET_TYPE_PLANET = 3                  # orion2_consts.h:404
 MAX_PLAYERS = 8
+# OMISSION config_minerals_per_mine (WO 437, audit F-02): v2.0.1 reads
+# `minerals_per_mine[8]` from its config (colcalc_config.cpp); HD keeps the
+# 1.60 literal, equal to the default, and never sees a changed config.
 MINERALS_PER_MINE = (1, 2, 3, 5, 8)     # COLCALC::_minerals_per_mine, colcalc.cpp:19
 MINERAL_ULTRA_POOR, MINERAL_POOR = 0, 1
 GRAVITY_LOW, GRAVITY_NORMAL, GRAVITY_HEAVY = 0, 1, 2
@@ -198,7 +201,20 @@ def monster_owner(view, star_index):
 def race_pop_limit(view, size, climate, race):
     """`Size_And_Climate_Race_Pop_Limit_` (colcalc.cpp): immune by trait, or
     race 8 always; the aquatic climate shift and the subterranean bonus only
-    for a player index."""
+    for a player index.
+
+    OMISSION config_population (WO 437, audit F-02): v2.0.1 reads
+    `population_capacity`, `population_bonus`, the optional
+    `population_capacity_table(_tolerant)` (flag
+    `population_capacity_table_enabled`), `pop_bonus_subterranean[size]`,
+    `pop_bonus_biospheres` and `aquatic_treats_tundra_as_swamp` from its
+    config (colcalc_config.cpp, colcalc.cpp `Size_And_Climate_Race_Pop_Limit`,
+    planet_environment.cpp `Calc_Player_Climate`). HD's literals (here and in
+    `core.colonyfacts`) equal the defaults (checked 25 Nov 2026: sizes 5..25,
+    climate factors 25..100, tolerant +25, subterranean 2*size+2, biosphere
+    +2, cap 42), so a default game agrees; a ruleset mod or an edited config
+    shows a wrong Max Pop column with no hint. UNVERIFIED which config a live
+    game runs; the config is not on the wire."""
     traits = view.traits(race) if race < MAX_PLAYERS else None
     immune = bool(traits[colonyfacts.TRAIT_ENVIRONMENT_IMMUNE]) if traits \
         else race == MAX_PLAYERS

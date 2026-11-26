@@ -657,4 +657,15 @@ LOCAL_PATCHES = {
 #: 42 stayed (Data: not approved) until work order 191 moved it up
 #: (Data: "Open Fix 42" in its bug list).
 REPORTED_PATCHES = {
+    # Work order 437 (applied on `orionlayer`, `required: no`): hazards, not symptoms.
+    "doc/ext_recv_whole_frame.patch": (
+        os.path.join("src", "ext", "ext_server.cpp"),
+        "OrionLayer, open fix 123.", "a split command frame keeps the client"),
+    "doc/ext_injected_mouse_atomic.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 124.", "the injected-mouse flag is atomic"),
+    "doc/ext_cancel_field_mouse.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 125.", "CANCEL_FIELD holds the real mouse off"),
 }
+

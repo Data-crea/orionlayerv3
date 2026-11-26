@@ -1,17 +1,20 @@
 """Planets In Range — the fifth toggle of the Planets list, work order 322 A3.
 
-TRANSCRIPTION `range_filter` of `PLNTSUM::Planet_In_Range_Of_A_Colony_` (plntsum.cpp:387-392,
-v2 :388-393), which asks `SHIPMOVE::Star_In_Extended_Range_Of_Player_` for
-the planet's STAR (shipmove.cpp, orion2re 1.60 / v2):
+TRANSCRIPTION `range_filter` of `Planet_In_Range_Of_A_Colony` (planet_summary.cpp
+in orion2re v2.0.1; plntsum.cpp:387-392 in 1.60), which asks
+`SHIPMOVE::Star_In_Extended_Range_Of_Player` for the planet's STAR
+(shipmove.cpp). WO 437 (audit F-01): citations are by function name in the
+v2.0.1 tree (`~/orion2re`, shipmove.cpp, the trailing underscores of 1.60 are
+gone) with the 1.60 line numbers only as a second reading aid:
 
-    Star_In_Extended_Range_Of_Player_   :327-331  / v2 :363-367
+    Star_In_Extended_Range_Of_Player    (1.60 :327-331)
         ext = (ship_range * 3 + 1) / 2              150 %, rounded
-    Star_In_Range_Of_Player_            :340-355  / v2 :376-392
+    Star_In_Range_Of_Player             (1.60 :340-355)
         the player, then every ALLY (treaty 2) by the same test
-    Star_In_Range_Of_Player_Aux2_       :286-310  / v2 :322-347
+    Star_In_Range_Of_Player_Aux2        (1.60 :286-310)
         a colony at the star; or Aux1; or through the star's wormhole,
         when the player has visited the far end, Aux1 from there
-    Star_In_Range_Of_Player_Aux1_       :249-277  / v2 :285-311
+    Star_In_Range_Of_Player_Aux1        (1.60 :249-277)
         any star S with a colony of the player, whose black-hole bitmap
         does not block the TARGET's index, within dist * 30 px
 
@@ -30,10 +33,11 @@ game's own rows (PLSM carries them), was never seen live — no live runs
 from core.structs import player as player_struct
 from core.structs import star as star_struct
 
-#: "dist is scaled by 30 pixels per unit (30^2 = 900)" (shipmove.cpp:256-257,
-#: v2 :292-293).
+#: "dist is scaled by 30 pixels per unit (30^2 = 900)" (`Star_In_Range_Of_Player_Aux1`,
+#: shipmove.cpp; 1.60 :256-257).
 PIXELS_PER_PARSEC_SQ = 900
-#: `treaty[i] == 2`, an alliance (shipmove.cpp:347, v2 :383).
+#: `treaty[i] == 2`, an alliance (`Star_In_Range_Of_Player`,
+#: shipmove.cpp; 1.60 :347).
 TREATY_ALLIANCE = 2
 
 

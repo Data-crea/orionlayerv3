@@ -38,6 +38,11 @@ DESIGN_BUILDER_MAX = 9
 #: builder -> (structure without drive, structure with drive),
 #: initship.cpp:596-625 — `case N: result = <with>; if (ftl_type <= 0)
 #: return <without>;`.
+#: OMISSION config_monster_hit_points (WO 437, audit F-02): v2.0.1 reads the
+#: pairs from `SHIP_CONFIG::monster.hit_points` (initship.cpp `Init_Ship`,
+#: ship_config.cpp; `-1` falls back to the shared value); these literals are
+#: the 1.60 numbers, equal to the defaults, and a config never reaches them.
+#: `dev:tools/monster_hull_check.py` reads the 1.60 worktree and cannot see it.
 MONSTER_STRUCTURE = {
     10: (400, 750),       # Amoeba
     11: (500, 2500),      # Crystal

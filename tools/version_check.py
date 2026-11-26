@@ -211,6 +211,10 @@ FIX_NUMBERS = {
     "doc/ext_fleet_move_preview.patch": (121,),
     # work order 408
     "doc/ext_diplomacy_reply.patch": (122,),
+    # work order 437, not required (REPORTED_PATCHES)
+    "doc/ext_recv_whole_frame.patch": (123,),
+    "doc/ext_injected_mouse_atomic.patch": (124,),
+    "doc/ext_cancel_field_mouse.patch": (125,),
 }
 
 
@@ -332,6 +336,17 @@ def main():
                  "not applied (reported)" if found is False
                  else "no such file")
         print(f"            {patch:32} : {state} — {enables}")
+
+    # The battle's hook calls, counted per file (work order 437): one
+    # marker per patch cannot see a hook a merge dropped from another file.
+    try:
+        from hook_sites import hook_site_problems
+    except ImportError:
+        from tools.hook_sites import hook_site_problems
+    hooks = hook_site_problems(tree)
+    print(f"            battle hook calls per file   : "
+          f"{'all present' if not hooks else 'MISMATCH'}")
+    problems += hooks
 
     # core/screen_names.ENGINE_SCREEN_MAX is a hand copy of the enum's last
     # value, and synthetic screen ids are only safe above it (decision 36:

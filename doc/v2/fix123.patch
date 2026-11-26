@@ -1,0 +1,60 @@
+From bec858ba73b394a44d13a430caae23482bf54d9c Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Thu, 26 Nov 2026 05:38:05 +0100
+Subject: [PATCH] OrionLayer Open Fix 123: a command frame that arrives in two
+ pieces no longer drops the client (Server::HandleClientMessage peeks the
+ whole frame, header and payload, and reads nothing until it is all there;
+ RecvExact on the non-blocking socket gave up on EAGAIN)
+
+OrionLayer, open fix 123.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_server.cpp | 20 +++++++++++++++++++-
+ 1 file changed, 19 insertions(+), 1 deletion(-)
+
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index e3b4d02b..10ebd07f 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -123,6 +123,10 @@ void Server::ReadInput() {
+     RemoveDeadClients();
+ }
+ 
++// OrionLayer, open fix 123. The largest payload a client may send (see
++// HandleClientMessage); one constant for the buffer and the peek.
++static constexpr size_t kMaxPayload = 256;
++
+ void Server::HandleClientMessage(Client& client) {
+     // Try to read a frame header (non-blocking)
+     FrameHeader fh;
+@@ -136,6 +140,20 @@ void Server::HandleClientMessage(Client& client) {
+     }
+     if (n < (int)sizeof(fh)) return; // Incomplete header
+ 
++    // OrionLayer, open fix 123. Read nothing until the whole frame is
++    // there. The socket is non-blocking and RecvExact gives up on
++    // EAGAIN, so a frame that reached us in two TCP segments after its
++    // header was peeked used to drop the client. A frame whose magic or
++    // length is wrong falls through to the refusals below, unchanged.
++    if (fh.magic == MAGIC && fh.length >= sizeof(MsgHeader)
++        && fh.length - sizeof(MsgHeader) <= kMaxPayload) {
++        uint8_t whole[sizeof(FrameHeader) + sizeof(MsgHeader) + kMaxPayload];
++        const size_t want = sizeof(fh) + fh.length;
++        const int have = recv(client.fd, (char*)whole, (int)want, MSG_PEEK);
++        if (have == 0) client.alive = false; // Disconnected
++        if (have < (int)want) return;        // The rest comes on a later Tick
++    }
++
+     // Now actually read the header
+     if (!RecvExact(client.fd, &fh, sizeof(fh))) {
+         client.alive = false;
+@@ -165,7 +183,7 @@ void Server::HandleClientMessage(Client& client) {
+     // per pop of a full colony — s_colony::pop[42] (orion2.h:497) —
+     // so 3 + 42*2 = 87. 256 is that with room, and the oversize
+     // branch below still drops the client rather than reading on.
+-    uint8_t payload[256]{};
++    uint8_t payload[kMaxPayload]{};
+     if (payload_len > 0) {
+         if (payload_len > sizeof(payload)) {
+             client.alive = false;

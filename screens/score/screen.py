@@ -31,7 +31,7 @@ its picture (SCORE.LBX); the word is typed in `layout.json` (decision 15).
 TRANSCRIPTION/OMISSION `score_pop_pictures`: the rows of population and
 captured-colonist figures and the eliminated players' portraits are drawn
 from the numbers and snapshot the screen holds (`popicons.py`: the rule of
-`Draw_Pop`, score.cpp:1282-1345, and `Draw_Eliminated_Race_Pictures`); what
+`Draw_Pop`, `Draw_Pop` in score.cpp, and `Draw_Eliminated_Race_Pictures`); what
 the block does not carry (the original's random pick of figures, the
 contacts that weight the captured portraits) is named there as DEVIATION and
 UNVERIFIED, and a row whose pictures are not extracted (`python

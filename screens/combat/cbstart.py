@@ -125,6 +125,15 @@ def beam_shot(player, ev, now):
 
 def destroy(player, ev):
     """A unit's death, in a blast or on its own."""
+    # TRANSCRIPTION `Destroy_Ship_By` (cmbtfire.cpp:400): the original draws
+    # the death only for a unit whose status was 0 when it was destroyed. The
+    # engine's CEV_DESTROY is sent first thing, before that test
+    # (cmbtfire.cpp:394), so a second destroy of a unit that is already out
+    # (status 5 retreated or dead) arrives as an event with a status above 0
+    # and draws nothing here either. Work order 437, audit combat F12; the
+    # case itself is UNVERIFIED live.
+    if int(ev.get("status_before", 0) or 0) != 0:
+        return 0.0
     u = player._unit(ev.get("unit", -1))
     state = int(ev.get("death_state", 1))
     # HD STATE `view_pause`: `Destroy_Ship_FX_` waits 7 ticks before

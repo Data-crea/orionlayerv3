@@ -596,7 +596,13 @@ def can_order(ship, player_raw, me):
     a status 1 ship with Tachyon or Sub-Space Communications is OFFERED
     without the relay-range test (the star flags and the two ranges are not
     parsed), the engine's own check refuses a ship out of range (open fix
-    21); a ship with NO comms tech at all is not selectable, as there."""
+    21); a ship with NO comms tech at all is not selectable, as there.
+
+    OMISSION config_ship_communication_range (WO 437, audit F-02): v2.0.1
+    reads the two relay ranges from `ship_communication_range.{sub_space,
+    tachyon}` (shipmove.cpp `Can_Order_Ship`, defaults 5 and 2); HD does not
+    compute the relay half at all, so a changed config changes nothing here
+    but the engine's refusal."""
     if ship.status in (0, 2):
         return True
     if ship.status != 1:

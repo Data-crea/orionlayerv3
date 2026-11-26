@@ -23,7 +23,11 @@ E_TREATY_FIRST, TREATY_LABELS = 0x275, 6
 #: The FMTPARA placeholder `Decode_Text_Stat_` replaces (jim.cpp:280).
 STAT_MARK = "é"
 
-# spy.cpp:4-31 and the constants it names (orion2_consts.h).
+# spy_actions.cpp:4 and spy_bonus.cpp:4-44 (1.60: spy.cpp:4-31) and the
+# constants they name (orion2_consts.h).
+# OMISSION config_spy_bonuses: the engine's tech / government / telepathic
+# bonuses (spy_bonus.cpp:4-44, `spy::telepathic_bonus` spy_config.cpp:9)
+# are configurable; HD assumes the defaults (`engine.config_bound_rules`).
 GOV_ATTACK = (0, 0, 10, 15, -10, -10, 15, 15)
 TECH_SPY = ((43, 10), (114, 10), (147, 10), (173, 10), (182, 5))
 RESEARCHED = 3
@@ -173,7 +177,7 @@ def agents(view):
 
 
 def spy_bonuses(view, leaders_raw):
-    """(defence, attack) — `Compute_Spy_Bonuses_` (spy.cpp:35-81). A
+    """(defence, attack) — `Compute_Spy_Bonuses` (spy_actions.cpp:4, 1.60: spy.cpp:35-81). A
     leader at a space anomaly (`Leader_At_Anomaly_`, colcalc.cpp:1206)
     would not count; the event table is not on the wire, so HD counts
     every leader (OMISSION `anomaly_leaders`)."""

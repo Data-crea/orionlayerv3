@@ -113,6 +113,17 @@ class ShipNames:
             from core.structs import player as player_struct
             self._player = player_struct.parse(raws[int(player_num)])
 
+    def size(self, production_id):
+        """`_ship[i].d.size` of a queued ship (`Prod_To_Sort_Type`,
+        colsum_details.cpp:324-327), or None when the record is not on
+        the wire or the id is no queued ship."""
+        from core.structs import ship as ship_struct
+        value = int(production_id)
+        idx = QUEUED_SHIP_BASE - value
+        if value <= QUEUED_SHIP_BASE and 0 <= idx < len(self._ships):
+            return ship_struct.SPEC.parse(self._ships[idx]).size
+        return None
+
     def name(self, production_id):
         from core.structs import player as player_struct
         from core.structs import ship as ship_struct
@@ -165,73 +176,71 @@ def production_name(production_id, buildings=None, strings=None,
     return text, STATE_OK
 
 
-# ── The sort key: `cmp_Prod_` as far as it is sourced ───────────────
+# ── The sort key: `cmp_Prod_`, all three levels (work order 437) ─────
 #
-# `cmp_Prod_` (colsum.cpp:1091-1116) is THREE levels, and the
-# direction is not what this project's table said. `Switched_cmp_`
-# case 5 does NOT negate (colsum.cpp:395) — unlike cases 1,2,3,4,6 —
-# but `cmp_Prod_` negates internally, twice:
+# `cmp_Prod` (colsum_details.cpp:225-250) is THREE levels, and the
+# direction is not what this project's table said. `Switched_cmp`
+# case 5 does NOT negate (colsum_details.cpp:81-109) — unlike cases
+# 1,2,3,4,6 — but `cmp_Prod` negates internally, twice:
 #
-#   1  -cmp_(Prod_To_Sort_Type_(a), Prod_To_Sort_Type_(b))  DESCENDING
-#   2  -sign(strcmp(Selection_Name_(a), Selection_Name_(b))) DESCENDING
-#   3   cmp_(turn_count(a), turn_count(b))                  ascending
+#   1  -cmp(Prod_To_Sort_Type(a), Prod_To_Sort_Type(b))     DESCENDING
+#   2  -sign(strcmp(Selection_Name(a), Selection_Name(b)))  DESCENDING
+#   3   cmp(turn_count(a), turn_count(b))                   ascending
 #
 # so producing is DESCENDING on tier and DESCENDING on name, and the
 # comment block in `colonyrows` calling it "ascending" was wrong.
-# Level 2 is `strcmp`, CASE-SENSITIVE — `cmp_Alpha_` uses
-# `strcasecmp` (colsum.cpp:1053) and this one does not, which is a
+# Level 2 is `strcmp`, CASE-SENSITIVE — `cmp_Alpha` uses `strcasecmp`
+# (colsum_details.cpp:180-184) and this one does not, which is a
 # difference between the two keys and not a slip in one of them.
 #
-# WHAT IS SOURCED AND WHAT IS NOT. `Prod_To_Sort_Type_`
-# (colsum.cpp:1212-1264) transcribes completely except in one place:
+# EVERYTHING IS SOURCED NOW. `Prod_To_Sort_Type`
+# (colsum_details.cpp:323-376):
 #
-#   queued ship      _ship[i].d.size + 10000    not on the wire
+#   queued ship      _ship[i].d.size + 10000   `ShipNames.size`, the ship
+#                                              record on the wire
 #   FREIGHTERS                        9999      literal
-#   building         _buildings[id].cost + 10   COST TABLE, absent
+#   building         buildings[id].cost + 10   `core.buildcost` (the table
+#                                              is compiled into the engine,
+#                                              techdata.cpp:41-90 — the
+#                                              old "not extracted" was
+#                                              wrong; OMISSION
+#                                              `config_building_cost`)
 #   FARMER/WORKER/SCIENTIST/SPY/NONE    -1      literal
 #   HOUSING/TRADE_GOODS/REPEAT          -2      literal
 #   everything else                      0      literal
 #
-# Building costs live in the player's techname.lbx beside the names
-# and are NOT extracted — `techname_extract` takes names only. But
-# the cost is `>= 0`, so `cost + 10 >= 10`: every building outranks
-# every option (0, -1, -2) and is outranked by FREIGHTERS and by any
-# queued ship. **The TIER ORDER is fully sourced; only the order of
-# buildings AMONG THEMSELVES is not.** That is why this key sorts
-# correctly for the reference save, where no colony builds a
-# building, and is still declared unavailable: a set with two
-# buildings in it would order them by name where the original orders
-# them by cost, and a control that is right on one save and wrong on
-# the next is worse than one that says it cannot do the job.
-
-#: The tier every building collapses into while `_buildings[].cost`
-#: is not extracted. 10 is `cost + 10` at cost 0 — the bottom of the
-#: building band, so the band still sits where the source puts it.
-BUILDING_TIER_UNSOURCED = 10
+# Level 3 is `Calculate_Current_Production_Turn_Count`
+# (colony.cpp:407-419: 1 when bought, 10000 for "never"), which
+# the engine computes from `Colony_Product_Cost` — config-bound, so
+# HD never computes it: CSUM carries it for every colony of the list
+# (`core.colsumblock`), and a row without the block compares EQUAL at
+# this level (UNVERIFIED live: the engine without open fix 110 sends no
+# CSUM; the tie then stays in array order, as before work order 437).
 
 #: colsum_details.cpp:329-350, literal for literal.
 TIER_FREIGHTERS = 9999
+TIER_QUEUED_SHIP = 10000
+TIER_BUILDING = 10
 _TIER_MINUS_ONE = (-4, -5, -6, -7, -1)      # FARMER WORKER SCIENTIST SPY NONE
 _TIER_MINUS_TWO = (-3, -2, -10)             # HOUSING TRADE_GOODS REPEAT
 
 
-def sort_tier(production_id):
-    """`Prod_To_Sort_Type_`, with the two unsourced branches folded.
-
-    A queued ship is `d.size + 10000` and `d.size` is not on the
-    wire, so every queued ship shares one tier — above everything
-    else, which is where the source puts the whole band.
-    """
+def sort_tier(production_id, ship_size=None):
+    """`Prod_To_Sort_Type`. `ship_size` is the queued ship's `d.size`
+    (`ShipNames.size`); None — an index past the wire's ship records —
+    counts as 0, the bottom of the ship band, which still sits where the
+    source puts it (above every building)."""
+    from core import buildcost
     try:
         value = int(production_id)
     except (TypeError, ValueError):
         return 0
     if value <= QUEUED_SHIP_BASE:
-        return 10000
+        return TIER_QUEUED_SHIP + int(ship_size or 0)
     if value == -15:
         return TIER_FREIGHTERS
     if buildnames.is_building(value):
-        return BUILDING_TIER_UNSOURCED
+        return int(buildcost.cost(value) or 0) + TIER_BUILDING
     if value in _TIER_MINUS_ONE:
         return -1
     if value in _TIER_MINUS_TWO:
@@ -240,35 +249,45 @@ def sort_tier(production_id):
 
 
 class _ProdOrder:
-    """`cmp_Prod_`'s first two levels as a sort key.
+    """`cmp_Prod` as a sort key.
 
     A comparator rather than a tuple because level 2 is a DESCENDING
-    string compare and a key tuple cannot negate a string. Level 3 —
-    `Calculate_Current_Production_Turn_Count_` — is not implemented,
-    so equal tier and equal name compare EQUAL, and `list.sort` being
-    stable leaves them in array order. That is the same tie behaviour
-    the other six keys have and it is the original's: `cmp_` returns
-    0 on equality and `Sort_Col_List_` swaps only on strictly greater
-    than zero (colsum.cpp:363, :1056).
+    string compare and a key tuple cannot negate a string. Equal on all
+    three levels compares EQUAL, and `list.sort` being stable leaves
+    them in array order: the tie behaviour the other six keys have and
+    the original's (`cmp` returns 0 on equality and `Sort_Col_List`
+    swaps only on strictly greater than zero, colsum_details.cpp:62-77).
+    The row carries `producing_tier` and `producing_turns_raw`
+    (`colonyrows`); a row without them (a stand-in) falls back to the id
+    alone.
     """
 
-    __slots__ = ("tier", "name")
+    __slots__ = ("tier", "name", "turns")
 
     def __init__(self, row):
-        self.tier = sort_tier(row.get("producing_id"))
+        tier = row.get("producing_tier")
+        self.tier = (tier if tier is not None
+                     else sort_tier(row.get("producing_id")))
         self.name = row.get("producing") or ""
+        self.turns = row.get("producing_turns_raw")
 
     def __lt__(self, other):
         if self.tier != other.tier:
             return self.tier > other.tier          # level 1, descending
-        return self.name > other.name              # level 2, descending
+        if self.name != other.name:
+            return self.name > other.name          # level 2, descending
+        if self.turns is None or other.turns is None:
+            return False                           # no CSUM: a tie
+        return self.turns < other.turns            # level 3, ascending
 
     def __eq__(self, other):
-        return self.tier == other.tier and self.name == other.name
+        return (self.tier == other.tier and self.name == other.name and
+                (self.turns is None or other.turns is None or
+                 self.turns == other.turns))
 
 
 def sort_key(row):
-    """The `producing` key. See the block above for what it cannot do."""
+    """The `producing` key (`cmp_Prod`, all three levels)."""
     return _ProdOrder(row)
 
 

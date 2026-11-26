@@ -2,7 +2,7 @@
 `build_lists_mockup` (work order 432, Data's mockup of 25 November 2026).
 
 The original prints a row of words at a fixed step (`Calculate_Squish_Step_`,
-coldraw.cpp:12-34) and squeezes a long list until every row fits. HD draws
+colony_production_display.cpp:4-26) and squeezes a long list until every row fits. HD draws
 the rows as the mockup does — a picture in front of each, a row that stands
 tall enough to read, the chosen row on a bar, the long list scrolled with a
 scroll bar and the wheel — and the right list's three groups (the game's

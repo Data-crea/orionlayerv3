@@ -6,10 +6,9 @@ WHAT THE ORIGINAL DRAWS. Under "N Population" a row of up to 16 figures, under
 `Draw_Cap_Pop`: `Draw_Pop(0, 4, reg_pop)` and `Draw_Pop(1, 2, raw_captured_
 population)`, score.cpp:640-645, :700-705), under "Players Eliminated" one
 portrait box of each defeated player (`Draw_Eliminated_Race_Pictures`,
-:725-790).
+score.cpp).
 
-TRANSCRIPTION `score_pop_rule`: the geometry of `Draw_Pop` (score.cpp:1290-
-1345). The list is at most 16 long, so `current_pop > max_pop * 27` (108 or
+TRANSCRIPTION `score_pop_rule`: the geometry of `Draw_Pop` (score.cpp). The list is at most 16 long, so `current_pop > max_pop * 27` (108 or
 54) never holds and the figures stand on the grid branch: figure n at
 x = (n % 25) * 22, y = (n / 25) * 22 from x = 140, one row of 22 pixel steps
 for 28 pixel sprites (RACEICON's 28 x 28); the rows after it start 28 pixels
@@ -31,7 +30,7 @@ player's colonies draws no row.
 
 TRANSCRIPTION `score_captured_rule`: the captured colonists are
 `min(captured colonies, 16)` portraits (`Build_Captured_Colonists_Array`,
-score.cpp:1198-1235), sorted by race (`qsort` ascending), each a
+score.cpp), sorted by race (`qsort` ascending), each a
 `Colony_Pop_Icon` (RACEICON entry race * 13 + 12, `Draw_Pop`). 
 UNVERIFIED `score_captured_races`: the original draws each portrait's race at random,
 weight 5 for a player the tally's player defeated and 2 for one he had first
@@ -79,7 +78,7 @@ PORTRAIT_FIRST, FRAME_ENTRY, PALETTE_ENTRY = 2, 1, 0
 def positions(max_pop, current):
     """`Draw_Pop`'s figure positions: [(x, y)] relative to the row's top left
     (x counted from 140), and the extra rows the call adds to `y_start`.
-    Both branches of score.cpp:1290-1345."""
+    Both branches of `Draw_Pop` (score.cpp)."""
     space = 12 if current < max_pop * 48 else 10 if current < max_pop * 58 \
         else 8 if current < max_pop * 72 else 6 if current < max_pop * 97 \
         else 4

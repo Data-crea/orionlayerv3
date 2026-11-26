@@ -128,7 +128,8 @@ class ResearchPopupsMixin:
         """
         tech_fields, tech_applications = self._tech
         return researchtechlist.group_list(
-            tech_fields, tech_applications, self._current[0], entry.group)
+            tech_fields, tech_applications, self._current[0], entry.group,
+            hyper_levels=self._hyper)
 
     def list_click(self, screen_x, screen_y):
         """A left click while the list is up (tech.cpp:979-1029).
@@ -229,7 +230,7 @@ class ResearchPopupsMixin:
         # justify/centre codes around it are layout that renderer drops
         # — it acts on X and T only, and says so — so they are not
         # written here rather than written and dropped.
-        cost = research.cost(field)
+        cost = research.cost(field, self._hyper)
         label = (self._wording.message(billtext.MSG_RESEARCH_COST)
                  if self._wording else "") or ""
         line = f"{label}{cost}{self._cost_suffix}"

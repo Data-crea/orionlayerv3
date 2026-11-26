@@ -26,6 +26,9 @@ ROMAN = ("I", "II", "III", "IV", "V")
 ECON_FOOD, ECON_INDUSTRY, ECON_RESEARCH, ECON_BC = 0, 1, 2, 3
 
 #: colcalc.cpp:57, _size_climate_max_pop_lookup, indexed by climate.
+#: OMISSION config_population (WO 437, F-02): the engine reads these tables
+#: from its config (colcalc_config.cpp); the literals equal the defaults,
+#: see `planetrows.race_pop_limit`.
 CLIMATE_FACTOR = (25, 25, 25, 25, 25, 25, 40, 60, 80, 100)
 #: mox.cpp:796, _planet_max_population, indexed by PLANET_SIZE. This
 #: is the BASE of a computation and never an answer on its own — see

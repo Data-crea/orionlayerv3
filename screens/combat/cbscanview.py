@@ -5,7 +5,7 @@ battle (decision 71), laid out as Data's sketch and mockup of 17 October
 2026 — ship, officer, crew on the left; the shields round the unit's own
 picture and the combat values in the middle; hull and systems, the special
 systems on the right; the weapons across the foot — not COMBAT.LBX 5 with
-the game's own lines (cmbtdrw1.cpp:3223-4007). No weapon or special icons
+the game's own lines (cmbtdrw1.cpp:2699-3447). No weapon or special icons
 (Data: the game has none).
 
 DEVIATION `scan_fills` (Data, work order 315): the window's own fills

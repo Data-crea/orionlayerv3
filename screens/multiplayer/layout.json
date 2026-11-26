@@ -11,6 +11,7 @@
     "load": "LOAD GAME",
     "join": "JOIN GAME",
     "comm": "COMM INFO",
+    "online_note": "The router address is set in data/orion2re.cfg (interface router).",
     "cancel": "CANCEL",
     "comm_title": "ONLINE CONNECT",
     "endpoint": "ENDPOINT",
@@ -40,6 +41,7 @@
   "marks": {
     "hd_extension_setup_caption": "The foot band of the setup panel, its title and one line of what the screen is for: Data's Multiplayer mockup of 21 November 2026. MULTIGM.LBX's art has no such text; the words are ours.",
     "deviation_hud_panels": "HUD panels on the universal background, where the original draws MULTIGM.LBX's pictures and animations (the setup's frame, the waiting animations).",
+    "deviation_comm_info_v1_only": "orion2re v2 has no COMM INFO dialog: the setup sets field_id_setup = -1000 (multplay_fields.cpp, Add_MP_Setup_Screen_Fields) and nothing opens Online_Setup_Screen, the router endpoint being the config value `interface router` (docs manual multiplayer.md). HD draws no COMM INFO button there and notes on the Online radio where the address is set (HD EXTENSION online_note, our words); the COMM INFO dialog stays for the old engine (generation 1).",
     "deviation_online_word": "The radio the art calls MODEM and the dialog it calls MODEM CONNECT are ONLINE and its ENDPOINT: orion2re replaced the modem with a direct TCP endpoint (netcode.cpp:266-275, docs/networking.md), and the MODEM CONNECT panel's other boxes (COM port, baud rate, phone number, modem strings) take no input."
   }
 }

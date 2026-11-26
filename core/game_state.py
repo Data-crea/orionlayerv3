@@ -30,10 +30,15 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# Struct sizes of the engine the specs were read against (sizes.h, 64-bit
-# build with MAX_STARS=1024: orion2re 1.60, `orionlayer-local`). An engine
-# that sends its LAYOUT (decision 97) says its own, and `parse_state` asks
-# `core.structs.layout` for every one of them.
+# 1.60 FALLBACK sizes (sizes.h, 64-bit build with MAX_STARS=1024: orion2re
+# 1.60, `orionlayer-local`) — the engine the specs and the suite's recorded
+# fixtures were read against. They are used ONLY when an engine sends no
+# LAYOUT; an engine that does (every v2 build, decision 97) says its own,
+# `parse_state` asks `core.structs.layout` for every one of them, and the
+# client reads no snapshot until the table arrived (`GameClient`
+# `_layout_pending`, check 090zzzzzn). Four of them differ on the current
+# engine, listed in `ENGINE_SIZES_V201` below (work order 437, audit
+# F-05/F-07); the recorded fixtures stay 1.60 bytes and are NOT re-recorded.
 SETTINGS_SIZE = 0x229       # 553
 PLAYER_SIZE = 0xF0E         # 3854
 STAR_SIZE = 0x6A + (1024 + 7) // 8  # 234 (with BITMAP(MAX_STARS))
@@ -46,6 +51,15 @@ ANTARAN_SIZE = 0x42         # 66
 SHIP_ICON_SIZE = 12
 MAX_PLAYERS = 8
 MAX_LEADERS = 67
+
+#: What the orionlayer branch (v2.0.1) compiles to, per `sizes.h` and the
+#: header probe of `dev:tools/struct_header_check.py` (which fails when one
+#: of these stops matching): s_player grew by `settlers[1000]` (consts.h:16,
+#: CONFIGURABLE_SIZE_ASSERT 0x2d86), s_ship_data by 6, s_colony by
+#: `buildings_scrapped_this_turn`, s_antaran by 2. Documentation of the
+#: gap, not a fall-back: a v2 snapshot is read with the engine's own table.
+ENGINE_SIZES_V201 = {"s_player": 0x2D86, "s_ship_data": 0x87,
+                     "s_colony": 0x16A, "s_antaran": 0x44}
 
 
 @dataclass

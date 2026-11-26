@@ -1,13 +1,21 @@
-"""s_colony — VERIFIED spec (361 bytes, 50 members).
+"""s_colony — VERIFIED spec (361 bytes, 50 members; 1.60 FALLBACK size).
+
+**The current engine's record is 362 bytes** (work order 437, audit F-05):
+orion2re v2 appends `uint8_t buildings_scrapped_this_turn` after
+`last_turn_building_destroyed` (`sizes.h:24` asserts 0x16a;
+`game_state.ENGINE_SIZES_V201`). OMISSION `colony_scrapped_flag`: HD does
+not read that byte. A live engine's LAYOUT supplies the size and the 50 members'
+offsets by name, so nothing here is read wrong; `SIZE` stays 361 because the
+recorded fixtures are 1.60 bytes and are not re-recorded.
 
 Two sources, as decision 23 requires, and they are independent of
 each other.
 
 **Source one, the header.** `struct s_colony` transcribed from
-orion2re's `src/game/orion2.h:487-537` and measured by compiling that
+orion2re 1.60's `src/game/orion2.h:487-537` and measured by compiling that
 header with its own `#pragma pack(push, 1)`: `offsetof` per member,
 and a `sizeof` of exactly 361 matching
-`ORION2RE_STATIC_SIZE_ASSERT(s_colony, 0x169)` at sizes.h:24. The 50
+`ORION2RE_STATIC_SIZE_ASSERT(s_colony, 0x169)` at 1.60's sizes.h:24. The 50
 members are contiguous — every offset is the previous offset plus the
 previous size, and the last ends on 361 — so the packing left no
 padding and no offset is free to move. Full write-up, including the

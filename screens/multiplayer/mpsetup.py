@@ -1,15 +1,31 @@
 """The multi-player setup (id 15) read from its own field list — work order 188.
 
-`MULTPLAY::Multi_Player_Screen_` (multplay.cpp:244-389) builds its buttons
-in `Add_MP_Setup_Screen_Fields_` (:520-637), each with its own hotkey: the
-three type radios NETWORK "N", MODEM "M" (orion2re's ONLINE), HOTSEAT "H";
-CANCEL (ESC), START NEW GAME "S", LOAD GAME "L", JOIN GAME "J" (absent under
-Hotseat, :608-619) and COMM INFO "C" (only under Online, :622-634). So the
-list itself says which type is selected — measured live in work order 188
-(`P7_explore`): Network lists J, Online J and C, Hotseat neither — and the
-setup needs nothing more from the wire.
+`MULTPLAY::Multi_Player_Screen` (multplay.cpp) builds its buttons in
+`Add_MP_Setup_Screen_Fields` (multplay_fields.cpp, v2; multplay.cpp of 1.60),
+each with its own hotkey: the three type radios N, M, H (the keys of
+`BUTTONS`: "network", "online", "hotseat"), CANCEL (ESC), START NEW GAME "S",
+LOAD GAME "L", JOIN GAME "J" (absent under Hotseat) and, on the OLD engine
+only, COMM INFO "C" (only under Online). On the old engine the list says which
+type is selected — measured live in work order 188 (`P7_explore`): Network
+lists J, Online J and C, Hotseat neither.
 
-The COMM INFO dialog (`Online_Setup_Screen_`, :677-725, still under 15) has
+WHAT THE RADIOS ARE ON ORION2RE v2 (work order 437 F12, source): N sets
+`multi_player_game_type` 2, `Set_Multi_Player_Game_Type` turns that into
+`net.mode = 1`, which `netcode_bootstrap.cpp` maps to a direct endpoint
+(`BOOTSTRAP_DIRECT_ENDPOINT`: the router named by `interface router` in
+`data/orion2re.cfg`) — ONLINE; M sets 1, `net.mode = 0`, the embedded router
+and LAN discovery — LAN. So the keys "network" (N) and "online" (M) are the
+original's legacy names and `V2_WORDS` names them as v2 behaves.
+
+THE COMM INFO DIALOG IS V1 ONLY (work order 437 F1)
+DEVIATION `comm_info_v1_only`: in v2 `Add_MP_Setup_Screen_Fields` sets
+`field_id_setup = -1000` ("Router configuration is supplied by the local
+interface config", multplay_fields.cpp) and no code opens
+`Online_Setup_Screen` (`MP_ONLINE_SETUP` is only a `case` in `ext_api.cpp`),
+so `classify` and `comm_fields` below serve the old engine alone and the
+setup draws no COMM INFO button under `layout.generation() >= 2`.
+
+The old engine's COMM INFO dialog (`Online_Setup_Screen_`, still under 15) has
 three fields: the endpoint's continuous input and two ESC buttons, CANCEL
 (left) and ACCEPT (right).
 """
@@ -48,19 +64,23 @@ def classify(fields):
 #: M sets 1, H sets 4 — the same in orion2re 1.60 and v2).
 GAME_TYPES = {2: "network", 1: "online", 4: "hotseat"}
 
-#: The words orion2re v2's own artwork puts on the first two radios
-#: (`data/base.zip`): the network type is ONLINE there, the second LAN.
+#: The words for the first two radios on orion2re v2, as the source behaves
+#: (work order 437 F12): N is the direct endpoint (`net.mode` 1, ONLINE), M
+#: the embedded router with LAN discovery (`net.mode` 0). UNVERIFIED against
+#: the artwork itself, which was not read.
 V2_WORDS = {"network": "ONLINE", "online": "LAN"}
 
 
 def selected(fields, settings_raw=None):
     """The chosen type. On orion2re v2 the list may not say it: the source
-    has no COMM INFO button in the setup (TRANSCRIPTION multplay.cpp:585-586
-    sets `field_id_setup = -1000`, the router configuration comes from the
-    local interface config; :185-188 draws that slot greyed), but work order
-    245's live walk reported one — UNVERIFIED which build showed it, so the
-    settings record is read first (`multi_player_game_type`, the value the
-    radios write). On the old engine the list says it: J and C → online, J
+    has no COMM INFO button in the setup (TRANSCRIPTION `Add_MP_Setup_Screen_
+    Fields` in multplay_fields.cpp sets `field_id_setup = -1000`, the router
+    configuration comes from the local interface config; `Draw_MP_Setup_Screen`
+    draws that slot greyed), so the settings record is read first
+    (`multi_player_game_type`, the value the radios write). Work order 245's
+    live walk reported a COMM INFO button; the source cannot show one, so
+    that report is taken for the old engine (work order 437 F1, closes
+    `comm_info_v2`). On the old engine the list says it: J and C → online, J
     alone → network, neither → hotseat (multplay.cpp:608-634 of 1.60).
     """
     from core.structs import layout

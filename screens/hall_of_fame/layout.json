@@ -6,7 +6,7 @@
   "marks": {
     "deviation_hud_table": "The table in HUD panels on the universal background, where the original draws SCORE.LBX 15's picture (title, header and its own frame) with its own cursor (SCORE.LBX 16).",
     "deviation_flash": "The new entry flashes as a lit row blinking at the original's pace (every 6 draw ticks, score.cpp:397-405), where the original cycles the row's palette colours.",
-    "omission_reset_key": "The original's 'C' key re-creates the default file on disk (score.cpp:329-334); HD never sends it \u2014 no key but ESC reaches the game from this screen.",
+    "unverified_reset_key": "The original's 'C' multi-hotkey field (Init_Hall_Of_Fame_Screen, exit_hotkey_handle) re-creates the default file on disk (Hall_Of_Fame_Screen, Create_Default_HOF_File); HD forwards the key through core.keyfwd, so it reaches the game (work order 230 E). Never run live.",
     "hd_extension_plate_frame": "With a painted frame the screen fills the window: the rows, the rank numbers and the title sit in the plate's own fields (layout.json frame_fields)."
   },
   "frame_fields": {

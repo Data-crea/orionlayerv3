@@ -221,6 +221,18 @@ SPEC = Spec("s_player", SIZE, [
     # values 4, 6, 9 and 255 all seen. An engine with the LAYOUT finds it by
     # name (decision 97).
     ("ship_range",            904, "i16"),
+    # `uint8_t hyper_advanced_tech[MAX_PLAYERS]` — PROMOTED in work order
+    # 437 (audit F-01): one count per hyper-advanced field (75..82), each
+    # adding `hyper_advanced_cost_increment` to that field's research cost
+    # (`Player_Research_Cost`, colcalc.cpp:552-556). TWO SOURCES: (1) the
+    # 1.60 header compile gives 640 (`dev:tools/struct_header_check.py`);
+    # (2) the v2.0.1 compiled layout table (the audit's probe of
+    # `ext_layout_table.inc`) gives 8440 = 640 + 7800, the same shift as
+    # every member behind `settlers[1000]`, width 8, unsigned. The live
+    # engine's LAYOUT message resolves it by name (decision 97); 640 is
+    # only the 1.60 fall-back. Live values on SAVE4/5 are all zero, which
+    # still confirms no offset — the offset stands on the two sources.
+    ("hyper_advanced_tech",   640, "u8[8]"),
     # THE RACES SCREEN'S FIELDS, work order 175 C. Header route (the
     # compiler asserts every offset, `dev:tools/struct_header_check.py`) and,
     # as the second source, the game's own invariants over every save on

@@ -1,13 +1,13 @@
 """The Hall of Fame (wire id 14) — work order 188, Part 6.
 
-`SCORE::Hall_Of_Fame_Screen_` (score.cpp:291-356): ten entries, score
+`SCORE::Hall_Of_Fame_Screen` (score.cpp, the function of that name): ten entries, score
 descending, numbered 1-10 (the numbers are the picture's), four columns —
 the player's name, the race's name, the difficulty's word, the score — drawn
 from HOF.M2 as the engine loaded it; no header row (the picture has none).
 Reached from the main menu's HALL OF FAME (its field resolved by hotkey,
 `screens/main_menu`) and at the end of a game (the new entry flashes).
 There is no empty state in the original: a missing or bad file is replaced
-by the engine with ten default entries (score.cpp:304-306), so HD never
+by the engine with ten default entries (`Hall_Of_Fame_Screen`'s load step, score.cpp `Create_Default_HOF_File`), so HD never
 draws an empty table either — without HOFM it does not claim the id.
 
 **IT CLAIMS 14 ONLY WITH OPEN FIX 50's "HOFM" BLOCK** (`core/hofblocks.py`):
@@ -15,10 +15,15 @@ the entries are the engine's, never read from a file of ours (decision 60's
 reasoning — the engine may rewrite HOF.M2 on entry).
 
 **WHAT IT SENDS**: one ACTIVATE_FIELD — the screen's full-screen field with
-ESC as its hotkey (score.cpp:549), the original's only way out — on a click
-anywhere or ESC. Nothing else: the original's "C" re-creates the default
-file ON DISK (score.cpp:329-334), and no key but ESC reaches the game from
-here (OMISSION `reset_key`).
+ESC as its hotkey (`Init_Hall_Of_Fame_Screen`, `screen_field_handle`), the
+original's only way out — on a click anywhere or ESC. Every other key goes
+through `core.keyfwd.forward` (work order 230 E), the one rule all screens
+share; the engine's `Add_Multi_Hot_Key_Field("C")` field (`exit_hotkey_handle`)
+is live, so Alt+C reaches the game, which then re-creates the default file
+and the table (`Hall_Of_Fame_Screen`'s `Create_Default_HOF_File` branch) —
+destructive and without a confirmation in the original too (TRANSCRIPTION,
+parity). UNVERIFIED `reset_key`: never run live; whether Data wants the key
+withheld is his decision (work order 437 F8).
 
 WITH A PAINTED FRAME (work order 361, HD EXTENSION `plate_frame`): when a
 mod's `frames/hall_of_fame.png` is drawn (`core.frameslot`) it fills the
@@ -29,7 +34,7 @@ is empty there, so the words stay the player's language, and no HUD panel
 is drawn.
 
 Marks (`layout.json`): DEVIATION `hud_table`, DEVIATION `flash`, HD
-EXTENSION `plate_frame`, OMISSION `reset_key`. Work order 361 removed HD
+EXTENSION `plate_frame`, UNVERIFIED `reset_key`. Work order 361 removed HD
 EXTENSION `exit_button`: the original has no button either.
 """
 import logging
@@ -62,7 +67,7 @@ REF_FONT, REF_PAD = 30, 28
 
 
 def exit_field(fields):
-    """The full-screen field with ESC as its hotkey (score.cpp:549)."""
+    """The full-screen field with ESC as its hotkey (`Init_Hall_Of_Fame_Screen`, `screen_field_handle`)."""
     return next((f for f in fields or [] if getattr(f, "index", 0) > 0
                  and f.hotkey == 0x1B and (f.x, f.y, f.x_end, f.y_end) ==
                  (0, 0, 639, 479)), None)
@@ -80,7 +85,7 @@ class HallOfFameScreen(ScreenBase):
         self._data = {}
         # THE SHELL (work order 225): the title plate and the table in the
         # content rectangle. NO BUTTON (work order 361): the original has
-        # none — a click anywhere or ESC leaves (score.cpp:549).
+        # none — a click anywhere or ESC leaves (`Init_Hall_Of_Fame_Screen`, `screen_field_handle`).
         self.shell = shell.Shell(title=lambda: self.words("title"))
 
     def enter(self, game_state=None):
@@ -236,7 +241,7 @@ class HallOfFameScreen(ScreenBase):
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y):
             return None
-        # A click anywhere, as the original (score.cpp:549)
+        # A click anywhere, as the original (`Init_Hall_Of_Fame_Screen`, `screen_field_handle`)
         self._leave("click")
         return None
 
@@ -244,7 +249,7 @@ class HallOfFameScreen(ScreenBase):
         if event.key == pygame.K_ESCAPE:
             self._leave("ESC")
         else:
-            # Alt+C resets the hall of fame (score.cpp:565, a multi-hotkey):
+            # Alt+C resets the hall of fame (`Init_Hall_Of_Fame_Screen`, `exit_hotkey_handle`, a multi-hotkey):
             # the one rule every screen shares (work order 230 E)
             from core import keyfwd
             keyfwd.forward(self, event)

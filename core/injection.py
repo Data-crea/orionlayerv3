@@ -314,11 +314,16 @@ class InjectionChain:
             conns = count_connections(getattr(self.client, "port", 17362))
         except Exception:
             pass
+        # The engine's RANDOM is opponents == 7 (`NEW_GAME_PLAYER_COUNT_RANDOM`,
+        # newgame_options.h): the count is drawn when the game starts, so no
+        # player total is known here and none is invented (work order 437 F10).
+        opp = get("ng_opponents")
+        players = "random" if opp == 7 else (opp or 0) + 2
         log.info("setup: galaxy_size=%s age=%s opponents=%s (players=%s) "
                  "difficulty=%s tech=%s stars=%s ext_connections=%s",
                  get("ng_galaxy_size"), get("ng_galaxy_age"),
-                 get("ng_opponents"),
-                 (get("ng_opponents") or 0) + 2,
+                 opp,
+                 players,
                  get("ng_difficulty"), get("ng_tech_level"),
                  get("num_stars"), conns)
 

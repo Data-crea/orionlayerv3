@@ -54,7 +54,7 @@ array located by HERODATA.LBX's own 67 names at this stride:
   eta @55              status-4 leaders ("For Hire (%d)", 30 - eta)
                        in 1..29 everywhere, and +1 each from SAVE4 to
                        SAVE5 — `Decrement_Officer_ETA_` increments a
-                       status-4 leader's eta every turn (officer.cpp:1732-1737)
+                       status-4 leader's eta every turn (officer.cpp:1732-1737 in 1.60; `Decrement_Officer_ETA`, officer.cpp:1618 on the branch)
 
 `level` @52 is 0 in every record of every file AND in HERODATA.LBX, and
 no line of the engine writes it (grep: only the save serializer and

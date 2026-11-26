@@ -19,7 +19,7 @@ would draw (it hands over, and the gate counts it as a failure).
 Geometry: every rectangle is a literal of colbldg.cpp (§2b of the
 reading); the list and queue rows are the live list's own fields, found
 by their x and sorted by y, so a squished list lands where the game put
-it (`Calculate_Squish_Step_`, coldraw.cpp:12-34).
+it (`Calculate_Squish_Step_`, colony_production_display.cpp:4-26).
 """
 from core.structs import colony as colony_struct
 from core.structs import planet as planet_struct

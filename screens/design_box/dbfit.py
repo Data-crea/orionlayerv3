@@ -18,6 +18,13 @@ was built at another tech level than the list is read at.
 
 `EXCLUDES` is `TECHDATA::specials[i].exclude` (techdata.cpp:455-495), nonzero
 entries only; a check holds it to the file where the source is on disk.
+
+OMISSION `config_exclude_table`: the engine lets a config key `exclude`
+of the tech tables override this table (`src/config/`, generated
+`config.cpp`), and no wire block reports the effective one; the DEFAULT
+table stands here. With a modded config the picker would dim a special
+the engine accepts, or the reverse. UNVERIFIED with a modded config.
+Wished from the engine: the exclusion mask per row in DSBX.
 """
 
 EXCLUDES = {

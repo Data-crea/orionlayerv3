@@ -180,7 +180,7 @@ class MainMenuScreen(ScreenBase):
                    (0x19F, 0xD9, 0x237, 0xEE) for f in fields)
 
     #: Each menu button's own field, by hotkey and rectangle
-    #: (`MAINMENU::Add_Main_Menu_Fields_`, mainmenu.cpp:110-140). The
+    #: (`MAINMENU::Add_Main_Menu_Fields_`, mainmenu.cpp). The
     #: boxes' `field_id`s (1-6) are the list's indices ONLY when both
     #: CONTINUE and LOAD exist: without a continue save the engine adds no
     #: CONTINUE field and every index after it moves up by one — HALL OF
@@ -225,7 +225,7 @@ class MainMenuScreen(ScreenBase):
         return super().handle_click(screen_x, screen_y)
 
     def handle_key(self, key):
-        """Q is QUIT here too (`last_input_scan == 0x51`, mainmenu.cpp:521),
+        """Q is QUIT here too (`last_input_scan == 0x51` in `Main_Menu_Screen`'s input loop, mainmenu.cpp),
         while the menu's own list is up. The easter egg's open panel takes
         every key first: ESC closes it and nothing reaches the game."""
         if self._egg is not None and self._egg.key(key):
@@ -261,7 +261,7 @@ class MainMenuScreen(ScreenBase):
         return self.layout.window_w, self.layout.window_h
 
     def _quitting(self):
-        """QUIT ends the game at once, no question (mainmenu.cpp:521-523,
+        """QUIT ends the game at once, no question (`Main_Menu_Screen`'s QUIT branch,
         SCREEN_EXIT): the client is told first, so the engine's going is
         the game's end and OrionLayer closes with it — as the GAME menu's
         QUIT does. Without it the silence read as a dead link: OrionLayer

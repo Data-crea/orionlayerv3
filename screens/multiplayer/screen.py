@@ -1,11 +1,12 @@
 """Multiplayer (wire ids 15, 16, 17, 21, 22, 37, 41) — work order 188, Part 7.
 
 What orion2re offers behind the main menu's MULTIPLAYER is read in
-`dev:doc/multiplayer_reading.md`: a setup (15) with three types — NETWORK (LAN,
-orion2re's own router on port 47800), ONLINE (a direct endpoint; the
-original's MODEM, whose art the engine still shows) and HOTSEAT (one engine,
-players taking turns) — START NEW GAME, LOAD GAME, JOIN GAME, COMM INFO
-(the Online endpoint) and CANCEL; then, per type, the hotseat setup (16) and
+`dev:doc/multiplayer_reading.md`: a setup (15) with three types — on v2 the
+first radio is ONLINE (a direct endpoint, `net.mode` 1) and the second LAN
+(orion2re's own router on port 47800, `net.mode` 0; see `mpsetup`), and
+HOTSEAT (one engine, players taking turns) — START NEW GAME, LOAD GAME, JOIN
+GAME and CANCEL (COMM INFO only on the old engine: v2 takes the Online
+endpoint from `data/orion2re.cfg`, `interface router`); then, per type, the hotseat setup (16) and
 player switch (17), hosting (21) and joining (22) a network game with its
 waiting steps, loading a multiplayer game (41), and between network turns
 (37). Nothing multiplayer-specific was on the wire; the setup reads its
@@ -13,16 +14,19 @@ state off its own field list (`mpsetup`), every other step needs open fix
 51's "MPLY" block (`mpwire`) and is claimed only with it.
 
 **WHAT IT SENDS**: each button's own field, found in the live list by its
-hotkey (`mpsetup.BUTTONS`), activated; the Online endpoint typed in HD and
-sent the save dialog's way (an injected click on the input, Backspaces as
+hotkey (`mpsetup.BUTTONS`), activated; on the old engine the Online endpoint
+typed in HD and sent the save dialog's way (an injected click on the input, Backspaces as
 long as the engine's text, the keys one per tick, Enter).
 
 Marks (`layout.json`): DEVIATION `hud_panels` (HUD panels and the universal
 background instead of MULTIGM.LBX's pictures), DEVIATION `online_word` (the
 radio the original's art calls MODEM and the dialog MODEM CONNECT are named
-by what orion2re does with them: ONLINE, its endpoint).
+by what orion2re does with them: ONLINE, its endpoint), DEVIATION
+`comm_info_v1_only` (no COMM INFO on v2: a note on the Online radio says where
+the router is set; work order 437 F1).
 """
 import logging
+import textwrap
 
 import pygame
 
@@ -31,6 +35,7 @@ from core.hud import shell
 from core.hud import text as hudtext
 from core.injection import InjectionChain, game_accepts, name_keys, paced_keys
 from core.screen_base import ScreenBase
+from core.structs import layout
 from core.widgets.text_input import TextInput
 
 from . import mpsetup
@@ -104,7 +109,6 @@ class MultiplayerScreen(ScreenBase):
                 self._chain = None
 
     def words(self, key):
-        from core.structs import layout
         if layout.generation() >= 2 and key in mpsetup.V2_WORDS:
             return mpsetup.V2_WORDS[key]      # v2's artwork, work order 243
         return (self._data.get("words") or {}).get(key) or key.upper()
@@ -179,15 +183,31 @@ class MultiplayerScreen(ScreenBase):
         self._caption(surface, panel, s)
         halves = shell.split(shell.inner(panel, L), L, [1.0, 1.0])
         y = panel.y + int(50 * s)
+        # DEVIATION `comm_info_v1_only` (work order 437 F1): v2 has no COMM
+        # INFO (`field_id_setup = -1000`), so its slot is not drawn there
+        v2 = layout.generation() >= 2
+        actions = ("start", "load", "join") if v2 else \
+            ("start", "load", "join", "comm")
         for half, keys, kind in ((halves[0], ("network", "online", "hotseat"),
                                   "toggle"),
-                                 (halves[1], ("start", "load", "join",
-                                              "comm"), "slant")):
+                                 (halves[1], actions, "slant")):
             x = half.centerx - bw // 2
             for i, key in enumerate(keys):
                 r = pygame.Rect(x, y + i * (bh + gap), bw, bh)
                 self._button(surface, key, r, btns.get(key),
                              lit=key == chosen, kind=kind)
+        if v2 and chosen == "network":
+            # the first radio is the direct endpoint on v2: say where it is
+            # set, since no dialog asks for it (HD EXTENSION `online_note`)
+            note = self.words("online_note")
+            r = pygame.Rect(halves[1].centerx - bw // 2,
+                            y + len(actions) * (bh + gap), bw, 2 * bh)
+            lines = textwrap.wrap(note, 26)
+            for k, line in enumerate(lines[:3]):
+                t = hudtext.render(self.style, line, "button", int(34 * s),
+                                   colour_=hudtext.colour("sub"))
+                surface.blit(t, (r.centerx - t.get_width() // 2,
+                                 r.y + k * (t.get_height() + int(4 * s))))
 
     def _caption(self, surface, panel, s):
         """HD EXTENSION `setup_caption` (Data's mockup, 21 November 2026): a

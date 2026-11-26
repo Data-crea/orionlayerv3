@@ -272,7 +272,7 @@ class CombatInput:
         click moves nothing, v2 :872), no missile under the pointer — any
         owner's, its field comes first (`missile_field`) — and no command
         in flight. The footprint of a legal cell is free but for the ship
-        itself (`Set_Legal_Moves`, v2 combat1.cpp:2877, :2890), so over a
+        itself (`Set_Legal_Moves`, branch combat1_fields.cpp:4-107), so over a
         short move the pointer may stand on the acting ship and still move
         it."""
         point = point or self._pointer

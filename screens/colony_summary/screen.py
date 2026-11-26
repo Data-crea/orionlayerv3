@@ -13,8 +13,8 @@ boxes.json carries names and styles only. Each window is a HUD panel:
   header          the five heading plates, a band of the list's area
   planet_info     the scanned colony's disc, name and paragraph
   colony_panel    its output (TRANSCRIPTION, COLSUM::Draw_Colony_Scan_
-                  Info_, colsum.cpp:1155), surface and the empire
-                  readouts (COLSUM::Draw_Empire_Info_, colsum.cpp:418)
+                  Info_, colsum_details.cpp:252), surface and the empire
+                  readouts (COLSUM::Draw_Empire_Info, colsum_details.cpp:106)
   galaxy_inset    the original's small galaxy map (colsum.cpp:415,
                   native (380, 349, 128, 91)); see `colonyinset`
   return          RETURN
@@ -47,7 +47,7 @@ window. The key path has no such constraint, which is a second
 reason to prefer it.
 
 Data: the sidebar is transcribed from COLSUM::Draw_Empire_Info_
-(colsum.cpp:418), six lines, each one s_player field. Every file:line
+(colsum_details.cpp:106), six lines, each one s_player field. Every file:line
 in this module and in layout.json's `empire` block was read in
 orion2re 1.60; a 1.31 archive numbers them differently, and that
 block carries the same warning. The draw order, the labels, the ESTR
@@ -68,11 +68,11 @@ the alignment, and that is `colonyempire.value_column.__doc__`
 wrong and is withdrawn (fundament 43).** It is to show the selected
 colony's food, industry and research, and this module claimed the
 original draws none of the three per colony. It draws all four.
-`COLSUM::Draw_Colony_Scan_Info_` (colsum.cpp:1155), reached from
+`COLSUM::Draw_Colony_Scan_Info` (colsum_details.cpp:252), reached from
 `Draw_Scan_Info_` at colsum.cpp:485, loops `i < ECON_COUNT` calling
 `Draw_Colony_Wee_Prod_(_g_colony_n, i, 106, y_pos, 366, 20)` with
 `y_pos` stepping 18, then adds morale at (106, 421); that path ends
-in `COLDRAW::Draw_Colony_Prod_Both_` (coldraw.cpp:36), which reads
+in `COLDRAW::Draw_Colony_Prod_Both` (colony_production_display.cpp:28), which reads
 `colony->production[prod_type]` (coldraw.cpp:60) and draws it as
 tens-and-units sprites. Native x 106, y 349 upward — the bottom-left,
 which is where `output_panel` is.
@@ -247,7 +247,7 @@ class ColonySummaryScreen(ScreenBase):
         which is decision 36's line.
 
         Idempotent by the original's own design: `Switched_cmp_` has
-        no direction toggle (colsum.cpp:378-401), so re-sorting by
+        no direction toggle (colsum_details.cpp:78-104), so re-sorting by
         the key the game already holds re-sorts identically. Entering
         the screen repeatedly costs one keystroke and changes
         nothing.
@@ -489,7 +489,7 @@ class ColonySummaryScreen(ScreenBase):
         self._render_panels(surface)
         self._render_list(surface)
         # BOTH HALVES OF THE ORIGINAL'S SCAN BOX IN ONE CALL,
-        # because `Draw_Colony_Scan_Info_` (colsum.cpp:1155) is one
+        # because `Draw_Colony_Scan_Info` (colsum_details.cpp:252) is one
         # function: the description paragraph at native
         # (13, 354, 80, 88) and the production rows from native
         # x 106. Splitting it across two screen methods had put both
@@ -644,7 +644,7 @@ class ColonySummaryScreen(ScreenBase):
         underneath them.
 
         **The active header does not indicate a direction, because
-        the original has none.** `Switched_cmp_` (colsum.cpp:378-401)
+        the original has none.** `Switched_cmp` (colsum_details.cpp:78-104)
         bakes the sign into each `case` as a literal — five of the
         seven descending, Name and Producing ascending — and there is
         no toggle anywhere: clicking the lit header re-sorts

@@ -1,0 +1,66 @@
+OrionLayer open fix 124 — g_injected_mouse_pending is a std::atomic<bool>
+=========================================================================
+
+Work order 437 (parity audit of 25 November 2026, finding F-04). orion2re on the
+fork's branch `orionlayer` (v2.0.1), after open fix 123. Not on
+`orionlayer-local`. In src/ext/ext_api.h and src/ext/ext_api.cpp.
+
+g_injected_mouse_pending (open fix 3) is set by ProcessInput
+(ext_api.cpp, the injected clicks and FilmGuard) and cleared by
+Pump_Game_Input_Queue (platform.cpp, from Pointer_X, Pointer_Y and the main
+loop) - the game thread, MOX2::main2, created with SDL_CreateThread in
+platform.cpp - and READ by Sync_Mouse_State_From_SDL, which the SDL event
+loop of the main thread calls (focus gained, F10, a fullscreen toggle). Two
+threads, a plain bool: a data race. g_hide_window got std::atomic in open
+fix 43; this flag did not.
+
+The change. `extern std::atomic<bool>` in the header, `std::atomic<bool>
+g_injected_mouse_pending{false}` in the definition. <atomic> was already
+included. platform.cpp is untouched: `if (flag)` and `flag = false` compile
+against an atomic unchanged. Same ordering (the default, sequentially
+consistent) as g_hide_window.
+
+Proved: ext_api.cpp and platform.cpp syntax-checked on the scratch clone with
+the build's own flags and PCH (ORION2RE_EXT on), a misspelt use refused; the
+branch built with `cmake --build --preset linux-debug`. Live: UNVERIFIED, see
+doc/orion2re_open_fixes.md entry 124.
+
+commit bf37dae6406da98d4b25c6e995f67aef89129cba
+Author: Data-crea <sattler.daniel@hotmail.com>
+Date:   Thu Nov 26 05:38:30 2026 +0100
+
+    OrionLayer Open Fix 124: g_injected_mouse_pending is a std::atomic<bool> (the game thread sets and clears it, the main thread's SDL event loop reads it in Sync_Mouse_State_From_SDL; open fix 3's flag was a plain bool shared by two threads)
+    
+    OrionLayer, open fix 124.
+    
+    Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 805ea708..019b6edb 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -26,7 +26,7 @@ int16_t g_activated_input = 0;
+ // OrionLayer, open fix 62. The rect the client saw at the pending index (x, y, x_end, y_end), when it sent one.
+ static bool g_pending_checked = false;
+ static int16_t g_pending_rect[4] = {0, 0, 0, 0};
+-bool g_injected_mouse_pending = false;
++std::atomic<bool> g_injected_mouse_pending{false};  // OrionLayer, open fix 124.
+ // OrionLayer, open fix 112. An injected click's release, held while a film plays (FilmGuard).
+ static SDL_Event g_film_release{};
+ static bool g_film_release_pending = false;
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index 96348ac4..a6d5df51 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -492,7 +492,10 @@ extern int16_t g_activated_input;
+ /// pumped. Sync_Mouse_State_From_SDL stands aside while this is
+ /// set, so the injected position survives to whoever reads
+ /// mouse::Pointer_X(). Cleared by Pump_Game_Input_Queue().
+-extern bool g_injected_mouse_pending;
++/// OrionLayer, open fix 124. Atomic: the game thread sets it (ProcessInput)
++/// and clears it (Pump_Game_Input_Queue), the main thread's SDL event loop
++/// reads it (Sync_Mouse_State_From_SDL).
++extern std::atomic<bool> g_injected_mouse_pending;
+ 
+ /// OrionLayer, open fix 71. True when timer::Release_Time may return at once:
+ /// a battle is live, the engine's window is hidden (open fix 43), a client is

@@ -155,9 +155,11 @@ def research_readout(plr, labels, hstrings=None):
     removes rather than marks.
 
     The arithmetic is `core/research.py`, transcribed with it. The
-    hyper-advanced surcharge is NOT applied: `hyper_advanced_tech` has one
-    source only (`core/structs/unverified.py`), so for fields 75..82 the
-    turn count is an underestimate — written here rather than papered over.
+    hyper-advanced surcharge IS applied since work order 437 (audit F-01):
+    `hyper_advanced_tech` has two sources now (`core/structs/player.py`),
+    and `Player_Research_Cost` adds it from field 75 on
+    (colcalc.cpp:552-556). The step per count is the default 10000
+    (OMISSION config_hyper_advanced_cost_increment, `core/research.py`).
 
     Wording comes from the game's own strings where the extractor has them
     (H 0x183, 0x188, 0xE1/0xE2), with the JSON label as the fallback
@@ -181,7 +183,7 @@ def research_readout(plr, labels, hstrings=None):
     fields_array = getattr(plr, "tech_fields", None)
     if fields_array is not None and 0 <= field < len(fields_array):
         status = int(fields_array[field])
-    cost = research.cost(field)
+    cost = research.cost(field, getattr(plr, "hyper_advanced_tech", None))
     turns = research.turns_until_complete(
         field, status, int(plr.research_accumulated),
         int(plr.research_produced), cost)

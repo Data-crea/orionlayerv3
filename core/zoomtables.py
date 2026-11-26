@@ -345,6 +345,15 @@ GALAXY_VIEWPORT_H = 0x190        # 400, mapgen.cpp:69
 #: below. Transcribed as the switch writes them, because that is what
 #: the switch is; `maximum_galaxy_display_scale` reproduces all four
 #: and a smoke check holds it to them.
+#:
+#: OMISSION config_max_map_scale (WO 437, audit F-02): v2.0.1 takes
+#: `max_map_scale` / `max_zoom_count` per galaxy size from the config
+#: `map.layout.N.{width,height,star_spacing,maximum_display_scale,
+#: maximum_zoom_level,initial_zoom_level}` (mapgen_layout.cpp,
+#: mapgen_config.cpp); neither value is on the wire (ext_api.cpp sends
+#: `cur_map_scale`, MAP_MAX_X/Y only), so HD derives them from the stock
+#: table and the Maximum formula, which equal the defaults of the five sizes
+#: (checked 25 Nov 2026). A changed layout config misplaces the zoom rungs.
 STOCK_MAX_MAP_SCALE = {506: 10, 759: 15, 1012: 20, 1518: 30}
 
 #: `raw_cell_size`, mapgen.cpp:65 and :1113 — the same expression in
@@ -698,7 +707,13 @@ def zoom_level(map_scale, max_zoom_count=3, num_stars=0,
 
 
 def _extended_scale_for_zoom(max_map_scale, max_zoom, level):
-    """MAP_SCALE::Extended_Scale_For_Zoom_Level_ — repeated halving."""
+    """MAP_SCALE::Extended_Scale_For_Zoom_Level_ — repeated halving.
+
+    OMISSION config_maximum_galaxy_zoom_mode (WO 437, audit F-02): this is
+    the engine's HALF mode (the default). `maximum_galaxy_zoom_mode =
+    classic` (map_scale.h `Classic_Zoom_Level_For_Scale_`, harold.cpp) uses
+    the classic 15/20/30 ladder; HD never reads the mode (UNVERIFIED which a
+    live game runs)."""
     level = max(0, level)
     if level >= max_zoom:
         return max_map_scale
@@ -771,21 +786,34 @@ def black_hole_origin(zoom, num_stars=0, map_scale=10):
 
 
 def black_hole_animates(num_stars, map_scale):
-    """MAP_SCALE::Advance_Black_Hole_Animation_.
+    """MAP_SCALE::Advance_Black_Hole_Animation (the scale-percent rule).
 
-    The original freezes black hole animation once icons are being
-    shrunk — a huge galaxy at maximum zoom-out has still frames.
-    """
+    OMISSION maximum_galaxy_display_classic (WO 437, audit F-03): this is
+    the rule the engine applies only when `Use_Classic_Maximum_Galaxy_
+    Display()` is FALSE. v2.0.1's default `maximum_galaxy_display =
+    classic` (mainscr_config.cpp) on a Maximum-size galaxy at the widest
+    zoom animates black holes regardless (`Draw_Stars`, mainscr.cpp: the
+    `Use_Classic_Maximum_Galaxy_Display() ||` test), so HD shows a frozen
+    frame where a default engine spins. Not changed: the config value and
+    `settings.galaxy_size` are not read at this call, the config is not on
+    the wire (UNVERIFIED which mode a live game runs), and a map look is
+    Data's to accept by playing."""
     return star_scale_percent(num_stars, map_scale) >= 100
 
 
 def names_suppressed(num_stars, map_scale, max_map_scale):
-    """MAINSCR::Print_Star_Names_ bails out entirely here.
+    """MAINSCR::Print_Star_Names in the OVERVIEW mode only.
 
-    MAP_SCALE::Is_Extended_Max_Map_View_: a galaxy larger than the
-    original maximum, viewed at its widest, draws no star names at
-    all — they would be unreadable and overlap.
-    """
+    OMISSION maximum_galaxy_display_classic (WO 437, audit F-03): the
+    engine returns early from `Print_Star_Names` (mainscr.cpp) only when
+    `Use_Maximum_Galaxy_Overview()` (mainscr_view.cpp) holds, i.e. the
+    extended-max view (`MAP_SCALE::Is_Extended_Max_Map_View_`: more stars
+    than the original maximum, scale at maximum) AND NOT the classic
+    display. The default config is classic, and on a Maximum-size galaxy
+    the default engine DRAWS the names here; HD hides them in every
+    extended-max view, as v2.0.0 did. The visited-star dot
+    (`visited_dot`) belongs to the same overview mode. Not changed, for
+    the reasons of `black_hole_animates`."""
     return (num_stars > ORIGINAL_MAX_STARS
             and map_scale == max_map_scale)
 

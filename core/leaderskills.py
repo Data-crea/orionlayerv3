@@ -99,8 +99,12 @@ LEVEL_NAME_ESTRINGS = {
     leader_struct.TYPE_COLONY: tuple(range(0x30E, 0x313 + 1)),
 }
 
-#: `Get_Officer_Base_Level_` (officer.cpp:44-61): the xp at which levels
-#: 1..5 start. Level 5 needs the owner's WARLORD trait as well.
+#: `Get_Officer_Base_Level` (officer_rules.cpp:38, 1.60: officer.cpp:44-61):
+#: the xp at which levels 1..5 start. Level 5 needs the owner's WARLORD
+#: trait as well.
+#: OMISSION config_leader_progression: the engine reads these from
+#: `progression.experience_thresholds` (officer_rules.cpp:41,51,183),
+#: configurable; HD assumes the defaults (`engine.config_bound_rules` in engine.md).
 LEVEL_STEPS = (60, 150, 300, 500, 1000)
 MAX_LEVEL = 5
 
@@ -127,6 +131,9 @@ SUPER_FAMOUS = 11
 
 #: `Set_Officer_To_Player_` refuses a fifth of one type (officer.cpp:2073)
 #: and the screen lists at most four (:2722): one number, two readers.
+#: OMISSION config_leaders_no_limit: with `leaders_no_limit` the engine
+#: allows MAX_LEADERS per type (officer_rules.cpp:13-17, officer.cpp:50);
+#: HD assumes the default of four.
 MAX_PER_TYPE = 4
 
 #: The leaders the original lists as female, for the ", the" wording

@@ -116,6 +116,16 @@ class CustomRaceScreen(ScreenBase):
             return
         # Sync game to zero: the game loads stock traits on entry,
         # HD starts clean — sending Clear aligns both sides.
+        # DEVIATION `custom_start_blank` (work order 437 F3): the original
+        # enters `Racial_Option_Screen` with the picked portrait race's
+        # traits (`Race_Selection_Screen`: `Copy_Structure(plr->traits,
+        # race_specials[i])`, racesel.cpp), so its start is not blank.
+        # DEVIATION `custom_cancel_wipes`: every entry resets, so CANCEL out
+        # of Empire Identity (lock released, screen 50 re-entered, this runs
+        # again) wipes a finished race where the original keeps it. Neither
+        # is changed: the wire carries no trait state to read back (the open
+        # item of [custom_race.screen]), so HD cannot tell a re-entry from a
+        # first entry without inventing one.
         if self.app.connected:
             self.app.client.activate_field(4)
 

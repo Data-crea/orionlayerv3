@@ -48,7 +48,10 @@ PRODUCING_NONE = -1
 #: `Calculate_Current_Production_Turn_Count` answers 10000 for "never"
 #: (colony.cpp:425-427).
 TURNS_MIN, TURNS_MAX = 1, 9999
-#: MAX_COLONIES (consts.h:8-11: MAX_PLANETS, MAX_STARS * 5): n's bound.
+#: OMISSION capacity_constants (WO 437, audit F-06): a literal copy of the
+#: engine's MAX_COLONIES (consts.h: MAX_PLANETS = MAX_STARS * 5), n's bound;
+#: equal today, and the engine sends MAX_STARS / MAX_SHIPS / MAX_PLANETS as
+#: constants in its layout block (ext_layout.cpp) but not this one.
 MAX_COLONIES = 1024 * 5
 
 

@@ -4,7 +4,7 @@ many and grouped as the original draws them, and put the number giving
 the row's value at the end of the row").
 
 TRANSCRIPTION `prod_symbols`: `COLDRAW::Draw_Colony_Prod_Both_` at frame
-0 (coldraw.cpp:36-181), called for BC, food, industry and research in
+0 (colony_production_display.cpp:28-173), called for BC, food, industry and research in
 that order (`Draw_Colony_Info_Production_`, colony.cpp:706-734: x 128,
 right edge 301, spacing 20) — the BC row is drawn by the same function,
 so it is drawn here too. Per row, left to right, one symbol per unit:
@@ -25,7 +25,7 @@ so it is drawn here too. Per row, left to right, one symbol per unit:
                   colour 0xED (`Short_Anims_`, colony.cpp:2168-2176;
                   `colart.outlined`)
 
-The step is `Calculate_Squish_Step_` (coldraw.cpp:12-34) over every
+The step is `Calculate_Squish_Step_` (colony_production_display.cpp:4-26) over every
 symbol and slot the original counts, at the spacing of 20 native px times
 the sprite's own step, so a squeezed row squeezes as the original's
 does; at a step of one pixel or less it becomes 2 and the row is clipped
@@ -80,7 +80,7 @@ def plan(col, econ):
     """([(slot, stem, short)], counted): what one row draws, in the
     original's order — `slot` the drawn_count it is drawn at, `short` a
     shortage symbol — and the count `Calculate_Squish_Step_` divides by.
-    A transcription of coldraw.cpp:36-181, branch for branch."""
+    A transcription of colony_production_display.cpp:28-173, branch for branch."""
     imports = [int(v) for v in col.imports]
     prod = int(col.production[econ])
     maint = [int(v) for v in col.maintenance]
@@ -131,7 +131,7 @@ def plan(col, econ):
 
 def row_step(x, right, count, spacing, px=1):
     """(step, clip): `Calculate_Squish_Step_` — its one home,
-    `colonyicons.squish_step` (coldraw.cpp:12-34) — and this caller's
+    `colonyicons.squish_step` (colony_production_display.cpp:4-26) — and this caller's
     floor (:111-117): a step of one native pixel or less becomes 2 and
     the row is clipped to its room. `px`: device px per native px (the
     sprite step), so the floor scales as the spacing does."""

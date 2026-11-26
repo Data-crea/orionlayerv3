@@ -47,7 +47,7 @@ log = logging.getLogger("empire_identity")
 
 class EmpireIdentityScreen(ScreenBase):
     SCREEN_NAME = "empire_identity"
-    GAME_SCREEN_ID = None     # sub-screen; wired later (after Custom Race)
+    GAME_SCREEN_ID = None     # sub-screen: reached by the dispatcher's lock (50/51), answers no id of its own
     USE_FRAME = True
     #: THE SCREEN SHELL (work order 225): the identity panel and the
     #: preview fill the content rectangle above the button row, every box
@@ -55,7 +55,7 @@ class EmpireIdentityScreen(ScreenBase):
     #: ACCEPT the shell's buttons, the title on the plate (`screenframe`).
     SHELL_WORN = True
     FRAME_TITLE = "Empire Identity"
-    FRAME_BTN_LEFT = ("Cancel", None)    # field IDs follow with wiring
+    FRAME_BTN_LEFT = ("Cancel", None)    # the fields are looked up when sent (the chain)
     FRAME_BTN_RIGHT = ("Accept", None)
 
     def __init__(self, app):
@@ -120,7 +120,7 @@ class EmpireIdentityScreen(ScreenBase):
     def _race_from_selection(self):
         """Race key for the emblem: taken from the Select Race screen
         when it holds a stock race, otherwise the layout default.
-        (Custom Race → picture choice; to be read from the game later.)"""
+        (Custom Race → the picture choice is not on the wire; the default stands.)"""
         default = self._data.get("default_race", "elerian")
         sel = self.app.dispatcher.screens.get("select_race") \
             if hasattr(self.app, "dispatcher") else None
@@ -364,7 +364,8 @@ class EmpireIdentityScreen(ScreenBase):
     def handle_key(self, key):
         if key == pygame.K_ESCAPE:
             self._cancel()
-        # No forwarding to orion2re: this screen is not wired yet.
+        # Nothing is forwarded to orion2re by a key: the engine's three
+        # dialogs are fed by the injection chain on ACCEPT (work order 188).
 
     # ── Actions ───────────────────────────────────────────
 
@@ -414,7 +415,7 @@ class EmpireIdentityScreen(ScreenBase):
 
     @property
     def result(self):
-        """Current choices — consumed by the wiring later."""
+        """Current choices — what ACCEPT hands to the injection chain."""
         return {"ruler": self._ruler.value if self._ruler else "",
                 "home": self._home.value if self._home else "",
                 "banner": self._color, "race": self._race}

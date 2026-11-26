@@ -6,15 +6,17 @@ buttons. Marks — each in `layout.json` `marks`, the status document and
 check 090q:
 
   TRANSCRIPTION  the lists in the game's order, a building row bright
-                 while queued and dim otherwise (colbldg.cpp:665-692), the
+                 while queued and dim otherwise (colbldg.cpp:753-769, `Draw_Buildings_List`), the
                  seven queue rows, the title, the summary's lines and their
                  numbers (BLDL: the engine's own `Draw_Cost_And_Time_Info_`
                  values)
   DEVIATION      `ship_row_dim` — narrowed by work order 208 B8: a design
                  LARGE or bigger is dimmed without a star base, star
                  fortress or battlestation, as the original does
-                 (:625-633); what `Colony_Can_Build_Product_` and
-                 `Auto_Design_Type_` dim (:637-652) is not copied
+                 (colbldg.cpp:714-721); `Colony_Can_Build_Product` is
+                 transcribed too (work order 437, `design_cannot_build`, :726-729);
+                 what `Auto_Design_Type` dims (:730-745) is not copied,
+                 OMISSION `ship_row_special`
   TRANSCRIPTION  the selected product's picture in the grid room and its
                  information in the large box (work order 226 D, Data's
                  decision 3; `bqproduct`, `screens/colony/colroom`)
@@ -29,7 +31,7 @@ check 090q:
                  its own pointer's queue row
   TRANSCRIPTION  the two modes (work order 228, Data's decision 3): while
                  DESIGN's mode is on every design row is bright and the
-                 design under the pointer blinks (colbldg.cpp:632-640), and
+                 design under the pointer blinks (colbldg.cpp:722-725), and
                  the button that set a mode (DESIGN, REPEAT BUILD) is
                  "selected" (decision 92) until the mode ends
   OMISSION       `mode_pointer` — the original's mode shows as its pointer
@@ -97,9 +99,10 @@ BASES, SHIP_SIZE_LARGE = (40, 41, 8), 2
 def design_needs_base(view, state, product):
     """TRANSCRIBED (work order 208 B8): a design row is dimmed when the
     colony has no star base, star fortress or battlestation and the design
-    is LARGE or bigger (colbldg.cpp:625-633). Not transcribed:
-    `Colony_Can_Build_Product_` (:637-640) and the special ships' dimming by
-    `Auto_Design_Type_` (:642-652) — DEVIATION `ship_row_dim`, narrowed."""
+    is LARGE or bigger (colbldg.cpp:714-721, `Draw_Militarys_List`). The
+    third dim, `Colony_Can_Build_Product`, is `design_cannot_build`; the
+    special ships' dimming by `Auto_Design_Type` (colbldg.cpp:730-745) is
+    not transcribed — OMISSION `ship_row_special`."""
     from core import prodname
     from core.structs import player as player_struct
     if prodname.kind(product) != prodname.KIND_SHIP_DESIGN or \
@@ -116,26 +119,55 @@ def design_needs_base(view, state, product):
     return size is not None and size >= SHIP_SIZE_LARGE and not has_base
 
 
+def design_cannot_build(view, state, product):
+    """TRANSCRIBED (work order 437, F4): the third dim of a design row,
+    `!Colony_Can_Build_Product` (colbldg.cpp:726-729), off the wire by
+    `core.shipbuildrule.can_build` — the owner's range, speed and tech,
+    the design's type and size, the colony's bases and barracks. False
+    where the record cannot say. OMISSION
+    `config_minimum_orbital_base_ship_class`: the engine's config value
+    is the default here (see the module)."""
+    from core import prodname, shipbuildrule
+    from core.structs import player as player_struct
+    from core.structs import ship as ship_struct
+    if prodname.kind(product) != prodname.KIND_SHIP_DESIGN or \
+            getattr(view, "colony", None) is None or state is None:
+        return False
+    raws = getattr(state, "player_raw", None) or []
+    me = getattr(state, "player_num", 0) or 0
+    if not 0 <= me < len(raws):
+        return False
+    owner = player_struct.parse(raws[me])
+    raw = player_struct.design_raw(owner, prodname.SHIP_DESIGN_BASE - product)
+    if raw is None:
+        return False
+    design = ship_struct.from_design(raw)
+    return shipbuildrule.can_build(
+        owner, list(view.colony.buildings), design.ship_type,
+        design.size) is False
+
+
 def design_blinks_dim(ticks):
     """`ERIC::Global_Cycler_(30, 2)` (eric.cpp:98-102): the half of the
     blink in which DESIGN's mode draws the design under the pointer dim
-    (colbldg.cpp:634-636) — every other 30 ms of the clock."""
+    (colbldg.cpp:722-725) — every other 30 ms of the clock."""
     return (int(ticks) // 30) % 2 != 0
 
 
 def row_bright(view, state, product, building, hover, ticks):
     """Whether a list row is drawn bright. A building row while queued
-    (colbldg.cpp:675-680). A ship row unless a design needs a base
-    (`design_needs_base`); while DESIGN's mode is on (`_field_mode` 1)
-    nothing is dimmed by that rule, and the design under the pointer
-    blinks (colbldg.cpp:625-640)."""
+    (colbldg.cpp:753-769, `Build_List_Product_Colors`). A ship row unless a design needs a base
+    (`design_needs_base`, `design_cannot_build`); while DESIGN's mode is on
+    (`_field_mode` 1) nothing is dimmed by those rules, and the design
+    under the pointer blinks (colbldg.cpp:712-729)."""
     if building:
         return view.queued(product)
     if getattr(view, "field_mode", w.MODE_NONE) == w.MODE_DESIGN:
         return not (product == hover and
                     prodname.kind(product) == prodname.KIND_SHIP_DESIGN and
                     design_blinks_dim(ticks))
-    return not design_needs_base(view, state, product)
+    return not (design_needs_base(view, state, product) or
+                design_cannot_build(view, state, product))
 
 
 def _lists(surface, screen, view, state, names, hover=None):

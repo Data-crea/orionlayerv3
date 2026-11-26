@@ -110,7 +110,9 @@ NEBULA_BRIGHTNESS = 188
 
 #: Black hole animation. The original advances its frames only
 #: while icons are drawn at full size (Advance_Black_Hole_Animation_),
-#: which core.zoomtables.black_hole_animates() reports.
+#: which core.zoomtables.black_hole_animates() reports. OMISSION
+#: maximum_galaxy_display_classic (WO 437): the default engine config
+#: (`classic`, Maximum-size galaxy) animates them at the widest zoom too.
 #:
 #: There is NO brightness pulse. An earlier version faded the sprite
 #: between alpha 165 and 255 every 4.8 s, which read as breathing and
@@ -132,7 +134,9 @@ NEBULA_BRIGHTNESS = 188
 #: count / 2, Draw_Black_Holes_ mainscr.cpp:729-737) — a stepped
 #: animation at the draw rate. HD turns one master smoothly, 90 s a
 #: revolution in half-degree steps, and stands still exactly where the
-#: original does (`black_hole_animates`, Advance_Black_Hole_Animation_).
+#: original does in the scale-percent rule (`black_hole_animates`; not in the
+#: default `classic` maximum-galaxy display, OMISSION
+#: maximum_galaxy_display_classic).
 #:
 #: The two used to be one decision, because the frames were
 #: pre-rendered: 72 frames over 40 s meant a 5-degree jump every

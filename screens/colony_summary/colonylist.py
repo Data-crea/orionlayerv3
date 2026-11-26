@@ -27,7 +27,7 @@ comparison is in `dev:v3_projektstatus.md`.
 **The per-row detail line is an HD EXTENSION.** The original prints
 it ONCE, for the selected colony, into the bottom-left scan box at
 native (13, 354, 80, 88) — `COLSUM::Draw_Colony_Scan_Info_`
-(colsum.cpp:1155) formats `ESTRINGS::E_Strings_(74)` and squeezes it
+(colsum_details.cpp:252) formats `ESTRINGS::E_Strings_(74)` and squeezes it
 into that rect, guarded by `_g_colony_n != -1`. The rows themselves
 carry a name and nothing else. Putting it on every row makes
 comparable what the original could only show one at a time, which is
@@ -126,7 +126,7 @@ ROW_NAME = palette.col("colony_summary", "row_name", (206, 216, 238))
 #: `_font_color_array` when it is not (colony.cpp:533-546).
 #:
 #: `_g_colony_n` IS the state that fills the description panel
-#: (`Draw_Colony_Scan_Info_`, colsum.cpp:1155), so the two read one
+#: (`Draw_Colony_Scan_Info`, colsum_details.cpp:252), so the two read one
 #: source here as well — `colonyselect.Selection.colony`, whose
 #: `row()` the panel already takes. A smoke check asserts they cannot
 #: disagree.
@@ -500,7 +500,7 @@ def _draw_name_block(surface, row, x, y, name_w, row_h, cfg,
     **THE SECOND LINE IS AN HD EXTENSION.** The original prints
     climate and n/max for the SELECTED colony only, into the scan box
     at native (13, 354, 80, 88) — `COLSUM::Draw_Colony_Scan_Info_`,
-    colsum.cpp:1155, substituting into `E_Strings_(74)`. Drawing it
+    colsum_details.cpp:252, substituting into `E_Strings_(74)`. Drawing it
     per row makes comparable what the original could only show one at
     a time. Marked here, in `layout.json` under `list._hd_extension`,
     in `dev:v3_projektstatus.md`, and in a smoke check.
@@ -593,7 +593,7 @@ def _detail_text(row, cfg):
     """'Terran 12/14' — climate name plus pops over the maximum.
 
     HD EXTENSION: per row, where the original has it once for the
-    selected colony (colsum.cpp:1155). See the module docstring.
+    selected colony (colsum_details.cpp:252). See the module docstring.
     """
     template = cfg.get("detail", "")
     if not template:

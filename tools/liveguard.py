@@ -18,7 +18,9 @@ happened to name.
 (work order 175):
 
     the game folder   SAVE1..SAVE10.GAM   Save_Game_ (filedef.cpp:64); SAVE10
-                                          is the autosave TURN writes
+                                          is the autosave TURN writes —
+                                          only in a single-player game with
+                                          `auto_saves != 0` (nextturn_runtime.cpp:21-43)
                       SAVE11.GAM          written by nothing (126 D) — held too
                       MOX.SET             Save_Game_Settings_ (filedef.cpp:24,
                                           loadsave.cpp:1063, initgame.cpp:113)

@@ -38,6 +38,31 @@ from core.blockreader import Reader
 from core.structs import combat as combat_struct
 
 GRID_W, GRID_H = 81, 68
+#: The wire's own battle limits (engine `ext_api.cpp:2107-2140, 2146, 2224`):
+#: units, ordnance slots and the legal-move bitmap are CUT there, while the
+#: engine's arrays are larger (`MAX_COMBAT_SHIPS` 1010, `MAX_COMBAT_FLYERS`
+#: 5000, grids up to 340 high, `consts.h:38-48`) and `combat.max_ships_per_
+#: side` / `max_flyers_*` are configurable (`combinit_config.cpp:5-7`;
+#: defaults 100 ships a side, 300 flyers). OMISSION config_combat_limits:
+#: HD assumes the default configuration. A count that EXCEEDS a limit is
+#: refused (below), one that sits exactly ON it cannot be told from a cut and
+#: is named in the log once (`_at_limit`) rather than drawn as if whole.
+#: Work order 437, audit combat F3/F4.
+MAX_UNITS, MAX_FLYERS = 210, 300
+_AT_LIMIT_SAID = set()
+
+
+def _at_limit(block, count, limit):
+    """Say once per block that the count equals the wire's limit: the engine
+    cuts there, so the battle may be larger than the picture."""
+    if count == limit and block not in _AT_LIMIT_SAID:
+        _AT_LIMIT_SAID.add(block)
+        import logging
+        logging.getLogger(__name__).warning(
+            "%s carries exactly %d entries, the wire's limit: the engine "
+            "cuts battles there (a raised max_ships_per_side or "
+            "max_flyers is not supported)", block, limit)
+    return count
 #: `s_combat_data` as CMBT writes it: the struct without its picture pointer
 #: (`core/structs/combat.py` holds the record and follows the engine's
 #: layout; 309 bytes on the old engine, which asserts both cut offsets and
@@ -100,7 +125,8 @@ def _cmbt(data, pos):
     n_order = r.one("B")
     out["turn_order"] = list(r.take(f"{n_order}h"))
     size, units = r.take("Hh")
-    if size != combat_struct.UNIT_SPEC.resolved()[0] or not 0 <= units <= 210:
+    if size != combat_struct.UNIT_SPEC.resolved()[0] or \
+            not 0 <= units <= MAX_UNITS:
         wire_protocol.refused("CMBT", "unit record size or count",
                               f"record {size}, {units} units")
         return None, pos
@@ -112,6 +138,7 @@ def _cmbt(data, pos):
     # other uses only compare it with a unit number. A refusal here cost
     # every block after CMBT, the film included.
     out["units"] = []
+    _at_limit("CMBT", units, MAX_UNITS)
     for _ in range(units):
         out["units"].append(unit(r.raw(size)))
     out["legal"] = bytes(r.raw((GRID_W * GRID_H + 7) // 8))
@@ -128,7 +155,8 @@ def _cmsl(data, pos):
     r = Reader(data, pos + 4)
     version, serial, size, n = r.take("BHBh")
     want = combat_struct.MISSILE_SPEC.resolved()[0]
-    if version != 1 or size != want or not 0 <= n <= 300 or \
+    _at_limit("CMSL", n, MAX_FLYERS)
+    if version != 1 or size != want or not 0 <= n <= MAX_FLYERS or \
             not r.fits(n * (2 + size)):
         wire_protocol.refused("CMSL", "version, record size, count or "
                               "length", f"version {version}, record "
@@ -155,7 +183,7 @@ def _cres(data, pos):
     head = r.take(CRES_HEAD)
     (version, number, serial, fought, winner, turn, star, colony, attacker,
      defender, pop_lost, stardate, units) = head
-    if version != 1 or not 0 <= units <= 210 or \
+    if version != 1 or not 0 <= units <= MAX_UNITS or \
             not r.fits(units * CRES_UNIT_SIZE):
         wire_protocol.refused("CRES", "version, count or length",
                               f"version {version}, {units} units")
@@ -181,13 +209,14 @@ def _ctgt(data, pos):
     slot switched on, which CMBT's `active` says)."""
     r = Reader(data, pos + 4)
     version, serial, source, units = r.take("BHhh")
-    if version != 1 or not 0 <= units <= 210 or not r.fits(units + 2):
+    if version != 1 or not 0 <= units <= MAX_UNITS or not r.fits(units + 2):
         wire_protocol.refused("CTGT", "version, unit count or length",
                               f"version {version}, {units} units")
         return None, pos
     masks = list(r.raw(units))
     n = r.one("h")
-    if not 0 <= n <= 300 or not r.fits(3 * n):
+    _at_limit("CTGT missiles", n, MAX_FLYERS)
+    if not 0 <= n <= MAX_FLYERS or not r.fits(3 * n):
         wire_protocol.refused("CTGT", "missile count or length",
                               f"{n} missiles")
         return None, pos
@@ -220,6 +249,8 @@ EVENTS = {
     11: ("rotate", ("unit", "from_facing", "to_facing", "step")),
     12: ("destroy", ("unit", "death_state", "status_before", "owner",
                      "previous_owner", "x_px", "y_px")),
+    # `status` is the unit_status BEFORE the engine sets 5: always 0 on the
+    # current engine (combat1.cpp:1201; audit combat F8)
     13: ("retreat", ("unit", "x", "y", "owner", "status")),
     # the blast's own kind is `blast`: an argument named "kind" overwrote
     # the event's kind in `_cmev` (work order 197's pulsar, seen as "1")

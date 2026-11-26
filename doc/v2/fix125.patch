@@ -1,0 +1,31 @@
+From 0296ca0c0112ede12010d66f251e2ef72990207a Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Thu, 26 Nov 2026 05:38:36 +0100
+Subject: [PATCH] OrionLayer Open Fix 125: MSG_CANCEL_FIELD holds the real
+ mouse off like the two injected clicks (it pushed a right click without
+ setting g_injected_mouse_pending, so the physical mouse could rewrite its
+ release, the defect open fix 3 describes)
+
+OrionLayer, open fix 125.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 019b6edb..1db1463e 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -3954,6 +3954,11 @@ static void ProcessInput() {
+                 // The field rect is in game space, so this centre
+                 // needs the same conversion as an injected click —
+                 // it is the same defect reached by a different door.
++                // OrionLayer, open fix 125. The same hold on the real
++                // mouse as the other two injections (INJECT_CLICK,
++                // INJECT_RIGHT_CLICK): without it the physical mouse
++                // rewrote this right click's release (open fix 3).
++                g_injected_mouse_pending = true;
+                 float cx = 0.0f;
+                 float cy = 0.0f;
+                 Game_Point_To_Window_Point_(
