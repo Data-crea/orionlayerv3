@@ -110,9 +110,9 @@ NEBULA_BRIGHTNESS = 188
 
 #: Black hole animation. The original advances its frames only
 #: while icons are drawn at full size (Advance_Black_Hole_Animation_),
-#: which core.zoomtables.black_hole_animates() reports. OMISSION
-#: maximum_galaxy_display_classic (WO 437): the default engine config
-#: (`classic`, Maximum-size galaxy) animates them at the widest zoom too.
+#: which core.zoomtables.black_hole_animates() reports; DEVIATION
+#: maximum_galaxy_classic (WO 437, Data): like the engine's default config
+#: (`classic`) a Maximum-size galaxy animates them at the widest zoom too.
 #:
 #: There is NO brightness pulse. An earlier version faded the sprite
 #: between alpha 165 and 255 every 4.8 s, which read as breathing and
@@ -135,8 +135,8 @@ NEBULA_BRIGHTNESS = 188
 #: animation at the draw rate. HD turns one master smoothly, 90 s a
 #: revolution in half-degree steps, and stands still exactly where the
 #: original does in the scale-percent rule (`black_hole_animates`; not in the
-#: default `classic` maximum-galaxy display, OMISSION
-#: maximum_galaxy_display_classic).
+#: default `classic` maximum-galaxy display, DEVIATION
+#: maximum_galaxy_classic).
 #:
 #: The two used to be one decision, because the frames were
 #: pre-rendered: 72 frames over 40 s meant a 5-degree jump every
@@ -234,7 +234,8 @@ class MapContext:
 
     @property
     def animate_black_holes(self):
-        return zt.black_hole_animates(self.num_stars, self.map_scale)
+        return zt.black_hole_animates(self.num_stars, self.map_scale,
+                                      self.max_map_scale)
 
     @property
     def names_hidden(self):
