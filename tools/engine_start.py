@@ -77,6 +77,8 @@ from core import paths  # noqa: E402 — work order 229 D
 #: The engine and the game folder: the environment, the player's own
 #: settings, else this machine's defaults (`core/paths.py`).
 ENGINE = paths.engine()
+#: The engine option that turns its logging on in a release build (WO 438).
+ENGINE_LOG_FLAG = "-log"
 GAME_DIR = paths.game_dir()
 PORT = 17362
 READY = "ext: server started"
@@ -221,8 +223,15 @@ def verdict(engines, free, screen, blanked_ok=False):
 
 
 def command(inhibit=True, engine=None):
-    """The engine command, under an idle inhibitor when one exists."""
-    cmd = [engine or paths.engine()]   # read now: play.py may just have set it
+    """The engine command, under an idle inhibitor when one exists.
+
+    `-log` (WO 438): orion2re v2.0.2's release builds print no log at all
+    without it (src/main.cpp `logging_enabled`, startup_options.cpp's "log"
+    option); the start-hang signature and READY are read off that log, so a
+    release engine would time out at '<empty log>'. The Debug build logs
+    anyway and accepts the flag. It is the LAST argument."""
+    # engine read now: play.py may just have set it
+    cmd = [engine or paths.engine(), ENGINE_LOG_FLAG]
     if inhibit and _which("gnome-session-inhibit"):
         cmd = ["gnome-session-inhibit", "--inhibit", "idle", "--reason",
                "OrionLayer live run: orion2re needs the screen on"] + cmd
