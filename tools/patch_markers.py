@@ -667,5 +667,9 @@ REPORTED_PATCHES = {
     "doc/ext_cancel_field_mouse.patch": (
         os.path.join("src", "ext", "ext_api.cpp"),
         "OrionLayer, open fix 125.", "CANCEL_FIELD holds the real mouse off"),
+    "doc/ext_injected_mouse_hold.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 129.",
+        "a real pointer move cannot rewrite an injected click"),
 }
 

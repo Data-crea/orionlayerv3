@@ -1,0 +1,130 @@
+From 0a800387059c032c5e4ea0465aba1f4d3557f929 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Thu, 26 Nov 2026 14:31:07 +0100
+Subject: [PATCH] OrionLayer Open Fix 129: a real pointer move during an
+ injected click no longer rewrites it (the flag of open fixes 3/124/125 was
+ cleared by the first pump, before the SDL thread had queued the click, and
+ the SDL_EVENT_MOUSE_MOTION path never read it; with the window shown, a right
+ click's help check read the moved pointer, 20 of 30 landed)
+
+OrionLayer, open fix 129.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp   | 24 ++++++++++++++++++++----
+ src/ext/ext_api.h     | 11 +++++++++++
+ src/game/platform.cpp |  9 ++++++++-
+ 3 files changed, 39 insertions(+), 5 deletions(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 1db1463e..5dda6d9b 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -27,6 +27,22 @@ int16_t g_activated_input = 0;
+ static bool g_pending_checked = false;
+ static int16_t g_pending_rect[4] = {0, 0, 0, 0};
+ std::atomic<bool> g_injected_mouse_pending{false};  // OrionLayer, open fix 124.
++// OrionLayer, open fix 129. SDL_GetTicks() until which the real mouse stays held off after an injected click.
++static std::atomic<uint32_t> g_injected_mouse_hold_until{0};
++static constexpr uint32_t k_injected_mouse_hold_ms = 300;
++
++void Hold_Real_Mouse_() {
++    g_injected_mouse_pending = true;
++    g_injected_mouse_hold_until = (uint32_t)SDL_GetTicks() + k_injected_mouse_hold_ms;
++}
++
++bool Real_Mouse_Held() {
++    if (g_injected_mouse_pending) {
++        return true;
++    }
++    // Signed difference: still right after SDL_GetTicks() wraps.
++    return (int32_t)(g_injected_mouse_hold_until.load() - (uint32_t)SDL_GetTicks()) > 0;
++}
+ // OrionLayer, open fix 112. An injected click's release, held while a film plays (FilmGuard).
+ static SDL_Event g_film_release{};
+ static bool g_film_release_pending = false;
+@@ -3806,7 +3822,7 @@ static void ProcessInput() {
+                 // coalescing rewrites the injected RELEASE to the
+                 // physical mouse position, and the pointer has walked
+                 // away before the game reads it.
+-                g_injected_mouse_pending = true;
++                Hold_Real_Mouse_();
+ 
+                 // The comment above has always said "in 640x480
+                 // space" and until now that was a promise the code
+@@ -3884,7 +3900,7 @@ static void ProcessInput() {
+                 // CANCEL_FIELD right-clicks a field's CENTRE, which is
+                 // the whole answer for a button and the wrong one for a
+                 // grid field: the game reads xpos/ypos from the point.
+-                g_injected_mouse_pending = true;
++                Hold_Real_Mouse_();
+                 float wx = 0.0f;
+                 float wy = 0.0f;
+                 Game_Point_To_Window_Point_((float)cmd.param1,
+@@ -3958,7 +3974,7 @@ static void ProcessInput() {
+                 // mouse as the other two injections (INJECT_CLICK,
+                 // INJECT_RIGHT_CLICK): without it the physical mouse
+                 // rewrote this right click's release (open fix 3).
+-                g_injected_mouse_pending = true;
++                Hold_Real_Mouse_();
+                 float cx = 0.0f;
+                 float cy = 0.0f;
+                 Game_Point_To_Window_Point_(
+@@ -4034,7 +4050,7 @@ FilmGuard::FilmGuard(const char* name)
+ FilmGuard::~FilmGuard() {
+     if (g_film_release_pending) {
+         g_film_release_pending = false;
+-        g_injected_mouse_pending = true;
++        Hold_Real_Mouse_();
+         SDL_PushEvent(&g_film_release);
+     }
+     g_film = previous;
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index a6d5df51..8669d16d 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -497,6 +497,17 @@ extern int16_t g_activated_input;
+ /// reads it (Sync_Mouse_State_From_SDL).
+ extern std::atomic<bool> g_injected_mouse_pending;
+ 
++/// OrionLayer, open fix 129. Holds the real mouse off for a fixed time after
++/// an injected click, instead of until the first Pump_Game_Input_Queue():
++/// the game thread pumps (and cleared the flag) before the SDL thread had
++/// even turned the injected DOWN/UP into queue events, and the right click's
++/// help box reads the pointer AT THE TIME OF THE CHECK (fields.cpp
++/// Check_Help_List), so one real SDL_EVENT_MOUSE_MOTION between the injected
++/// release and that check moved the pointer off the field. Set by every
++/// injection (Hold_Real_Mouse_), read by Real_Mouse_Held() on the SDL thread.
++void Hold_Real_Mouse_();
++bool Real_Mouse_Held();
++
+ /// OrionLayer, open fix 71. True when timer::Release_Time may return at once:
+ /// a battle is live, the engine's window is hidden (open fix 43), a client is
+ /// connected to draw it, and no input poll (Tick) came since the last wait —
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 12c0dba0..47a021b4 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -1054,7 +1054,7 @@ namespace platform {
+             // over the injected release (same button state), pulling
+             // the pointer back to the physical mouse. Stand aside
+             // until the queue has been pumped.
+-            if (ext::g_injected_mouse_pending) {
++            if (ext::Real_Mouse_Held()) {
+                 return;
+             }
+ #endif
+@@ -1401,6 +1401,13 @@ namespace platform {
+             }
+ 
+             if (event.type == SDL_EVENT_MOUSE_MOTION) {
++#ifdef ORION2RE_EXT
++                // OrionLayer, open fix 129. A real pointer move while an injected click is being delivered would
++                // coalesce over its release (Enqueue_Mouse_Input_Event) or move the pointer before the click is read.
++                if (ext::Real_Mouse_Held()) {
++                    continue;
++                }
++#endif
+                 int16_t mouse_x = 0;
+                 int16_t mouse_y = 0;
+                 Map_Window_Point_To_Game_Point(event.motion.x, event.motion.y, &mouse_x, &mouse_y);
