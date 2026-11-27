@@ -84,7 +84,7 @@ def missile_warning(fields):
 
 
 #: The one field AUTO leaves: `Clear_Fields_` and a hidden field over the
-#: whole screen as `_auto_button` (combat1.cpp:569-570).
+#: whole screen as `_auto_button` (combat1.cpp:525-526).
 FULL_SCREEN = (0, 0, 639, 479)
 
 
@@ -128,8 +128,14 @@ def move_target(cam, x, y, size_class):
 def auto_off_field(state, me):
     """TRANSCRIPTION `auto_off` (work order 229 F): while the player's side
     plays under AUTO the engine's list is that one full-screen field, and
-    the computer's turn polls it (cmbtai.cpp:598, :616, :740): ANY click
-    switches AUTO off. Its index, or None when AUTO is not the player's or
+    the computer's turn polls it (cmbtai.cpp:168, :185, :309, orion2re v2.0.2): ANY
+    click switches AUTO off. A boarding text box of the computer's turn takes the
+    FIRST click instead (it is one full-screen field too, textbox.cpp:129-151,
+    cmbtfir2_boarding.cpp:419-421): the engine needs a second click, as the
+    original does (open fix 131, closed). AUTO is off for the engine's own control
+    only at the end of the ship's turn (combat1.cpp:1138-1145).
+
+    Its index, or None when AUTO is not the player's or
     the list is not that shape. Until 229 HD looked AUTO up by its hotkey
     and waited for the player's turn, so AUTO, once on, could not be
     switched off in HD (seen live: the flag stayed on to the battle's end)."""
