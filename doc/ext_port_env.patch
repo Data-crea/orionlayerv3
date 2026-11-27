@@ -1,0 +1,46 @@
+OrionLayer open fix 133 — ORION2RE_EXT_PORT: the Extension API's port from the environment
+==========================================================================================
+
+Work order 440 (parallel live runs). orion2re on the branch `orionlayer` (v2.0.2
+merged in), after open fix 132. In src/ext/ext_api.cpp, inside `#ifdef
+ORION2RE_EXT` (the file is compiled only with it).
+
+Only one engine could run at a time: `ext::Init(uint16_t port = 17362)` took
+its default and `mox2.cpp` calls it without an argument. The change: `Init`
+reads the environment variable `ORION2RE_EXT_PORT` once, before
+`g_server.Start`. A decimal number from 1024 to 65535 (whole string) replaces
+the port; unset keeps 17362; anything else (empty, text, 80, 70000, "17363x")
+is ignored with ONE warning in the log ("ext: ORION2RE_EXT_PORT=... is not a
+port in 1024-65535, ignored (port stays 17362)") and the port stays. A port
+that is taken makes `bind` fail: `Server::Start` returns false, Init logs
+"ext: failed to start server on port N" and returns false; mox2.cpp ignores
+the result, so the game runs on WITHOUT an Extension API server. The player's
+`play.py` sets no variable: 17362 stays.
+
+Live proof: see doc/orion2re_open_fixes.md entry 133 (two engines, Xvfb).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 8091bd89..173a6a4c 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -4039,6 +4039,20 @@ bool Init(uint16_t port) {
+     g_last_stardate = -1;
+     g_last_fields_count = -1;
+ 
++    // OrionLayer, open fix 133. ORION2RE_EXT_PORT names the port (decimal 1024-65535) so several engines can run side by
++    // side on one machine; unset keeps the argument (17362), and any other value is ignored with one log line.
++    if (const char* env_port = std::getenv("ORION2RE_EXT_PORT")) {
++        char* end = nullptr;
++        const long value = std::strtol(env_port, &end, 10);
++        if (end != env_port && *end == '\0' && value >= 1024 && value <= 65535) {
++            port = (uint16_t)value;
++        } else {
++            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
++                        "ext: ORION2RE_EXT_PORT=\"%s\" is not a port in 1024-65535, ignored (port stays %d)",
++                        env_port, port);
++        }
++    }
++
+     bool ok = g_server.Start(port);
+     if (ok) {
+         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,

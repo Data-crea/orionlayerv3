@@ -9,6 +9,7 @@ from core import resources, palette, usermod, usersettings, frameslot, lang
 from core import framerate, textsize, wheelroute
 from core import lastword, fsurface
 from core import hdkeys
+from core import ports  # work order 440
 from core import cursor as cursor_gfx
 from core import mouse as mouse_input
 from core.layout import Layout
@@ -222,7 +223,7 @@ class App:
         """Connect to orion2re Extension API."""
         cfg = self.settings.get("orion2re", {})
         host = cfg.get("host", "localhost")
-        port = cfg.get("port", 17362)
+        port = ports.resolve_port(cfg.get("port"))
         self.connected = self.client.connect(host=host, port=port)
         if self.connected:
             log.info(f"Connected to orion2re at {host}:{port}")

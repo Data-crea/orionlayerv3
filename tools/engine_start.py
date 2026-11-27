@@ -73,6 +73,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 from core import paths  # noqa: E402 — work order 229 D
+from core import ports  # noqa: E402 — work order 440
 
 #: The engine and the game folder: the environment, the player's own
 #: settings, else this machine's defaults (`core/paths.py`).
@@ -80,7 +81,9 @@ ENGINE = paths.engine()
 #: The engine option that turns its logging on in a release build (WO 438).
 ENGINE_LOG_FLAG = "-log"
 GAME_DIR = paths.game_dir()
-PORT = 17362
+#: The player's port. A run asks `ports.ext_port()` (work order 440: the
+#: variable ORION2RE_EXT_PORT, open fix 133); this stays for the old name.
+PORT = ports.DEFAULT_PORT
 READY = "ext: server started"
 
 
@@ -92,14 +95,19 @@ def display_env(base=None):
     return vdisplay.engine_env("real desktop", base, out=lambda *_: None)
 
 
-def run_env(reason=None, out=print):
+def run_env(reason=None, out=print, port=None, display=None, extra=None):
     """The environment an engine STARTS in (work order 182): the private
     Xvfb of `tools/vdisplay.py`, never Data's session — unless the run
     names a reason for the real desktop. And the player's language (work
     order 200 C, open fix 70): `core/lang.engine_env` from the user
     settings — English adds nothing."""
     import vdisplay
-    env = vdisplay.engine_env(reason, out=out)
+    env = vdisplay.engine_env(reason, out=out, display=display)
+    # WO 440: the engine's Extension API port is the run's, set explicitly
+    # (a variable inherited from a shell must not decide for a slot's run)
+    if port is not None:
+        env[ports.ENV_VAR] = str(port)
+    env.update(extra or {})
     if os.environ.get("ORIONLAYER_ENGINE_SHOWN") == "1":
         # work order 260: the original ALONE, no client — its window shown
         # from the start (open fix 43 hides it only on its starter's word),
@@ -180,14 +188,16 @@ def running_engines():
     return rows
 
 
-def port_free(port=PORT):
+def port_free(port=None):
     """True if nothing listens on `port` — by BINDING it, never by
     connecting (a connection would be a client in somebody's game). With
     SO_REUSEADDR, as the engine binds it (ext_server.cpp:49): a closed
     session's connection lingers in TIME-WAIT for about a minute, which
     the engine starts over, and a plain bind refused — play.py said "the
     game did not start" to a player starting again after closing (work
-    order 214). A listening engine still refuses the bind."""
+    order 214). A listening engine still refuses the bind. No `port`: the
+    one `ports.ext_port()` names (work order 440)."""
+    port = ports.ext_port() if port is None else port
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
@@ -199,7 +209,7 @@ def port_free(port=PORT):
         s.close()
 
 
-def verdict(engines, free, screen, blanked_ok=False):
+def verdict(engines, free, screen, blanked_ok=False, port=None):
     """(ok, [reasons]) — the decision, separate from asking, so the smoke
     suite can hold it without a desktop. `blanked_ok` (work order 177,
     `--blanked-ok`): with open fix 31 applied (175) the engine presents
@@ -213,7 +223,8 @@ def verdict(engines, free, screen, blanked_ok=False):
                        f"connected to; close it with --close-foreign (work "
                        f"order 190's standing live permission)")
     if not free:
-        reasons.append(f"port {PORT} is taken")
+        reasons.append(f"port {ports.ext_port() if port is None else port} "
+                       f"is taken")
     if screen.get("blanked") is True and not blanked_ok:
         reasons.append("the screen is blanked or locked: orion2re would wait "
                        "in its first logo frame (a VSync present the "
@@ -222,16 +233,17 @@ def verdict(engines, free, screen, blanked_ok=False):
     return (not reasons), reasons
 
 
-def command(inhibit=True, engine=None):
+def command(inhibit=True, engine=None, extra_args=()):
     """The engine command, under an idle inhibitor when one exists.
 
     `-log` (WO 438): orion2re v2.0.2's release builds print no log at all
     without it (src/main.cpp `logging_enabled`, startup_options.cpp's "log"
     option); the start-hang signature and READY are read off that log, so a
     release engine would time out at '<empty log>'. The Debug build logs
-    anyway and accepts the flag. It is the LAST argument."""
+    anyway and accepts the flag. It is the LAST argument. `extra_args`
+    (WO 440: a slot's `-game-dir FOLDER`) come before it."""
     # engine read now: play.py may just have set it
-    cmd = [engine or paths.engine(), ENGINE_LOG_FLAG]
+    cmd = [engine or paths.engine(), *extra_args, ENGINE_LOG_FLAG]
     if inhibit and _which("gnome-session-inhibit"):
         cmd = ["gnome-session-inhibit", "--inhibit", "idle", "--reason",
                "OrionLayer live run: orion2re needs the screen on"] + cmd
@@ -349,15 +361,20 @@ def keep_previous(log_path, out=print):
 
 def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
           engine=None, guard=None, blanked_ok=False, intro=False,
-          real_desktop=None):
+          real_desktop=None, slot=None):
     """Start, and start again after a recognised hang. `guard` is the
     folder the pre-run backup goes to (taken once, before the first
     attempt). `real_desktop` is the REASON for Data's session; None (the
-    default since work order 182) is the virtual display."""
+    default since work order 182) is the virtual display. `slot` (WO 440,
+    the store's live-run slots): a dict with `port`, `display` ((display, auth)),
+    `extra_env`, `extra_args`, `on_pid`, `start_lock`, `guard_kw` (the slot's own folder for the
+    backup) and `known_pids` (engines of OTHER slots,
+    which are not foreign); None is today's single run on the default port
+    and the single Xvfb."""
     for attempt in range(1, retries + 1):
         pid = _start_once(log_path, timeout, inhibit, out, engine,
                           guard if attempt == 1 else None, blanked_ok, intro,
-                          real_desktop)
+                          real_desktop, slot)
         if pid != "hang":
             return pid
         out(f"start hang recognised (attempt {attempt} of {retries})")
@@ -365,13 +382,40 @@ def start(log_path, timeout=START_DEADLINE, inhibit=True, out=print, retries=3,
 
 
 def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
-                blanked_ok=False, intro=False, real_desktop=None):
+                blanked_ok=False, intro=False, real_desktop=None, slot=None):
+    """One start. A slot's start holds the slot start lock from its engine
+    check until its engine's PID is registered (`on_pid`), so a sibling
+    that starts at the same moment sees this engine as known, never as a
+    stranger (WO 440 review); the lock is released on every way out."""
+    slot = slot or {}
+    lock = slot.get("start_lock")
+    if lock is not None:
+        lock.acquire()
+    try:
+        return _start_once_locked(log_path, timeout, inhibit, out, engine,
+                                  guard, blanked_ok, intro, real_desktop,
+                                  slot)
+    finally:
+        if lock is not None:
+            lock.release()
+
+
+def _start_once_locked(log_path, timeout, inhibit, out, engine, guard,
+                       blanked_ok, intro, real_desktop, slot):
+    port = slot.get("port")
     # The session's screen matters only when the engine goes onto it: a
     # blanked desktop cannot hold up a present on the virtual display.
     screen = screen_state() if real_desktop else {"blanked": False,
                                                   "idle_ms": None}
-    engines, free = running_engines(), port_free()
-    ok, reasons = verdict(engines, free, screen, blanked_ok)
+    # a slot's run: engines of the other slots are no strangers; a stranger
+    # on THIS run's port is still refused by the bind test
+    # (a callable is asked again at every attempt: a sibling's engine may
+    # have been registered since the last one)
+    known = slot.get("known_pids") or ()
+    known = set(known() if callable(known) else known)
+    engines = [e for e in running_engines() if e[0] not in known]
+    free = port_free(port)
+    ok, reasons = verdict(engines, free, screen, blanked_ok, port)
     if real_desktop:
         out(f"screen: blanked={screen['blanked']} idle={screen['idle_ms']} ms")
     if blanked_ok and screen.get("blanked") is True:
@@ -390,19 +434,21 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         # OrionLayer can write during a run, copied and hashed, before an
         # engine exists that could write one. `liveguard verify` after.
         import liveguard
-        man = liveguard.snapshot(guard)
+        man = liveguard.snapshot(guard, **slot.get("guard_kw", {}))
         out(f"GUARD: {sum(1 for f in man['files'].values() if f)} files "
             f"backed up to {guard} — after the run: python "
             f"tools/liveguard.py verify {guard} [--restore]")
-    env = run_env(real_desktop, out)
-    proc = subprocess.Popen(command(inhibit and bool(real_desktop), engine),
+    env = run_env(real_desktop, out, port, slot.get("display"),
+                  slot.get("extra_env"))
+    proc = subprocess.Popen(command(inhibit and bool(real_desktop), engine,
+                                    slot.get("extra_args", ())),
                             cwd=paths.game_dir(), env=env,
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
     # Ctrl+C while waiting must not leave the engine behind: it lives in
     # its own session (start_new_session), so the terminal never reaches
     # it, and play.py enters its try/finally only after this returns a
-    # pid. The orphan would hold port 17362 and refuse the next start.
+    # pid. The orphan would hold its port (17362 by default) and refuse the next start.
     # Audit TD-02.
     pid = None
     try:
@@ -414,6 +460,10 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
         # still be printable (work order 194 met it with a renamed copy).
         text = ""
         pid = _engine_pid(proc.pid, deadline)
+        if pid and slot.get("on_pid"):
+            slot["on_pid"](pid)         # registered as OURS before READY
+        if slot.get("start_lock") is not None:
+            slot["start_lock"].release()
         while time.time() < deadline:
             with open(log_path, encoding="utf-8", errors="replace") as f:
                 text = f.read()

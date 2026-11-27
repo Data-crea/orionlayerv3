@@ -157,14 +157,15 @@ AUTOSAVE = ("SAVE10.GAM",)
 RUN_REWRITES = ENGINE_SETTINGS + AUTOSAVE
 
 
-def restore_engine_settings(dest, log=print, names=ENGINE_SETTINGS):
+def restore_engine_settings(dest, log=print, names=ENGINE_SETTINGS,
+                            within=None):
     """Put the engine's settings files — with `names=RUN_REWRITES` the
     autosave too — back from the snapshot `dest`, which must be one taken
     BEFORE its engine started (a later one holds the loaded game's), and
     prove each equal (`verify` compares the hash of what it copied).
     Returns the keys restored."""
     _, restored = verify(dest, restore=True, only=names,
-                         log=lambda _m: None)
+                         log=lambda _m: None, within=within)
     for key in restored:
         why = ("TURN writes it" if key.endswith(AUTOSAVE)
                else "the engine rewrites it on every load")
@@ -172,16 +173,43 @@ def restore_engine_settings(dest, log=print, names=ENGINE_SETTINGS):
     return restored
 
 
-def verify(dest, restore=False, allow=(), log=print, only=None):
+#: The reference save, slot 8 (work order 190): no run may load
+#: or write it. Its hash is the record every run is held to.
+SLOT8 = "SAVE8.GAM"
+SLOT8_SHA256 = ("ab70cc9ad5442335a58498bf49de8c6517838826fb07a789e323b85c02370bd6")
+
+
+def check_slot8(game_dir=None, expected=SLOT8_SHA256):
+    """(ok, sha256 or None, path or None) — the reference save against the
+    record. A PARALLEL BATCH takes it ONCE, at its end (work order 440):
+    every run's own folder is its game folder, so slot 8 of the shared game
+    folder is nobody's to write and one check covers the batch."""
+    path = _find(game_dir or GAME_DIR, SLOT8)
+    if path is None:
+        return False, None, None
+    sha = _sha(path)
+    return sha == expected, sha, path
+
+
+def _inside(path, folder):
+    folder = os.path.realpath(folder) + os.sep
+    return os.path.realpath(path).startswith(folder)
+
+
+def verify(dest, restore=False, allow=(), log=print, only=None, within=None):
     """Compare every file with the snapshot. Returns (changes, restored)
     — `changes` [(key, "changed"/"appeared"/"vanished")], allowed ones
     excluded; with `restore`, each is put back (an appeared file is
     removed) and the list of restored keys returned. `only`: those file
-    names alone."""
+    names alone. `within` (work order 440): a PARALLEL run's own folder —
+    a change is still reported, but only a file inside it is ever restored
+    or removed; a file outside (the shared tree, another run's folder) is
+    named "NOT RESTORED: outside this run's folder" and left alone, so two
+    runs can never restore the same file."""
     with open(os.path.join(dest, "manifest.json")) as fh:
         man = json.load(fh)
     now = files(man["game_dir"], man["root"], man.get("config_dir"))
-    changes, restored = [], []
+    changes, restored, outside = [], [], []
     for key, before in man["files"].items():
         name = key.split("/", 1)[1]
         if name in allow or (only is not None and name not in only):
@@ -198,6 +226,11 @@ def verify(dest, restore=False, allow=(), log=print, only=None):
         else:
             continue
         changes.append((key, kind))
+        target_path = path or (before or {}).get("path")
+        if restore and within is not None and target_path is not None \
+                and not _inside(target_path, within):
+            outside.append(key)
+            continue
         if restore:
             if before is None:
                 os.remove(path)
@@ -214,8 +247,10 @@ def verify(dest, restore=False, allow=(), log=print, only=None):
             status != man["tree_status"]:
         changes.append(("tree/git status", "changed"))
     for key, kind in changes:
-        log(f"{kind.upper():9s} {key}" + ("  -> restored" if key in restored
-                                          else ""))
+        log(f"{kind.upper():9s} {key}" + (
+            "  -> restored" if key in restored else
+            "  -> NOT RESTORED: outside this run's folder" if key in outside
+            else ""))
     if not changes:
         log(f"every file identical to the snapshot of {man['taken']}"
             + (f" (allowed: {', '.join(allow)})" if allow else ""))
@@ -231,13 +266,23 @@ def main():
     v.add_argument("dir")
     v.add_argument("--restore", action="store_true")
     v.add_argument("--allow", action="append", default=[])
+    v.add_argument("--within", default=None, help="a parallel run's own "
+                   "folder: restore only files inside it (work order 440)")
+    e = sub.add_parser("slot8", help="the reference save against its record")
+    e.add_argument("--game-dir", default=None)
     args = ap.parse_args()
     if args.cmd == "snapshot":
         man = snapshot(args.dir)
         held = sum(1 for f in man["files"].values() if f)
         print(f"{held} files backed up to {args.dir}")
         return 0
-    changes, _ = verify(args.dir, args.restore, tuple(args.allow))
+    if args.cmd == "slot8":
+        ok, sha, path = check_slot8(args.game_dir)
+        print("OK" if ok else f"{SLOT8} is missing" if sha is None
+              else "CHANGED", *([SLOT8, sha, f"({path})"] if sha else []))
+        return 0 if ok else 1
+    changes, _ = verify(args.dir, args.restore, tuple(args.allow),
+                        within=args.within)
     return 1 if changes and not args.restore else 0
 
 

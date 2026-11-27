@@ -35,6 +35,7 @@ toolenv.init_palette()
 from core import config, resources  # noqa: E402
 from core import zoomtables as zt  # noqa: E402
 from core.game_client import GameClient  # noqa: E402
+from core import ports  # noqa: E402 — work order 440
 from core.structs import ship as ship_struct  # noqa: E402
 from screens.galaxy_map import ships as shi  # noqa: E402
 
@@ -79,7 +80,7 @@ def main():
     client = GameClient()
     conn = settings.get("orion2re", {}) or {}
     if not client.connect(conn.get("host", "localhost"),
-                          conn.get("port", 17362),
+                          ports.resolve_port(conn.get("port")),
                           subscribe_visual=False):
         print("orion2re is not reachable. Start it first:")
         from core import paths

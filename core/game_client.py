@@ -24,6 +24,7 @@ from core.wire_protocol import (
     parse_save_slots,
 )
 from core import colony_guard
+from core import ports
 from core.structs import layout as engine_layout
 
 log = logging.getLogger("game_client")
@@ -92,7 +93,7 @@ SEND_TIMEOUT = 2.0
 SNAPSHOT_TIMEOUT = 10.0
 
 
-def fetch_snapshot(host="localhost", port=17362,
+def fetch_snapshot(host="localhost", port=None,
                    timeout=SNAPSHOT_TIMEOUT):
     """Connect, wait for one STATE_SNAPSHOT, disconnect, return it.
 
@@ -115,6 +116,7 @@ def fetch_snapshot(host="localhost", port=17362,
     That suits a tool that wants one reading. Anything that has to
     keep watching wants a `GameClient` of its own.
     """
+    port = ports.ext_port() if port is None else port
     client = GameClient()
     if not client.connect(host=host, port=port):
         return None, (f"Cannot reach orion2re at {host}:{port} — is the "
@@ -133,7 +135,7 @@ def fetch_snapshot(host="localhost", port=17362,
                   f"so a game busy generating or processing is silent.")
 
 
-def count_connections(port=17362):
+def count_connections(port=None):
     """How many established TCP connections exist on `port`.
 
     OrionLayer holds exactly one. Anything above two entries (our
@@ -147,6 +149,7 @@ def count_connections(port=17362):
     so it costs nothing and works with no tools installed. Returns
     None where /proc is not available.
     """
+    port = ports.ext_port() if port is None else port
     hexport = f"{port:04X}"
     total = 0
     found = False
@@ -197,7 +200,7 @@ class GameClient:
 
     def __init__(self):
         self.host = 'localhost'
-        self.port = 17362
+        self.port = ports.ext_port()
         self.sock = None
         self.connected = False
         #: HELLO_REPLY's capability bits of the engine connected now; 0
@@ -252,12 +255,13 @@ class GameClient:
         self._last_state = None
         self._last_of = {}
 
-    def connect(self, host='localhost', port=17362,
+    def connect(self, host='localhost', port=None,
                 subscribe_state=True, subscribe_fields=True,
                 subscribe_visual=True, subscribe_events=True):
         """Open connection and send subscription request."""
         self.host = host
-        self.port = port
+        # WO 440: one source of the port (core/ports.py), read when asked
+        self.port = ports.ext_port() if port is None else port
         self._subs = 0
         if subscribe_state:  self._subs |= SUB_STATE
         if subscribe_fields: self._subs |= SUB_FIELDS

@@ -1,0 +1,40 @@
+From e86181ce59fa1126e41a6e9d6fa0c64a7d4337e9 Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Fri, 27 Nov 2026 10:23:59 +0100
+Subject: [PATCH] OrionLayer Open Fix 133: the Extension API's port comes from
+ the environment variable ORION2RE_EXT_PORT (decimal 1024-65535; unset keeps
+ 17362, anything else is ignored with one log line), so several engines can
+ run at once on one machine
+
+OrionLayer, open fix 133.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 8091bd89..173a6a4c 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -4039,6 +4039,20 @@ bool Init(uint16_t port) {
+     g_last_stardate = -1;
+     g_last_fields_count = -1;
+ 
++    // OrionLayer, open fix 133. ORION2RE_EXT_PORT names the port (decimal 1024-65535) so several engines can run side by
++    // side on one machine; unset keeps the argument (17362), and any other value is ignored with one log line.
++    if (const char* env_port = std::getenv("ORION2RE_EXT_PORT")) {
++        char* end = nullptr;
++        const long value = std::strtol(env_port, &end, 10);
++        if (end != env_port && *end == '\0' && value >= 1024 && value <= 65535) {
++            port = (uint16_t)value;
++        } else {
++            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
++                        "ext: ORION2RE_EXT_PORT=\"%s\" is not a port in 1024-65535, ignored (port stays %d)",
++                        env_port, port);
++        }
++    }
++
+     bool ok = g_server.Start(port);
+     if (ok) {
+         SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION,

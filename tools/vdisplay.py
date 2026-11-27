@@ -96,48 +96,113 @@ def headless_clients(argv=None, environ=None, out=print):
     return None
 
 
+#: Work order 440: a live run in a SLOT (the store's live-run tool) has its own Xvfb,
+#: its own xauth cookie and its own state file, named by the slot. The slot
+#: comes as an argument, or from this variable (set by liverun for the
+#: tools it starts, so their `ensure()`/`running()` find THEIR run's display
+#: and never another run's). No slot is the single Xvfb of before.
+SLOT_ENV = "ORIONLAYER_LIVE_SLOT"
+#: Display numbers claimed by this process (flock held until `stop`/exit),
+#: so two allocators never pick the same free-looking number between "look"
+#: and "Xvfb has made its socket".
+_CLAIMS = {}
+#: Xvfb processes this process started: reaped on `stop`, no zombie.
+_PROCS = {}
+
+
 def _free(n):
     return not os.path.exists(f"/tmp/.X11-unix/X{n}") and \
         not os.path.exists(f"/tmp/.X{n}-lock")
 
 
-def _state_file():
-    return os.path.join(STATE_DIR, "xvfb.txt")
+def _slot(slot=None):
+    return slot if slot else (os.environ.get(SLOT_ENV) or None)
 
 
-def running():
-    """(display, pid, auth) of this module's Xvfb if it is alive, else None."""
+def _name(base, slot, ext=""):
+    return os.path.join(STATE_DIR, f"{base}{'_' + slot if slot else ''}{ext}")
+
+
+def _state_file(slot=None):
+    return _name("xvfb", _slot(slot), ".txt")
+
+
+def _claim(n):
+    """flock on the display number's own file; the lock fd, or None when
+    another process holds it."""
+    import fcntl
+    workdirs.makedirs(STATE_DIR, by="vdisplay")
+    fd = os.open(os.path.join(STATE_DIR, f"display_{n}.lock"),
+                 os.O_CREAT | os.O_RDWR, 0o600)
     try:
-        with open(_state_file(), encoding="utf-8") as fh:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        return None
+    return fd
+
+
+def _is_xvfb(pid):
+    """True when /proc/<pid>/cmdline is an Xvfb: a stale state file plus a
+    reused pid must never make this module signal a stranger."""
+    try:
+        with open(f"/proc/{int(pid)}/cmdline", "rb") as fh:
+            argv0 = fh.read().split(b"\0")[0]
+    except (OSError, ValueError):
+        return False
+    return os.path.basename(argv0) == b"Xvfb"
+
+
+def started_here(pid):
+    """True for an Xvfb THIS process started (`ensure` kept its handle)."""
+    return pid in _PROCS
+
+
+def running(slot=None):
+    """(display, pid, auth) of this module's Xvfb (the slot's, when there
+    is one) if it is alive, else None."""
+    try:
+        with open(_state_file(slot), encoding="utf-8") as fh:
             display, pid, auth = fh.read().split()
         os.kill(int(pid), 0)
-        if os.path.exists(f"/tmp/.X11-unix/X{display.lstrip(':')}"):
+        if _is_xvfb(pid) and os.path.exists(f"/tmp/.X11-unix/X{display.lstrip(':')}"):
             return display, int(pid), auth
     except (OSError, ValueError):
         pass
     return None
 
 
-def ensure(out=print):
+def ensure(out=print, slot=None):
     """This module's Xvfb, started if needed: (display, pid, auth). Access
-    by a private MIT cookie (`xauth`), so only this user's tools connect."""
-    got = running()
+    by a private MIT cookie (`xauth`), so only this user's tools connect.
+    With a `slot` (or ORIONLAYER_LIVE_SLOT) the Xvfb, cookie, state file and
+    log are the slot's own."""
+    slot = _slot(slot)
+    got = running(slot)
     if got:
         return got
     if shutil.which("Xvfb") is None:
         raise SystemExit("Xvfb is not installed (xorg-server-xvfb) — the "
                          "virtual display cannot start")
     workdirs.makedirs(STATE_DIR, by="vdisplay")
-    n = next((n for n in DISPLAYS if _free(n)), None)
+    n = fd = None
+    for cand in DISPLAYS:
+        if not _free(cand):
+            continue
+        fd = _claim(cand)
+        if fd is not None:
+            n = cand
+            break
     if n is None:
         raise SystemExit(f"no free display in :{DISPLAYS[0]}..:{DISPLAYS[-1]}")
+    _CLAIMS[n] = fd
     display = f":{n}"
-    auth = os.path.join(STATE_DIR, "xauth")
+    auth = _name("xauth", slot)
     cookie = subprocess.run(["mcookie"], capture_output=True,
                             text=True).stdout.strip()
     subprocess.run(["xauth", "-f", auth, "add", display, ".", cookie],
                    check=True, capture_output=True)
-    log = open(os.path.join(STATE_DIR, "xvfb.log"), "w")
+    log = open(_name("xvfb", slot, ".log"), "w")
     proc = subprocess.Popen(
         ["Xvfb", display, "-screen", "0", GEOMETRY, "-nolisten", "tcp",
          "-auth", auth], stdin=subprocess.DEVNULL, stdout=log,
@@ -148,18 +213,63 @@ def ensure(out=print):
         time.sleep(0.1)
     else:
         proc.kill()
+        proc.wait()
+        _release_claim(n)
         raise SystemExit(f"Xvfb {display} did not come up (log in {STATE_DIR})")
-    with open(_state_file(), "w", encoding="utf-8") as fh:
+    _PROCS[proc.pid] = proc
+    with open(_state_file(slot), "w", encoding="utf-8") as fh:
         fh.write(f"{display} {proc.pid} {auth}\n")
-    out(f"VIRTUAL DISPLAY: Xvfb {display} (PID {proc.pid}), {GEOMETRY}")
+    out(f"VIRTUAL DISPLAY: Xvfb {display} (PID {proc.pid}), {GEOMETRY}"
+        + (f", slot {slot}" if slot else ""))
     return display, proc.pid, auth
 
 
-def stop(out=print):
-    got = running()
+def _release_claim(n):
+    fd = _CLAIMS.pop(n, None)
+    if fd is not None:
+        os.close(fd)
+
+
+def stop(out=print, slot=None, wait=5.0):
+    """Stop the Xvfb by its PID (SIGTERM, SIGKILL after `wait`), reap it,
+    and remove its state and cookie (the slot's own files only). WO 440:
+    until then one Xvfb stayed behind after every live run."""
+    slot = _slot(slot)
+    got = running(slot)
     if got:
-        os.kill(got[1], 15)
-        out(f"VIRTUAL DISPLAY: Xvfb {got[0]} (PID {got[1]}) stopped")
+        display, pid, _auth = got
+        try:
+            os.kill(pid, 15)
+        except ProcessLookupError:
+            pass
+        proc = _PROCS.pop(pid, None)
+        end = time.time() + wait
+        while time.time() < end:
+            if proc is not None:
+                if proc.poll() is not None:
+                    break
+            else:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    break
+            time.sleep(0.1)
+        else:
+            try:
+                os.kill(pid, 9)
+            except ProcessLookupError:
+                pass
+            if proc is not None:
+                proc.wait()
+        out(f"VIRTUAL DISPLAY: Xvfb {display} (PID {pid}) stopped")
+        _release_claim(int(display.lstrip(":")))
+    if slot:
+        # a slot's files are its own and go with it; the single Xvfb's stay
+        for path in (_state_file(slot), _name("xauth", slot)):
+            try:
+                os.remove(path)
+            except OSError:
+                pass
 
 
 def session_auth(display=":0"):
@@ -177,9 +287,10 @@ def session_auth(display=":0"):
     return auths[0] if auths else None
 
 
-def engine_env(reason=None, base=None, out=print):
-    """The environment an ENGINE starts in: this module's Xvfb, or — with a
-    reason — the real session's `:0` (dev:CLAUDE.md's three variables)."""
+def engine_env(reason=None, base=None, out=print, display=None):
+    """The environment an ENGINE starts in: this module's Xvfb (or the
+    `display` a slot hands over), or — with a reason — the real session's
+    `:0` (dev:CLAUDE.md's three variables)."""
     env = dict(os.environ if base is None else base)
     env.pop("WAYLAND_DISPLAY", None)
     env["SDL_VIDEODRIVER"] = "x11"
@@ -201,7 +312,11 @@ def engine_env(reason=None, base=None, out=print):
         if auth:
             env["XAUTHORITY"] = auth
         return env
-    display, _pid, auth = ensure(out)
+    # `display`: (display, auth) a slot's run already started (WO 440)
+    if display is None:
+        display, _pid, auth = ensure(out)
+    else:
+        display, auth = display
     env["DISPLAY"] = display
     env["XAUTHORITY"] = auth
     env["SDL_AUDIODRIVER"] = "dummy"

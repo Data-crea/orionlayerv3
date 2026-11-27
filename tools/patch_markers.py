@@ -679,5 +679,9 @@ REPORTED_PATCHES = {
         os.path.join("src", "ext", "ext_api.cpp"),
         "OrionLayer, open fix 132.",
         "MSG_INJECT_WHEEL puts a wheel event into the game's queue"),
+    "doc/ext_port_env.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 133.",
+        "the Extension API's port comes from ORION2RE_EXT_PORT"),
 }
 

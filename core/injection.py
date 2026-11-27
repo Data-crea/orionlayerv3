@@ -311,7 +311,7 @@ class InjectionChain:
         conns = None
         try:
             from core.game_client import count_connections
-            conns = count_connections(getattr(self.client, "port", 17362))
+            conns = count_connections(getattr(self.client, "port", None))
         except Exception:
             pass
         # The engine's RANDOM is opponents == 7 (`NEW_GAME_PLAYER_COUNT_RANDOM`,
