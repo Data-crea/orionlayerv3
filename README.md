@@ -24,6 +24,12 @@ so the game stays playable.
 > **OrionLayer runs on Linux only.** Windows (and macOS) are not supported:
 > OrionLayer does not start on Windows yet.
 
+> **News (27 November 2026).** OrionLayer now runs on orion2re v2.0.2, the
+> 30th-anniversary release. The move has passed automated live tests (new
+> game, turns, battles, Maximum galaxy) but has **not been play-tested yet**.
+> Until the end of February updates will come more slowly because of other
+> projects; development continues.
+
 You can start it, load or begin a game and play through the HD screens,
 but expect missing pieces, screens that still fall back to the original,
 and bugs.
