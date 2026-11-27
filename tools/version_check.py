@@ -217,6 +217,8 @@ FIX_NUMBERS = {
     "doc/ext_cancel_field_mouse.patch": (125,),
     "doc/ext_injected_mouse_hold.patch": (129,),
     "doc/ext_inject_click_direct.patch": (130,),
+    # work order 441
+    "doc/ext_inject_wheel.patch": (132,),
 }
 
 

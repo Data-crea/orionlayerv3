@@ -675,5 +675,9 @@ REPORTED_PATCHES = {
         os.path.join("src", "ext", "ext_api.cpp"),
         "OrionLayer, open fix 130.",
         "an injected click is read in the call that takes it"),
+    "doc/ext_inject_wheel.patch": (
+        os.path.join("src", "ext", "ext_api.cpp"),
+        "OrionLayer, open fix 132.",
+        "MSG_INJECT_WHEEL puts a wheel event into the game's queue"),
 }
 

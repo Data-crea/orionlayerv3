@@ -33,6 +33,12 @@ only as a hidden field (the original's "not a valid choice" state), a
 click on a row the list has no field for (a shield or computer not
 researched). A click inside the box on no field sends nothing — the
 original's catch-all swallows it.
+
+**THE WHEEL** (work order 441, HD EXTENSION `wheel_rows`): over the
+weapon or special list, and only once it has more than ten rows, a notch
+activates the list's scroll arrow once, and HD moves nothing: the next DSBX
+block reports `first_row`. The engine's own wheel step is lumpy here
+(measured live), so `MSG_INJECT_WHEEL` is not used on this list.
 """
 import logging
 
@@ -40,6 +46,7 @@ import pygame
 
 from core.screen_base import ScreenBase
 from core import nativedraw as nd
+from core import wheelforward
 from screens.ship_design import sdart
 from screens.ship_design.screen import Names
 
@@ -179,6 +186,54 @@ class DesignBoxScreen(ScreenBase):
         if hits and not (hits[0] is live.accept() and
                          hits[0].field_type != geom.TYPE_BUTTON):
             self.send(hits[0], f"key {pygame.key.name(key)}")
+
+    def list_rect(self, live):
+        """The engine's scrolled list in native pixels: the bounding box
+        of the row fields (weapon rows from base + 0x1C, special rows from
+        base + 25, `dbwire.Box.rows`), or None where the engine has no scroll
+        field — a shield or computer list (`Add_Generic_Replacement_Fields`,
+        desbox.cpp:810-864, adds none) and a list of ten rows or fewer, whose
+        scroll field and arrows are made only above ten
+        (`total_rows <= 10`, desbox.cpp:360-399 weapon, :2676-2700
+        special: the arrows are the two buttons `scroll_buttons` finds)."""
+        if live.kind not in ("weapon", "special") or \
+                not live.scroll_buttons():
+            return None
+        fields = [f for _y, _r, f in live.rows() if f is not None]
+        if not fields:
+            return None
+        return (min(f.x for f in fields), min(f.y for f in fields),
+                max(f.x_end for f in fields), max(f.y_end for f in fields))
+
+    def handle_mousewheel(self, direction, mx, my):
+        """One wheel notch is ONE ROW (HD EXTENSION `wheel_rows`): the
+        engine's own wheel step on these lists is lumpy (the thumb moves
+        12 px of 120, `first_row` follows only after half a thumb, so every
+        second notch jumped 7-8 rows: scroll.cpp:128-143, desbox.cpp:375-385),
+        so the list's scroll arrow is activated once per notch, the field a
+        click on it activates; the next DSBX `first_row` says where the list
+        went and HD moves nothing. Over the weapon or special list only,
+        above ten rows (`list_rect`), at most `ROWS_PER_FRAME` presses; the
+        upper arrow of the two scroll buttons is the one higher on the box.
+        Needs no CAP_WHEEL."""
+        if self.help_consumes_wheel(direction):
+            return True
+        step, n = wheelforward.notches(direction)
+        if not n or not self.ready():
+            return False
+        live = self._live_box()
+        rect = self.list_rect(live) if live is not None and live.draws \
+            else None
+        if rect is None or not wheelforward.over(self.app, self.layout, mx,
+                                                 my, [rect]):
+            return False
+        arrows = sorted(live.scroll_buttons(), key=lambda f: f.y)
+        if len(arrows) != 2:
+            return False
+        arrow = arrows[0] if step > 0 else arrows[1]
+        for _ in range(n):
+            self.send(arrow, "wheel")
+        return True
 
     def handle_click(self, screen_x, screen_y):
         if self.help_consumes_click(screen_x, screen_y) or not self.ready():

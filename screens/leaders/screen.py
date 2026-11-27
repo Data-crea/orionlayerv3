@@ -56,6 +56,7 @@ from core.structs import player as player_struct
 
 from . import ldrart, ldrdialog, ldrdraw, ldrgeom, ldrinput, ldrmap
 from core import nativedraw
+from core import wheelforward
 from . import ldrpics, ldrright, ldrrows, ldrwire
 
 log = logging.getLogger("leaders")
@@ -399,6 +400,29 @@ class LeadersScreen(ScreenBase):
             ldrinput.press(self, key)
             return None
         return ldrinput.click(self, screen_x, screen_y)
+
+    def handle_mousewheel(self, direction, mx, my):
+        """The wheel over the ship view's grid or its scroll track goes to
+        the ENGINE (HD EXTENSION `wheel_forward`, `core/wheelforward`, open
+        fix 132): `FLT2::Fleet_Screen_Big_Icon_Fields_` adds one vertical
+        scroll field at `ldrgeom.SCROLL_TRACK` when there are more icons
+        than a row holds (flt2.cpp:101, officer.cpp:2752), which
+        `fields::Handle_Mouse_Wheel` takes wherever the pointer is
+        (fields.cpp:2844-2870); the OFFS block's `first_row` then says where
+        the grid went and HD draws that. Nothing moves here; with a box or
+        popup up, a skill help open or no CAP_WHEEL, nothing is sent."""
+        if self.help_consumes_wheel(direction):
+            return True
+        view = self._view
+        if view is None or view.state != ldrwire.READY or \
+                view.view != ldrgeom.VIEW_SHIP or \
+                self._skill_help is not None or not any(
+                    f.field_type == ldrgeom.TYPE_SCROLL
+                    for f in view.fields):
+            return False
+        return wheelforward.forward(self.app, self.layout, direction, mx, my,
+                                    [ldrgeom.GRID_RECT,
+                                     ldrgeom.SCROLL_TRACK])
 
     def handle_right_button(self, down, screen_x, screen_y):
         return ldrinput.right_button(self, down, screen_x, screen_y)

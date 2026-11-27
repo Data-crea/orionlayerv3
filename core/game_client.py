@@ -19,7 +19,7 @@ from core.wire_protocol import (
     MSG_SET_JOBS, MSG_SELECT_SHIP, MSG_SAVE_SLOTS, MSG_SHOW_WINDOW,
     MSG_INJECT_RIGHT_CLICK, MSG_COMBAT_COMMAND, MSG_SET_SPIES,
     MSG_INJECT_RAW_KEY, MSG_SETTLE_POPS, MSG_LAYOUT, CAP_LAYOUT,
-    MSG_DEMOLISH, CAP_DEMOLISH,
+    MSG_DEMOLISH, CAP_DEMOLISH, MSG_INJECT_WHEEL, CAP_WHEEL,
     SUB_STATE, SUB_FIELDS, SUB_VISUAL, SUB_EVENTS,
     parse_save_slots,
 )
@@ -631,6 +631,26 @@ class GameClient:
         game's and comes back as MSGB."""
         self._send_message(MSG_DEMOLISH,
                            struct.pack('<hh', colony_index, building))
+
+    @property
+    def can_wheel(self):
+        """The engine takes MSG_INJECT_WHEEL (open fix 132, CAP_WHEEL)."""
+        return bool(getattr(self, "capabilities", 0) & CAP_WHEEL)
+
+    def inject_wheel(self, x, y, notches):
+        """Feed one mouse-wheel event into the game's own queue
+        (`MSG_INJECT_WHEEL`, open fix 132): (x, y) in 640x480 space,
+        `notches` signed, positive = up. HD EXTENSION `wheel_forward`: the
+        original has no wheel; the game's `fields::Handle_Mouse_Wheel`
+        (fields.cpp:2813-2872) answers it. Returns False and sends NOTHING
+        when the engine lacks CAP_WHEEL (the caller then behaves as before
+        the wheel existed); True once the frame is sent."""
+        if not self.can_wheel or not notches:
+            return False
+        notches = max(-32768, min(32767, int(notches)))
+        self._send_message(MSG_INJECT_WHEEL,
+                           struct.pack('<hhh', int(x), int(y), notches))
+        return True
 
     def select_ship(self, ship_index, selected):
         """Select or deselect ONE ship in the open fleet box.

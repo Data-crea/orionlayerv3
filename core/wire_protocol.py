@@ -140,6 +140,15 @@ MSG_SETTLE_POPS = 0x8B
 #: confirmation box and the refund stay the game's and arrive as MSGB. Sent
 #: only to an engine whose HELLO_REPLY carries CAP_DEMOLISH.
 MSG_DEMOLISH = 0x8C
+#: Open fix 132 (work order 441): one mouse-wheel event fed into the game's
+#: own input queue — int16 x, int16 y (the pointer, 640x480 game space like
+#: an injected click's), int16 notches (signed, positive = wheel up). The
+#: game's own `fields::Handle_Mouse_Wheel` (fields.cpp:2813-2872) does the
+#: rest: a scroll field under the pointer, or the screen's lone one wherever
+#: it is, steps by max(1, range/10) per notch. Sent only to an engine whose
+#: HELLO_REPLY carries CAP_WHEEL. HD EXTENSION `wheel_forward`: the original
+#: game has no wheel; the behaviour is upstream's.
+MSG_INJECT_WHEEL = 0x8D
 
 #: How many STATE/VISUAL pairs after an injected command can still
 #: describe the world BEFORE it. One — so a caller that waits for an
@@ -184,6 +193,9 @@ MSG_LAYOUT        = 0x15
 CAP_LAYOUT        = 0x0001
 #: HELLO_REPLY's second word, bit 1: the server takes MSG_DEMOLISH (open fix 111).
 CAP_DEMOLISH      = 0x0002
+#: HELLO_REPLY's second word, bit 2: the server takes MSG_INJECT_WHEEL
+#: (open fix 132).
+CAP_WHEEL         = 0x0004
 
 #: One slot record in MSG_SAVE_SLOTS: int8 status, int8 game type,
 #: char[37] description, char[25] stardate, char[25] date.

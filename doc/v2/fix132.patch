@@ -1,0 +1,133 @@
+From 0db19aac04c814801718c4c07771c5b30c47149f Mon Sep 17 00:00:00 2001
+From: Data-crea <sattler.daniel@hotmail.com>
+Date: Fri, 27 Nov 2026 06:14:29 +0100
+Subject: [PATCH] OrionLayer Open Fix 132: MSG_INJECT_WHEEL puts a mouse wheel
+ event into the game's own input queue (the Colonies list, the design pickers
+ and the other lists the engine scrolls with Handle_Mouse_Wheel had no wheel
+ from a client); CAP_WHEEL in HELLO_REPLY
+
+OrionLayer, open fix 132.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/ext/ext_api.cpp    | 11 +++++++++++
+ src/ext/ext_server.cpp | 14 +++++++++++++-
+ src/ext/ext_server.h   |  6 ++++++
+ src/game/platform.cpp  |  6 ++++++
+ src/game/platform.h    |  1 +
+ 5 files changed, 37 insertions(+), 1 deletion(-)
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 75053256..8091bd89 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -3804,6 +3804,17 @@ static void ProcessInput() {
+             }
+             break;
+ 
++        case MSG_INJECT_WHEEL:
++            // OrionLayer, open fix 132. The event goes straight into the game's own queue (no window mapping, no
++            // real-mouse hold: a wheel has no button state for the real mouse to rewrite). Dropped while a film
++            // plays, as fix 130's direct click is not taken there: a film reads no wheel. Clamped, so a wild
++            // client cannot park a huge step in the queue.
++            if (!g_film.active && cmd.param3 != 0) {
++                const int16_t notches = (int16_t)std::clamp<int>(cmd.param3, -64, 64);
++                platform::Inject_Game_Wheel((int16_t)cmd.param1, (int16_t)cmd.param2, notches);
++            }
++            break;
++
+         case MSG_INJECT_KEY:
+             // Push a keyboard scancode into the SDL event queue
+             {
+diff --git a/src/ext/ext_server.cpp b/src/ext/ext_server.cpp
+index 10ebd07f..e5e7761e 100644
+--- a/src/ext/ext_server.cpp
++++ b/src/ext/ext_server.cpp
+@@ -207,7 +207,7 @@ void Server::HandleClientMessage(Client& client) {
+         // OrionLayer, open fix 93. HELLO_REPLY, then the layout of every raw record (CAP_LAYOUT):
+         // a client finds each member by name, so a record that grows or
+         // moves in the engine needs no change in the client.
+-        uint16_t reply[2] = { PROTO_VERSION, CAP_LAYOUT | CAP_DEMOLISH };  // OrionLayer, open fix 111: CAP_DEMOLISH.
++        uint16_t reply[2] = { PROTO_VERSION, CAP_LAYOUT | CAP_DEMOLISH | CAP_WHEEL };  // OrionLayer, open fix 111: CAP_DEMOLISH; open fix 132: CAP_WHEEL.
+         SendFrame(client.fd, MSG_HELLO_REPLY, 0,
+                   client.sequence++, (uint8_t*)reply, sizeof(reply));
+         const std::vector<uint8_t>& layout = LayoutTable();
+@@ -250,6 +250,18 @@ void Server::HandleClientMessage(Client& client) {
+         }
+         break;
+     }
++    case MSG_INJECT_WHEEL: {
++        // OrionLayer, open fix 132. int16 x, int16 y, int16 notches; shorter is dropped, never guessed.
++        if (payload_len >= 6) {
++            InputCommand cmd{};
++            cmd.type = MSG_INJECT_WHEEL;
++            memcpy(&cmd.param1, payload, 2);
++            memcpy(&cmd.param2, payload + 2, 2);
++            memcpy(&cmd.param3, payload + 4, 2);
++            input_queue_.push_back(cmd);
++        }
++        break;
++    }
+     case MSG_INJECT_RIGHT_CLICK: {
+         // OrionLayer, open fix 61. int16 x, int16 y; shorter is dropped, never guessed.
+         if (payload_len >= 4) {
+diff --git a/src/ext/ext_server.h b/src/ext/ext_server.h
+index c5b34896..40a5e306 100644
+--- a/src/ext/ext_server.h
++++ b/src/ext/ext_server.h
+@@ -34,6 +34,8 @@ constexpr uint16_t MSG_LAYOUT        = 0x15;
+ constexpr uint16_t CAP_LAYOUT        = 0x0001;
+ // OrionLayer, open fix 111. The server takes MSG_DEMOLISH; a client offers the demolish only then.
+ constexpr uint16_t CAP_DEMOLISH      = 0x0002;
++// OrionLayer, open fix 132. The server takes MSG_INJECT_WHEEL; a client sends a wheel only then.
++constexpr uint16_t CAP_WHEEL         = 0x0004;
+ 
+ // Client → Server message types
+ constexpr uint16_t MSG_HELLO         = 0x01;
+@@ -64,6 +66,9 @@ constexpr uint16_t MSG_INJECT_RAW_KEY = 0x8A;
+ constexpr uint16_t MSG_SETTLE_POPS = 0x8B;
+ // OrionLayer, open fix 111. Demolish one building of the colony the colony screen shows, through the original's own click on it: int16 colony, int16 building id. The game's refusals, its confirmation box and its refund stay its own (colony.cpp:1563-1589, :1932-1971); a command whose colony or building is not on screen writes nothing.
+ constexpr uint16_t MSG_DEMOLISH = 0x8C;
++// OrionLayer, open fix 132: a mouse wheel event into the game's own queue. int16 x, int16 y (game space 640x480),
++// int16 notches (signed, positive = up, as Handle_Mouse_Wheel reads wheel_y). See doc/ext_inject_wheel.patch.
++constexpr uint16_t MSG_INJECT_WHEEL = 0x8D;
+ 
+ // Subscription flags (bitmask)
+ constexpr uint16_t SUB_STATE         = 0x01;
+@@ -82,6 +87,7 @@ struct InputCommand {
+     uint16_t type;     // MSG_ACTIVATE, MSG_INJECT_KEY, etc.
+     int16_t  param1;   // field_id or keysym or x or colony_idx
+     int16_t  param2;   // 0 or y or pop count
++    int16_t  param3 = 0;  // OrionLayer, open fix 132: MSG_INJECT_WHEEL notches only
+     // MSG_SET_JOBS only: count x (pop_idx, new_job) byte pairs.
+     // Empty for every other command, which keeps all of those on
+     // the two fixed fields exactly as before.
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index ed2d2344..21e52d14 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -1850,6 +1850,12 @@ namespace platform {
+         Enqueue_Mouse_Input_Event(x, y, 0);
+         Set_Present_Mouse_Position(x, y);
+     }
++
++    // OrionLayer, open fix 132. A wheel event for the game's own queue, as the SDL path (SDL_EVENT_MOUSE_WHEEL above) puts it:
++    // wheel_x 0, wheel_y = notches (positive = up). x, y are game space already.
++    void Inject_Game_Wheel(int16_t x, int16_t y, int16_t notches) {
++        Enqueue_Wheel_Input_Event(x, y, 0.0f, (float)notches);
++    }
+ #endif
+ 
+     void __cdecl Update_Cursor_Image() {
+diff --git a/src/game/platform.h b/src/game/platform.h
+index 91a79d76..4d3a5cfc 100755
+--- a/src/game/platform.h
++++ b/src/game/platform.h
+@@ -87,6 +87,7 @@ namespace platform {
+     void __cdecl Pump_Game_Input_Queue();
+ #ifdef ORION2RE_EXT
+     void Inject_Game_Click(int16_t x, int16_t y);
++    void Inject_Game_Wheel(int16_t x, int16_t y, int16_t notches);  // OrionLayer, open fix 132
+ #endif
+     int16_t __cdecl Get_Mouse_X();
+     int16_t __cdecl Get_Mouse_Y();

@@ -52,6 +52,7 @@ from core.structs import ship as ship_struct
 from core import nativeview as nat
 from screens.fleets import fltart, fltrows
 from core import nativedraw as nd
+from core import wheelforward
 
 from . import refart, refdraw, refgeom as geom, refwords
 
@@ -404,6 +405,41 @@ class RefitScreen(ScreenBase):
         elif self.first + geom.CELLS < len(self._ships) and \
                 self.send(self._field(geom.DOWN, geom.TYPE_BUTTON), "down"):
             self._paging = (self.first + 5, 0)
+
+    def handle_mousewheel(self, direction, mx, my):
+        """One wheel notch is ONE ROW of five ships (HD EXTENSION
+        `wheel_rows`, open fix 132 measured it): the engine's own wheel step
+        on this list is two units of a five-unit row and `Update_First_Ship`
+        snaps it back (colrefit.cpp:20-36, :367), so notches were lost; the
+        arrow field is activated once per notch instead, the path `_page`
+        takes, and the same page hold keeps a cell click off the old page.
+        At most `wheelforward.ROWS_PER_FRAME` presses a frame; the rows are
+        counted as `_page` bounds them (colrefit.cpp:241-245). Nothing moves
+        here; no arrow field in the live list, nothing is sent. Needs no
+        CAP_WHEEL: the arrows exist on every engine."""
+        if self.help_consumes_wheel(direction):
+            return True
+        step, n = wheelforward.notches(direction)
+        if not n or self.kind != "ships" or self.first is None or \
+                not wheelforward.over(self.app, self.layout, mx, my,
+                                      [geom.GRID, geom.TRACK]):
+            return False
+        want = self.first
+        for _ in range(n):
+            if step > 0:                        # wheel up: list up
+                ok = want > 0 and self._field(geom.UP, geom.TYPE_BUTTON)
+                nxt = max(0, want - 5)
+            else:
+                ok = want + geom.CELLS < len(self._ships) and \
+                    self._field(geom.DOWN, geom.TYPE_BUTTON)
+                nxt = want + 5
+            if not ok or not self.send(ok, "wheel"):
+                break
+            want = nxt
+        if want == self.first:
+            return False
+        self._paging = (want, 0)
+        return True
 
     def handle_key(self, key):
         """The arrows' hotkeys page through `_page`; every other key goes

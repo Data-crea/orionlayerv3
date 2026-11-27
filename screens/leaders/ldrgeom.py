@@ -120,7 +120,7 @@ def row_skill_help_rects(i, n_special, n_general):
 #: (officer.cpp:2831-2908). Type 0 is `Add_Button_Field_`, 7 is
 #: `Add_Hidden_Field_` (the types the wire reports; screens/fleets/
 #: fltwire.py measured both).
-TYPE_BUTTON, TYPE_HIDDEN = 0, 7
+TYPE_BUTTON, TYPE_SCROLL, TYPE_HIDDEN = 0, 6, 7
 ESC = 0x1B
 BUTTONS = {
     "tab_colony": ((0x09, 0x0B), ord("C"), TYPE_HIDDEN, "tab_colony"),
@@ -247,8 +247,15 @@ def grid_cell(slot):
     return (x, y, x + GRID_CELL, y + GRID_CELL)
 
 
-#: The scroll bar's track, `FLT2::Fleet_Screen_Big_Icon_Fields_(…,
-#: 0x264, 0x2D, 0xA, 0x79)` (officer.cpp:2959) — x, y, width, length.
+#: The whole 5 x 3 grid, first cell's corner to the last cell's: where the
+#: wheel is forwarded (`screen.handle_mousewheel`;
+#: HD EXTENSION `wheel_forward`).
+GRID_RECT = (GRID_ORIGIN[0], GRID_ORIGIN[1],
+             GRID_ORIGIN[0] + (GRID_COLUMNS - 1) * GRID_STEP[0] + GRID_CELL,
+             GRID_ORIGIN[1] + (GRID_ROWS - 1) * GRID_STEP[1] + GRID_CELL)
+
+#: The scroll bar's track, `FLT2::Fleet_Screen_Big_Icon_Fields(…,
+#: 0x264, 0x2D, 0xA, 0x79)` (officer.cpp:2752) — x, y, width, length.
 SCROLL_TRACK = (0x264, 0x2D, 0x264 + 0xA, 0x2D + 0x79)
 
 #: The strip under the view box: the star (colony view, officer.cpp:
