@@ -1,0 +1,90 @@
+OrionLayer open fix 134 — an injected RIGHT click is read by the call that drained it
+=====================================================================================
+
+Work order 443 (the engine commit's message says 444). orion2re on the branch `orionlayer` (v2.0.2 merged in), after
+open fix 133. In src/ext/ext_api.cpp, src/ext/ext_api.h, src/game/platform.cpp
+and src/game/platform.h; all of it inside `#ifdef ORION2RE_EXT`.
+
+With the engine window SHOWN, a MSG_INJECT_RIGHT_CLICK was lost 3 times in 600
+(measured on the build without this change, colonies button of the galaxy map,
+help popup as the proof of effect; a fourth in a pair series: 4 of about 800).
+It took the SDL path exactly as the left click did before open fix 130: an SDL
+mouse-down and mouse-up pushed by ProcessInput, turned into queue events by the
+SDL thread later, open to the game's own Clear_Fields_Above() queue pump.
+
+The change, the same as open fix 130 for the other button. An
+INJECT_RIGHT_CLICK drained inside fields::Get_Input's own Tick
+(ext::g_click_direct_ok), not in a film, and only if no direct click was taken
+in this Tick yet (ONE flag for both buttons: one direct click per Tick) calls
+platform::Inject_Game_Right_Click, which enqueues the DOWN (mouse_buttons 2)
+and the UP (0) from the game thread and sets the present pointer position; the
+same Get_Input reads it. Every other Tick, a film and a second click in one
+drain take the SDL path as before. The hold of open fix 129 is taken first, as
+before. MSG_CANCEL_FIELD is not changed.
+
+Live proof: see doc/orion2re_open_fixes.md entry 134 (Xvfb, no window manager,
+no real pointer motion).
+
+diff --git a/src/ext/ext_api.cpp b/src/ext/ext_api.cpp
+index 173a6a4c..a65a3e10 100644
+--- a/src/ext/ext_api.cpp
++++ b/src/ext/ext_api.cpp
+@@ -3930,6 +3930,15 @@ static void ProcessInput() {
+                 // the whole answer for a button and the wrong one for a
+                 // grid field: the game reads xpos/ypos from the point.
+                 Hold_Real_Mouse_();
++                // OrionLayer, open fix 134. The right button gets the same direct path as the left one (open fix 130): in
++                // Get_Input's own Tick DOWN and UP go into the game's input queue here and are read by the same call, so
++                // the game's Clear_Fields_Above() pump cannot fall between the SDL thread's two halves (4 of about 800
++                // injected right clicks were lost with the window shown, WO 444). One direct click per Tick, left or right.
++                if (g_click_direct_ok && !g_click_direct_used && !g_film.active) {
++                    g_click_direct_used = true;
++                    platform::Inject_Game_Right_Click((int16_t)cmd.param1, (int16_t)cmd.param2);
++                    break;
++                }
+                 float wx = 0.0f;
+                 float wy = 0.0f;
+                 Game_Point_To_Window_Point_((float)cmd.param1,
+diff --git a/src/ext/ext_api.h b/src/ext/ext_api.h
+index c82bc2db..ca7b402c 100644
+--- a/src/ext/ext_api.h
++++ b/src/ext/ext_api.h
+@@ -511,7 +511,7 @@ bool Real_Mouse_Held();
+ /// OrionLayer, open fix 130. True only while fields::Get_Input runs its own
+ /// Tick, right before it reads the mouse (Interpret_Mouse_Input). An
+ /// INJECT_CLICK drained there goes straight into the game's input queue
+-/// (platform::Inject_Game_Click) and is read in the same call. Anywhere else
++/// (platform::Inject_Game_Click) and is read in the same call; an INJECT_RIGHT_CLICK likewise (open fix 134, platform::Inject_Game_Right_Click). Anywhere else
+ /// (the input delay's Tick, the screen loop's Tick, a film) it takes the SDL
+ /// path as before. The flag is set and cleared by Get_Input, game thread only.
+ extern bool g_click_direct_ok;
+diff --git a/src/game/platform.cpp b/src/game/platform.cpp
+index 21e52d14..2cf0f20b 100755
+--- a/src/game/platform.cpp
++++ b/src/game/platform.cpp
+@@ -1851,6 +1851,13 @@ namespace platform {
+         Set_Present_Mouse_Position(x, y);
+     }
+ 
++    // OrionLayer, open fix 134. The same for the right button (mouse_buttons bit 1, value 2, as Forward_Game_Mouse_State gets it from the SDL path).
++    void Inject_Game_Right_Click(int16_t x, int16_t y) {
++        Enqueue_Mouse_Input_Event(x, y, 2);
++        Enqueue_Mouse_Input_Event(x, y, 0);
++        Set_Present_Mouse_Position(x, y);
++    }
++
+     // OrionLayer, open fix 132. A wheel event for the game's own queue, as the SDL path (SDL_EVENT_MOUSE_WHEEL above) puts it:
+     // wheel_x 0, wheel_y = notches (positive = up). x, y are game space already.
+     void Inject_Game_Wheel(int16_t x, int16_t y, int16_t notches) {
+diff --git a/src/game/platform.h b/src/game/platform.h
+index 4d3a5cfc..da91d60b 100755
+--- a/src/game/platform.h
++++ b/src/game/platform.h
+@@ -87,6 +87,7 @@ namespace platform {
+     void __cdecl Pump_Game_Input_Queue();
+ #ifdef ORION2RE_EXT
+     void Inject_Game_Click(int16_t x, int16_t y);
++    void Inject_Game_Right_Click(int16_t x, int16_t y);  // OrionLayer, open fix 134
+     void Inject_Game_Wheel(int16_t x, int16_t y, int16_t notches);  // OrionLayer, open fix 132
+ #endif
+     int16_t __cdecl Get_Mouse_X();

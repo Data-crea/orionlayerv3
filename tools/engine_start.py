@@ -85,6 +85,20 @@ GAME_DIR = paths.game_dir()
 #: variable ORION2RE_EXT_PORT, open fix 133); this stays for the old name.
 PORT = ports.DEFAULT_PORT
 READY = "ext: server started"
+#: What the engine logs when it cannot bind the Extension API's port
+#: (src/ext/ext_api.cpp; seen in the engine log of WO 440's taken-port run:
+#: `ERROR: ext: failed to start server on port 17400`). The engine keeps
+#: RUNNING without a server (`mox2.cpp:435` ignores the result), so without
+#: this the start waited out the whole deadline for a READY that cannot come.
+SERVER_FAILED = "ext: failed to start server on port"
+
+
+def server_failure(text):
+    """The engine's own 'failed to start server' line in its log, or None."""
+    for line in text.splitlines():
+        if SERVER_FAILED in line:
+            return line.strip()
+    return None
 
 
 def display_env(base=None):
@@ -177,14 +191,15 @@ def screen_state():
 
 
 def running_engines():
-    """[(pid, ppid, started)] of every orion2re on this machine."""
-    out = subprocess.run(["ps", "-o", "pid=,ppid=,lstart=", "-C", "orion2re"],
-                         capture_output=True, text=True).stdout
+    """[(pid, ppid, started)] of every live (not defunct) orion2re on this machine."""
+    out = subprocess.run(["ps", "-o", "pid=,ppid=,stat=,lstart=", "-C",
+                          "orion2re"], capture_output=True, text=True).stdout
     rows = []
     for line in out.splitlines():
-        parts = line.split(None, 2)
-        if len(parts) == 3:
-            rows.append((int(parts[0]), int(parts[1]), parts[2].strip()))
+        parts = line.split(None, 3)
+        # a defunct process is no engine: it holds no port and no display
+        if len(parts) == 4 and not parts[2].startswith("Z"):
+            rows.append((int(parts[0]), int(parts[1]), parts[3].strip()))
     return rows
 
 
@@ -400,6 +415,11 @@ def _start_once(log_path, timeout, inhibit, out, engine=None, guard=None,
             lock.release()
 
 
+#: The engines' Popen objects, so that nothing but `liverun.stop_engine`
+#: reaps them (see `_start_once_locked`). A handful of small objects.
+_LAUNCHED = {}
+
+
 def _start_once_locked(log_path, timeout, inhibit, out, engine, guard,
                        blanked_ok, intro, real_desktop, slot):
     port = slot.get("port")
@@ -445,6 +465,11 @@ def _start_once_locked(log_path, timeout, inhibit, out, engine, guard,
                             cwd=paths.game_dir(), env=env,
                             stdin=subprocess.DEVNULL, stdout=handle,
                             stderr=subprocess.STDOUT, start_new_session=True)
+    # The Popen object must outlive this function: a dropped, still-running
+    # one lands in subprocess._active and the NEXT Popen() of any thread
+    # reaps it (WO 443: two concurrent runs, the engine's exit status read
+    # back as '?' because liverun's waitpid found no child). Kept by pid.
+    _LAUNCHED[proc.pid] = proc
     # Ctrl+C while waiting must not leave the engine behind: it lives in
     # its own session (start_new_session), so the terminal never reaches
     # it, and play.py enters its try/finally only after this returns a
@@ -472,8 +497,18 @@ def _start_once_locked(log_path, timeout, inhibit, out, engine, guard,
             if READY in text:
                 out(f"READY: orion2re PID {pid} (launcher {proc.pid}), log {log_path}")
                 return pid
+            failed = server_failure(text)
+            if failed:
+                # a port taken between the bind test and the engine's own
+                # bind: the cause is named at once, not after the deadline
+                out(f"PORT TAKEN: the engine says {failed!r} — another "
+                    f"process took the port after the bind test; stopping "
+                    f"PID {pid} (ours)")
+                _stop(proc, pid)
+                return None
             if proc.poll() is not None:
                 out(f"EXITED with {proc.returncode} before {READY!r}")
+                _LAUNCHED.pop(proc.pid, None)
                 return None
             if pid and time.time() - (deadline - timeout) > 10:
                 last = (text.strip().splitlines() or [""])[-1]
@@ -486,7 +521,7 @@ def _start_once_locked(log_path, timeout, inhibit, out, engine, guard,
                     if is_hang(last, samples):
                         out(f"HANG: PID {pid} waits in its first present "
                             f"(open fix 31); stopping it (ours)")
-                        _terminate(pid)
+                        _stop(proc, pid)
                         return "hang"
                     if not intro_named:
                         out(f"INTRO: the original's logos and intro are playing "
@@ -496,15 +531,30 @@ def _start_once_locked(log_path, timeout, inhibit, out, engine, guard,
         last = text.strip().splitlines()[-1:] or ["<empty log>"]
         out(f"TIMEOUT after {timeout} s: last line {last[0]!r}, state "
             f"{_state(pid) if pid else 'unknown'}; stopping PID {pid} (ours)")
-        if pid:
-            _terminate(pid)
+        _stop(proc, pid)
         return None
     except BaseException:
         try:
-            _terminate(pid or proc.pid)
+            _stop(proc, pid)
         except OSError:
             pass
         raise
+
+
+def _stop(proc, pid):
+    """Stop the engine this start launched (the pid its name search found,
+    else the launcher's) AND reap it: a terminated child nobody waits for
+    stays a zombie, which `ps -C orion2re` lists, and the retry's `verdict`
+    refuses it as a foreign engine (WO 443 review). Pops `_LAUNCHED`."""
+    try:
+        _terminate(pid or proc.pid)
+    finally:
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+        _LAUNCHED.pop(proc.pid, None)
 
 
 def _terminate(pid, wait=5.0):

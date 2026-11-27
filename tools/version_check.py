@@ -221,6 +221,8 @@ FIX_NUMBERS = {
     "doc/ext_inject_wheel.patch": (132,),
     # work order 440
     "doc/ext_port_env.patch": (133,),
+    # work order 444
+    "doc/ext_inject_right_click_direct.patch": (134,),
 }
 
 
